@@ -62,7 +62,10 @@
     <Compile Include="BenefitEnrollmentCompletionInfo.cs" />
     <Compile Include="BenefitsEnrollmentAknowledgement.cs" />
     <Compile Include="BenefitTypeAction.cs" />
+    <Compile Include="EmployeeLeaveTransaction.cs" />
     <Compile Include="EmployeeLeavePlanQueryCriteria.cs" />
+    <Compile Include="LeaveRequestActionType.cs" />
+    <Compile Include="LeaveTransactionType.cs" />
     <Compile Include="PeriodBenefitCostCalculationRequirement.cs" />
     <Compile Include="EmployeeBenefitsEnrollmentInfoQueryCriteria.cs" />
     <Compile Include="BenefitEnrollmentBenefitsQueryCriteria.cs" />

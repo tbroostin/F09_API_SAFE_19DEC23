@@ -4,10 +4,10 @@ using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,18 +29,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private DocumentApprovalService documentApprovalService;
         private DocumentApprovalService noStaffLoginservice;
-        private DocumentApprovalService emptyStaffLoginservice;
         private DocumentApprovalService serviceForNoPermission;
+        private DocumentApprovalService expiredSessionService;
 
         private Mock<IDocumentApprovalRepository> repositoryMock = new Mock<IDocumentApprovalRepository>();
+        private Mock<IDocumentApprovalRepository> expiredRepositoryMock = new Mock<IDocumentApprovalRepository>();
+
         private Mock<IStaffRepository> staffRepositoryMock = new Mock<IStaffRepository>();
         private Mock<IStaffRepository> noStaffLoginIdStaffRepositoryMock = new Mock<IStaffRepository>();
-        private Mock<IStaffRepository> emptyStaffLoginIdStaffRepositoryMock = new Mock<IStaffRepository>();
 
         private TestDocumentApprovalRepository testDocumentApprovalRepository;
         private Mock<IDocumentApprovalRepository> testDocumentApprovalRepositoryNoPermissionMock;
         private Mock<IDocumentApprovalRepository> testDocumentApprovalRepositoryNullDomainMock;
-        private DocumentApproval documentApprovalEntity;
+        private Domain.ColleagueFinance.Entities.DocumentApproval documentApprovalEntity;
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -55,10 +56,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private GeneralLedgerCurrentUser.DocumentApprovalUser documentApprovalUser = new GeneralLedgerCurrentUser.DocumentApprovalUser();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
 
-        private List<ApprovalDocumentRequest> approvalDocumentRequests;
+        private List<Domain.ColleagueFinance.Entities.ApprovalDocumentRequest> approvalDocumentRequests;
         private Dtos.ColleagueFinance.DocumentApprovalRequest documentApprovalRequest;
 
-        public ApprovedDocumentFilterCriteria entityFilterCriteria;
+        public Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria entityFilterCriteria;
         public Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria dtoFilterCriteria;
 
         [TestInitialize]
@@ -70,6 +71,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Assign the view document approval permission to the role that is assigned to the user (userFactory) defined in 
             // the GeneralLedgerCurrentUser class.
             glUserRoleViewPermissions.AddPermission(permissionViewDocumentApproval);
+
+            // Mock the Document Approval repository.
+            repositoryMock = new Mock<IDocumentApprovalRepository>();
+            expiredRepositoryMock = new Mock<IDocumentApprovalRepository>();
 
             // Mock the role repository for the role that has the view permissions.
             roleRepositoryMock = new Mock<IRoleRepository>();
@@ -84,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             documentApprovalEntity = testDocumentApprovalRepository.GetAsync("GTT").Result;
 
             testDocumentApprovalRepositoryNoPermissionMock.Setup(y => y.GetAsync(It.IsAny<string>())).ReturnsAsync(documentApprovalEntity);
-            testDocumentApprovalRepositoryNullDomainMock.Setup(y => y.GetAsync(It.IsAny<string>())).ReturnsAsync(null as DocumentApproval);
+            testDocumentApprovalRepositoryNullDomainMock.Setup(y => y.GetAsync(It.IsAny<string>())).ReturnsAsync(null as Domain.ColleagueFinance.Entities.DocumentApproval);
 
             // Mock the logger
             loggerMock = new Mock<ILogger>();
@@ -95,73 +100,82 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 return Task.FromResult("GTT");
             });
 
+            // Mock a repository that returns a Colleague Session Expired Exception for the three service methods.
+            expiredRepositoryMock.Setup(srm => srm.GetAsync(It.IsAny<string>())).Returns(() =>
+            {
+                throw new ColleagueSessionExpiredException("timeout");
+            });
+
+            expiredRepositoryMock.Setup(srm => srm.QueryApprovedDocumentsAsync(It.IsAny<string>(), It.IsAny<Ellucian.Colleague.Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>())).Returns(() =>
+             {
+                 throw new ColleagueSessionExpiredException("timeout");
+             });
+
+            expiredRepositoryMock.Setup(srm => srm.UpdateDocumentApprovalAsync(It.IsAny<string>(), It.IsAny<List<Ellucian.Colleague.Domain.ColleagueFinance.Entities.ApprovalDocumentRequest>>())).Returns(() =>
+             {
+                 throw new ColleagueSessionExpiredException("timeout");
+             });
+
             // Mock a null staff login ID result from the staff repository.
             noStaffLoginIdStaffRepositoryMock.Setup(srm => srm.GetStaffLoginIdForPersonAsync(It.IsAny<string>())).Throws<ApplicationException>();
 
-            // Mock a null staff login ID result from the staff repository.
-            emptyStaffLoginIdStaffRepositoryMock.Setup(srm => srm.GetStaffLoginIdForPersonAsync(It.IsAny<string>())).Returns(() =>
-            {
-                return Task.FromResult("");
-            });
-
             // Define and mock adapters
             documentApprovalAdapterRegistryMock = new Mock<IAdapterRegistry>();
-            var documentApprovalEntityToDtoAdapter = new AutoMapperAdapter<DocumentApproval, Dtos.ColleagueFinance.DocumentApproval>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<DocumentApproval, Dtos.ColleagueFinance.DocumentApproval>()).Returns(documentApprovalEntityToDtoAdapter);
+            var documentApprovalEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DocumentApproval, Dtos.ColleagueFinance.DocumentApproval>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApproval, Dtos.ColleagueFinance.DocumentApproval>()).Returns(documentApprovalEntityToDtoAdapter);
 
-            var approvalDocumentEntityToDtoAdapter = new AutoMapperAdapter<ApprovalDocument, Dtos.ColleagueFinance.ApprovalDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovalDocument, Dtos.ColleagueFinance.ApprovalDocument>()).Returns(approvalDocumentEntityToDtoAdapter);
+            var approvalDocumentEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ApprovalDocument, Dtos.ColleagueFinance.ApprovalDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.ApprovalDocument, Dtos.ColleagueFinance.ApprovalDocument>()).Returns(approvalDocumentEntityToDtoAdapter);
 
-            var approvalItemEntityToDtoAdapter = new AutoMapperAdapter<ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>()).Returns(approvalItemEntityToDtoAdapter);
+            var approvalItemEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>()).Returns(approvalItemEntityToDtoAdapter);
 
-            var approvalInformationEntityToDtoAdapter = new AutoMapperAdapter<Approver, Dtos.ColleagueFinance.Approver>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Approver, Dtos.ColleagueFinance.Approver>()).Returns(approvalInformationEntityToDtoAdapter);
+            var approvalInformationEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>()).Returns(approvalInformationEntityToDtoAdapter);
 
-            var associatedDocumentEntityToDtoAdapter = new AutoMapperAdapter<AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>()).Returns(associatedDocumentEntityToDtoAdapter);
+            var associatedDocumentEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>()).Returns(associatedDocumentEntityToDtoAdapter);
 
-            var documentApprovalResponseEntityToDtoAdapter = new AutoMapperAdapter<DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>()).Returns(documentApprovalResponseEntityToDtoAdapter);
+            var documentApprovalResponseEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>()).Returns(documentApprovalResponseEntityToDtoAdapter);
 
-            var approvalDocumentResponseEntityToDtoAdapter = new AutoMapperAdapter<ApprovalDocumentResponse, Dtos.ColleagueFinance.ApprovalDocumentResponse>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovalDocumentResponse, Dtos.ColleagueFinance.ApprovalDocumentResponse>()).Returns(approvalDocumentResponseEntityToDtoAdapter);
+            var approvalDocumentResponseEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ApprovalDocumentResponse, Dtos.ColleagueFinance.ApprovalDocumentResponse>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.ApprovalDocumentResponse, Dtos.ColleagueFinance.ApprovalDocumentResponse>()).Returns(approvalDocumentResponseEntityToDtoAdapter);
 
-            var documentApprovalRequestDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.DocumentApprovalRequest, DocumentApprovalRequest>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.DocumentApprovalRequest, DocumentApprovalRequest>()).Returns(documentApprovalRequestDtoToEntityAdapter);
+            var documentApprovalRequestDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.DocumentApprovalRequest, Domain.ColleagueFinance.Entities.DocumentApprovalRequest>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.DocumentApprovalRequest, Domain.ColleagueFinance.Entities.DocumentApprovalRequest>()).Returns(documentApprovalRequestDtoToEntityAdapter);
 
-            var approvalDocumentRequestDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, ApprovalDocumentRequest>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            var approvalDocumentRequestDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, Domain.ColleagueFinance.Entities.ApprovalDocumentRequest>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, Domain.ColleagueFinance.Entities.ApprovalDocumentRequest>()).Returns(approvalDocumentRequestDtoToEntityAdapter);
 
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, ApprovalDocumentRequest>()).Returns(approvalDocumentRequestDtoToEntityAdapter);
+            var approvalItemDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalItem, Domain.ColleagueFinance.Entities.ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalItem, Domain.ColleagueFinance.Entities.ApprovalItem>()).Returns(approvalItemDtoToEntityAdapter);
 
-            var approvalItemDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalItem, ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalItem, ApprovalItem>()).Returns(approvalItemDtoToEntityAdapter);
+            var approvedDocumentEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>()).Returns(approvedDocumentEntityToDtoAdapter);
 
-            var approvedDocumentEntityToDtoAdapter = new AutoMapperAdapter<ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>()).Returns(approvedDocumentEntityToDtoAdapter);
-
-            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
 
             // Build a service for getting and updating the document approval.
             documentApprovalService = new DocumentApprovalService(testDocumentApprovalRepository, staffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
                                             documentApprovalUser, roleRepository, loggerMock.Object);
 
             // Build a service with a staff repository that does not have a staff record.
-            noStaffLoginservice = new DocumentApprovalService(testDocumentApprovalRepository, noStaffLoginIdStaffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
+            expiredSessionService = new DocumentApprovalService(expiredRepositoryMock.Object, staffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
                 documentApprovalUser, roleRepository, loggerMock.Object);
 
-            // Build a service with a staff repository that does not have a staff login Id.
-            emptyStaffLoginservice = new DocumentApprovalService(testDocumentApprovalRepository, emptyStaffLoginIdStaffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
+            // Build a service with a staff repository that does not have a staff record.
+            noStaffLoginservice = new DocumentApprovalService(testDocumentApprovalRepository, noStaffLoginIdStaffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
                 documentApprovalUser, roleRepository, loggerMock.Object);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new DocumentApprovalService(testDocumentApprovalRepositoryNoPermissionMock.Object, staffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
                 noPermissionsUser, roleRepository, loggerMock.Object);
 
-            approvalDocumentRequests = new List<ApprovalDocumentRequest>()
+            approvalDocumentRequests = new List<Domain.ColleagueFinance.Entities.ApprovalDocumentRequest>()
             {
-                new ApprovalDocumentRequest()
+                new Domain.ColleagueFinance.Entities.ApprovalDocumentRequest()
                 {
                     Approve = true,
                     DocumentType = "REQ",
@@ -169,9 +183,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     DocumentNumber = "0001196",
                     ChangeDate = "12345",
                     ChangeTime = "33333",
-                    DocumentItems = new List<ApprovalItem>()
+                    DocumentItems = new List<Domain.ColleagueFinance.Entities.ApprovalItem>()
                     {
-                        new ApprovalItem()
+                        new Domain.ColleagueFinance.Entities.ApprovalItem()
                         {
                             DocumentType = "REQ",
                             DocumentId = "1325",
@@ -220,16 +234,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 ApprovalDateFrom = null,
                 ApprovalDateTo = null
             };
-            entityFilterCriteria = new ApprovedDocumentFilterCriteria();
+            entityFilterCriteria = new Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria();
         }
 
         [TestCleanup]
         public void Cleanup()
         {
             noStaffLoginservice = null;
-            emptyStaffLoginservice = null;
             documentApprovalService = null;
             serviceForNoPermission = null;
+            expiredSessionService = null;
+
+            repositoryMock = null;
+            expiredRepositoryMock = null;
 
             staffRepositoryMock = null;
             noStaffLoginIdStaffRepositoryMock = null;
@@ -304,12 +321,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await noStaffLoginservice.GetAsync();
         }
 
-        //[TestMethod]
-        //[ExpectedException(typeof(PermissionsException))]
-        //public async Task GetAsync_EmptyStaffLoginId_PermissionException()
-        //{
-        //    await emptyStaffLoginservice.GetAsync();
-        //}
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task GetAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            await expiredSessionService.GetAsync();
+        }
+
         #endregion
 
         #region Update a document approval tests
@@ -355,12 +373,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await noStaffLoginservice.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
         }
 
-        //[TestMethod]
-        //[ExpectedException(typeof(PermissionsException))]
-        //public async Task UpdateDocumentApprovalRequestAsync_EmptyStaffLoginId_PermissionException()
-        //{
-        //    await emptyStaffLoginservice.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
-        //}
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task UpdateDocumentApprovalRequestAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            await expiredSessionService.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
+        }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
@@ -382,6 +400,114 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             documentApprovalRequest.ApprovalDocumentRequests = null;
             var documentApprovalResponseDto = await documentApprovalService.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
         }
+        #region Approval returns tests
+
+        [TestMethod]
+        public async Task UpdateDocumentApprovalRequestAsync_ReturnDocumentSuccess()
+        {
+            // Confirm that the UpdateDocumentApprovalRequestAsync service method returns a DTO with
+            // the same information that is in the test document approval domain entity.
+            var documentApprovalDomain = await testDocumentApprovalRepository.UpdateDocumentApprovalAsync("GTT", approvalDocumentRequests);
+            documentApprovalRequest = new Dtos.ColleagueFinance.DocumentApprovalRequest();
+            documentApprovalRequest.ApprovalDocumentRequests = new List<Dtos.ColleagueFinance.ApprovalDocumentRequest>();
+            var documentRequest = new Dtos.ColleagueFinance.ApprovalDocumentRequest()
+            {
+                Approve = false,
+                DocumentType = "REQ",
+                DocumentId = "1325",
+                DocumentNumber = "0001196",
+                Return = true,
+                ReturnComments = "Need more info",
+                ChangeDate = "12345",
+                ChangeTime = "33333",
+                DocumentItems = new List<Dtos.ColleagueFinance.ApprovalItem>()
+                        {
+                            new Dtos.ColleagueFinance.ApprovalItem()
+                            {
+                                DocumentType = "REQ",
+                                DocumentId = "1325",
+                                ItemId = "7237",
+                                ChangeDate = "12345",
+                                ChangeTime = "33333"
+                            }
+                        }
+            };
+
+            documentApprovalRequest.ApprovalDocumentRequests.Add(documentRequest);
+
+            var documentApprovalResponseDto = await documentApprovalService.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
+
+            Assert.IsNotNull(documentApprovalResponseDto.UpdatedApprovalDocumentResponses);
+            Assert.IsNotNull(documentApprovalResponseDto.NotUpdatedApprovalDocumentResponses);
+            Assert.IsTrue(documentApprovalResponseDto.UpdatedApprovalDocumentResponses.Count == 1);
+            Assert.IsTrue(documentApprovalResponseDto.NotUpdatedApprovalDocumentResponses.Count == 0);
+            // Confirm that the data in the document approval response DTO matches the domain entity
+            var updatedApprovalDocumentDto = documentApprovalResponseDto.UpdatedApprovalDocumentResponses.FirstOrDefault();
+            var matchingUpdatedApprovalDocumentEntity = documentApprovalDomain.UpdatedApprovalDocumentResponses.FirstOrDefault(x => x.DocumentId == updatedApprovalDocumentDto.DocumentId
+                && x.DocumentType == updatedApprovalDocumentDto.DocumentType
+                && x.DocumentNumber == updatedApprovalDocumentDto.DocumentNumber
+                && x.DocumentId == updatedApprovalDocumentDto.DocumentId);
+            Assert.IsNotNull(matchingUpdatedApprovalDocumentEntity);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task UpdateDocumentApprovalRequestAsync_ReturnContainsMoreThanOneDocument()
+        {
+            documentApprovalRequest = new Dtos.ColleagueFinance.DocumentApprovalRequest();
+            documentApprovalRequest.ApprovalDocumentRequests = new List<Dtos.ColleagueFinance.ApprovalDocumentRequest>();
+
+            var documentRequest1 = new Dtos.ColleagueFinance.ApprovalDocumentRequest()
+            {
+                Approve = false,
+                DocumentType = "REQ",
+                DocumentId = "1325",
+                DocumentNumber = "0001196",
+                Return = true,
+                ReturnComments = "Need more info",
+                ChangeDate = "12345",
+                ChangeTime = "33333",
+                DocumentItems = new List<Dtos.ColleagueFinance.ApprovalItem>()
+                        {
+                            new Dtos.ColleagueFinance.ApprovalItem()
+                            {
+                                DocumentType = "REQ",
+                                DocumentId = "1325",
+                                ItemId = "7237",
+                                ChangeDate = "12345",
+                                ChangeTime = "33333"
+                            }
+                        }
+            };
+            var documentRequest2 = new Dtos.ColleagueFinance.ApprovalDocumentRequest()
+            {
+                Approve = true,
+                DocumentType = "REQ",
+                DocumentId = "1325",
+                DocumentNumber = "0001197",
+                Return = false,
+                ReturnComments = null,
+                ChangeDate = "12345",
+                ChangeTime = "33333",
+                DocumentItems = new List<Dtos.ColleagueFinance.ApprovalItem>()
+                        {
+                            new Dtos.ColleagueFinance.ApprovalItem()
+                            {
+                                DocumentType = "REQ",
+                                DocumentId = "1326",
+                                ItemId = "7238",
+                                ChangeDate = "12345",
+                                ChangeTime = "33333"
+                            }
+                        }
+            };
+            documentApprovalRequest.ApprovalDocumentRequests.Add(documentRequest1);
+            documentApprovalRequest.ApprovalDocumentRequests.Add(documentRequest2);
+            var documentApprovalResponseDto = await documentApprovalService.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
+        }
+        
+        #endregion
+
         #endregion
 
         #region QueryApprovedDocumentsAsync Tests
@@ -390,8 +516,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task QueryApprovedDocumentsAsync_Success_NoFilterValues()
         {
             // Test the filter conversion from DTO to entity with no values.
-            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
             entityFilterCriteria = approvedDocumentFilterCriteriaDtoToEntityAdapter.MapToType(dtoFilterCriteria);
 
             Assert.AreEqual(entityFilterCriteria.DocumentType.Count(), 0);
@@ -439,8 +565,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             dtoFilterCriteria.ApprovalDateFrom = DateTime.Today.AddDays(-3);
             dtoFilterCriteria.ApprovalDateTo = DateTime.Today.AddDays(-1);
 
-            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
-            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
             entityFilterCriteria = approvedDocumentFilterCriteriaDtoToEntityAdapter.MapToType(dtoFilterCriteria);
 
             Assert.AreEqual(entityFilterCriteria.DocumentType.Count(), dtoFilterCriteria.DocumentType.Count());
@@ -491,6 +617,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await noStaffLoginservice.QueryApprovedDocumentsAsync(dtoFilterCriteria);
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task QueryApprovedDocumentsAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            await expiredSessionService.QueryApprovedDocumentsAsync(dtoFilterCriteria);
+        }
         #endregion
     }
 }

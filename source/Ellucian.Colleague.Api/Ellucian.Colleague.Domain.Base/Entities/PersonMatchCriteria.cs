@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +14,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// Identifier of the record specifying the match criteria to use for this lookup
         /// </summary>
-        public string MatchCriteriaIdentifier;
+        public string MatchCriteriaIdentifier
+        {
+            get { return matchCriteriaIdentifier; }
+            set { matchCriteriaIdentifier = value; }
+        }
+
+        private string matchCriteriaIdentifier;
 
         /// <summary>
         /// List of possible names for the person to find
@@ -60,6 +66,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The suffix of the person to find
         /// </summary>
         public string Suffix { get; set; }
+
 
         /// <summary>
         /// Creates a new PersonMatchCriteria

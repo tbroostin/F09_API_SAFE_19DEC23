@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -67,7 +67,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             }
                             catch (Exception ex)
                             {
-                                throw ex;
+                                throw;
                             }
                         }
                     }

@@ -1,7 +1,9 @@
 ﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
@@ -19,5 +21,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="apType">AP type</param>
         /// <returns>Default Line Item information DTO</returns>
         Task<NewLineItemDefaultAdditionalInformation> GetNewLineItemDefaultAdditionalInformation(string commodityCode, string vendorId, string apType);
+
+        /// <summary>
+        /// Get attachments
+        /// </summary>
+        /// <param name="owner">Owner to get attachments for</param>
+        /// <param name="documentTagOnePrefix">Tag one prefix</param>
+        /// <param name="documentIds">List of document id's</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        Task<List<Attachment>> GetAttachmentsAsync(string owner, string documentTagOnePrefix, IEnumerable<string> documentIds);
     }
 }

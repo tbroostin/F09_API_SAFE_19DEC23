@@ -1,9 +1,10 @@
-﻿//Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Finance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Finance;
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -1419,6 +1420,24 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Finance
                 ReceivablesController = new ReceivablesController(arServiceMock.Object, ppServiceMock.Object, loggerMock.Object);
 
                 var cc = await ReceivablesController.GetChargeCodesAsync();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ReceivablesController_GetChargeCodesAsyncs_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    arServiceMock.Setup(pc => pc.GetChargeCodesAsync())
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    ReceivablesController = new ReceivablesController(arServiceMock.Object, ppServiceMock.Object, loggerMock.Object);
+                    await ReceivablesController.GetChargeCodesAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
     }

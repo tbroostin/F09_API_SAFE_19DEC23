@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +16,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -53,6 +54,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         Collection<TranscriptGroupings> transcriptGroupinsData = await DataReader.BulkReadRecordAsync<TranscriptGroupings>("", true);
                         var transcriptGroupingList = BuildTranscriptGroupings(transcriptGroupinsData, stwebDefaults.StwebTranAllowedGroupings);
                         return transcriptGroupingList;
+                    }
+                    catch (ColleagueSessionExpiredException csee)
+                    {
+                        logger.Error(csee, "Colleague session expired while retrieving transcript groupings");
+                        throw;
                     }
                     catch (Exception exception)
                     {

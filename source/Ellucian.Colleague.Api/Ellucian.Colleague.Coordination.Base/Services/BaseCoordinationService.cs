@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -14,6 +14,7 @@ using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using System.Text;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -26,6 +27,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IRoleRepository roleRepository;
         private readonly IStaffRepository staffRepository;
         private readonly IConfigurationRepository configurationRepository;
+
+        char _VM = Convert.ToChar(DynamicArray.VM);
+        char _SM = Convert.ToChar(DynamicArray.SM);
+        char _XM = Convert.ToChar(250);
 
         /// <summary>
         /// The logger
@@ -60,7 +65,25 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// value is value to save in, if empty string then this means it is meant to remove the data from colleague
         /// </summary>
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
+        
+        /// <summary>
+        /// Contains a Tuple where Item1 is a bool set to true if any fields are denied or secured, 
+        /// Item2 is a list of DeniedAccess Fields and Item3 is a list of Restricted fields.
+        /// </summary>
+        public Tuple<bool, List<string>, List<string>> SecureDataDefinition { get; set; }
 
+        /// <summary>
+        /// Get the Denied and Secured Data Properties from the CTX call.
+        /// </summary>
+        /// <returns>Returns a Tuple with the secure flag and list of denied data fields and list of secure data fields.</returns>
+        public Tuple<bool, List<string>, List<string>> GetSecureDataDefinition()
+        {
+            if (SecureDataDefinition == null)
+            {
+                SecureDataDefinition = new Tuple<bool, List<string>, List<string>>(false, new List<string>(), new List<string>());
+            }
+            return SecureDataDefinition;
+        }
 
         /// <summary>
         /// IntegrationApiException object for error collection
@@ -71,6 +94,20 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Used to decide if the EthosApiBuilder is running and then report errors as an exception.
         /// </summary>
         public bool ReportEthosApiErrors { get; set; }
+
+        /// <summary>
+        /// Get all the data privacy and store it in the global variable for performance. 
+        /// </summary>
+        private IEnumerable<Domain.Base.Entities.EthosSecurity> _ethosDataPrivacyConfigs = null;
+        private async Task<IEnumerable<Domain.Base.Entities.EthosSecurity>> GetEthosDataPrivacyConfiguration(bool bypassCache)
+        {
+            if (_ethosDataPrivacyConfigs == null)
+            {
+                _ethosDataPrivacyConfigs = await configurationRepository.GetEthosDataPrivacyConfiguration(bypassCache);
+            }
+            return _ethosDataPrivacyConfigs;
+
+        }
 
         /// <summary>
         /// Initializes a new instance of the BaseCoordinationService class.
@@ -434,6 +471,30 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
+        /// returns true if an api has any data privacy set up
+        /// </summary>
+        /// <param name="apiName">name of the api (eedm schema name)</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>true if there is data privacy</returns>
+        public async Task<bool> CheckDataPrivacyByApi(string apiName, bool bypassCache = false)
+        {
+            bool hasPrivacy = false;
+
+            if (configurationRepository != null)
+            {
+                var ethosDataPrivacyListForApi =
+                    (await GetEthosDataPrivacyConfiguration(bypassCache)).Where(
+                        e => e.ApiName.Equals(apiName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+                if (ethosDataPrivacyListForApi != null && ethosDataPrivacyListForApi.PropertyDefinitions.Any())
+                {
+                    hasPrivacy = true;
+                }
+            }
+            return hasPrivacy;
+        }
+
+        /// <summary>
         /// Gets the list of EEDM data privacy settings by user based on user, roles and permissions
         /// </summary>
         /// <param name="apiName">name of the api (eedm schema name)</param>
@@ -446,11 +507,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (configurationRepository != null)
             {
-                var isEmaUser = await configurationRepository.IsThisTheEmaUser(CurrentUser.UserId, bypassCache);
+                //since this CINC Huib record data is static, even though the api is called with no-cache, we are always going to read the HUB record from cache as this record is quite static. 
+                var isEmaUser = await configurationRepository.IsThisTheEmaUser(CurrentUser.UserId, false);
                 var returnList = new List<string>();
 
                 var ethosDataPrivacyListForApi =
-                    (await configurationRepository.GetEthosDataPrivacyConfiguration(bypassCache)).Where(
+                    (await GetEthosDataPrivacyConfiguration(bypassCache)).Where(
                         e => e.ApiName.Equals(apiName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
                 if (ethosDataPrivacyListForApi != null && ethosDataPrivacyListForApi.PropertyDefinitions.Any())
@@ -541,15 +603,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
             var userRoleIdList = (await GetUserRoleIdsAsync()).ToList();
-
-
             if (configurationRepository != null)
             {
                 var isEmaUser = await configurationRepository.IsThisTheEmaUser(CurrentUser.UserId, bypassCache);
                 var returnList = new List<string>();
 
                 var ethosDataPrivacyListForApi =
-                    (await configurationRepository.GetEthosDataPrivacyConfiguration(bypassCache)).FirstOrDefault(e => e.ApiName.Equals(ethosResourceRouteInfo.ResourceName, StringComparison.OrdinalIgnoreCase));
+                    (await GetEthosDataPrivacyConfiguration(bypassCache)).FirstOrDefault(e => e.ApiName.Equals(ethosResourceRouteInfo.ResourceName, StringComparison.OrdinalIgnoreCase));
 
                 if (ethosDataPrivacyListForApi == null || !ethosDataPrivacyListForApi.PropertyDefinitions.Any())
                     return returnList;
@@ -630,12 +690,76 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 resourceName = ethosResourceRouteInfo.ExtendedSchemaResourceId.ToLowerInvariant();
             }
 
-
             if (configurationRepository != null)
             {
+                Dictionary<string, Dictionary<string, string>> allColumnData = null;
+                if (EthosExtendedDataDictionary != null && EthosExtendedDataDictionary.Any())
+                {
+                    allColumnData = new Dictionary<string, Dictionary<string, string>>
+                    {
+                        { resourceIds.FirstOrDefault(), EthosExtendedDataDictionary }
+                    };
+                }
+
                 var extendDataFromRepo = await configurationRepository.GetExtendedEthosDataByResource(resourceName,
                     ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId,
-                    resourceIds, ReportEthosApiErrors, bypassCache, useRecordKey);
+                    resourceIds, allColumnData, ReportEthosApiErrors, bypassCache, useRecordKey, ethosResourceRouteInfo.ReturnRestrictedFields);
+
+                // If the extended data CTX has restricted or denied fields, pass this back to the controller.
+                // Only get the list for GET and not when PUT or POST has already set this property.
+                if (allColumnData == null || !allColumnData.Any())
+                {
+                    SecureDataDefinition = configurationRepository.GetSecureDataDefinition();
+                }
+
+                // Check for self-service style security for access to "my" records only and filter out any
+                // responses that don't don't belong to "me".
+                List<Domain.Base.Entities.EthosExtensibleData> newExtendDataFromRepo = new List<Domain.Base.Entities.EthosExtensibleData>();
+                foreach (var dataItem in extendDataFromRepo)
+                {
+                    if (!string.IsNullOrEmpty(dataItem.CurrentUserIdPath))
+                    {
+                        var matchingData = extendDataFromRepo.Select(ed => ed.ExtendedDataList.Where(edl => edl.FullJsonPath.Equals(dataItem.CurrentUserIdPath, StringComparison.OrdinalIgnoreCase)).FirstOrDefault()).FirstOrDefault();
+                        if (matchingData != null)
+                        {
+                            bool matchFound = false;
+                            var matchingValue = matchingData.ExtendedDataValue.Split(_VM);
+                            foreach (var matchValue in matchingValue)
+                            {
+                                if (matchValue.Equals(CurrentUser.PersonId, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    matchFound = true;
+                                }
+                            }
+                            if (matchFound)
+                            {
+                                newExtendDataFromRepo.Add(dataItem);
+                            }
+                        }
+                        else
+                        {
+                            if (dataItem.CurrentUserIdPath.Equals("/id", StringComparison.OrdinalIgnoreCase) || dataItem.CurrentUserIdPath.Equals("/_id", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var primaryKey = dataItem.ResourceId.Replace("-", "%").ToUpper();
+                                var matchingValue = Uri.UnescapeDataString(primaryKey);
+                                if (matchingValue.Contains("+"))
+                                {
+                                    var idSplit = matchingValue.Split('+');
+                                    matchingValue = idSplit[1];
+                                }
+                                if (matchingValue.Equals(CurrentUser.PersonId, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    newExtendDataFromRepo.Add(dataItem);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        newExtendDataFromRepo.Add(dataItem);
+                    }
+                }
+                extendDataFromRepo = newExtendDataFromRepo;
 
                 return ConvertExtendedDataFromDomainToPlatform(extendDataFromRepo);
             }
@@ -651,9 +775,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="resourceName"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false)
+        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false, string requestedVersion = "")
         {
-            return await configurationRepository.GetEthosExtensibilityResourceDefaultVersion(resourceName, bypassCache);
+            return await configurationRepository.GetEthosExtensibilityResourceDefaultVersion(resourceName, bypassCache, requestedVersion);
         }
 
         /// <summary>
@@ -683,6 +807,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return null;
                 }
 
+                extendDataFromRepo.CurrentUserId = CurrentUser.PersonId;
                 var extendedConfigList = ConvertExtendedDataFromDomainToPlatform(new List<Domain.Base.Entities.EthosExtensibleData> { extendDataFromRepo });
 
                 return extendedConfigList.Any() ? extendedConfigList.First() : null;
@@ -731,11 +856,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <returns>List with all of the extended configurations if available. Returns an null if none available, or none configured</returns>
-        public async Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false)
+        public async Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false, bool customOnly = true)
         {
             if (configurationRepository != null)
             {
-                return (await configurationRepository.GetEthosExtensibilityConfigurationEntities(true, bypassCache)).ToList();
+                return (await configurationRepository.GetEthosExtensibilityConfigurationEntities(customOnly, bypassCache)).ToList();
 
             }
             else
@@ -752,7 +877,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
 
-        private static IList<EthosExtensibleData> ConvertExtendedDataFromDomainToPlatform(IEnumerable<Domain.Base.Entities.EthosExtensibleData> domainExtensibleData)
+        public IList<EthosExtensibleData> ConvertExtendedDataFromDomainToPlatform(IEnumerable<Domain.Base.Entities.EthosExtensibleData> domainExtensibleData)
         {
 
             var platformExtensibleDatas = new List<EthosExtensibleData>();
@@ -763,9 +888,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     ApiResourceName = extDataItem.ApiResourceName,
                     ApiVersionNumber = extDataItem.ApiVersionNumber,
+                    VersionReleaseStatus = extDataItem.VersionReleaseStatus,
+                    ApiType = extDataItem.ApiType,
                     ExtendedSchemaType = extDataItem.ExtendedSchemaType,
                     ResourceId = extDataItem.ResourceId,
                     ColleagueTimeZone = extDataItem.ColleagueTimeZone,
+                    CurrentUserIdPath = extDataItem.CurrentUserIdPath,
+                    CurrentUserId = extDataItem.CurrentUserId,
+                    ColleagueFileNames = extDataItem.ColleagueFileNames,
+                    ColleagueKeyNames = extDataItem.ColleagueKeyNames,
                     ExtendedDataList = new List<EthosExtensibleDataRow>(),
                     ExtendedDataFilterList = new List<EthosExtensibleDataFilter>()
                 };
@@ -776,14 +907,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     {
                         ColleagueColumnName = dataRow.ColleagueColumnName,
                         ColleagueFileName = dataRow.ColleagueFileName,
+                        ColleaguePropertyPosition = dataRow.ColleaguePropertyPosition,
+                        Required = dataRow.Required,
                         ColleaguePropertyLength = dataRow.ColleaguePropertyLength,
                         FullJsonPath = dataRow.FullJsonPath,
                         JsonPath = dataRow.JsonPath,
                         JsonTitle = dataRow.JsonTitle,
                         ExtendedDataValue = dataRow.ExtendedDataValue,
-                        AssociationController = dataRow.associationController,
-                        UsageType = dataRow.databaseUsageType,
-                        TransType = dataRow.transType
+                        AssociationController = dataRow.AssociationController,
+                        UsageType = dataRow.DatabaseUsageType,
+                        TransType = dataRow.TransType
+                        
                     };
 
                     switch (dataRow.JsonPropertyType.ToLower())
@@ -819,6 +953,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         DatabaseUsageType = filterRow.DatabaseUsageType,
                         ColleagueFileName = filterRow.ColleagueFileName,
                         ColleaguePropertyLength = filterRow.ColleaguePropertyLength,
+                        ColleaguePropertyPosition = filterRow.ColleagueFieldPosition,
+                        Required = filterRow.Required,
                         FullJsonPath = filterRow.FullJsonPath,
                         JsonPath = filterRow.JsonPath,
                         JsonTitle = filterRow.JsonTitle,
@@ -838,7 +974,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         FilterOper = filterRow.FilterOper,
                         ValidFilterOpers = filterRow.ValidFilterOpers,
                         SelectRules = filterRow.SelectRules,
-                        QueryName = filterRow.NamedQuery ? filterRow.JsonTitle : "criteria"
+                        QueryName = filterRow.NamedQuery && !filterRow.KeyQuery ? filterRow.JsonTitle : "criteria",
+                        KeyQuery = filterRow.KeyQuery
                     };
 
                     switch (filterRow.JsonPropertyType.ToLower())
@@ -942,6 +1079,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     ResourceName = extDataItem.ResourceName,
                     ApiType = extDataItem.ApiType,
                     ProcessId = extDataItem.ProcessId,
+                    ColleagueFileNames = extDataItem.ColleagueFileNames,
+                    ColleagueKeyNames = extDataItem.ColleagueKeyNames,
                     ParentResourceName = extDataItem.ParentResourceName,
                     PrimaryEntity = extDataItem.PrimaryEntity,
                     PrimaryApplication = extDataItem.PrimaryApplication,
@@ -962,11 +1101,21 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     SelectParagraph = extDataItem.SelectParagraph,
                     HttpMethods = new List<EthosApiSupportedMethods>(),
                     SelectionCriteria = new List<EthosApiSelectCriteria>(),
-                    SortColumns = new List<EthosApiSortCriteria>()
+                    SortColumns = new List<EthosApiSortCriteria>(),
+                    CurrentUserIdPath = extDataItem.CurrentUserIdPath,
+                    CurrentUserId = extDataItem.CurrentUserId,
+                    Description = extDataItem.Description,
+                    ProcessDesc = extDataItem.ProcessDesc,
+                    ApiDomain = extDataItem.ApiDomain,
+                    ReleaseStatus = extDataItem.ReleaseStatus
                 };
                 foreach (var method in extDataItem.HttpMethods)
                 {
-                    newEthosDataItem.HttpMethods.Add(new EthosApiSupportedMethods(method.Method, method.Permission));
+                    newEthosDataItem.HttpMethods.Add(new EthosApiSupportedMethods(method.Method, method.Permission, method.Description, method.Summary));
+                }
+                foreach (var response in extDataItem.PreparedResponses)
+                {
+                    newEthosDataItem.PreparedResponses.Add(new EthosApiPreparedResponse(response.Text, response.JsonTitle, response.Options, response.DefaultOption));
                 }
                 foreach (var select in extDataItem.SelectionCriteria)
                 {
@@ -1007,6 +1156,36 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 Id = !string.IsNullOrEmpty(id) ? id : null,
                 StatusCode = httpStatusCode
             };
+        }
+
+        /// <summary>
+        /// Checks whether the user has the departmental oversight permission to access section information.
+        /// </summary>
+        /// <param name="section">Section information</param>
+        /// <param name="departments">Departments information</param>
+        /// <returns></returns>
+        protected bool CheckDepartmentalOversightAccessForSection(Domain.Student.Entities.Section section, IEnumerable<Domain.Base.Entities.Department> departments)
+        {
+            if (section == null)
+            {
+                throw new ArgumentNullException("section", "Must provide a section to check departmental oversight permission.");
+            }
+            if (departments == null)
+            {
+                throw new ArgumentNullException("departments", "Must provide departments to check departmental oversight permission.");
+            }
+
+            // Filter the assigned departments for the requestor
+            var assignedDepartments = departments.Where(d => d.DepartmentalOversightIds != null && d.DepartmentalOversightIds.Contains(CurrentUser.PersonId)).Select(d => d.Code);
+            if (assignedDepartments != null && assignedDepartments.Any())
+            {
+                var offeringDepartments = section.Departments.Where(d => assignedDepartments.Any(dc => dc == d.AcademicDepartmentCode)).ToList();
+                if (offeringDepartments != null && offeringDepartments.Any())
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

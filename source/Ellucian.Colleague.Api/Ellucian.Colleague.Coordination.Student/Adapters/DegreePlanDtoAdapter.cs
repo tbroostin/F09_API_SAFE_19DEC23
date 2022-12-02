@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -124,9 +124,9 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                         {
                             approvals.Add(new Domain.Student.Entities.DegreePlans.DegreePlanApproval(approval.PersonId, ConvertStatus(approval.Status), approval.Date, approval.CourseId, approval.TermCode));
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // No action taken, approval simply skipped if an exception is generated
+                            logger.Error(ex, "Approval skipped.");
                         }
                     }
                 }

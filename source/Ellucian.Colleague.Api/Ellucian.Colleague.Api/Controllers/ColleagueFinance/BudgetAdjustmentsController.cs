@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -65,6 +66,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(cex.Message);
                 throw CreateHttpResponseException("Unable to get budget adjustment configuration.", HttpStatusCode.NotFound);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> PostAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
@@ -98,6 +104,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(cex.Message);
                 throw CreateHttpResponseException("Unable to get budget adjustment configuration.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> PutAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -142,6 +153,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(agex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> GetBudgetAdjustmentAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)
@@ -189,6 +205,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(agex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> GetBudgetAdjustmentPendingApprovalDetailAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -228,6 +249,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(naex.Message);
                 throw CreateHttpResponseException("The budget adjustment does not have a not approved status.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> PostBudgetAdjustmentApprovalAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -284,6 +310,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to get the budget adjustment pending approval summary.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> GetBudgetAdjustmentsPendingApprovalSummaryAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

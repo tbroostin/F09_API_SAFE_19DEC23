@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -107,5 +107,44 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             return;
         }
+        /// <summary>
+        /// Get all current phone numbers for a person
+        /// </summary>
+        /// <param name="personId">Person to get phone numbers for</param>
+        /// <accessComments>
+        /// Users can retrieve their own phone numbers or person's with permission VIEW.PERSON.INFORMATION can retrieve phone numbers for other users.
+        /// </accessComments>
+        /// <returns>PhoneNumber Object<see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
+        public async Task<Dtos.Base.PhoneNumber> GetPersonPhones2Async(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person Id is required to retrieve the person's phone numbers.");
+            }
+            await CheckGetPersonViewPermission(personId);
+
+            var phoneCollection = await _phoneNumberRepository.GetPersonPhonesAsync(personId);
+            // Get the right adapter for the type mapping
+            var phoneDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.PhoneNumber, Ellucian.Colleague.Dtos.Base.PhoneNumber>();
+            // Map the PhoneNumber entity to the Address DTO
+            return phoneDtoAdapter.MapToType(phoneCollection);
+        }
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view person information.
+        /// Only a user can retrieve its own phone number
+        /// Or a user with VIEW.PERSON.INFORMATION can retrieve phone numbers
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private async Task CheckGetPersonViewPermission(string personId)
+        {
+            IEnumerable<string> userPermissionList = await GetUserPermissionCodesAsync();
+            if (!userPermissionList.Contains(BasePermissionCodes.ViewPersonInformation) && CurrentUser.PersonId != personId)
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person information.");
+                throw new PermissionsException("User is not authorized to view person information.");
+            }
+        }
+
     }
 }

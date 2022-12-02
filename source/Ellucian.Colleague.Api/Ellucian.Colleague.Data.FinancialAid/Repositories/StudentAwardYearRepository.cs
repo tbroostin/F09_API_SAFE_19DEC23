@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2017 Ellucian Company L.P. and its affiliates
+﻿//Copyright 2014-2022 Ellucian Company L.P. and its affiliates
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +10,12 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -54,9 +56,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             {
                 throw new ArgumentNullException("currentOfficeService");
             }
-            
-            var studentAwardYearsData = await DataReader.ReadRecordAsync<FinAid>(studentId);
-
+            var studentAwardYearsData = new FinAid();
+            try
+            {
+                studentAwardYearsData = await DataReader.ReadRecordAsync<FinAid>(studentId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             if (studentAwardYearsData == null)
             {
                 throw new KeyNotFoundException(string.Format("Student Id {0} does not have a Financial Aid record", studentId));
@@ -101,7 +109,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             
             if (awardLetterHistoryRecords == null || !awardLetterHistoryRecords.Any())
             {
-                logger.Info(string.Format("Student Id {0} has no award letter history records", studentId));
+                logger.Debug(string.Format("Student Id {0} has no award letter history records", studentId));
             }
 
             var studentAwardYears = new List<StudentAwardYear>();
@@ -109,7 +117,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             //If no fa years on record
             if (!studentYearsList.Any())
             {
-                logger.Info(string.Format("Student Id {0} has no Financial Aid information available to review", studentId));
+                logger.Debug(string.Format("Student Id {0} has no Financial Aid information available to review", studentId));
                 return studentAwardYears;
             }
 
@@ -202,6 +210,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                         studentAwardYear.IsApplicationReviewed = (ysRecord != null) ? (ysRecord.YsApplCompleteDate.HasValue && ysRecord.YsApplCompleteDate.Value <= DateTime.Today) : false;
                     }
+
+                    var currConfiguration =  office.Configurations.FirstOrDefault(c => c.AwardYear == year);
+
+                    if (currConfiguration != null && !string.IsNullOrEmpty(currConfiguration.FaCreditsVisibilityRule))
+                    {
+                        logger.Error("Evaluating rule table {0} for office*year {1}*{2} for student {3}", currConfiguration.FaCreditsVisibilityRule, currConfiguration.OfficeId, year, studentId);
+                        studentAwardYear.AreFaCreditsVisible = GetStudentFinancialAidCreditsVisibility(currConfiguration.FaCreditsVisibilityRule, year, studentId);
+                    }
+                    else { studentAwardYear.AreFaCreditsVisible = false; }
 
                     studentAwardYears.Add(studentAwardYear);
                 }
@@ -297,7 +314,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 {
                     var message = string.Format("Unable to update Paper Copy Option for student {1}. Error message from CTX: ", studentAwardYear.StudentId, transactionResponse.ErrorMessage);
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
             }
 
@@ -320,8 +337,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             request.StudentId = studentAwardYear.StudentId;
             request.PaperCopyOptionFlag = studentAwardYear.IsPaperCopyOptionSelected;
 
-            var transactionResponse = await transactionInvoker.ExecuteAsync<UpdateCorrOptionFlagRequest, UpdateCorrOptionFlagResponse>(request);
-
+            var transactionResponse = new UpdateCorrOptionFlagResponse();
+            try
+            {
+                transactionResponse = await transactionInvoker.ExecuteAsync<UpdateCorrOptionFlagRequest, UpdateCorrOptionFlagResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             if (!string.IsNullOrEmpty(transactionResponse.ErrorMessage))
             {
                 if (transactionResponse.ErrorMessage.ToLower() == string.Format("conflict: fin.aid record for student {0} is locked by a process", studentAwardYear.StudentId))
@@ -334,11 +358,29 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 {
                     var message = string.Format("Unable to update Paper Copy Option for student {1}. Error message from CTX: ", studentAwardYear.StudentId, transactionResponse.ErrorMessage);
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
             }
 
             return studentAwardYear;
+        }
+
+        public bool GetStudentFinancialAidCreditsVisibility(string ruleTableId, string awardYear, string studentId)
+        {
+            GetFaCreditsVisibilityRequest visibilityRequest = new GetFaCreditsVisibilityRequest();
+            visibilityRequest.StudentId = studentId;
+            visibilityRequest.FaYear = awardYear;
+            visibilityRequest.RuleTableId = ruleTableId;
+
+            GetFaCreditsVisibilityResponse visibilityResponse = new GetFaCreditsVisibilityResponse();
+
+            visibilityResponse = transactionInvoker.Execute<GetFaCreditsVisibilityRequest, GetFaCreditsVisibilityResponse>(visibilityRequest);
+
+            if (visibilityResponse.OutputVisibility.ToUpper() == "Y")
+            {
+                return true;
+            }
+            else { return false; }
         }
     }
 }

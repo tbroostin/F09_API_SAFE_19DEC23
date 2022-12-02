@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,12 +6,15 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
-
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -26,6 +29,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly ISectionRepository sectionRepository;
         private readonly IStudentProgramRepository studentProgramRepository;
         private readonly IStudentReferenceDataRepository referenceDataRepository;
+        private readonly IReferenceDataRepository baseReferenceDataRepository;
         private readonly ICourseRepository courseRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
@@ -35,7 +39,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="adapterRegistry">Dto adapter registry</param>
         /// <param name="studentWaiverRepository">Waiver repository access</param>
         /// <param name="logger">error logging</param>
-        public StudentWaiverService(IAdapterRegistry adapterRegistry, IStudentWaiverRepository studentWaiverRepository, ISectionRepository sectionRepository, IStudentProgramRepository studentProgramRepository, IStudentReferenceDataRepository referenceDataRepository, ICourseRepository courseRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository configurationRepository)
+        public StudentWaiverService(IAdapterRegistry adapterRegistry, IStudentWaiverRepository studentWaiverRepository, ISectionRepository sectionRepository, IStudentProgramRepository studentProgramRepository, IStudentReferenceDataRepository referenceDataRepository, IReferenceDataRepository baseReferenceDataRepository, ICourseRepository courseRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository configurationRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _configurationRepository = configurationRepository;
@@ -43,6 +47,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             this.sectionRepository = sectionRepository;
             this.studentProgramRepository = studentProgramRepository;
             this.referenceDataRepository = referenceDataRepository;
+            this.baseReferenceDataRepository = baseReferenceDataRepository;
             this.courseRepository = courseRepository;
             this._studentRepository = studentRepository;
         }
@@ -59,13 +64,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Get the specified section from the repository
             Domain.Student.Entities.Section section = await GetSectionAsync(sectionId);
-
-            // Ensure that the current user is a faculty of the given section. 
-            if (!IsSectionFaculty(section))
+            if (section == null)
             {
-                var message = "Current user is not a faculty of requested section " + sectionId + " and therefore cannot access waivers";
-                logger.Error(message);
-                throw new PermissionsException(message);
+                throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
+            }
+
+            var allDepartments = await baseReferenceDataRepository.DepartmentsAsync();
+            var userPermissions = await GetUserPermissionCodesAsync();
+
+            // The current user must be a faculty member of the section or a departmental oversight member with the required permissions
+            if ((section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId)) &&
+                    !(CheckDepartmentalOversightAccessForSection(section, allDepartments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionPrerequisiteWaiver) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionPrerequisiteWaiver))))
+            {
+                throw new PermissionsException(string.Format("Authenticated user is neither a faculty nor a departmental oversight for requested section {0} and therefore cannot access waivers", section.Id));
             }
 
             // Finally, Get the waivers from the repository for this section and convert to dtos
@@ -84,11 +95,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read waivers from repository using section id " + sectionId + "Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             return waivers;
@@ -101,8 +116,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>The newly created <see cref="Dtos.Student.StudentWaiver">Waiver</see></returns>
         public async Task<Dtos.Student.StudentWaiver> CreateStudentWaiverAsync(Dtos.Student.StudentWaiver studentWaiver)
         {
+            var userPermissions = await GetUserPermissionCodesAsync();
             // Throw exception if user does not have correct permissions
-            if (!(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreatePrerequisiteWaiver))
+            if (!(userPermissions.Contains(StudentPermissionCodes.CreatePrerequisiteWaiver) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionPrerequisiteWaiver)))
             {
                 var message = "User does not have permissions required to create a Section Prerequisite Waiver.";
                 logger.Error(message);
@@ -135,8 +151,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!((await referenceDataRepository.GetStudentWaiverReasonsAsync()).Select(wr => wr.Code).Contains(waiverToAdd.ReasonCode)))
                     {
-                        throw new Exception("Waiver Reason is not valid.");
+                        throw new ColleagueWebApiException("Waiver Reason is not valid.");
                     }
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -145,7 +165,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-
             // Validate the requisite IDs
             try
             {
@@ -153,12 +172,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 Domain.Student.Entities.Course course = await courseRepository.GetAsync(waiverSection.CourseId);
                 waiverToAdd.ValidateRequisiteWaivers(waiverSection, course);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Error occurred during validation of Requisites for section ID (" + waiverToAdd.SectionId + ") specified in waiver. Message: " + ex.Message);
                 throw;
             }
 
+            // Now that we have retrieved it, see if waiver can be added by person requesting.
+            // Get the specified section from the repository
+            Domain.Student.Entities.Section section = await GetSectionAsync(studentWaiver.SectionId);
+            var allDepartments = await baseReferenceDataRepository.DepartmentsAsync();
+            // Ensure that the current user is a faculty of the given section or a departmental oversight member with the required permissions. 
+            if (!(IsSectionFaculty(section) && userPermissions.Contains(StudentPermissionCodes.CreatePrerequisiteWaiver))
+                && !(CheckDepartmentalOversightAccessForSection(section, allDepartments) && userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionPrerequisiteWaiver)))
+            {
+                var message = "Current user is neither a faculty nor a departmental oversight of requested section " + studentWaiver.SectionId + " with the required permissions and therefore cannot add waiver requested.";
+                logger.Info(message);
+                throw new PermissionsException(message);
+            }
             var newWaiver = await studentWaiverRepository.CreateSectionWaiverAsync(waiverToAdd);
 
             var waiverDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentWaiver, Dtos.Student.StudentWaiver>();
@@ -196,7 +231,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Exception occurred while trying to read waiver from repository using student waiver id " + studentWaiverId + " Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             // Faculty can see only waivers for their own section
@@ -209,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Section Id " + studentWaiver.SectionId + " specified in student waiver could not be verified.";
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             if (!IsSectionFaculty(section))
             {
@@ -260,7 +295,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Exception occurred while trying to read section from repository using id " + sectionId + "Exception message: " + ex.ToString();
                 logger.Error(message);
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -312,6 +347,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return waivers;
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read waivers from repository using student id " + studentId + "Exception message: " + ex.Message;

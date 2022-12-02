@@ -1,4 +1,4 @@
-﻿// Copyright 2015 - 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015 - 2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -202,6 +202,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Voucher status date
         /// </summary>
         public DateTime StatusDate { get; set; }
+
+        /// <summary>
+        /// The voucher requestor name
+        /// </summary>
+        public string RequestorName { get; set; }
 
         /// <summary>
         /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .

@@ -32,6 +32,16 @@ namespace Ellucian.Web.Http.EthosExtend
         public int? ColleaguePropertyLength { get; set; }
 
         /// <summary>
+        /// Position of the Colleague field within the file, primarily used for keys.
+        /// </summary>
+        public int? ColleaguePropertyPosition { get; set; }
+
+        /// <summary>
+        /// Indicates whether this field is required 
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
         /// Title of the extended property in the Ethos json schema
         /// </summary>
         public string JsonTitle { get; set; }
@@ -150,6 +160,11 @@ namespace Ellucian.Web.Http.EthosExtend
         /// Contains the named query name or "criteria" for validation in controller of the query string request
         /// </summary>
         public string QueryName { get; set; }
+
+        /// <summary>
+        /// Key Query flag
+        /// </summary>
+        public bool KeyQuery { get; set; }
     }
 
     /// <summary>

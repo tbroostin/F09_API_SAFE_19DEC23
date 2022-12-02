@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
         {
             AddMappingDependency<Domain.Base.Entities.EthnicOrigin, Dtos.Base.EthnicOrigin>();
             AddMappingDependency<Domain.Base.Entities.MaritalState, Dtos.Base.MaritalState>();
+            AddMappingDependency<Domain.Base.Entities.PersonHierarchyName, Dtos.Base.PersonHierarchyName>();
         }
     }
 }

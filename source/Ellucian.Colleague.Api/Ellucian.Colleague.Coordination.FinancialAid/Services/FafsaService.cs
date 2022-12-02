@@ -149,14 +149,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years", studentId));
+                logger.Debug(string.Format("Student {0} has no award years", studentId));
                 return new List<Fafsa>();
             }
 
             var fafsaEntities = await fafsaRepository.GetFafsasAsync(new List<string>() { studentId }, studentAwardYears.Select(y => y.Code));
             if (fafsaEntities == null || fafsaEntities.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no fafsas", studentId));
+                logger.Debug(string.Format("Student {0} has no fafsas", studentId));
                 return new List<Fafsa>();
             }
 

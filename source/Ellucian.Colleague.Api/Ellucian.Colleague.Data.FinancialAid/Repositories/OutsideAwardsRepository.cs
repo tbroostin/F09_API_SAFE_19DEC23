@@ -1,4 +1,4 @@
-﻿/*Copyright 2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Data.Colleague;
 using slf4net;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -62,7 +63,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             if (string.IsNullOrEmpty(response.OutOutsideAwardId))
             {
-                throw new Exception("Unknown error occurred while trying to create a new outside award record");
+                throw new ColleagueWebApiException("Unknown error occurred while trying to create a new outside award record");
             }
 
             return await GetOutsideAwardAsync(response.OutOutsideAwardId);

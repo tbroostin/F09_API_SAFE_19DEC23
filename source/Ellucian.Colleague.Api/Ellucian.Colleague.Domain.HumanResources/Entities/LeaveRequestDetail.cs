@@ -44,6 +44,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public bool ProcessedInPayPeriod { get { return processedInPayPeriod; } }
         private readonly bool processedInPayPeriod;
+
+        /// <summary>
+        /// Leave request detail change operator
+        /// </summary>
+        public string LeaveRequestDetailChgopr { get { return leaveRequestDetailChgopr; } }
+        private readonly string leaveRequestDetailChgopr;
+
         #endregion
 
         #region Constructor
@@ -54,11 +61,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="leaveRequestId"></param>
         /// <param name="leaveDate"></param>
         /// <param name="leaveHours"></param>
+        /// <param name="leaveRequestDetailChgopr"></param>
         public LeaveRequestDetail(string id,
             string leaveRequestId,
             DateTime leaveDate,
             decimal? leaveHours,
-            bool processedInPayPeriod)
+            bool processedInPayPeriod,
+            string leaveRequestDetailChgopr = null)
         {
             if (leaveDate == null || leaveDate == DateTime.MinValue)
             {
@@ -69,6 +78,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             this.leaveDate = leaveDate;
             this.leaveHours = leaveHours;
             this.processedInPayPeriod = processedInPayPeriod;
+            this.leaveRequestDetailChgopr = leaveRequestDetailChgopr;
         }
         #endregion
 

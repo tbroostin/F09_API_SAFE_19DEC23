@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -23,5 +23,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="criteria">Selection Criteria including PersonIds list.</param>
         /// <returns>List of Phone Number Objects <see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
         Task<IEnumerable<Ellucian.Colleague.Dtos.Base.PilotPhoneNumber>> QueryPilotPhoneNumbersAsync(PhoneNumberQueryCriteria criteria);
+        /// <summary>
+        /// Get all current phone numbers for a person
+        /// </summary>
+        /// <param name="personId">Person to get phone numbers for</param>
+        /// <returns>PhoneNumber Object<see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
+        Task<Dtos.Base.PhoneNumber> GetPersonPhones2Async(string personId);
     }
 }

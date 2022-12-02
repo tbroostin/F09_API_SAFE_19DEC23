@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 // base admin namespace
 (function (admin, $, undefined) {
 }(window.admin = window.admin || {}, jQuery));
@@ -192,7 +192,8 @@
                         }
                         alert(message);
                     }
-                }
+                },
+                complete: function () { }
             });
         }
 
@@ -244,7 +245,8 @@
                             }
                             alert(message);
                         }
-                    }
+                    },
+                    complete: function () { }
                 });
             }
         }

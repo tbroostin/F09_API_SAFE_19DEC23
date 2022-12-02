@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using System.Web.Http;
@@ -23,7 +23,7 @@ using System.Collections;
 using Ellucian.Colleague.Dtos.HumanResources;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
-
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -38,6 +38,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly IEmployeeLeaveRequestService _employeeLeaveRequestService;
         private readonly ILogger _logger;
 
+        private const string existingResourceErrorMessage = "Cannot create resource that already exists.";
+        private const string recordLockErrorMessage = "The record you tried to access was locked.";
+        private const string invalidPermissionsErrorMessage = "The current user does not have the permissions to perform the requested operation.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
         private static readonly string noLeaveRequestIdErrorMessage = "leaveRequestId is required in the request";
         private static readonly string noPositionIdErrorMessage = "positionId is required in the request";
         private static readonly string unexpectedErrorMessage = "Unexpected error occurred while getting leave request details";
@@ -77,19 +82,27 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
+                _logger.Debug("************Start- Process to get Leave Request for a speciifc/logged in user - "+ effectivePersonId + " - Start************");
                 var leaveRequests = await _employeeLeaveRequestService.GetLeaveRequestsAsync(effectivePersonId);
+                _logger.Debug("************End- Process to get Leave Requests for a speciifc/logged in user- " + effectivePersonId + " End************");
 
                 return leaveRequests;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
 
         }
@@ -105,7 +118,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
         /// <returns>LeaveRequest DTO</returns>
         [HttpGet]
-        public async Task<LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync([FromUri]string id, [FromUri]string effectivePersonId = null)
+        public async Task<LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync([FromUri] string id, [FromUri] string effectivePersonId = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -114,13 +127,23 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await _employeeLeaveRequestService.GetLeaveRequestInfoByLeaveRequestIdAsync(id, effectivePersonId);
+                _logger.Debug("************Start- Process to get Leave Requests for a specific leave request Id - Start************");
+                var employeeleaverequests = await _employeeLeaveRequestService.GetLeaveRequestInfoByLeaveRequestIdAsync(id, effectivePersonId);
+                _logger.Debug("************End- Process to get Leave Requests for a specific leave request Id - End************");
+
+                return employeeleaverequests;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 var message = string.Format(pe.Message);
                 _logger.Error(pe, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -145,7 +168,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await _employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, effectivePersonId);
+                _logger.Debug("************Start- Process to get Leave Requests for time entry - Start************");
+                var leaverequests = await _employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, effectivePersonId);
+                _logger.Debug("************End- Process to get Leave Requests for time entry - End************");
+
+                return leaverequests;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {
@@ -173,13 +205,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <accessComments>
         /// Any authenticated user can create their own leave request     
+        /// Supervisor can create leave requests on behalf of their supervisees
         /// The endpoint will reject the creation of a Leave Request if Employee does not have the correct permission.
         /// </accessComments>
         /// <param name="leaveRequest">Leave Request DTO</param>
         /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
         /// <returns>Newly created Leave Request Object</returns>
         [HttpPost]
-        public async Task<HttpResponseMessage> CreateLeaveRequestAsync([FromBody]LeaveRequest leaveRequest, [FromUri] string effectivePersonId = null)
+        public async Task<HttpResponseMessage> CreateLeaveRequestAsync([FromBody] LeaveRequest leaveRequest, [FromUri] string effectivePersonId = null)
         {
             if (leaveRequest == null)
             {
@@ -187,16 +220,24 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _logger.Debug("************Start - Process to create Leave Request -- Start ************");
                 var newLeaveRequest = await _employeeLeaveRequestService.CreateLeaveRequestAsync(leaveRequest, effectivePersonId);
                 var response = Request.CreateResponse<LeaveRequest>(HttpStatusCode.Created, newLeaveRequest);
                 SetResourceLocationHeader(getLeaveRequestRouteId, new { id = newLeaveRequest.Id });
+                _logger.Debug("************End - Process to create Leave Request -- End ************");
                 return response;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 var message = string.Format(pe.Message);
                 _logger.Error(pe, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (ExistingResourceException ere)
             {
@@ -210,7 +251,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -225,7 +266,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="effectivePersonId">Optional parameter - Current user or proxy user person id.</param>
         /// <returns>Newly created Leave Request Status</returns>
         [HttpPost]
-        public async Task<LeaveRequestStatus> CreateLeaveRequestStatusAsync([FromBody]LeaveRequestStatus status, [FromUri] string effectivePersonId = null)
+        public async Task<LeaveRequestStatus> CreateLeaveRequestStatusAsync([FromBody] LeaveRequestStatus status, [FromUri] string effectivePersonId = null)
         {
             if (status == null)
             {
@@ -234,18 +275,26 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _logger.Debug("************Start - Process to create Leave Request Status -- Start ************");
                 var response = await _employeeLeaveRequestService.CreateLeaveRequestStatusAsync(status, effectivePersonId);
+                _logger.Debug("************End - Process to create Leave Request Status -- End ************");
                 return response;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -260,7 +309,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="effectivePersonId">Optional parameter for passing effective person Id.</param>
         /// <returns>List of HumanResourceDemographics DTOs</returns>
         [HttpPost]
-        public async Task<IEnumerable<HumanResourceDemographics>> GetSupervisorsByPositionIdAsync([FromBody]string id, [FromUri]string effectivePersonId = null)
+        public async Task<IEnumerable<HumanResourceDemographics>> GetSupervisorsByPositionIdAsync([FromBody] string id, [FromUri] string effectivePersonId = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -269,12 +318,21 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await _employeeLeaveRequestService.GetSupervisorsByPositionIdAsync(id, effectivePersonId);
+                _logger.Debug("************Start - Process to fetch Supervisors by position Id-- Start ************");
+                var supervisors = await _employeeLeaveRequestService.GetSupervisorsByPositionIdAsync(id, effectivePersonId);
+                _logger.Debug("************End - Process to fetch Supervisors by position Id-- End ************");
+                return supervisors;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -302,12 +360,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await _employeeLeaveRequestService.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
+                _logger.Debug("************Start - Process to fetch supervisee primary position -- Start ************");
+                var supervisees = await _employeeLeaveRequestService.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
+                _logger.Debug("************End - Process to fetch supervisee primary position -- End ************");
+                return supervisees;
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -315,12 +381,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(supervisorsUnexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
         }
-       
+
         /// <summary>
         /// This endpoint will update an existing Leave Request along with its Leave Request Details. 
         /// </summary>
         /// <accessComments>
-        /// Any authenticated user can update their own leave request.     
+        /// Any authenticated user can update their own leave request.    
+        /// Supervisor can update leave requests created by their supervisees 
         /// The endpoint will reject the update of a Leave Request if the employee does not have a valid permission.
         /// </accessComments>       
         /// <param name="leaveRequest"><see cref="LeaveRequest">Leave Request DTO</see></param>
@@ -331,7 +398,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound returned if the leave request record to be edited doesn't exist in the DB.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if the leave request record to be edited is locked or if a duplicate leave request record already exists in the DB.</exception>
         [HttpPut]
-        public async Task<LeaveRequest> UpdateLeaveRequestAsync([FromBody]LeaveRequest leaveRequest, [FromUri] string effectivePersonId = null)
+        public async Task<LeaveRequest> UpdateLeaveRequestAsync([FromBody] LeaveRequest leaveRequest, [FromUri] string effectivePersonId = null)
         {
             try
             {
@@ -339,14 +406,22 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     throw CreateHttpResponseException(noLeaveRequestObjectErrorMessage);
                 }
+                _logger.Debug("************Start - Process to update leave request -- Start ************");
                 var updatedLeaveRequest = await _employeeLeaveRequestService.UpdateLeaveRequestAsync(leaveRequest, effectivePersonId);
+                _logger.Debug("************End - Process to update leave request -- End ************");
                 return updatedLeaveRequest;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 var message = string.Format(pe.Message);
                 _logger.Error(pe, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException cnfe)
             {
@@ -356,21 +431,21 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (RecordLockException rle)
             {
                 _logger.Error(rle, rle.Message);
-                throw CreateHttpResponseException(rle.Message, HttpStatusCode.Conflict);
+                throw CreateHttpResponseException(recordLockErrorMessage, HttpStatusCode.Conflict);
             }
             catch (ExistingResourceException ere)
             {
                 _logger.Error(ere, ere.Message);
                 SetResourceLocationHeader(getLeaveRequestRouteId, new { id = ere.ExistingResourceId });
                 var exception = new WebApiException();
-                exception.Message = ere.Message;
-                exception.AddConflict(ere.ExistingResourceId);
+                exception.Message = existingResourceErrorMessage;
+                exception.AddConflict("ExistingResource");
                 throw CreateHttpResponseException(exception, HttpStatusCode.Conflict);
             }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -395,18 +470,27 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await _employeeLeaveRequestService.CreateLeaveRequestCommentsAsync(leaveRequestComment, effectivePersonId);
+                _logger.Debug("************Start - Process to create leave request comment -- Start ************");
+                var leaverequestcomment = await _employeeLeaveRequestService.CreateLeaveRequestCommentsAsync(leaveRequestComment, effectivePersonId);
+                _logger.Debug("************End - Process to create leave request comment -- End ************");
+                return leaverequestcomment;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 var message = pe.Message;
                 _logger.Error(pe, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
 
 

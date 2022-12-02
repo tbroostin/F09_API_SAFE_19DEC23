@@ -1,8 +1,5 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Entities
 {
@@ -21,7 +18,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// The item type
         /// </summary>
-        public ChecklistItemType ChecklistItemType;
+        public ChecklistItemType ChecklistItemType { get; set; }
 
         /// <summary>
         /// The sorting order

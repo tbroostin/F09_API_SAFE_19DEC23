@@ -439,21 +439,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #region EXCEPTIONS
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequests_PostMealPlanRequestsAsync_ArgumentNullException()
             {
                 var actualResult = await mealPlanRequestsService.PostMealPlanRequestsAsync(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequests_PostMealPlanRequestsAsync_ArgumentNullException_When_Id_Is_Null()
             {
                 var actualResult = await mealPlanRequestsService.PostMealPlanRequestsAsync(new MealPlanRequests() { Id = null });
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_PermissionsException()
             {
                 var actualResult = await mealPlanRequestsService.PostMealPlanRequestsAsync(new MealPlanRequests() { Id = Guid.NewGuid().ToString() });
@@ -461,7 +461,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Person_Null()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -473,7 +473,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Person_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -484,7 +484,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlan_Null()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -501,7 +501,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
              * Modified code to check empty list " File: MealPlanRequestsService.cs, Line: 362
              **/
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlans_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -513,7 +513,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlan_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -531,7 +531,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             * Modified code to check empty list " File: MealPlanRequestsService.cs, Line: 402
             **/
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_AcademicPeriods_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -547,7 +547,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_AcademicPeriod_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -565,7 +565,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Status_NotSet()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -604,7 +604,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
              * This test is not working because of academic periods cache.
              **/
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_AcademicPeriods_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -624,7 +624,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_AcademicPeriod_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -645,7 +645,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_MealPlan_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -663,7 +663,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PostMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_Person_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -812,28 +812,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #region EXCEPTIONS
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequests_PutMealPlanRequestsAsync_ArgumentNullException()
             {
                 var actualResult = await mealPlanRequestsService.PutMealPlanRequestsAsync(It.IsAny<string>(), null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequests_PutMealPlanRequestsAsync_ArgumentNullException_When_Id_Is_Null()
             {
                 var actualResult = await mealPlanRequestsService.PutMealPlanRequestsAsync(It.IsAny<string>(), new MealPlanRequests() { Id = null });
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_PermissionsException()
             {
                 var actualResult = await mealPlanRequestsService.PutMealPlanRequestsAsync(It.IsAny<string>(), new MealPlanRequests() { Id = Guid.NewGuid().ToString() });
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Person_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -844,7 +844,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Person_Null()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -856,7 +856,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlan_Null()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -869,7 +869,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlans_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -881,7 +881,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_MeanPlan_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -895,7 +895,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_AcademicPeriods_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -911,7 +911,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_AcademicPeriod_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -929,7 +929,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Dto_Domain_Exception_When_Status_NotSet()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -965,7 +965,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_AcademicPeriods_Empty()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -985,7 +985,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_AcademicPeriod_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -1006,7 +1006,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_MealPlan_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));
@@ -1024,7 +1024,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task MealPlanRequestsService_PutMealPlanRequestsAsync_Convert_Domain_Dto_Exception_When_Person_NotFound()
             {
                 createMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateMealPlanRequest));

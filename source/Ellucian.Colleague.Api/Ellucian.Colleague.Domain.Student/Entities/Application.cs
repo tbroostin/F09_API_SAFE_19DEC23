@@ -12,11 +12,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class Application
     {
-        public string ErpProspectId;
-        public string CrmApplicationId;
-        public string ApplicationStatus;
-        public string RecruiterOrganizationName;
-        public string RecruiterOrganizationId;
+        public string ErpProspectId { get; set; }
+        public string CrmApplicationId { get; set; }
+        public string ApplicationStatus { get; set; }
+        public string RecruiterOrganizationName { get; set; }
+        public string RecruiterOrganizationId { get; set; }
         public string CrmProspectId { get; set; }
         public string Ssn { get; set; }
         public string Sin { get; set; }

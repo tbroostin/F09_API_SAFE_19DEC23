@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -50,6 +50,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
                 Assert.AreEqual(false, data.QuickRegistrationIsEnabled);
                 Assert.AreEqual(0, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
             }
 
             [TestMethod]
@@ -66,6 +68,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
                 Assert.AreEqual(false, data.QuickRegistrationIsEnabled);
                 Assert.AreEqual(0, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
             }
 
             [TestMethod]
@@ -81,6 +85,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
                 Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
                 Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
             }
         }
 

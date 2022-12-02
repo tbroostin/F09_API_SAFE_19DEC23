@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -450,6 +450,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         studentAnonymousGradingIds.Add(new Dtos.Student.StudentAnonymousGrading()
                         {
                             AnonymousGradingId = string.Empty,
+                            MidTermGradingId=string.Empty,
                             SectionId = sectionId,
                             TermId = string.Empty,
                             Message = "Course section " + sectionId + " is not a valid course section."
@@ -463,6 +464,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         studentAnonymousGradingIds.Add(new Dtos.Student.StudentAnonymousGrading()
                         {
                             AnonymousGradingId = string.Empty,
+                            MidTermGradingId=string.Empty,
                             SectionId = sectionId,
                             TermId = string.Empty,
                             Message = "Course section " + sectionId + " is not configured for anonymous grading."

@@ -19,6 +19,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
@@ -3652,6 +3653,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorsByPostAsync_ColleagueSessionExpiredException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).Throws(new ColleagueSessionExpiredException("session expired"));
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorsByPostAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorsController_QueryVendorsByPostAsync_KeyNotFoundException()
         {
             _vendorsServiceMock.Setup(s => s.QueryVendorsByPostAsync(criteriaDto)).Throws(new KeyNotFoundException());
@@ -3815,6 +3829,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_QueryVendorForVoucherAsync_ColleagueSessionExpiredException()
+        {
+            _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).Throws(new ColleagueSessionExpiredException("session expired"));
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.QueryVendorForVoucherAsync(criteriaDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorsController_QueryVendorForVoucherAsync_KeyNotFoundException()
         {
             _vendorsServiceMock.Setup(s => s.QueryVendorForVoucherAsync(criteriaDto)).Throws(new KeyNotFoundException());
@@ -3904,7 +3931,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_NullCriteria()
         {
             var actualDto = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(null, null);
-            Assert.IsNull(actualDto);
         }
 
         [TestMethod]
@@ -3918,13 +3944,39 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_ArgumentNullException()
         {
-            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(null, null)).Throws(new ArgumentNullException());
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new ArgumentNullException());
             _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
             {
                 Request = new HttpRequestMessage()
             };
 
-            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(null, null);
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync("arg1", "arg2");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_PermissionsException()
+        {
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new PermissionsException());
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorDefaultTaxFormInfoAsync_ColleagueSessionExpiredException()
+        {
+            _vendorsServiceMock.Setup(s => s.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new ColleagueSessionExpiredException("session expired"));
+            _vendorsController = new VendorsController(_vendorsServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vendorsController.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
         }
 
         [TestMethod]

@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
@@ -14,7 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -43,10 +44,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private Mock<IRoleRepository> roleRepoMock;
         private IRoleRepository roleRepo;
         private ICurrentUserFactory currentUserFactoryFake;
+        private ICurrentUserFactory currentUserFactoryForAdmin;
         private Mock<IProfileRepository> profileRepoMock;
         private IProfileRepository profileRepo;
         private Mock<IPersonProxyUserRepository> personProxyUserRepoMock;
         private IPersonProxyUserRepository personProxyUserRepo;
+
+        public Domain.Entities.Role proxyAdminRole;
+        public Domain.Entities.Permission addAllEmployeeProxyPermission;
 
         [TestInitialize]
         public void Initialize()
@@ -97,6 +102,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             roleRepoMock = new Mock<IRoleRepository>();
             roleRepo = roleRepoMock.Object;
             currentUserFactoryFake = new Person001UserFactory();
+            currentUserFactoryForAdmin = new Person002UserFactory();
             profileRepoMock = new Mock<IProfileRepository>();
             profileRepo = profileRepoMock.Object;
             personProxyUserRepoMock = new Mock<IPersonProxyUserRepository>();
@@ -209,6 +215,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Mock the adapter registry to use the automappers between the EmergencyInformation domain entity and dto. 
             var emptyAdapterRegistryMock = new Mock<IAdapterRegistry>();
 
+            // permissions mock
+            proxyAdminRole = new Domain.Entities.Role(20, "EMPLOYEE PROXY ADMIN");
+            addAllEmployeeProxyPermission = new Ellucian.Colleague.Domain.Entities.Permission(BasePermissionCodes.AddAllEmployeeProxy);
+            proxyAdminRole.AddPermission(addAllEmployeeProxyPermission);
+            roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { proxyAdminRole });
+
             // Instantiate the service
             // Set up current user
             currentUserFactory = currentUserFactoryFake;
@@ -268,7 +280,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task ProxyService_GetUserProxyPermissionsAsync_NoPermission()
             {
-                var users = await proxyService.GetUserProxyPermissionsAsync("1234567");
+              var users = await proxyService.GetUserProxyPermissionsAsync("1234567");
+            }
+
+            [TestMethod]
+            public async Task ProxyService_GetUserProxyPermissionsAsync_EmployeeProxyAdminTest()
+            {                
+                proxyService = new ProxyService(proxyRepo, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactoryForAdmin, roleRepo, logger);
+                var users = await proxyService.GetUserProxyPermissionsAsync(currentUserFactory.CurrentUser.PersonId);
+                Assert.AreEqual(userEntities.Count, users.Count());
             }
 
             [TestMethod]
@@ -368,7 +388,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             [TestMethod]
             public async Task ProxyService_GetUserProxyCandidatesAsync_Valid()
+            {               
+                var candidates = await proxyService.GetUserProxyCandidatesAsync(currentUserFactory.CurrentUser.PersonId);
+                Assert.AreEqual(fakeProxyCandidates.Count, candidates.Count());
+            }
+
+            [TestMethod]
+            public async Task ProxyService_GetUserProxyCandidatesAsync_EmployeeProxyAdminTest()
             {
+                proxyService = new ProxyService(proxyRepo, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactoryForAdmin, roleRepo, logger);
                 var candidates = await proxyService.GetUserProxyCandidatesAsync(currentUserFactory.CurrentUser.PersonId);
                 Assert.AreEqual(fakeProxyCandidates.Count, candidates.Count());
             }
@@ -437,7 +465,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ProxyService_PostPersonProxyUserAsync_NoConfiguration_ThrowsException()
             {
 
@@ -458,7 +486,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ProxyService_PostPersonProxyUserAsync_AddUserConfigurationDisabled_ThrowsException()
             {
 
@@ -519,6 +547,30 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
         }
 
+        /// <summary>
+        /// ICurrentUserFactory implementation for employee proxy admins
+        /// </summary>
+        public class Person002UserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {                       
+                        ControlId = "125",
+                        Name = "John",
+                        PersonId = "0001200",
+                        SecurityToken = "320",
+                        SessionTimeout = 30,
+                        UserName = "Admin",
+                        Roles = new List<string>() { "EMPLOYEE PROXY ADMIN" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
         [TestClass]
         public class ProxyService_PostUserProxyPermissionsAsync : ProxyServiceTests
         {
@@ -560,6 +612,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 {
                     new ProxyAccessPermission() {IsGranted = false, ProxySubjectId = "0000001", ProxyUserId = "00002", StartDate = new DateTime(2001, 01, 02), ProxyWorkflowCode = "SFBB" },
                     new ProxyAccessPermission() {IsGranted = false, ProxySubjectId = "0000001", ProxyUserId = "00002", StartDate = new DateTime(2001, 01, 02), ProxyWorkflowCode = "SFAA" }
+                };
+                var assignment = new ProxyPermissionAssignment() { ProxySubjectId = "0000001", Permissions = accessPermissions, ProxySubjectApprovalDocumentText = new List<string>() };
+                var result = await proxyService.PostUserProxyPermissionsAsync(assignment);
+            }
+
+            [TestMethod]
+            public async Task ProxyService_PostUserProxyPermissionAsync_EmployeeProxyAdminTest()
+            {
+                proxyService = new ProxyService(proxyRepo, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactoryForAdmin, roleRepo, logger);
+                var accessPermissions = new List<ProxyAccessPermission>()
+                {
+                    new ProxyAccessPermission() {IsGranted = false, ProxySubjectId = "0000001", ProxyUserId = "DECEASED", StartDate = new DateTime(2001, 01, 02), ProxyWorkflowCode = "SFBB" },
+                    new ProxyAccessPermission() {IsGranted = false, ProxySubjectId = "0000001", ProxyUserId = "DECEASED", StartDate = new DateTime(2001, 01, 02), ProxyWorkflowCode = "SFAA" }
                 };
                 var assignment = new ProxyPermissionAssignment() { ProxySubjectId = "0000001", Permissions = accessPermissions, ProxySubjectApprovalDocumentText = new List<string>() };
                 var result = await proxyService.PostUserProxyPermissionsAsync(assignment);

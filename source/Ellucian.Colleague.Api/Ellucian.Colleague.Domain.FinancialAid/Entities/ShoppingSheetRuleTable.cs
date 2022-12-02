@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -57,6 +57,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         private string defaultResult;
 
         /// <summary>
+        /// The subroutine name for a custom text definition if one is provided
+        /// </summary>
+        public string RtSubrName { get; set; }
+
+        /// <summary>
+        /// The resulting verbiage from a custom subroutine
+        /// </summary>
+        public string RtCustomVerbiage { get; set; }
+
+        /// <summary>
         /// Flag indicating whether the rule table will always to return the DefaultResult string in its list of results.
         /// </summary>
         public bool AlwaysUseDefault { get; set; }
@@ -66,7 +76,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// The keys in this list (the rule Ids) are ultimately what drive the execution of this rule table.
         /// Duplicate keys are allowed.
         /// </summary>        
-        public ReadOnlyCollection<KeyValuePair<string, string>> RuleResultPairs;
+        public ReadOnlyCollection<KeyValuePair<string, string>> RuleResultPairs { get; private set; }
         private List<KeyValuePair<string, string>> ruleResultPairs;
 
 

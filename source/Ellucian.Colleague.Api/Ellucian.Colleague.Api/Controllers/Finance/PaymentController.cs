@@ -13,6 +13,9 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Collections.Generic;
 using System;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -26,6 +29,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     {
         private readonly IPaymentService _service;
         private readonly IAccountsReceivableService _arService;
+        private readonly IFinanceConfigurationService _financeConfigService;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -33,11 +37,13 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// </summary>
         /// <param name="service">Service of type <see cref="IPaymentService">IPaymentService</see></param>
         /// <param name="arService">Service of type <see cref="IAccountsReceivableService">IAccountsReceivableService</see></param>
+        /// <param name="financeConfigService"></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
-        public PaymentController(IPaymentService service, IAccountsReceivableService arService, ILogger logger)
+        public PaymentController(IPaymentService service, IAccountsReceivableService arService, IFinanceConfigurationService financeConfigService, ILogger logger)
         {
             _service = service;
             _arService = arService;
+            _financeConfigService = financeConfigService;
             _logger = logger;
         }
 
@@ -53,7 +59,20 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>The <see cref="PaymentConfirmation">Payment Confirmation</see> information</returns>
         public PaymentConfirmation GetPaymentConfirmation(string distribution, string paymentMethod, string amountToPay)
         {
-            return _service.GetPaymentConfirmation(distribution, paymentMethod, amountToPay);
+            try
+            {
+                return _service.GetPaymentConfirmation(distribution, paymentMethod, amountToPay);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException();
+            }
         }
 
         /// <summary>
@@ -71,6 +90,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.PostPaymentProvider(paymentDetails);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -95,7 +119,12 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.GetPaymentReceipt(transactionId, cashReceiptId);
             }
-            catch(PermissionsException pex)
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException pex)
             {
                 _logger.Error(pex, pex.Message);
                 throw CreateHttpResponseException("Permission denied to access receipt information. See log for details.", HttpStatusCode.Forbidden);
@@ -130,6 +159,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.PostProcessElectronicCheck(paymentDetails);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -152,6 +186,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetCheckPayerInformation(personId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -178,6 +217,42 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _arService.GetDistributions(studentId, types, paymentProcess);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Finance.Configuration.AvailablePaymentMethod>> GetRestrictedPaymentMethodsAsync(string studentId)
+        {
+            try
+            {
+                var config = _financeConfigService.GetFinanceConfiguration();
+                var allPaymentMethods = new List<AvailablePaymentMethod>();
+                foreach (var paymentMethod in config.PaymentMethods)
+                {
+                    var singlePayMethod = new AvailablePaymentMethod();
+                    singlePayMethod.Description = paymentMethod.Description;
+                    singlePayMethod.InternalCode = paymentMethod.InternalCode;
+                    singlePayMethod.Type = paymentMethod.Type;
+                    allPaymentMethods.Add(singlePayMethod);
+                }
+                var restrictedPaymentMethods = await _service.GetRestrictedPaymentMethodsAsync(studentId, allPaymentMethods);
+                return restrictedPaymentMethods;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

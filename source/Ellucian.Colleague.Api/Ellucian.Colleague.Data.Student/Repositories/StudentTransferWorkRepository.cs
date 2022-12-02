@@ -1,8 +1,9 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities.TransferWork;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -19,8 +20,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class StudentTransferWorkRepository : BaseColleagueRepository, IStudentTransferWorkRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
-        public static char _TM = Convert.ToChar(DynamicArray.TM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _TM = Convert.ToChar(DynamicArray.TM);
 
         /// <summary>
         /// Constructor for StudentTransferWorkRepository
@@ -55,24 +56,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Returns a list of transfer and non course equivalency work for a student.</returns>
         public async Task<IEnumerable<TransferEquivalencies>> GetStudentTransferWorkAsync(string studentId)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException(studentId, "Student Id must be specified");
-            }
-
             List<TransferEquivalencies> transferEquivalenciesList = new List<TransferEquivalencies>();
-
-            // Get Person Record
-            Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Base.DataContracts.Person>(studentId);
-
-            // Get Person Institutions Attended
-            if (person != null && person.PersonInstitutionsAttend != null && person.PersonInstitutionsAttend.Any())
+            try
             {
-                List<string> personInstitutionsAttend = person.PersonInstitutionsAttend;
-                foreach (var institution in personInstitutionsAttend)
+                if (string.IsNullOrEmpty(studentId))
                 {
-                    transferEquivalenciesList.Add(await GetStudentTransferEquivalenciesAsync(studentId, institution));
+                    throw new ArgumentNullException(studentId, "Student Id must be specified");
                 }
+                // Get Person Record
+                Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Base.DataContracts.Person>(studentId);
+
+                // Get Person Institutions Attended
+                if (person != null && person.PersonInstitutionsAttend != null && person.PersonInstitutionsAttend.Any())
+                {
+                    List<string> personInstitutionsAttend = person.PersonInstitutionsAttend;
+                    foreach (var institution in personInstitutionsAttend)
+                    {
+                        transferEquivalenciesList.Add(await GetStudentTransferEquivalenciesAsync(studentId, institution));
+                    }
+                }
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student transfer and non course equivelancy work";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var message = "Exception occurred while trying to retrieve student transfer and non course equivelancy work";
+                logger.Error(message);
+                throw;
             }
 
             return transferEquivalenciesList;

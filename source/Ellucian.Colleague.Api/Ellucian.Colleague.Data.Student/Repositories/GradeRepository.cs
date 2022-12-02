@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -14,6 +14,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -29,16 +30,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<ICollection<Grade>> GetAsync()
         {
-            var grades = await GetOrAddToCacheAsync<List<Grade>>("AllGrades",
-                async () =>
-                {
-                    Collection<Grades> gradesData = await DataReader.BulkReadRecordAsync<Grades>("");
-                    // No need for a separate comparisonGradeData list, since gradesData contains all grade records
-                    var gradeList = await BuildGradesAsync(gradesData, null);
-                    return gradeList;
-                }
-            );
-            return grades;
+            try
+            {
+                var grades = await GetOrAddToCacheAsync<List<Grade>>("AllGrades",
+                    async () =>
+                    {
+                        Collection<Grades> gradesData = await DataReader.BulkReadRecordAsync<Grades>("");
+                            // No need for a separate comparisonGradeData list, since gradesData contains all grade records
+                            var gradeList = await BuildGradesAsync(gradesData, null);
+                        return gradeList;
+                    }
+                );
+                return grades;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving grades";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occurred while retrieving grades");
+                throw;
+            }
         }
 
         /// <summary>

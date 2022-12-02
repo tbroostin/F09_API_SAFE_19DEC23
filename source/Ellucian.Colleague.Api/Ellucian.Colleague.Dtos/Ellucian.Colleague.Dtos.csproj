@@ -53,6 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiSchemas.cs" />
     <Compile Include="CipCode.cs" />
     <Compile Include="AptitudeAssessmentSources.cs" />
     <Compile Include="CareerGoals.cs" />
@@ -63,6 +64,8 @@
     <Compile Include="DtoProperties\FinancialAidEducationLevelDtoProperty.cs" />
     <Compile Include="DtoProperties\MaritalStatusDtoProperty.cs" />
     <Compile Include="EnumProperties\RequisitionTypes.cs" />
+    <Compile Include="EnumProperties\SectionCatalogDisplay.cs" />
+    <Compile Include="AuditLogConfiguration.cs" />
     <Compile Include="Filters\PersonByInstitutionTypeFilter.cs" />
     <Compile Include="DtoProperties\PersonPhone2DtoProperty.cs" />
     <Compile Include="Filters\FinancialAidFundsFilter.cs" />
@@ -132,6 +135,8 @@
     <Compile Include="MappingSettings.cs" />
     <Compile Include="MappingSettingsEthos.cs" />
     <Compile Include="MappingSettingsSource.cs" />
+    <Compile Include="SectionRegistration5.cs" />
+    <Compile Include="SectionRegistrations.cs" />
     <Compile Include="StudentTranscriptGradesIncompleteGrade.cs" />
     <Compile Include="VendorContactInitiationProcess.cs" />
     <Compile Include="PersonalRelationshipInitiationProcess.cs" />
@@ -1449,6 +1454,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConfigurationSettingsEthos.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Web.Http.Configuration\Ellucian.Web.Http.Configuration.csproj">
+      <Project>{7b91d852-251c-4260-913e-ffacabce5463}</Project>
+      <Name>Ellucian.Web.Http.Configuration</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- begin ellucian project settings -->

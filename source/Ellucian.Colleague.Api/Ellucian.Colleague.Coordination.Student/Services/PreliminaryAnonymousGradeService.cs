@@ -1,10 +1,12 @@
 ﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student.AnonymousGrading;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -24,6 +26,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     public class PreliminaryAnonymousGradeService : StudentCoordinationService, IPreliminaryAnonymousGradeService
     {
         private readonly ISectionRepository _sectionRepository;
+        private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IStudentConfigurationRepository _studentConfigurationRepository;
         private readonly IPreliminaryAnonymousGradeRepository _preliminaryAnonymousGradeRepository;
 
@@ -41,11 +44,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="preliminaryAnonymousGradeRepository">Interface to preliminary anonymous grade repository</param>
         public PreliminaryAnonymousGradeService(IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, 
-            IStudentRepository studentRepository, IConfigurationRepository configurationRepository, ISectionRepository sectionRepository,
+            IStudentRepository studentRepository, IConfigurationRepository configurationRepository, ISectionRepository sectionRepository, IReferenceDataRepository referenceDataRepository,
             IStudentConfigurationRepository studentConfigurationRepository, IPreliminaryAnonymousGradeRepository preliminaryAnonymousGradeRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _sectionRepository = sectionRepository;
+            _referenceDataRepository = referenceDataRepository;
             _studentConfigurationRepository = studentConfigurationRepository;
             _preliminaryAnonymousGradeRepository = preliminaryAnonymousGradeRepository;
         }
@@ -69,8 +73,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Retrieve non-cached course section information for further validations
             var courseSection = await RetrieveCourseSectionInformation(sectionId);
 
-            // The authenticated user is only permitted to retrieve preliminary anonymous grades for a course section if they are an assigned faculty member for the course section
-            VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(courseSection);
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+            // The authenticated user is only permitted to retrieve preliminary anonymous grades for a course section if they are an assigned faculty member for the course section or a departmental oversight
+            VerifyAuthenticatedUserIsAssignedFacultyOrDeptOversightForSectionAsync(courseSection, allDepartments, userPermissions);
 
             // The specified course section must be set up for grading by random ID
             VerifyCourseSectionUsesGradingByRandomIdAsync(courseSection);
@@ -92,6 +98,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var crosslistedSection = await RetrieveCourseSectionInformation(crosslistedSectionId);
                     VerifyCourseSectionUsesGradingByRandomIdAsync(crosslistedSection);
                     crossListedSectionsToProcess.Add(crosslistedSectionId);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -141,8 +151,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Retrieve non-cached course section information for further validations
             var courseSection = await RetrieveCourseSectionInformation(sectionId);
 
-            // The authenticated user is only permitted to update preliminary anonymous grades for a course section if they are an assigned faculty member for the course section
-            VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(courseSection);
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+            // The authenticated user is only permitted to update preliminary anonymous grades for a course section if they are an assigned faculty member for the course section or a departmental oversight
+            VerifyAuthenticatedUserIsAssignedFacultyOrDeptOversightForSectionAsync(courseSection, allDepartments, userPermissions);
 
             // The specified course section must be set up for grading by random ID
             VerifyCourseSectionUsesGradingByRandomIdAsync(courseSection);
@@ -210,6 +222,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Verifies that the authenticated user is an assigned faculty member for the specified course section or departmental oversight
+        /// </summary>
+        /// <param name="courseSection">Course section to check</param>
+        /// <exception cref="PermissionsException">Authenticated user is not an assigned faculty member for course section or departmental oversight.</exception>
+        private void VerifyAuthenticatedUserIsAssignedFacultyOrDeptOversightForSectionAsync(Domain.Student.Entities.Section courseSection, IEnumerable<Domain.Base.Entities.Department> departments, IEnumerable<string> userPermissions)
+        {
+            // The current user must be a faculty member of the section or a departmental oversight member with the required permissions
+            if ((courseSection.FacultyIds == null || !courseSection.FacultyIds.Contains(CurrentUser.PersonId)) && 
+                !(CheckDepartmentalOversightAccessForSection(courseSection, departments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionGrading) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading))))
+            {
+                throw new PermissionsException(string.Format("Authenticated user is neither an assigned faculty member nor a departmental oversight for course section {0}.", courseSection.Id));
+            }
+        }
+
+        /// <summary>
         /// Determine if preliminary anonymous grades data for a course section should include data for its crosslisted course section(s) 
         /// based on grading configuration settings and, if so, identify those crosslisted course sections' IDs.
         /// </summary>
@@ -217,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of crosslisted course section IDs for the specified course section (when appropriate)</returns>
         private async Task<List<string>> BuildListOfCrosslistedSectionsToRetrievePreliminaryAnonymousGradesAsync(Domain.Student.Entities.Section courseSection)
         {
-            var gradingConfiguration = await _studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+            var gradingConfiguration = await _studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
             List<string> crossListedCourseSectionIds = new List<string>();
             if (gradingConfiguration != null && gradingConfiguration.IncludeCrosslistedStudents)
             {

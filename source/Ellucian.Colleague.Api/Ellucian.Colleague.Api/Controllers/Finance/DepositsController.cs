@@ -9,6 +9,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Finance;
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -53,6 +54,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetDepositsDue(studentId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

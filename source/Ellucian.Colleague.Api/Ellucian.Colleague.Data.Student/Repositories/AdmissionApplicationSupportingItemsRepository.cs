@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -15,6 +15,7 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -27,7 +28,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType]
     public class AdmissionApplicationSupportingItemsRepository : BaseColleagueRepository, IAdmissionApplicationSupportingItemsRepository, IEthosExtended
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private ApplValcodes _corrStatuses;
         protected const string suppItemsKeysCacheKey = "AllApplicationSupportingItemsKeys";
         protected const int suppItemsCacheTimeout = 20; // Clear from cache every 20 minutes
@@ -720,7 +721,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access CORR.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return typesTable;
                 }, Level1CacheTimeoutValue);

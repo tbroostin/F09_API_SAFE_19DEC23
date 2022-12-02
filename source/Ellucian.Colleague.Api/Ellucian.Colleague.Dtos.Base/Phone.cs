@@ -1,4 +1,4 @@
-﻿//Copyright 2013-2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Base
 {
@@ -19,5 +19,9 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Phone Type such as Home, Fax or Business
         /// </summary>
         public string TypeCode { get; set; }
+        /// <summary>
+        /// Person has authorized this phone for texts
+        /// </summary>
+        public bool? IsAuthorizedForText { get; set; }
     }
 }

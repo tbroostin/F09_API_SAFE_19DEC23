@@ -1,7 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -108,12 +109,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task EducationGoalsController_GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetAllEducationGoalsAsync(It.IsAny<bool>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                await educationGoalsController.GetEducationGoalsAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationGoalsController_GetAsync_throws_exception_when_exception_caught()
         {
             referenceDataRepositoryMock.Setup(repo => repo.GetAllEducationGoalsAsync(It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
             var EducationGoals = await educationGoalsController.GetEducationGoalsAsync();
         }
-
 
         private IEnumerable<Domain.Student.Entities.EducationGoal> BuildEducationGoals()
         {

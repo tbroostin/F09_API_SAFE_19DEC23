@@ -1,10 +1,11 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.QuickRegistration;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -99,6 +100,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Debug(string.Format("Colleague Self-Service Quick Registration workflow is disabled; no quick registration sections will be returned for student {0} for any terms.", studentId));
                 }
                 return quickReg;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

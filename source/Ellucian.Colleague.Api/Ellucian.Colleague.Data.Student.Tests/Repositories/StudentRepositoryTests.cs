@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -14,6 +14,7 @@ using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -2120,7 +2121,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 else
                 {
                     // Missing a term - this is an error.
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
             }
         }
@@ -3076,18 +3077,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             sectReg1.Action = RegistrationAction.Drop;
             sectReg1.Credits = 3.5m;
             sectReg1.DropReasonCode = "Reason1";
+            sectReg1.IntentToWithdrawId = "1";
             sectionRegs.Add(sectReg1);
             Domain.Student.Entities.SectionRegistration sectReg2 = new SectionRegistration();
             sectReg2.SectionId = "section2";
             sectReg2.Action = RegistrationAction.Add;
             sectReg2.Credits = 2.5m;
             sectReg2.DropReasonCode = null;
+            sectReg2.IntentToWithdrawId = null;
             sectionRegs.Add(sectReg2);
             Domain.Student.Entities.SectionRegistration sectReg3 = new SectionRegistration();
             sectReg3.SectionId = "section3";
             sectReg3.Action = RegistrationAction.Add;
             sectReg3.Credits = 3m;
             sectReg3.DropReasonCode = null;
+            sectReg3.IntentToWithdrawId = null;
             sectionRegs.Add(sectReg3);
 
             Domain.Student.Entities.RegistrationRequest regRequest = new RegistrationRequest(studentID, sectionRegs);
@@ -3115,10 +3119,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 rr.Sections[0].SectionAction == sectionRegs[0].Action.ToString() &&
                 rr.Sections[0].SectionCredits == sectionRegs[0].Credits &&
                 rr.Sections[0].SectionDropReasonCode == sectionRegs[0].DropReasonCode &&
+                rr.Sections[0].SectionIntentToWithdrawId == sectionRegs[0].IntentToWithdrawId &&
                 rr.Sections[1].SectionIds == sectionRegs[1].SectionId &&
                 rr.Sections[1].SectionAction == sectionRegs[1].Action.ToString() &&
                 rr.Sections[1].SectionCredits == sectionRegs[1].Credits &&
-                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode))).ReturnsAsync(regForSecResponse);
+                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode &&
+                rr.Sections[1].SectionIntentToWithdrawId == sectionRegs[1].IntentToWithdrawId
+                ))).ReturnsAsync(regForSecResponse);
 
             RegistrationResponse regResponse = await studentRepository.RegisterAsync(regRequest);
 
@@ -3144,12 +3151,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             sectReg1.Action = RegistrationAction.Drop;
             sectReg1.Credits = 3.5m;
             sectReg1.DropReasonCode = "Reason1";
+            sectReg1.IntentToWithdrawId = "11";
             sectionRegs.Add(sectReg1);
             Domain.Student.Entities.SectionRegistration sectReg2 = new SectionRegistration();
             sectReg2.SectionId = "section2";
             sectReg2.Action = RegistrationAction.Add;
             sectReg2.Credits = 2.5m;
             sectReg2.DropReasonCode = null;
+            sectReg2.IntentToWithdrawId = null;
             sectionRegs.Add(sectReg2);
 
             Domain.Student.Entities.RegistrationRequest regRequest = new RegistrationRequest(studentID, sectionRegs);
@@ -3177,10 +3186,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 rr.Sections[0].SectionAction == sectionRegs[0].Action.ToString() &&
                 rr.Sections[0].SectionCredits == sectionRegs[0].Credits &&
                 rr.Sections[0].SectionDropReasonCode == sectionRegs[0].DropReasonCode &&
+                rr.Sections[0].SectionIntentToWithdrawId == sectionRegs[0].IntentToWithdrawId &&
                 rr.Sections[1].SectionIds == sectionRegs[1].SectionId &&
                 rr.Sections[1].SectionAction == sectionRegs[1].Action.ToString() &&
                 rr.Sections[1].SectionCredits == sectionRegs[1].Credits &&
-                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode))).ReturnsAsync(regForSecResponse);
+                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode &&
+                rr.Sections[1].SectionIntentToWithdrawId == sectionRegs[1].IntentToWithdrawId
+                ))).ReturnsAsync(regForSecResponse);
 
             RegistrationResponse regResponse = await studentRepository.RegisterAsync(regRequest);
 
@@ -3206,18 +3218,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             sectReg1.Action = RegistrationAction.Drop;
             sectReg1.Credits = 3.5m;
             sectReg1.DropReasonCode = "Reason1";
+            sectReg1.IntentToWithdrawId = "12";
             sectionRegs.Add(sectReg1);
             Domain.Student.Entities.SectionRegistration sectReg2 = new SectionRegistration();
             sectReg2.SectionId = "section2";
             sectReg2.Action = RegistrationAction.Add;
             sectReg2.Credits = 2.5m;
             sectReg2.DropReasonCode = null;
+            sectReg2.IntentToWithdrawId = null;
             sectionRegs.Add(sectReg2);
             Domain.Student.Entities.SectionRegistration sectReg3 = new SectionRegistration();
             sectReg3.SectionId = "section3";
             sectReg3.Action = RegistrationAction.Add;
             sectReg3.Credits = 3m;
             sectReg3.DropReasonCode = null;
+            sectReg3.IntentToWithdrawId = "34";
             sectionRegs.Add(sectReg3);
 
             Domain.Student.Entities.RegistrationRequest regRequest = new RegistrationRequest(studentID, sectionRegs);
@@ -3245,10 +3260,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 rr.Sections[0].SectionAction == sectionRegs[0].Action.ToString() &&
                 rr.Sections[0].SectionCredits == sectionRegs[0].Credits &&
                 rr.Sections[0].SectionDropReasonCode == sectionRegs[0].DropReasonCode &&
+                rr.Sections[0].SectionIntentToWithdrawId == sectionRegs[0].IntentToWithdrawId &&
                 rr.Sections[1].SectionIds == sectionRegs[1].SectionId &&
                 rr.Sections[1].SectionAction == sectionRegs[1].Action.ToString() &&
                 rr.Sections[1].SectionCredits == sectionRegs[1].Credits &&
-                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode))).ReturnsAsync(regForSecResponse);
+                rr.Sections[1].SectionDropReasonCode == sectionRegs[1].DropReasonCode &&
+                rr.Sections[1].SectionIntentToWithdrawId == sectionRegs[1].IntentToWithdrawId
+                ))).ReturnsAsync(regForSecResponse);
 
             RegistrationResponse regResponse = await studentRepository.RegisterAsync(regRequest);
 

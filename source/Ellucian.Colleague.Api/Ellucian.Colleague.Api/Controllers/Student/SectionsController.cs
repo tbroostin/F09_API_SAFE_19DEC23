@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -33,6 +33,7 @@ using System.Web.Http.ModelBinding;
 using Section = Ellucian.Colleague.Dtos.Student.Section;
 using Section2 = Ellucian.Colleague.Dtos.Student.Section2;
 using Section3 = Ellucian.Colleague.Dtos.Student.Section3;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -49,6 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IRegistrationGroupService _registrationGroupService;
         private readonly ICourseService _courseService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the SectionsController class.
@@ -263,23 +265,31 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return sectionDto;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (KeyNotFoundException exception)
             {
-                _logger.Error(exception, exception.Message);
+                var message = "The section was not found for section " + sectionId;
+                _logger.Error(exception, message);
                 throw CreateNotFoundException("Section", sectionId);
             }
             catch (ArgumentNullException exception)
             {
-                _logger.Error(exception, exception.Message);
+                var message = "A section Id was not provided.";
+                _logger.Error(exception, message);
                 throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
             catch (Exception exception)
             {
-                _logger.Error(exception.ToString());
+                var message = "An error occurred while retrieving section details for section " + sectionId;
+                _logger.Error(exception, message);
                 throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
         }
-
 
         /// <summary>
         /// Retrieves information about faculty member indications that grading is complete for the section.
@@ -287,7 +297,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">Id of the section</param>
         /// <returns>The requested <see cref="Dtos.Student.SectionMidtermGradingComplete">section grading completion indication information</see></returns>
         ///  <accessComments>
-        /// Only an a faculty member assigned to the section may retrieve midterm grading completion information for a section.
+        /// 1. Only a faculty member assigned to the section may retrieve midterm grading completion information for a section.
+        /// 2. A departmental oversight member assigned to the section may retrieve midterm grading completion information with the following permission code
+        /// VIEW.SECTION.GRADING
+        /// CREATE.SECTION.GRADING
         /// </accessComments>
         public async Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync([FromUri] string sectionId)
         {
@@ -295,6 +308,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var sectionCompleteDto = await _sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
                 return sectionCompleteDto;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving section midterm grading complete information.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -318,9 +337,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionId">Section ID</param>
         /// <param name="postInfo">Attributes of the midterm grading complete indication to be posted</param>
-        /// <returns>The requested <see cref="Dtos.Student.SectionMidtermGradingComplete">section grading completion indication information</see></returns>
+        /// <returns>The requested <see cref="Dtos.Student.SectionMidtermGradingComplete">section grading completion indication information</see></returns>        
         /// <accessComments>
-        /// A user with UPDATE.GRADES permission or a faculty member assigned to the section can indicate that midterm grading is complete.
+        /// 1. A user with UPDATE.GRADES permission or assigned faculty on a section can indicate that midterm grading is complete.
+        /// 2. A departmental oversight member assigned to the section with CREATE.SECTION.GRADING can indicate that midterm grading is complete.
         /// </accessComments>
         public async Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync([FromUri] string sectionId, [FromBody] SectionMidtermGradingCompleteForPost postInfo)
         {
@@ -328,6 +348,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var sectionCompleteDto = await _sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postInfo);
                 return sectionCompleteDto;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while posting section midterm grading complete information.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -360,7 +386,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not authorized to retrieve section grading status information for the specified course section.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound returned if data for a course section could not be retrieved.</exception>
         /// <accessComments>
-        /// The authenticated user must be an assigned faculty member for the specified course section in order to retrieve course section grading status information for that course section.
+        /// 1. The authenticated user must be an assigned faculty member for the specified course section in order to retrieve course section grading status information for that course section.
+        /// 2. A departmental oversight member assigned to the section may retrieve course section grading status information with the following permission code
+        /// VIEW.SECTION.GRADING
+        /// CREATE.SECTION.GRADING
         /// </accessComments>
         [ParameterSubstitutionFilter]
         public async Task<Dtos.Student.SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
@@ -375,6 +404,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var sectionPreliminaryAnonymousGrading = await _sectionCoordinationService.GetSectionGradingStatusAsync(sectionId);
                 return sectionPreliminaryAnonymousGrading;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving course section grading status information for course section " + sectionId;
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -444,7 +479,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">Course section ID</param>
         /// <returns>A course roster</returns>
         /// <accessComments>
-        /// Requestor must be registered student or assigned faculty member for section.
+        /// 1. The requestor must be a registered student or assigned faculty member for the section.
+        /// 2. A departmental oversight member assigned to the section may retrieve section roster information with any of the following permission codes
+        /// VIEW.SECTION.ROSTER
+        /// VIEW.SECTION.GRADING
+        /// CREATE.SECTION.GRADING
+        /// VIEW.SECTION.ADD.AUTHORIZATIONS
+        /// CREATE.SECTION.ADD.AUTHORIZATION
         /// </accessComments>
         [ParameterSubstitutionFilter]
         public async Task<SectionRoster> GetSectionRoster2Async(string sectionId)
@@ -453,16 +494,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.GetSectionRoster2Async(sectionId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException e)
             {
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var message = "Cannot build a section roster without a course section Id.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
             catch (KeyNotFoundException e)
             {
+                var message = "Couldn't retrieve section information for given Section Id.";
+                _logger.Error(e, message);
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.NotFound);
             }
             catch (Exception e)
             {
+                var message = "An error occurred while retrieving section roster information.";
+                _logger.Error(e, message);
                 throw CreateHttpResponseException(e.Message);
             }
         }
@@ -506,7 +559,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">Course section ID</param>
         /// <returns>Section waitlist config</returns>
         /// <accessComments>
-        /// You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// 1. The user must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// 2. A departmental oversight member for the course section can retrieve section waitlist information with any of the following permission codes 
+        /// VIEW.SECTION.ROSTER
+        /// CREATE.SECTION.ADD.AUTHORIZATION
+        /// VIEW.SECTION.WAITLISTS
         /// </accessComments>
         [ParameterSubstitutionFilter]
         public async Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
@@ -515,20 +572,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.GetSectionWaitlistConfigAsync(sectionId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, "Session has expired while retrieving section waitlist configuration details");
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException e)
             {
-                _logger.Error(e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var message = "Cannot get a section waitlist config without a course section ID.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
             catch (PermissionsException pex)
             {
-                _logger.Error(pex.Message);
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                var message = "Access to Section waitlist settings is forbidden.";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e.Message);
-                throw CreateHttpResponseException("Error retrieving section waitlist Settings.", HttpStatusCode.BadRequest);
+                var message = "Error retrieving section waitlist settings.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -570,7 +635,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria">This holds the section ids and a boolean to indicate if the cross listed section waitlist details are to be included or not</param>
         /// <returns>A list of student waitlist information</returns>
         /// <accessComments>
-        /// You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// 1. You must be an assigned faculty for the course section to retrieve section waitlist information. 
+        /// 2. A departmental oversight member assigned to the section may retrieve section waitlist information with any of the following permission codes
+        /// VIEW.SECTION.ROSTER
+        /// CREATE.SECTION.ADD.AUTHORIZATION
+        /// VIEW.SECTION.WAITLISTS
         /// </accessComments>
         public async Task<IEnumerable<SectionWaitlistStudent>> QuerySectionWaitlistAsync([FromBody] SectionWaitlistQueryCriteria criteria)
         {
@@ -578,19 +647,25 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.GetSectionWaitlist3Async(criteria);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving section waitlists.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException e)
             {
-                _logger.Error(e,e.Message);
+                _logger.Error(e, e.Message);
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
             catch (PermissionsException pex)
             {
-                _logger.Error(pex,pex.ToString());
+                _logger.Error(pex, pex.ToString());
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex,ex.ToString());
+                _logger.Error(ex, ex.ToString());
                 throw CreateHttpResponseException("Error retrieving section waitlists.", HttpStatusCode.BadRequest);
             }
         }
@@ -606,24 +681,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.GetStudentWaitlistStatusesAsync();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving waitlist statuses.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException e)
             {
-                _logger.Error(e.Message);
+                _logger.Error(e, e.Message);
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
             catch (PermissionsException pex)
             {
-                _logger.Error(pex.Message);
+                _logger.Error(pex, pex.Message);
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e.Message);
+                _logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error retrieving waitlist statuses.", HttpStatusCode.BadRequest);
             }
         }
-
-
 
         /// <summary>
         /// Retrieves the waitlist details for a given course Section Id and Student Id. 
@@ -652,19 +731,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.GetStudentSectionWaitlistsByStudentAndSectionIdAsync(sectionId, studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving section waitlist information";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (ArgumentNullException e)
             {
-                _logger.Error(e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                string message = "Arguments passed is null  while retrieving section waitlist information";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
             catch (PermissionsException pex)
             {
-                _logger.Error(pex.Message);
+                string message = "User does not have apporpriate permissions to retrieve section waitlist information";
+                _logger.Error(pex, message);
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e.Message);
+                string message = "Error retrieving student section waitlist details.";
+                _logger.Error(e, message);
                 throw CreateHttpResponseException("Error retrieving student section waitlist details.", HttpStatusCode.BadRequest);
             }
         }
@@ -1002,7 +1091,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 if ((!string.IsNullOrEmpty(status)) && (!ValidEnumerationValue(typeof(SectionStatus2), status)))
                 {
-                    throw new Exception(string.Concat("'", status, "' is an invalid enumeration value. "));
+                    throw new ColleagueWebApiException(string.Concat("'", status, "' is an invalid enumeration value. "));
                 }
 
                 var pageOfItems = await _sectionCoordinationService.GetSections3Async(page.Offset, page.Limit, title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, academicLevels, course, site, status, owningInstitutionUnits);
@@ -2570,7 +2659,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return sectionsDto;
             }
-
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving sections";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException exception)
             {
                 _logger.Error(exception, exception.Message);
@@ -2591,8 +2685,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The requested <see cref="Section4">Sections</see></returns>
         /// <accessComments>
         /// Any authenticated user can retrieve course sections information; however,
-        /// only an assigned faculty user may retrieve list of active students Ids in a given course section.
-        /// For all other users that are not assigned faculty to a given course section a list of active students Ids is not retrieved and 
+        /// only an assigned faculty or departmental oversight user may retrieve list of active students Ids in a given course section.
+        /// For all other users that are not assigned faculty or departmental oversight to a given course section a list of active students Ids is not retrieved and 
         /// response object is returned with a X-Content-Restricted header with a value of "partial".
         /// </accessComments>
         [HttpPost]
@@ -2625,6 +2719,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 return sectionsDto;
             }
 
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException exception)
             {
                 _logger.Error(exception, exception.Message);
@@ -2878,7 +2977,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <returns><see cref="Dtos.Student.Grade">StudentSectionGradeResponse</see></returns>
         /// <accessComments>
-        /// A user with UPDATE.GRADES permission or assigned faculty on a section can update students grades for the given section.
+        /// 1. A user with UPDATE.GRADES permission or assigned faculty on a section can update students grades for the given section.
+        /// 2. A departmental oversight member assigned to the section with CREATE.SECTION.GRADING can update students grades for the given section.
         /// </accessComments>
         public async Task<SectionGradeSectionResponse> PutCollectionOfStudentGrades5Async([FromUri] string sectionId, [FromBody] SectionGrades4 sectionGrades)
         {
@@ -2916,6 +3016,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 var returnDto = await _sectionCoordinationService.ImportGrades5Async(sectionGrades);
                 return returnDto;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while updating student grade information.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -3024,9 +3130,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 return await _registrationGroupService.GetSectionRegistrationDatesAsync(sectionIds, considerUsersGroup);
 
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving section's registration dates";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                string message = "Exception occurred while retrieving section's registration dates";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
 
         }
@@ -3046,15 +3160,24 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(errText);
                 throw CreateHttpResponseException(errText, HttpStatusCode.BadRequest);
             }
+
             try
             {
                 return await _sectionCoordinationService.GetSectionMeetingInstancesAsync(sectionId);
             }
-            catch (Exception)
+            catch (ColleagueSessionExpiredException csse)
             {
+                var message = "Session has expired while retrieving student attendances.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An error occurred while retrieving student attendances.");
                 throw CreateNotFoundException("section events", sectionId);
             }
         }
+
         /// <summary>
         /// Query by post method to retrieve section events or section calendar schedules in ICal format.
         /// For unscheduled cross-listed sections, it will retrieve calendar schedules for associated primary section if parameter on CPWP/SXRF allows to do so.
@@ -3074,6 +3197,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var result = await _sectionCoordinationService.GetSectionEventsICalAsync(criteria.SectionIds, criteria.StartDate, criteria.EndDate);
                 return result;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving section events calendar";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -3128,6 +3257,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 SectionPage2 sectionPage = await _courseService.SectionSearch2Async(criteria, pageSize, pageIndex);
                 return sectionPage;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while searching of sections in Colleague that are available for registration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString() + ex.StackTrace);
@@ -3147,7 +3282,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.KeyNotFound returned if section si not found or census date for the section does not exist.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if there are other creation problem.</exception>
         /// <accessComments>
-        /// Requestor must be assigned faculty member for section.   
+        /// 1. You must be an assigned faculty for the course section. 
+        /// 2. A departmental oversight member assigned to the section may certify census with any of the following permission codes
+        /// CREATE.SECTION.CENSUS
         /// </accessComments>
         public async Task<HttpResponseMessage> PostSectionCensusCertificationAsync([FromUri] string sectionId, [FromBody] SectionCensusToCertify sectionCensusToCertify)
         {
@@ -3188,7 +3325,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 SetResourceLocationHeader("GetSection4", new { sectionId = sectionIdForRequest });
                 return response;
             }
-
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while adding census certification details for the section Id " + sectionId;
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException ex)
             {
                 _logger.Error(ex, ex.Message);
@@ -3239,6 +3381,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var message = "Information for one or more section seat counts could not be retrieved.";
                 _logger.Error(knfe, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while trying to retrieve seat counts";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

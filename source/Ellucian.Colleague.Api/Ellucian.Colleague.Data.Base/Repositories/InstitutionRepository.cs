@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         const string AllInstitutionsCache = "AllInstitutions";
         const int AllInstitutionsCacheTimeout = 20; // Clear from cache every 20 minutes
         RepositoryException repositoryException = null;
@@ -183,9 +183,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 bulkAddressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", bulkPersonData.SelectMany(p => p.PersonAddresses).Distinct().ToArray());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 //do not throw exception.
+                logger.Error(ex.Message, "Cannot read bulk address data.");
             }
             var socialMediaKeys = await DataReader.SelectAsync("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID = '?'", institutionData.Select(p => p.Recordkey).Distinct().ToArray());
             var bulkSocialMediaData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.SocialMediaHandles>("SOCIAL.MEDIA.HANDLES", socialMediaKeys);
@@ -709,10 +710,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         
                         emailAddresses.Add(emailToAdd);
                     }
-                    catch (Exception exception)
+                    catch (Exception ex)
                     {
-                       // do not log error
-                        //logger.Error(exception, string.Format("Could not load email address for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
+                        // do not log error
+                        //logger.Error(exception, string.Format("Could not load email address for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));denied. Table is not public.");
+                        logger.Error(ex.Message, "Could not load email address.");
                     }
                 }
             }

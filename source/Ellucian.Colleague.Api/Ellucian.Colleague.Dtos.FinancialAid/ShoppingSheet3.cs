@@ -135,6 +135,16 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         public Decimal? UnsubOriginationFee { get; set; }
 
         /// <summary>
+        /// Interest rate for a grad unsub loan 
+        /// </summary>
+        public Decimal? GradUnsubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a grad unsub loan
+        /// </summary>
+        public Decimal? GradUnsubOriginationFee { get; set; }
+
+        /// <summary>
         /// Interest rate associated with a private loan
         /// </summary>
         public Decimal? PrivateInterestRate { get; set; }
@@ -258,5 +268,10 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// Total amount for Fafsa EFC
         /// </summary>
         public int? FafsaEfc { get; set; }
+
+        ///<summary>
+        ///Total Vets benefit amount
+        /// </summary>
+        public int? VetBenAmt { get; set; }
     }
 }

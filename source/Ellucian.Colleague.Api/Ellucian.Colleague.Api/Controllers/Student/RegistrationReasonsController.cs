@@ -1,13 +1,15 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 - 2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using System;
+using System.Net;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -28,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IStudentReferenceDataRepository referenceDataRepository;
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the RegistrationReasonsController class.
@@ -77,6 +80,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     }
                 }
                 return registrationReasonDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving registration reasons data";
+                logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

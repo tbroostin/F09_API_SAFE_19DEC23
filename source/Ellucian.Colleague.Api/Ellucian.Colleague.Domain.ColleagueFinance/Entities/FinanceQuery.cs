@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -57,10 +57,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
             }
         }
 
+
+
         /// <summary>
         /// List of finance query subtotals that make up the finance query.
         /// </summary>
-        public List<FinanceQuerySubtotal> FinanceQuerySubtotals = new List<FinanceQuerySubtotal>();
-
+        private List<FinanceQuerySubtotal> financeQuerySubtotals = new List<FinanceQuerySubtotal>();
+        public List<FinanceQuerySubtotal> FinanceQuerySubtotals { get { return financeQuerySubtotals; } set { financeQuerySubtotals = value; } }
     }
 }

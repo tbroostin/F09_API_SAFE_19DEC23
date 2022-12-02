@@ -18,6 +18,7 @@ using System.Text.RegularExpressions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Colleague.Coordination.Finance;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -60,7 +61,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// permission or proxy permissions can request other users' data
         /// </accessComments>
         /// <param name="accountHolderId">ID of the student for whom the statement will be generated</param>
-        /// <param name="timeframeId">ID of the timeframe for which the statement will be generated</param>
+        /// <param name="timeframeId">ID of the timeframe for which the statement will be generated. For example, for Spring 2022 term this would be 2022/SP</param>
         /// <param name="startDate">Date on which the supplied timeframe starts</param>
         /// <param name="endDate">Date on which the supplied timeframe ends</param>
         /// <returns>An HttpResponseMessage containing a byte array representing a PDF</returns>
@@ -110,6 +111,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
                 };
                 response.Content.Headers.ContentLength = renderedBytes.Length;
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException ae)
             {

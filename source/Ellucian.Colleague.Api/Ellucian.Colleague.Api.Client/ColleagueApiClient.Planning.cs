@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
 using Ellucian.Colleague.Dtos.Planning;
@@ -48,6 +48,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<CurriculumTrack>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while querying curriculum tracks");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException rnfe)
             {
@@ -534,6 +540,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<DegreePlanPreview7>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while previewing degree plan");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException rnfe)
             {
@@ -663,6 +675,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<DegreePlanReviewRequest>>(response.Content.ReadAsStringAsync().Result);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving degree plans submitted for review");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve QueryReviewRequestedDegreePlans.");
@@ -692,6 +709,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<DegreePlanReviewRequest>(degreePlanReviewRequest, "degree-plan-review-request", headers: headers);
                 var resource = JsonConvert.DeserializeObject<DegreePlanReviewRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while create/update of degree plan review assignment");
+                throw;
             }
             catch (Exception ex)
             {
@@ -936,6 +958,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(hre.ToString());
                 throw new InvalidOperationException(string.Format("Degree Plan Archive creation failed.", degreePlan.Id), hre);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while degree plan archive creation");
+                throw;
+            }
             // HTTP request successful, but some other problem encountered...
             catch (Exception ex)
             {
@@ -1020,6 +1047,11 @@ namespace Ellucian.Colleague.Api.Client
                 {
                     advisor = null;
                 }
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving an advisor by id");
+                throw;
             }
             catch (Exception ex)
             {
@@ -1175,6 +1207,11 @@ namespace Ellucian.Colleague.Api.Client
                 {
                     throw new AdvisingException(AdvisingExceptionCodes.UnauthorizedAdvisor);
                 }
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving assigned advisees");
+                throw;
             }
             catch (Exception ex)
             {
@@ -1352,6 +1389,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving program evaluation for student: " + id);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get ProgramEvaluation");
@@ -1605,6 +1647,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving evaluation notices for student: " + studentId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get EvaluationNotices");
@@ -1706,6 +1753,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<DegreePlanArchive2>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception occurred while retrieving archived plans");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1758,6 +1811,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = await response.Content.ReadAsByteArrayAsync();
                 return new Tuple<byte[], string>(resource, fileName);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving archived plan report");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1936,6 +1995,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return advisees;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while searching advisees");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -2032,6 +2096,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(advisorIds, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Advisor>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception occurred while querying advisors");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve advisor data.");
@@ -2125,6 +2195,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PlanningStudent>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving planning students");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
@@ -2215,6 +2290,12 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving planning configuration");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student planning configuration data.");
@@ -2246,9 +2327,164 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(completeAdvisement, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Advisee>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while posting completed advisement for student " + studentId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to post completed advisement for student " + studentId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Applicant's evaluation result
+        /// </summary>
+        /// <param name="id">id of an applicant</param>
+        /// <param name="programCodes">list of programs codes to evaluate</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<ProgramEvaluation4>> QueryApplicantEvaluationsAsync(string id, List<string> programCodes)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for ProgramEvaluation retrieval.");
+            }
+            if (programCodes == null || programCodes.Count() == 0)
+            {
+                throw new ArgumentNullException("programCodes", "Program Codes cannot be empty/null for program results retrieval.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _applicantPath, id, "evaluation" };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                // Build url path
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(programCodes, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<ProgramEvaluation4>>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get ProgramEvaluations for the applicant:" + id);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a program evaluation async.
+        /// </summary>
+        /// <returns><see cref="ProgramEvaluation4"/>Returns a program evaluation</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<ProgramEvaluation4> GetApplicantProgramEvaluationAsync(string id, string program, string catalogYear = null)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "Applicant ID cannot be empty/null for ProgramEvaluation retrieval.");
+            }
+            if (string.IsNullOrEmpty(program))
+            {
+                throw new ArgumentNullException("program", "Program cannot be empty/null for program results retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_applicantPath, id, _evaluationsPath);
+                string query = UrlUtility.BuildEncodedQueryString(new[] { "program", program, "catalogYear", catalogYear });
+
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<ProgramEvaluation4>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving program evaluation for student: " + id);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get ProgramEvaluation for an applicant");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the academic credits for the provided applicant
+        /// </summary>
+        /// <returns>Returns the list of  academic credits </returns>
+        /// <param name="id">The applicant's ID for whom academic credits are being requested</param>
+        /// <param name="filterCredits">(Optional) used to filter to active credit only.</param>
+        /// <param name="includeDrops">to include dropped courses or not</param>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ApplicantAcademicCredit>> GetApplicantAcademicCreditsAsync(string id, bool filterCredits = true, bool includeDrops = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for Academic History retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_applicantPath, id, "academic-credits");
+                var queryString = UrlUtility.BuildEncodedQueryString("filterCredits", filterCredits.ToString(), "includeDrops", includeDrops.ToString());
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers:headers);
+                return JsonConvert.DeserializeObject<IEnumerable<ApplicantAcademicCredit>>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving applicant's academic history.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get applicant's Academic History");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get applicant 's programs
+        /// Include Inactive programs flag works in conjunctions with currentOnly flag such as:
+        /// When includeInactivePrograms is set to true then only those inactive programs that are not yet ended will be included if currentOnly flag is true otherwise all inactive programs will be included.
+        /// When includeInactivePrograms is set to false but currentOnly is true then it means only those inactive programs will be included that are in past ended
+        /// </summary>
+        /// <returns>Returns the set of student's programs</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ApplicantStudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = false, bool currentOnly = true)
+        {
+            
+            if (applicantId == null)
+            {
+                throw new ArgumentNullException("studentIds", "ID cannot be empty/null for IEnumerable<StudentProgram2> retrieval.");
+            }
+            try
+            {
+                // Build url path from qapi path and student programs path
+                string urlPath = UrlUtility.CombineUrlPath(_applicantPath, applicantId, "programs");
+                var queryString = UrlUtility.BuildEncodedQueryString("includeInactivePrograms", includeInactivePrograms.ToString(), "currentOnly", currentOnly.ToString());
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<ApplicantStudentProgram>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve applicant's  programs.");
                 throw;
             }
         }

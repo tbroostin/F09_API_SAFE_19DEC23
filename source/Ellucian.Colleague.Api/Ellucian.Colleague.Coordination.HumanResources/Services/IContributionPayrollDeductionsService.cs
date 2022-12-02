@@ -14,6 +14,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
     {
         Task<Ellucian.Colleague.Dtos.ContributionPayrollDeductions> GetContributionPayrollDeductionsByGuidAsync(string id);
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>> GetContributionPayrollDeductionsAsync(int offset, int limit,
-            string arrangement = "", bool bypassCache = false);   
+            string arrangement = "", string deductedOn = "", Dictionary<string, string> filterQualifiers = null, bool bypassCache = false);   
     }
 }

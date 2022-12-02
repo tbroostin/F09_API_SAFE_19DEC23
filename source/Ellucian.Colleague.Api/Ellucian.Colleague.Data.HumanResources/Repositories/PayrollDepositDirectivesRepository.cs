@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -70,7 +70,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             //If no direct deposits, return empty PayrollDepositDirective obj
             if (employeeRecord.DirDepEntityAssociation == null || !employeeRecord.DirDepEntityAssociation.Any())
             {
-                logger.Info(string.Format("Employee {0} has no direct deposits", employeeId));
+                logger.Error(string.Format("Employee {0} has no direct deposits", employeeId));
                 return new PayrollDepositDirectiveCollection(employeeId);
             }
 
@@ -82,7 +82,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug(string.Format("Fetching Payroll deposit directive collection for employee id {0}", employeeId));
             var payrollDepositDirectives = new PayrollDepositDirectiveCollection(employeeId);
 
             foreach (var directDeposit in employeeRecord.DirDepEntityAssociation)
@@ -91,12 +91,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var bankRecord = bankRecords.FirstOrDefault(b => b.Recordkey == directDeposit.EmpDepositCodesAssocMember);
                 if (bankRecord == null)
                 {
-                    LogDataError("PrDepositCodes", directDeposit.EmpDepositCodesAssocMember, directDeposit);
+                    LogDataError("PrDepositCodes", directDeposit.EmpDepositCodesAssocMember, new Object());
                     throw new ApplicationException(string.Format("PrDepositCode not found for code {0}", directDeposit.EmpDepositCodesAssocMember));
                 }
 
                 if (!string.IsNullOrWhiteSpace(bankRecord.DdcTransitNo)) // US Account
                 {
+                    logger.Debug(string.Format("US Account - employee id {0}", employeeId));
                     payrollDepositDirectives.Add(new PayrollDepositDirective(
                         directDeposit.EmpDepositIdAssocMember,
                         employeeRecord.Recordkey,
@@ -120,6 +121,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 else // Canadian Account
                 {
+                    logger.Debug(string.Format("Canadian Account - employee id {0}", employeeId));
                     payrollDepositDirectives.Add(new PayrollDepositDirective(
                         directDeposit.EmpDepositIdAssocMember,
                         employeeRecord.Recordkey,
@@ -143,6 +145,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     ));
                 }
             }
+            logger.Debug(string.Format("Successfully Fetched Payroll deposit directive collection for employee id {0}", employeeId));
             return payrollDepositDirectives;
         }
 
@@ -156,8 +159,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                logger.Debug("Payroll Deposit Directive Id is null or empty");
                 throw new ArgumentNullException("id");
             }
+            logger.Debug(string.Format("Fetching Payroll deposit directives for employee id {0}", employeeId));
             var directives = await GetPayrollDepositDirectivesAsync(employeeId);
 
             var directive = directives.FirstOrDefault(dir => dir.Id == id);
@@ -168,7 +173,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new KeyNotFoundException(message);
             }
-
+            logger.Debug(string.Format("Successfully Fetched Payroll deposit directives for employee id {0}", employeeId));
             return directive;
         }
 
@@ -181,15 +186,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (payrollDepositDirectives == null)
             {
+                logger.Debug("Payroll Deposit Directive is null or empty");
                 throw new ArgumentNullException("payrollDepositDirective");
             }
+            logger.Debug("Get Banks or Update and get banks from cache");
             var bankRecords = await GetBanksOrUpdateAndGetBanksFromCache();
 
 
             var depositAccountsThatNeedBankRecords = payrollDepositDirectives.Where(directive => !BankCodeExists(bankRecords, directive));
             if (depositAccountsThatNeedBankRecords.Any())
             {
+                logger.Debug("Creating bank codes for deposit accounts that need bank records");
                 await CreateBankCodesAsync(depositAccountsThatNeedBankRecords);
+                logger.Debug("Get Banks or Update and get banks from cache");
                 bankRecords = await GetBanksOrUpdateAndGetBanksFromCache(true);
             }
 
@@ -217,6 +226,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             // create the request to update the direct deposits...
+            logger.Debug("Create the request to update the Payroll deposits");
             var request = new UpdatePayrollDepositsRequest()
             {
                 EmployeeId = payrollDepositDirectives.EmployeeId,
@@ -244,7 +254,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     throw new ApplicationException(response.ErrorMessage);
                 }
             }
-
+            logger.Debug("Successfully updated Payroll deposit directives");
             return await GetPayrollDepositDirectivesAsync(payrollDepositDirectives.EmployeeId);
         }
 
@@ -257,6 +267,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (payrollDepositDirective == null)
             {
+                logger.Debug("Payroll deposit is null or empty");
                 throw new ArgumentNullException("payrollDeposit");
             }
             var employeeId = payrollDepositDirective.PersonId;
@@ -285,6 +296,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 AddOperator = employeeId
             };
             // get the response from request...
+            logger.Debug("Create request to Create the Payroll deposits");
             var response = await transactionInvoker.ExecuteAsync<CreatePayrollDepositRequest, CreatePayrollDepositResponse>(request);
 
             if (response == null)
@@ -313,7 +325,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 LogDataError("PayrollDepositDirective", response.DepositId, createdDirective);
                 throw new ApplicationException("Created object not found in database");
             }
-
+            logger.Debug("Successfully created Payroll deposit directives");
             return createdDirective;
         }
 
@@ -327,15 +339,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                logger.Debug("Payroll deposit Id is null or empty");
                 throw new ArgumentNullException("id");
             }
             if (string.IsNullOrWhiteSpace(employeeId))
             {
+                logger.Debug("Employee id is null or empty");
                 throw new ArgumentNullException("employeeId");
             }
             var bankRecords = await GetBanksOrUpdateAndGetBanksFromCache();
 
+            logger.Debug(string.Format("Fetching Payroll deposit to delete for employee Id {0}", employeeId));
             var directiveToDelete = (await GetPayrollDepositDirectivesAsync(employeeId)).FirstOrDefault(dir => dir.Id == id);
+            
             if (directiveToDelete == null)
             {
                 LogDataError("PayrollDepositDirective", id, directiveToDelete);
@@ -346,7 +362,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var message = string.Format("Person {0} Cannot delete payroll directives for person {1}", employeeId, directiveToDelete.PersonId);
                 logger.Error(message);
             }
-
+            logger.Debug(string.Format("Successfully fetched Payroll deposit to delete for employee Id {0}", employeeId));
             var directivesToDelete = new List<PayrollDepositDirectives2>();
 
             var deposit = new PayrollDepositDirectives2()
@@ -372,6 +388,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
             // create the request to update the direct deposits...
+            logger.Debug("Create request to Delete the Payroll deposit");
             var request = new DeletePayrollDepositsRequest()
             {
                 EmployeeId = employeeId,
@@ -400,7 +417,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
             else
+            {
+                logger.Debug(string.Format("Successfully Deleted the Payroll deposit for employee Id {0}", employeeId));
                 return true;
+            }
+                
         }
 
         /// <summary>
@@ -413,11 +434,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (!ids.Any())
             {
+                logger.Debug("Payroll deposit Ids are null or empty");
                 throw new ArgumentNullException("ids");
             }
 
             var bankRecords = await GetBanksOrUpdateAndGetBanksFromCache();
-
+            logger.Debug(string.Format("Fetching Payroll deposits to delete for employee Id {0}", employeeId));
             var allEmployeepayrollDepositDirectives = await GetPayrollDepositDirectivesAsync(employeeId);
 
             if (allEmployeepayrollDepositDirectives == null)
@@ -426,7 +448,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug(string.Format("Successfully Fetched Payroll deposits to delete for employee Id {0}", employeeId));
             var directivesToDelete = new List<PayrollDepositDirectives2>();
 
             foreach (var payrollDepositDirective in allEmployeepayrollDepositDirectives)
@@ -466,6 +488,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
             // create the request to update the direct deposits...
+            logger.Debug("Create request to Delete the Payroll deposits");
             var request = new DeletePayrollDepositsRequest()
             {
                 EmployeeId = employeeId,
@@ -494,8 +517,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     throw new ApplicationException(response.ErrorMessage);
                 }
             }
-            else
+            else {
+                logger.Debug(string.Format("Successfully Deleted the Payroll deposits for employee Id {0}", employeeId));
                 return true;
+            }
+                
         }
 
         #region CLASS UTILITIES
@@ -518,8 +544,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     return BankAccountType.Checking;
                 case "S":
                     return BankAccountType.Savings;
-                default:
-                    throw new ApplicationException("Unknown bank account type internal code " + internalCode);
+                default: {
+                        logger.Debug("Unknown bank account type internal code");
+                        throw new ApplicationException("Unknown bank account type internal code " + internalCode);
+                }
+                    
             }
         }
         /// <summary>
@@ -536,7 +565,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 case BankAccountType.Savings:
                     return "S";
                 default:
-                    throw new ApplicationException("Unknown bank account type " + type);
+                    {
+                        logger.Debug("Unknown bank account type");
+                        throw new ApplicationException("Unknown bank account type " + type);
+                    }
+                    
             }
         }
         /// <summary>
@@ -598,10 +631,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (bankRecords == null)
             {
+                logger.Debug("Bank records cannot be null or empty");
                 throw new ArgumentNullException("bankRecords");
             }
             if (directive == null)
             {
+                logger.Debug("Payroll deposit directive cannot be null or empty");
                 throw new ArgumentNullException("directive");
             }
 
@@ -625,7 +660,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception e)
             {
-                logger.Info(e, string.Format("Unable to find bank record for bank code for directive {0}", directive.Id));
+                logger.Error(e, string.Format("Unable to find bank record for bank code for directive {0}", directive.Id));
             }
             bankCode = null;
             return false;
@@ -643,6 +678,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (bankRecord == null)
             {
+                logger.Debug("Bank records cannot be null or empty");
                 throw new ArgumentNullException("bankRecord");
             }
 
@@ -665,6 +701,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (bankAccounts == null)
             {
+                logger.Debug("Bank Accounts cannot be null or empty");
                 throw new ArgumentNullException("bankAccounts");
             }
 
@@ -682,7 +719,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         BranchId = acct.BranchNumber
                     }).ToList()
             };
-
+            logger.Debug("Create request to Create bank codes");
             var response = await transactionInvoker.ExecuteAsync<CreatePrDepositCodeRequest, CreatePrDepositCodeResponse>(request);
 
             if (response == null)
@@ -708,7 +745,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     DdcFinInstNumber = newBank.InstitutionId,
                     DdcBrTransitNumber = newBank.BranchId
                 }).ToList();
-
+            logger.Debug("Successfully added bank codes.");
             return addedBankRecords;
         }
 
@@ -733,6 +770,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (string.IsNullOrWhiteSpace(employeeId))
             {
+                logger.Debug("Employee id cannot be null or empty");
                 throw new ArgumentNullException("employeeId");
             }
 
@@ -750,12 +788,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             };
 
 
-
+            logger.Debug("Create request to Authenticate Payroll Deposit Directive");
             //invoke ctx
             var response = await transactionInvoker.ExecuteAsync<AuthenticatePayrollDepositDirectiveRequest, AuthenticatePayrollDepositDirectiveResponse>(request);
 
             if (response == null)
             {
+                logger.Debug("Null response from transaction");
                 throw new BankingAuthenticationException(depositDirectiveId, "Null response from transaction");
             }
             if (!string.IsNullOrEmpty(response.ErrorMessage))
@@ -764,18 +803,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!response.ExpirationDate.HasValue || !response.ExpirationTime.HasValue)
             {
+                logger.Debug(string.Format("Expiration Date and Time should be {0} but CTX returned null", expiration));
                 throw new BankingAuthenticationException(depositDirectiveId, string.Format("Expiration Date and Time should be {0} but CTX returned null", expiration));
             }
 
             var officialExpiration = response.ExpirationTime.ToPointInTimeDateTimeOffset(response.ExpirationDate, colleagueTimeZone);
             if (!officialExpiration.HasValue)
             {
+                logger.Debug(string.Format("Unable to parse expiration date and time from CTX \n date: {0} \n time: {1}", response.ExpirationDate.Value, response.ExpirationTime.Value));
                 throw new BankingAuthenticationException(depositDirectiveId, string.Format("Unable to parse expiration date and time from CTX \n date: {0} \n time: {1}", response.ExpirationDate.Value, response.ExpirationTime.Value));
             }
 
             Guid officialToken;
             if (!Guid.TryParse(response.Token, out officialToken))
             {
+                logger.Debug(string.Format("Unable to parse token in CTX response - {0}", response.Token));
                 throw new BankingAuthenticationException(depositDirectiveId, string.Format("Unable to parse token in CTX response - {0}", response.Token));
             }
 

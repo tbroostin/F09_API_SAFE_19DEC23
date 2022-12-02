@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -115,6 +115,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 _financialAidYears = await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
             }
             return _financialAidYears;
+        }
+
+        private IEnumerable<Domain.Student.Entities.FinancialAidYear> _limitedFinancialAidYears = null;
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidYear>> GetLimitedFinancialAidYearsAsync(bool restricted = false)
+        {
+            if (_limitedFinancialAidYears == null)
+            {
+                _limitedFinancialAidYears = await _studentFinancialAidAwardRepository.GetLimitedFinancialAidYearsAsync(restricted);
+            }
+            return _limitedFinancialAidYears;
         }
 
         private IEnumerable<Domain.Student.Entities.FinancialAidFundCategory> _financialAidFundCategories = null;
@@ -312,11 +322,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of StudentFinancialAidAwards</returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>> Get2Async(int offset, int limit, Dtos.StudentFinancialAidAward2 criteria, string personFilter = "", bool bypassCache = false, 
             bool restricted = false)
-        {
-             //CheckViewStudentFinancialAidAwardsPermission2();
-            
+        {            
             Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null;
-            var aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);
+            IEnumerable<Domain.Student.Entities.FinancialAidYear> aidYearsEntities = null;
+            try
+            {
+                aidYearsEntities = await GetLimitedFinancialAidYearsAsync(restricted);
+            }
+            catch
+            {
+                return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
+            }
+            if (!aidYearsEntities.Any())
+            {
+                //  No aid years found via limiting list, but no errors.  So retrieve all years.
+                aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);                
+            }
             List<string> aidYears = null;
             aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
             var finAidFunds = await GetFinancialAidFundsAsync(bypassCache);

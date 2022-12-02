@@ -1,5 +1,6 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -20,21 +21,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private IStudentRepository _studentRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
-        protected StudentCoordinationService(IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, 
-            IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository 
+        protected StudentCoordinationService(IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory,
+            IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository
             configurationRepository, IStaffRepository staffRepository = null)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, staffRepository, configurationRepository)
         {
             _studentRepository = studentRepository;
             _configurationRepository = configurationRepository;
-    }
+        }
 
-    /// <summary>
-    /// Confirms that the user is the student being accessed
-    /// </summary>
-    /// <param name="studentId"></param>
-    /// <returns></returns>
-    protected bool UserIsSelf(string studentId)
+        /// <summary>
+        /// Confirms that the user is the student being accessed
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <returns></returns>
+        protected bool UserIsSelf(string studentId)
         {
             // Access is Ok if the current user is this student
             if (CurrentUser.IsPerson(studentId))
@@ -111,7 +112,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
 
             // They're allowed to see another's data if they are a proxy for that user or have the admin permission
-            if (UserIsSelf(studentId) || (await UserIsAdvisorAsync(studentId, student)) || HasPermission(StudentPermissionCodes.ViewPersonInformation) || HasProxyAccessForPerson(studentId))
+            if (UserIsSelf(studentId) || (await UserIsAdvisorAsync(studentId, student)) || (HasPermission(StudentPermissionCodes.ViewPersonInformation) && HasPermission(StudentPermissionCodes.ViewStudentInformation)) || HasProxyAccessForPerson(studentId))
             {
                 return;
             }
@@ -185,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
 
             //Access is Ok if this is an advisor with full access to any student or has full access to their assigned advisees and this an an assigned advisee.
-            if (userPermissions.Contains(StudentPermissionCodes.CanDropStudent))
+            if (userPermissions.Contains(StudentPermissionCodes.CanDropStudent) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionDropRoster))
             {
                 return;
             }
@@ -231,13 +232,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Helper method to determine if the user is an assigned faculty on a provided section
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        public bool UserIsSectionFaculty(Domain.Student.Entities.Section section)
+        public bool UserIsSectionFacultyorDepartmentalOversight(Domain.Student.Entities.Section section, IEnumerable<Department> allDepartments)
         {
             if (section == null)
             {
                 throw new ArgumentNullException("Must provide a section to check faculty permission.");
             }
-            if (section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId))
+            if ((section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId)) ||
+                (CheckDepartmentalOversightAccessForSection(section, allDepartments) && HasPermission(DepartmentalOversightPermissionCodes.CreateSectionAddAuthorization)))
             {
                 return true;
             }
@@ -321,6 +323,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             logger.Error("User " + CurrentUser.PersonId + " does not have permissions to update this degree plan");
             throw new PermissionsException();
         }
+        /// <summary>
+        /// It checks that current user have EVALUATE.WHAT.IF permission
+        /// </summary>
+        /// <returns>bool</returns>
+        protected async Task<bool> CheckEvaluatePermissionAsync()
+        {
+            // Get user permissions
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
 
+            // Access is Ok if this is an advisor with all access, update access, review access or view access to any student.  
+            // Access is also OK if this is an advisor with all access, update access, review or view access to their assigned advisees and this is an assigned advisee.
+            // Need to allow advisors with view access to be able to create a plan because if a student doesn't have a plan one must be created.
+            if (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ApplicantEvaluateWhatIf))
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

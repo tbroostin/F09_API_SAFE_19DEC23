@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.AccountActivity;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -55,22 +56,30 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         {
             CheckPermission(studentId);
 
-            var termPeriods = _activityRepository.GetAccountPeriods(studentId);
-            var nonTermPeriod = _activityRepository.GetNonTermAccountPeriod(studentId);
-
-            var activityDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.AccountPeriod, Dtos.Finance.AccountActivity.AccountPeriod>();
-            var activityDto = new AccountActivityPeriods();
-            var activityDtoCollection = new List<Dtos.Finance.AccountActivity.AccountPeriod>();
-
-            foreach (var period in termPeriods)
+            try
             {
-                activityDtoCollection.Add(activityDtoAdapter.MapToType(period));
+                var termPeriods = _activityRepository.GetAccountPeriods(studentId);
+                var nonTermPeriod = _activityRepository.GetNonTermAccountPeriod(studentId);
+
+                var activityDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.AccountPeriod, Dtos.Finance.AccountActivity.AccountPeriod>();
+                var activityDto = new AccountActivityPeriods();
+                var activityDtoCollection = new List<Dtos.Finance.AccountActivity.AccountPeriod>();
+
+                foreach (var period in termPeriods)
+                {
+                    activityDtoCollection.Add(activityDtoAdapter.MapToType(period));
+                }
+
+                activityDto.Periods = activityDtoCollection;
+                activityDto.NonTermActivity = activityDtoAdapter.MapToType(nonTermPeriod);
+
+                return activityDto;
             }
-
-            activityDto.Periods = activityDtoCollection;
-            activityDto.NonTermActivity = activityDtoAdapter.MapToType(nonTermPeriod);
-
-            return activityDto;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         [Obsolete("Obsolete as of API version 1.8, use GetAccountActivityByTermForStudent2 instead")]
@@ -97,13 +106,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         {
             CheckPermission(personId);
 
-            var accountPeriodEntity = _activityRepository.GetTermActivityForStudent2(termId, personId);
+            try
+            {
+                var accountPeriodEntity = _activityRepository.GetTermActivityForStudent2(termId, personId);
 
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.DetailedAccountPeriod, Dtos.Finance.AccountActivity.DetailedAccountPeriod>();
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.DetailedAccountPeriod, Dtos.Finance.AccountActivity.DetailedAccountPeriod>();
 
-            var accountPeriodDto = adapter.MapToType(accountPeriodEntity);
+                var accountPeriodDto = adapter.MapToType(accountPeriodEntity);
 
-            return accountPeriodDto;
+                return accountPeriodDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         [Obsolete("Obsolete as of API version 1.8, use PostAccountActivityByPeriodForStudent2 instead")]
@@ -132,13 +149,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         {
             CheckPermission(personId);
 
-            var accountPeriodEntity = _activityRepository.GetPeriodActivityForStudent2(periods, startDate, endDate, personId);
+            try
+            {
+                var accountPeriodEntity = _activityRepository.GetPeriodActivityForStudent2(periods, startDate, endDate, personId);
 
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.DetailedAccountPeriod, Dtos.Finance.AccountActivity.DetailedAccountPeriod>();
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountActivity.DetailedAccountPeriod, Dtos.Finance.AccountActivity.DetailedAccountPeriod>();
 
-            var accountPeriodDto = adapter.MapToType(accountPeriodEntity);
+                var accountPeriodDto = adapter.MapToType(accountPeriodEntity);
 
-            return accountPeriodDto;
+                return accountPeriodDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         public IEnumerable<DepositDue> GetDepositsDue(string id)
@@ -190,77 +215,81 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             CheckPermission(studentId);
 
-            var awards = await faReferenceDataRepository.GetFinancialAidAwardsAsync();
-            var refAward = awards.FirstOrDefault(a => a.Code == awardId);
-            if(refAward == null)
-            {
-                string message = string.Format("Cannot get disbursement info for the specified student award: {0} - unknown award", awardId);
-                logger.Error(message);
-                throw new ApplicationException(message);
-            }
-            var awardCategory = refAward.AwardCategory;
-            if(awardCategory == null)
-            {
-                string message = string.Format("Cannot get disbursement info for the specified award: {0} - award category is missing", awardId);
-                logger.Error(message);
-                throw new ApplicationException(message);
-            }
+            try {
+                var awards = await faReferenceDataRepository.GetFinancialAidAwardsAsync();
+                var refAward = awards.FirstOrDefault(a => a.Code == awardId);
+                if (refAward == null)
+                {
+                    string message = string.Format("Cannot get disbursement info for the specified student award: {0} - unknown award", awardId);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+                var awardCategory = refAward.AwardCategory;
+                if (awardCategory == null)
+                {
+                    string message = string.Format("Cannot get disbursement info for the specified award: {0} - award category is missing", awardId);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
 
-            TIVAwardCategory? tivCategory = null;
-            switch (awardCategory.Code)
-            {
-                case "GPLUS":
-                    tivCategory = TIVAwardCategory.Loan;
-                    break;
-                case "PLUS":
-                    tivCategory = TIVAwardCategory.Loan;
-                    break;
-                case "GRTCH":
-                    tivCategory = TIVAwardCategory.Teach;
-                    break;
-                case "UGTCH":
-                    tivCategory = TIVAwardCategory.Teach;
-                    break;
-                case "GSL":
-                    tivCategory = TIVAwardCategory.Loan;
-                    break;
-                case "USTF":
-                    tivCategory = TIVAwardCategory.Loan;
-                    break;
-                case "PELL":
-                    tivCategory = TIVAwardCategory.Pell;
-                    break;
-            }
+                TIVAwardCategory? tivCategory = null;
+                switch (awardCategory.Code)
+                {
+                    case "GPLUS":
+                        tivCategory = TIVAwardCategory.Loan;
+                        break;
+                    case "PLUS":
+                        tivCategory = TIVAwardCategory.Loan;
+                        break;
+                    case "GRTCH":
+                        tivCategory = TIVAwardCategory.Teach;
+                        break;
+                    case "UGTCH":
+                        tivCategory = TIVAwardCategory.Teach;
+                        break;
+                    case "GSL":
+                        tivCategory = TIVAwardCategory.Loan;
+                        break;
+                    case "USTF":
+                        tivCategory = TIVAwardCategory.Loan;
+                        break;
+                    case "PELL":
+                        tivCategory = TIVAwardCategory.Pell;
+                        break;
+                }
 
-            if(tivCategory == null)
-            {
-                string message = string.Format("Could not assign a TIV category to the specified award: {0}", awardId);
-                logger.Error(message);
-                throw new ApplicationException(message);
-            }
-            TIVAwardCategory category = tivCategory.Value;
+                if (tivCategory == null)
+                {
+                    string message = string.Format("Could not assign a TIV category to the specified award: {0}", awardId);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+                TIVAwardCategory category = tivCategory.Value;
 
-            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountActivity.StudentAwardDisbursementInfo, Dtos.Finance.AccountActivity.StudentAwardDisbursementInfo>();
-            try
-            {
+                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountActivity.StudentAwardDisbursementInfo, Dtos.Finance.AccountActivity.StudentAwardDisbursementInfo>();
                 Domain.Finance.Entities.AccountActivity.StudentAwardDisbursementInfo disbursementInfoEntity = await _activityRepository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, category);
                 disbursementInfoEntity.AwardDescription = refAward.Description;
 
                 Dtos.Finance.AccountActivity.StudentAwardDisbursementInfo disbursementInfoDto = adapter.MapToType(disbursementInfoEntity);
 
                 return disbursementInfoDto;
+                }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
             }
             catch (ArgumentNullException ane)
             {
                 logger.Error(ane, ane.Message);
                 throw;
             }
-            catch(KeyNotFoundException knfe)
+            catch (KeyNotFoundException knfe)
             {
                 logger.Error(knfe, knfe.Message);
                 throw;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
                 throw;
@@ -293,24 +322,33 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             {
                 throw new ArgumentNullException("awardsToEvaluate");
             }
-            // criteria contains a list of tuples.  The first field of the tuple is a string
-            // and cannot be null or empty
-            if (criteria.AwardPeriodAwardsToEvaluate
-                .Where(x => string.IsNullOrEmpty(x.AwardPeriodAward))
-                .ToList()
-                .Any() )
+
+            try
             {
-                throw new ArgumentException("Received a null award to evaluate.");
+                // criteria contains a list of tuples.  The first field of the tuple is a string
+                // and cannot be null or empty
+                if (criteria.AwardPeriodAwardsToEvaluate
+                    .Where(x => string.IsNullOrEmpty(x.AwardPeriodAward))
+                    .ToList()
+                    .Any())
+                {
+                    throw new ArgumentException("Received a null award to evaluate.");
+                }
+
+                CheckPermission(criteria.StudentId);
+
+                var dtoAdapter = _adapterRegistry.GetAdapter<Dtos.Finance.PotentialD7FinancialAidCriteria, Domain.Finance.Entities.PotentialD7FinancialAidCriteria>();
+                var entityCriteria = dtoAdapter.MapToType(criteria);
+                var d7Entity = await _faRepository.GetPotentialD7FinancialAidAsync(entityCriteria);
+                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid, Dtos.Finance.AccountActivity.PotentialD7FinancialAid>();
+                var d7Dto = d7Entity.Select(x => adapter.MapToType(x));
+                return d7Dto.ToList();
             }
-
-            CheckPermission(criteria.StudentId);
-
-            var dtoAdapter = _adapterRegistry.GetAdapter<Dtos.Finance.PotentialD7FinancialAidCriteria, Domain.Finance.Entities.PotentialD7FinancialAidCriteria>();
-            var entityCriteria = dtoAdapter.MapToType(criteria);
-            var d7Entity = await _faRepository.GetPotentialD7FinancialAidAsync(entityCriteria);
-            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid, Dtos.Finance.AccountActivity.PotentialD7FinancialAid>();
-            var d7Dto = d7Entity.Select(x => adapter.MapToType(x));
-            return d7Dto.ToList();
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
     }
 }

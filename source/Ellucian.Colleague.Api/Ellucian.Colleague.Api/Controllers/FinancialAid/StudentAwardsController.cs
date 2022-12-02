@@ -15,6 +15,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -232,6 +233,11 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 {
                     StudentAwards = await StudentAwardService.UpdateStudentAwardsAsync(studentId, year, studentAwardPackage.StudentAwards, getActiveYearsOnly)
                 };
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                Logger.Error(csee.Message);
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {

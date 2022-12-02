@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Dmi.Client;
@@ -100,7 +100,7 @@ namespace Ellucian.Colleague.Api
                 {
                     // Invalidate the user in an unexpected event to be safe.
                     Context.User = null;
-                    throw exc;
+                    throw;
                 }
             }
             else
@@ -130,18 +130,18 @@ namespace Ellucian.Colleague.Api
                 // DMI clean up
                 Task.Run(async () => await DmiConnectionPool.CloseAllConnectionsAsync()).GetAwaiter().GetResult();
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore
+                DependencyResolver.Current.GetService<ILogger>().Error(ex, "Error during DMI clean up");
             }
             try
             {
                 // DMI clean up
                 Task.Run(async () => await DasSessionPool.CloseAllConnectionsAsync()).GetAwaiter().GetResult();
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore
+                DependencyResolver.Current.GetService<ILogger>().Error(ex, "Error during DMI clean up");
             }
         }
 
@@ -324,7 +324,7 @@ namespace Ellucian.Colleague.Api
                         // Kick off monitor thread and pass it a callback delegate that will shutdown app domain to restart itself.
                         // If this thread gets killed mid operation, it actually doesn't matter.
                         logger.Info("No new config data to apply. Kicking off monitor job...");
-                        var monitorJob = new BackgroundMonitorJob(AppConfigUtility.StorageServiceClient);
+                        var monitorJob = new BackgroundMonitorJob(AppConfigUtility.StorageServiceClient, AppDomain.CurrentDomain);
                         ThreadStart threadDelegate = new ThreadStart(monitorJob.Start);
                         Thread newThread = new Thread(threadDelegate);
                         newThread.Start();

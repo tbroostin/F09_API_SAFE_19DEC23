@@ -76,7 +76,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            public async Task QueryPlanningStudents_WithPermission()
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task QueryPlanningStudents_WithOnlyViewPersonInformation_Permission()
             {
                 List<string> planningStudents = new List<string>() { "0004723", "0011902" };
                 var planningStudentsEntity = new List<Domain.Student.Entities.PlanningStudent>() {
@@ -88,6 +89,45 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 planningStudentService = new PlanningStudentService(adapterRegistry, planningStudentRepo, currentUserFactory, roleRepository, logger, studentRepo, baseConfigurationRepository, staffRepo);
                 // Set up view assigned advisee permissions on advisor's role--so that advisor cannot access this student
                 facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewPersonInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { facultyRole });
+                var result = await planningStudentService.QueryPlanningStudentsAsync(planningStudents);
+                Assert.IsTrue(result.Dto is List<Dtos.Student.PlanningStudent>);
+                Assert.AreEqual(2, result.Dto.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task QueryPlanningStudents_WithOnlyViewStudentInformation_Permission()
+            {
+                List<string> planningStudents = new List<string>() { "0004723", "0011902" };
+                var planningStudentsEntity = new List<Domain.Student.Entities.PlanningStudent>() {
+                new Domain.Student.Entities.PlanningStudent("0004723","last name",null,null),
+                new Domain.Student.Entities.PlanningStudent("0011902","last name",null,null)
+                };
+                planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<List<string>>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudentsEntity.AsEnumerable()));
+                currentUserFactory = new FacultyUserFactory();
+                planningStudentService = new PlanningStudentService(adapterRegistry, planningStudentRepo, currentUserFactory, roleRepository, logger, studentRepo, baseConfigurationRepository, staffRepo);
+                // Set up view assigned advisee permissions on advisor's role--so that advisor cannot access this student
+                facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { facultyRole });
+                var result = await planningStudentService.QueryPlanningStudentsAsync(planningStudents);
+                Assert.IsTrue(result.Dto is List<Dtos.Student.PlanningStudent>);
+                Assert.AreEqual(2, result.Dto.Count());
+            }
+            [TestMethod]
+            public async Task QueryPlanningStudents_WithBoth_Permissions()
+            {
+                List<string> planningStudents = new List<string>() { "0004723", "0011902" };
+                var planningStudentsEntity = new List<Domain.Student.Entities.PlanningStudent>() {
+                new Domain.Student.Entities.PlanningStudent("0004723","last name",null,null),
+                new Domain.Student.Entities.PlanningStudent("0011902","last name",null,null)
+                };
+                planningStudentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<List<string>>(), It.IsAny<bool>())).Returns(Task.FromResult(planningStudentsEntity.AsEnumerable()));
+                currentUserFactory = new FacultyUserFactory();
+                planningStudentService = new PlanningStudentService(adapterRegistry, planningStudentRepo, currentUserFactory, roleRepository, logger, studentRepo, baseConfigurationRepository, staffRepo);
+                // Set up view assigned advisee permissions on advisor's role--so that advisor cannot access this student
+                facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewPersonInformation));
+                facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { facultyRole });
                 var result = await planningStudentService.QueryPlanningStudentsAsync(planningStudents);
                 Assert.IsTrue(result.Dto is List<Dtos.Student.PlanningStudent>);

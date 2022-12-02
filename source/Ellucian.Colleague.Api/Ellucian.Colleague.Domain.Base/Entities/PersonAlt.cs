@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public class PersonAlt
     {
-        public static string ElevatePersonAltType = "ELEV";
+        private static string elevatePersonAltType = "ELEV";
+        public static string ElevatePersonAltType
+        {
+            get { return elevatePersonAltType; }
+            set { elevatePersonAltType = value; }
+        }
+
 
         /// <summary>
         /// Gets or sets the person's alternate ID
@@ -29,7 +35,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The person's alternate ID type.
         /// </value>
         public string Type { get; set; }
-
+      
         /// <summary>
         /// Create a person alt domain object
         /// </summary>

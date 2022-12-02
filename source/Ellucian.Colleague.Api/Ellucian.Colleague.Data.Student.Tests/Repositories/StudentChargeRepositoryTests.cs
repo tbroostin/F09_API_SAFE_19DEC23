@@ -15,6 +15,7 @@ using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {

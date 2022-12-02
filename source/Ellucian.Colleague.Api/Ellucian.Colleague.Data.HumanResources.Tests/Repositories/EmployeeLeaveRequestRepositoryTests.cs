@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Domain.HumanResources.Repositories;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -31,13 +32,29 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public CreateLeaveRequestStatusRequest actualCreateLeaveRequestStatusRequest;
         public UpdateLeaveRequestRequest actualUpdateLeaveRequestRequest;
 
+        Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
+
+        public HRSSConfiguration hrssConfiguration = null;
         public DateTime startDate;
         public DateTime endDate;
 
         public EmployeeLeaveRequestRepository BuildRepository()
         {
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
+            DataContracts.HrssDefaults value = new DataContracts.HrssDefaults() { HrssDisplayNameHierarchy = "GR" };
+            
+            hrReferenceDataRepositoryMock.Setup(repo => repo.GetHrssConfigurationAsync()).Returns(Task.FromResult(hrssConfiguration));
+            hrReferenceDataRepositoryMock.Setup(repo => repo.GetHrssConfigurationAsync())
+                .Returns(Task.FromResult(hrssConfiguration));
 
+            // mock data reader for getting the Name Address Hierarchy
+            dataReaderMock.Setup<Task<Base.DataContracts.NameAddrHierarchy>>(a =>
+                a.ReadRecordAsync<Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "GR", true))
+                .ReturnsAsync(new Base.DataContracts.NameAddrHierarchy()
+                {
+                    Recordkey = "GR",
+                    NahNameHierarchy = new List<string>() { "CHL", "PF" }
+                });
             #region GetLeaveRequestsAsync
             #region LEAVE.REQUEST
             dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
@@ -131,6 +148,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     }
                }));
             #endregion
+
             // To Do : Incude LEAVE.REQUEST.COMMENTS
             #endregion
 
@@ -214,19 +232,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
               .Returns<UpdateLeaveRequestRequest>((req) => Task.FromResult(new UpdateLeaveRequestResponse() { ErrorMessage = "" }));
             #endregion
 
-            return new EmployeeLeaveRequestRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            return new EmployeeLeaveRequestRepository(hrReferenceDataRepositoryMock.Object, cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
         }
 
         public void EmployeeLeaveRequestRepositoryTestsInitialize()
         {
             MockInitialize();
+            hrssConfiguration = new HRSSConfiguration() { HrssDisplayNameHierarchy = "GR" };
             testData = new TestEmployeeLeaveRequestRepository();
+            hrReferenceDataRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
             employeeId = testData.leaveRequestRecords[0].EmployeeId;
             employeeIds = new List<string>() { employeeId };
             leaveRequestId = testData.leaveRequestRecords[1].Id;
             repositoryUnderTest = BuildRepository();
             startDate = DateTime.Today;
             endDate = DateTime.Today.AddDays(4);
+            
+
         }
 
         [TestClass]
@@ -327,9 +349,88 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     Assert.AreEqual(expected.ElementAt(i).EndDate, actual.ElementAt(i).EndDate);
                     Assert.AreEqual(expected.ElementAt(i).Status, actual.ElementAt(i).Status);
                     Assert.AreEqual(expected.ElementAt(i).ApproverId, actual.ElementAt(i).ApproverId);
-                    Assert.IsTrue(string.IsNullOrWhiteSpace(actual.ElementAt(i).ApproverName));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(actual.ElementAt(i).ApproverName));
 
                     CollectionAssert.AreEqual(expected.ElementAt(i).LeaveRequestDetails, actual.ElementAt(i).LeaveRequestDetails);
+                }
+            }
+
+            [TestMethod]
+            public async Task ExpectedEqualsActualTest_NA_ChosenName()
+            {
+                //Mock personbase to chosen name
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>("PERSON", It.IsAny<string[]>(), true))
+                                  .Returns<string, string[], bool>((x, y, z) => Task.FromResult(new Collection<Person>()
+                              {
+                    new Person(){
+                        Recordkey = "0011560",
+                        LastName = "Brown",
+                        FirstName = "Jennifer",
+                        MiddleName = "",
+                        PersonChosenLastName="CH_Brown",
+                        PersonChosenFirstName="CH_Jennifer"
+
+                    }
+                              }));
+
+                var expected = await getExpected();
+                var actual = await getActual();
+
+                Assert.AreEqual(expected.Count(), actual.Count());
+                for (int i = 0; i < expected.Count(); i++)
+                {
+                    Assert.AreEqual(expected.ElementAt(i).Id, actual.ElementAt(i).Id);
+                    Assert.AreEqual(expected.ElementAt(i).PerLeaveId, actual.ElementAt(i).PerLeaveId);
+                    Assert.AreEqual(expected.ElementAt(i).EmployeeId, actual.ElementAt(i).EmployeeId);
+                    Assert.AreEqual(expected.ElementAt(i).StartDate, actual.ElementAt(i).StartDate);
+                    Assert.AreEqual(expected.ElementAt(i).EndDate, actual.ElementAt(i).EndDate);
+                    Assert.AreEqual(expected.ElementAt(i).Status, actual.ElementAt(i).Status);
+                    Assert.AreEqual(expected.ElementAt(i).ApproverId, actual.ElementAt(i).ApproverId);
+                    CollectionAssert.AreEqual(expected.ElementAt(i).LeaveRequestDetails, actual.ElementAt(i).LeaveRequestDetails);
+
+                    //Check the chosen Name
+                    if (i == 0)
+                        Assert.AreEqual(expected.ElementAt(i).ApproverName, actual.ElementAt(i).ApproverName);
+                }
+            }
+
+            [TestMethod]
+            public async Task ExpectedEqualsActualTest_NA_PreferredName()
+            {
+
+                //Mock personbase to chosen name
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>("PERSON", It.IsAny<string[]>(), true))
+                                  .Returns<string, string[], bool>((x, y, z) => Task.FromResult(new Collection<Person>()
+                              {
+                    new Person(){
+                        Recordkey = "0011560",
+                        LastName = "Brown",
+                        FirstName = "Jennifer",
+                        MiddleName = "",
+                       PreferredName="Jennifer Aniston"
+
+
+                    }
+                              }));
+
+                var expected = await getExpected();
+                var actual = await getActual();
+
+                Assert.AreEqual(expected.Count(), actual.Count());
+                for (int i = 0; i < expected.Count(); i++)
+                {
+                    Assert.AreEqual(expected.ElementAt(i).Id, actual.ElementAt(i).Id);
+                    Assert.AreEqual(expected.ElementAt(i).PerLeaveId, actual.ElementAt(i).PerLeaveId);
+                    Assert.AreEqual(expected.ElementAt(i).EmployeeId, actual.ElementAt(i).EmployeeId);
+                    Assert.AreEqual(expected.ElementAt(i).StartDate, actual.ElementAt(i).StartDate);
+                    Assert.AreEqual(expected.ElementAt(i).EndDate, actual.ElementAt(i).EndDate);
+                    Assert.AreEqual(expected.ElementAt(i).Status, actual.ElementAt(i).Status);
+                    Assert.AreEqual(expected.ElementAt(i).ApproverId, actual.ElementAt(i).ApproverId);
+                    CollectionAssert.AreEqual(expected.ElementAt(i).LeaveRequestDetails, actual.ElementAt(i).LeaveRequestDetails);
+
+                    //Check the Preferred Name
+                    if (i == 1)
+                        Assert.AreEqual(expected.ElementAt(i).ApproverName, actual.ElementAt(i).ApproverName);
                 }
             }
 
@@ -463,6 +564,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
+
             public async Task ExpectedEqualsActualTest()
             {
                 #region LEAVE.REQUEST.DETAIL
@@ -519,7 +621,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.AreEqual(expected.StartDate, actual.StartDate);
                 Assert.AreEqual(expected.EndDate, actual.EndDate);
                 Assert.AreEqual(expected.ApproverId, actual.ApproverId);
-                Assert.IsTrue(string.IsNullOrWhiteSpace(actual.ApproverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(actual.ApproverName));
                 Assert.AreEqual(expected.Status, actual.Status);
 
                 CollectionAssert.AreEqual(expected.LeaveRequestDetails, actual.LeaveRequestDetails);
@@ -548,13 +650,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             {
                 EmployeeLeaveRequestRepositoryTestsInitialize();
                 inputLeaveRequest = new LeaveRequest(null, "895", "0011560",
-                    DateTime.Today, DateTime.Today, "0010351",
-                    "", LeaveStatusAction.Draft,
+                    DateTime.Today, DateTime.Today, "0011560",
+                    "Brown, Jennifer", "", LeaveStatusAction.Draft,
                     new List<LeaveRequestDetail>()
                     {
-                        new LeaveRequestDetail(null, null, DateTime.Today, 8.00m, false)
+                        new LeaveRequestDetail(null, null, DateTime.Today, 8.00m, false,"0011560")
                     },
-                    new List<LeaveRequestComment>() { });
+                    new List<LeaveRequestComment>() { }, false);
             }
 
             [TestCleanup]
@@ -618,6 +720,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
+
             public async Task CreateLeaveRequestSuccessfulTest()
             {
                 newlyCreatedLeaveRequestId = TestEmployeeLeaveRequestRepository.randomLeaveRequestId;
@@ -690,7 +793,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.AreEqual(inputLeaveRequest.StartDate, newlyCreatedLeaveRequest.StartDate);
                 Assert.AreEqual(inputLeaveRequest.EndDate, newlyCreatedLeaveRequest.EndDate);
                 Assert.AreEqual(inputLeaveRequest.ApproverId, newlyCreatedLeaveRequest.ApproverId);
-                Assert.AreEqual(inputLeaveRequest.ApproverName, newlyCreatedLeaveRequest.ApproverName);
+                Assert.IsNotNull(newlyCreatedLeaveRequest.ApproverName);
                 Assert.AreEqual(inputLeaveRequest.Status, newlyCreatedLeaveRequest.Status);
                 Assert.AreEqual(inputLeaveRequest.LeaveRequestDetails.Count, newlyCreatedLeaveRequest.LeaveRequestDetails.Count);
                 Assert.AreEqual(inputLeaveRequest.LeaveRequestComments.Count, newlyCreatedLeaveRequest.LeaveRequestComments.Count);
@@ -815,6 +918,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
+
             public async Task CreateLeaveRequestStatusSuccessfulTest()
             {
                 var newlyCreatedLeaveRequest = await createActual();
@@ -854,11 +958,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 EmployeeLeaveRequestRepositoryTestsInitialize();
 
                 inputLeaveRequestHelper = new LeaveRequestHelper(new LeaveRequest("2", "697", "0011560", new DateTime(2019, 04, 05),
-                    new DateTime(2019, 04, 05), "0010351", "", LeaveStatusAction.Submitted,
-                    new List<LeaveRequestDetail>() { new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 8.00m, false) },
-                    new List<LeaveRequestComment>() { }));
+                    new DateTime(2019, 04, 05), "0010351", "", "", LeaveStatusAction.Submitted,
+                    new List<LeaveRequestDetail>() { new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 8.00m, false, "0011560") },
+                    new List<LeaveRequestComment>() { }, false));
 
-                var leaveRequestDetailsTOBeUpdated = new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 12.00m, false);
+                var leaveRequestDetailsTOBeUpdated = new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 12.00m, false, "0011560");
                 inputLeaveRequestHelper.LeaveRequestDetailsToUpdate.Add(leaveRequestDetailsTOBeUpdated);
             }
 
@@ -916,6 +1020,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
+
             public async Task SuccessfulUpdateTest()
             {
 
@@ -984,7 +1089,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 transManagerMock.Verify(t => t.ExecuteAsync<UpdateLeaveRequestRequest, UpdateLeaveRequestResponse>(It.Is<UpdateLeaveRequestRequest>(r => this.CompareUpdateRequest(r, inputLeaveRequestHelper.LeaveRequest))));
             }
         }
-
 
         [TestClass]
         public class GetLeaveRequestsForTimeEntryAsyncTests : EmployeeLeaveRequestRepositoryTests
@@ -1062,6 +1166,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
+
             public async Task GetLeaveRequestsForTimeEntryAsync_ExpectedEqualsActualTest()
             {
                 dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
@@ -1129,7 +1234,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             {
                 foreach (var lrd in createLeaveRequestDetails)
                 {
-                    leaveRequestDetailsToBeCreated.Add(new LeaveRequestDetail(null, null, lrd.LrdLeaveDate.Value, lrd.LrdHours, false));
+                    leaveRequestDetailsToBeCreated.Add(new LeaveRequestDetail(null, null, lrd.LrdLeaveDate.Value, lrd.LrdHours, false, "0011560"));
                 }
             }
 

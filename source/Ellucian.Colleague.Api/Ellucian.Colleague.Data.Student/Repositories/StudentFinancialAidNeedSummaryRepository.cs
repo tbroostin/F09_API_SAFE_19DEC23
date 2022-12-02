@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -95,8 +95,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex, "Unable to get person guid.");
                 }
             }
 

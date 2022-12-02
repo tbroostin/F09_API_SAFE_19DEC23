@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +29,7 @@ using Ellucian.Web.Http.Filters;
 using System.Collections;
 using System.Web.Http.Controllers;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -8229,6 +8230,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryPersonMatchResultsByPostAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    personServiceMock.Setup(s => s.QueryPersonMatchResultsByPostAsync(criteriaDto)).Throws(new ColleagueSessionExpiredException("session expired"));
+                    personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger);
+                    await personsController.QueryPersonMatchResultsByPostAsync(criteriaDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task QueryPersonMatchResultsByPostAsync_Exception()
             {
                 personServiceMock.Setup(s => s.QueryPersonMatchResultsByPostAsync(criteriaDto)).Throws(new Exception("An error occurred"));
@@ -8237,7 +8255,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var results = await personsController.QueryPersonMatchResultsByPostAsync(criteriaDto);
             }
         }
-
         #endregion
     }
 }

@@ -190,6 +190,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<IEnumerable<StudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = true, bool currentOnly=true)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

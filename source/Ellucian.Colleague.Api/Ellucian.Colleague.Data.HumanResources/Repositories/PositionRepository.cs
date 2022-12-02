@@ -1,4 +1,5 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -16,6 +17,7 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -77,34 +79,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
         private async Task<IEnumerable<Position>> BuildAllPositions()
         {
-            var positionEntities = new List<Position>();
-            var positionIds = await DataReader.SelectAsync("POSITION", "");
-            if (positionIds == null)
-            {
-                var message = "Unexpected: Null position Ids returned from select";
-                logger.Error(message);
-                throw new ApplicationException(message);
-            }
-
-            for (int i = 0; i < positionIds.Count(); i += bulkReadSize)
-            {
-                var subList = positionIds.Skip(i).Take(bulkReadSize);
-                var positionRecords = await DataReader.BulkReadRecordAsync<DataContracts.Position>(subList.ToArray());
-                if (positionRecords == null)
+                var positionEntities = new List<Position>();
+                var positionIds = await DataReader.SelectAsync("POSITION", "");
+                if (positionIds == null)
                 {
-                    var message = string.Format("Unexpected: Bulk data read using keys of position records returned null.");
+                    var message = "Unexpected: Null position Ids returned from select";
                     logger.Error(message);
+                    throw new ApplicationException(message);
                 }
-                else
+
+                for (int i = 0; i < positionIds.Count(); i += bulkReadSize)
                 {
-                    foreach (var positionRecord in positionRecords)
+                    var subList = positionIds.Skip(i).Take(bulkReadSize);
+                    var positionRecords = await DataReader.BulkReadRecordAsync<DataContracts.Position>(subList.ToArray());
+                    if (positionRecords == null)
                     {
-                        try
+                        var message = string.Format("Unexpected: Bulk data read using keys of position records returned null.");
+                        logger.Error(message);
+                    }
+                    else
+                    {
+                        foreach (var positionRecord in positionRecords)
                         {
-                            // If the logExceptionsOnly flag is passed, then call the 'legacy' build positions helper method which will
-                            // throw execeptions as they occur, as opposed to the BuildPositionErrorCollection method which will
-                            // add the errors to the RepositoryException
-                            var positionDomainEntity = BuildPosition(positionRecord);
+                            try
+                            {
+                                // If the logExceptionsOnly flag is passed, then call the 'legacy' build positions helper method which will
+                                // throw execeptions as they occur, as opposed to the BuildPositionErrorCollection method which will
+                                // add the errors to the RepositoryException
+                                var positionDomainEntity = BuildPosition(positionRecord);
 
                             if (positionDomainEntity != null)
                                 positionEntities.Add(positionDomainEntity);
@@ -114,12 +116,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         {
                             foreach (var error in ex.Errors)
                             {
-                                LogDataError("Position", positionRecord.Recordkey, positionRecord, ex, error.Message);
+                                LogDataError("Position", positionRecord.Recordkey, null, ex, error.Message);
                             }
                         }
                         catch (Exception e)
                         {
-                            LogDataError("Position", positionRecord.Recordkey, positionRecord, e, e.Message);
+                            LogDataError("Position", positionRecord.Recordkey,null, e, e.Message);
                         }
                     }
 
@@ -128,7 +130,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             return positionEntities;
         }
-
 
         private async Task<IEnumerable<Position>> BuildAllPositionsCollection()
         {
@@ -658,7 +659,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             return foundEntry.Value.PrimaryKey;
         }
-        
+
         #endregion
 
         #region PositionPay
@@ -730,7 +731,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var positionPayEntity = new PositionPay(posPayRecord.Recordkey);
             positionPayEntity.AuthorizedDate = posPayRecord.PospayAuthorizedDate;
             positionPayEntity.BargainingUnit = posPayRecord.PospayBargainingUnit;
-            
+
             positionPayEntity.EndDate = posPayRecord.PospayEndDate;
             positionPayEntity.StartDate = posPayRecord.PospayStartDate;
 
@@ -738,7 +739,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             positionPayEntity.SalaryMinimum = posPayRecord.PospaySalaryMin;
 
             positionPayEntity.CycleWorkTimeAmount = posPayRecord.PospayCycleWorkTimeAmt;
-            positionPayEntity.YearWorkTimeAmount = posPayRecord.PospayYearWorkTimeAmt; 
+            positionPayEntity.YearWorkTimeAmount = posPayRecord.PospayYearWorkTimeAmt;
             positionPayEntity.CycleWorkTimeUnits = posPayRecord.PospayCycleWorkTimeUnits;
             positionPayEntity.YearWorkTimeUnits = posPayRecord.PospayYearWorkTimeUnits;
 
@@ -752,13 +753,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var fundingSources = new List<PositionFundingSource>();
             foreach (var fundingRecord in posPayRecord.PospayFndgEntityAssociation)
             {
-              
+
                 var fundingSource = new PositionFundingSource(
                     fundingRecord.PospayFndgGlNoAssocMember,
                     posPayRecord.PospayFndgGlNo.IndexOf(fundingRecord.PospayFndgGlNoAssocMember)
                     )
                 {
-                    ProjectId = fundingRecord.PospayFndgProjIdAssocMember                   
+                    ProjectId = fundingRecord.PospayFndgProjIdAssocMember
                 };
                 if (!string.IsNullOrEmpty(fundingRecord.PospayFndgProjIdAssocMember))
                 {
@@ -781,9 +782,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
         private async Task<string> GetHostCountryAsync()
         {
-           if (_internationalParameters == null)
-               _internationalParameters = await GetInternationalParametersAsync();
-           return _internationalParameters.HostCountry;
+            if (_internationalParameters == null)
+                _internationalParameters = await GetInternationalParametersAsync();
+            return _internationalParameters.HostCountry;
         }
 
         /// <summary>

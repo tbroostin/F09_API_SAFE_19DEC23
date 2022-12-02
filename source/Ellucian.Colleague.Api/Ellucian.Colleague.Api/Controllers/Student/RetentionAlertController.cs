@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using System.Net;
 using System.Net.Http;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -51,10 +52,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetCaseTypesAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving case types";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to retrieve Case types", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Unable to retrieve case types", HttpStatusCode.BadRequest);
             }
         }
 
@@ -70,10 +77,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetCaseCategoriesAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving case categories";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to retrieve Case categories", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Unable to retrieve case categories", HttpStatusCode.BadRequest);
             }
         }
 
@@ -89,6 +102,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _retentionAlertService.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while getting case category org roles";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -109,6 +128,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetRetentionAlertPermissionsAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving retention alert permissions.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -128,10 +153,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetCaseClosureReasonsAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving case closure reasons";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to retrieve Case closure Reasons", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Unable to retrieve case closure reasons", HttpStatusCode.BadRequest);
             }
         }
 
@@ -204,10 +235,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(ex, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving retention alert work cases 2";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to retrieve Retention Alert work cases 2");
-                throw CreateHttpResponseException("Unable to retrieve Retention Alert work cases 2", HttpStatusCode.BadRequest);
+                string message = "Unable to retrieve retention alert work cases 2";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
         /// <summary>
@@ -243,10 +281,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(ex, "User is not authorized to retrieve retention alert case detail");
                 throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving alert case detail";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to retrieve retention alert case detail");
-                throw CreateHttpResponseException("Unable to retrieve retention alert case detail", HttpStatusCode.BadRequest);
+                string message = "Unable to retrieve retention alert case detail";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -281,10 +326,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not authorized to get contributions");
                 throw CreateHttpResponseException("User is not authorized to get contributions", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving retention alert contributions";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Unable to retrieve retention alert contributions");
-                throw CreateHttpResponseException("Unable to retrieve retention alert contributions", HttpStatusCode.BadRequest);
+                string message = "Unable to retrieve retention alert contributions";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -316,10 +368,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 SetResourceLocationHeader("PostRetentionAlertCase", new { id = newCaseResponse.CaseId });
                 return response;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding retention alert case for student";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to add retention alert case");
-                throw CreateHttpResponseException("Unable to add retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to add retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -356,10 +415,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.AddRetentionAlertCaseNoteAsync(caseId, retentionAlertCaseNote);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding note to retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to add note to retention alert case");
-                throw CreateHttpResponseException("Unable to add note to retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to add note to retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -396,10 +462,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.AddRetentionAlertCaseFollowUpAsync(caseId, retentionAlertCaseNote);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding followup to retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to add followup to retention alert case");
-                throw CreateHttpResponseException("Unable to add followup to retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to add followup to retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -435,10 +508,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.AddRetentionAlertCaseCommCodeAsync(caseId, retentionAlertCaseCommCode);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding communication code to a retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to add communication code to a retention alert case");
-                throw CreateHttpResponseException("Unable to add communication code to a retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to add communication code to a retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -474,10 +554,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.AddRetentionAlertCaseTypeAsync(caseId, retentionAlertCaseType);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding a case type to a retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to add a case type to a retention alert case");
-                throw CreateHttpResponseException("Unable to add a case type to a retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to add a case type to a retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -513,10 +600,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.ChangeRetentionAlertCasePriorityAsync(caseId, retentionAlertCasePriority);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while changing priority of the retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to change priority of the retention alert case");
-                throw CreateHttpResponseException("Unable to change priority of the retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to change priority of the retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -552,10 +646,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 RetentionAlertWorkCaseActionResponse newCaseResponse = await _retentionAlertService.CloseRetentionAlertCaseAsync(caseId, retentionAlertCaseClose);
                 return newCaseResponse;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while closing a retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to close a retention alert case");
-                throw CreateHttpResponseException("Unable to close a retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to close a retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -617,6 +718,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetRetentionAlertCaseOwnerSummaryAsync(categoryId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while fetching Category Summary for retention alert cases.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Unable to get Category Summary for retention alert cases.");
@@ -635,10 +742,17 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _retentionAlertService.GetCasePrioritiesAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving case priorities";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to retrieve Case priorities");
-                throw CreateHttpResponseException("Unable to retrieve Case priorities", HttpStatusCode.BadRequest);
+                string message = "Unable to retrieve case priorities";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -679,10 +793,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not able to send email for case.");
                 throw CreateHttpResponseException("User is not able to send email for case.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while sending mail for retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to send mail for retention alert case");
-                throw CreateHttpResponseException("Unable to send mail for retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to send mail for retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -723,10 +844,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not able to set a reminder for case.");
                 throw CreateHttpResponseException("User is not able to set a reminder for case.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while setting reminder for retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to set a reminder for retention alert case");
-                throw CreateHttpResponseException("Unable to set a reminder for retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to set a reminder for retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -767,10 +895,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not able to set a reminder for case.");
                 throw CreateHttpResponseException("User is not able to set a reminder for case.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while setting a reminder for retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to set a reminder for retention alert case");
-                throw CreateHttpResponseException("Unable to set a reminder for retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to set a reminder for retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -794,6 +929,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(pex, "User is not authorized to get open cases.");
                 throw CreateHttpResponseException("User is not authorized to get open cases.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while fetching open cases";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -821,6 +962,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(pex, "User is not authorized to get cases closed by reason.");
                 throw CreateHttpResponseException("User is not authorized to get cases closed by reason.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while fetching retention alert closed cases by reason";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -867,10 +1014,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not authorized to reassign case.");
                 throw CreateHttpResponseException("User is not authorized to reassign case.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while reassigning the retention alert case";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to reassign the retention alert case");
-                throw CreateHttpResponseException("Unable to reassign the retention alert case", HttpStatusCode.BadRequest);
+                string message = "Unable to reassign the retention alert case";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -912,10 +1066,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not authorized to set the Send Email Preference.");
                 throw CreateHttpResponseException("User is not authorized to set the Send Email Preference.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while setting the send email preference.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to set the Send Email Preference.");
-                throw CreateHttpResponseException("Unable  to set the Send Email Preference.", HttpStatusCode.BadRequest);
+                string message = "Unable to set the send email preference.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -950,10 +1111,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(pex, "User is not authorized to get the Send Email Preference.");
                 throw CreateHttpResponseException("User is not authorized to get the Send Email Preference.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving send email preference.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, "Unable to get the Send Email Preference.");
-                throw CreateHttpResponseException("Unable  to get the Send Email Preference.", HttpStatusCode.BadRequest);
+                string message = "Unable to get the send email preference.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

@@ -1,11 +1,7 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
-
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
 {
@@ -19,72 +15,72 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// The address lines of the ship to destination location
         /// </summary>
-        public List<string> addressLines;
+        public List<string> addressLines { get; set; }
 
 		/// <summary>
 		/// Country code of place
 		/// </summary>
-        public string placeCountryCode;
+        public string placeCountryCode { get; set; }
 
         /// <summary>
         /// Country title of place
         /// </summary>
-        public string placeCountryTitle;
+        public string placeCountryTitle { get; set; }
 
         /// <summary>
         /// Postal title of place
         /// </summary>
-        public string placeCountryPostalTitle;
+        public string placeCountryPostalTitle { get; set; }
 
         /// <summary>
         /// Country region code of place
         /// </summary>
-        public string placeCountryRegionCode;
+        public string placeCountryRegionCode { get; set; }
 
         /// <summary>
         /// Country region title of place
         /// </summary>
-        public string placeCountryRegionTitle;
+        public string placeCountryRegionTitle { get; set; }
 
         /// <summary>
         /// Country sub-region code of place
         /// </summary>
-        public string placeCountrySubRegionCode;
+        public string placeCountrySubRegionCode { get; set; }
 
         /// <summary>
         /// Country sub-region title of place
         /// </summary>
-        public string placeCountrySubRegionTitle;
+        public string placeCountrySubRegionTitle { get; set; }
 
         /// <summary>
         /// The name of the city or town
         /// </summary>
-        public string placeCountryLocality;
+        public string placeCountryLocality { get; set; }
 
         /// <summary>
         /// The mailing postal code
         /// </summary>
-        public string placeCountryPostalCode;
+        public string placeCountryPostalCode { get; set; }
 
         /// <summary>
         /// Contact name
         /// </summary>
-        public string contactName;
+        public string contactName { get; set; }
 
         /// <summary>
         /// The phone number of the contact
         /// </summary>
-        public string phoneNumber;
+        public string phoneNumber { get; set; }
 
         /// <summary>
         /// The extension of the contact
         /// </summary>
-        public string phoneExtension;
+        public string phoneExtension { get; set; }
 
         /// <summary>
         /// Tax code associated with destination
         /// </summary>
-        public string taxCode;
+        public string taxCode { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ShipToDestination"/> class.

@@ -4,6 +4,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student.AnonymousGrading;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -46,7 +47,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">ID of the course section for which to retrieve preliminary anonymous grade information</param>
         /// <returns>Preliminary anonymous grade information for the specified course section</returns>
         /// <accessComments>
-        /// The authenticated user must be an assigned faculty member for the specified course section in order to retrieve preliminary anonymous grade information for that course section.
+        /// 1. The authenticated user must be an assigned faculty member for the specified course section to retrieve preliminary anonymous grade information for that course section.
+        /// 2. A departmental oversight member assigned to the section may retrieve preliminary anonymous grade information with the following permission code
+        /// VIEW.SECTION.GRADING
+        /// CREATE.SECTION.GRADING
         /// </accessComments>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if a course section is not specified, or if there was a Colleage data or configuration error.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not authorized to retrieve preliminary anonymous grade information for the specified course section.</exception>
@@ -64,6 +68,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var sectionPreliminaryAnonymousGrading = await _preliminaryAnonymousGradeService.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
                 return sectionPreliminaryAnonymousGrading;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving preliminary anonymous grade information.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -126,6 +136,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 var updatedPreliminaryAnonymousGrades = await _preliminaryAnonymousGradeService.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades);
                 return updatedPreliminaryAnonymousGrades;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while updating preliminary anonymous grade information for course section " + sectionId;
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

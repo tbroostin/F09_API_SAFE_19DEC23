@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -54,17 +55,22 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
         private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.LeavePlan>> GetLeavePlansV2Async(bool bypassCache)
         {
-            return await leavePlansRepository.GetLeavePlansV2Async(bypassCache);
+            logger.Debug("********* Start - Service to get leave plans - Start *********");
+            var leaveplans = await leavePlansRepository.GetLeavePlansV2Async(bypassCache);
+            logger.Debug("********* End - Service to get leave plans - End *********");
+            return leaveplans;
         }
 
         //get all leave type categories from reference repository
         private IEnumerable<LeaveType> leaveTypes = null;
         private async Task<IEnumerable<LeaveType>> GetLeaveCategoriesAsync(bool bypassCache)
         {
+            logger.Debug("********* Start - Service to get leave categories - Start *********");
             if (leaveTypes == null)
             {
                 leaveTypes = await humanResourcesReferenceDataRepository.GetLeaveTypesAsync(bypassCache);
             }
+            logger.Debug("********* End - Service to get leave categories - End *********");
             return leaveTypes;
         }
 
@@ -72,10 +78,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private IEnumerable<EarningType2> earningTypes = null;
         private async Task<IEnumerable<EarningType2>> GetEarningTypes2Async(bool bypassCache)
         {
+            logger.Debug("********* Start - Service to get earning types - Start *********");
             if (earningTypes == null)
             {
                 earningTypes = await humanResourcesReferenceDataRepository.GetEarningTypesAsync(bypassCache);
             }
+            logger.Debug("********* End - Service to get earning types - End *********");
             return earningTypes;
         }
 
@@ -86,6 +94,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of EmployeeLeavePlans DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.EmployeeLeavePlans>, int>> GetEmployeeLeavePlansAsync(int offset, int limit, bool bypassCache = false)
         {
+            logger.Debug("********* Start - Service to get employee leave plans - Start *********");
             var empLeavePlansCollection = new List<Ellucian.Colleague.Dtos.EmployeeLeavePlans>();
 
             Tuple<IEnumerable<Perleave>, int> empLeavePlansEntities = null;
@@ -141,6 +150,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw IntegrationApiException;
             }
+            logger.Debug("********* End - Service to get employee leave plans - End *********");
             return new Tuple<IEnumerable<EmployeeLeavePlans>, int>(empLeavePlansCollection, empLeavePlansEntities.Item2);
         }
 
@@ -151,14 +161,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>EmployeeLeavePlans DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.EmployeeLeavePlans> GetEmployeeLeavePlansByGuidAsync(string guid, bool bypassCache = false)
         {
+            logger.Debug("********* Start - Service to get employee leave plans by guid - Start *********");
             if (string.IsNullOrEmpty(guid))
             {
+                logger.Debug("Argument guid cannot be null or empty");
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a employee-leave-plans.");
             }
 
             Perleave perleaveEntity = null;
             try
             {
+                logger.Debug(string.Format("Calling GetEmployeeLeavePlansByGuidAsync repository method with guid {0}", guid));
                 perleaveEntity = await employeeLeavePlansRepository.GetEmployeeLeavePlansByGuidAsync(guid);
             }
             catch (RepositoryException ex)
@@ -168,6 +181,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (KeyNotFoundException)
             {
+                logger.Debug(string.Format("No employee-leave-plans was found for GUID '{0}'", guid));
                 throw new KeyNotFoundException(string.Format("No employee-leave-plans was found for GUID '{0}'", guid));
             }
             Ellucian.Colleague.Dtos.EmployeeLeavePlans retval = null;
@@ -181,13 +195,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (KeyNotFoundException)
             {
+                logger.Debug(string.Format("No employee-leave-plans was found for GUID '{0}'", guid));
                 throw new KeyNotFoundException(string.Format("No employee-leave-plans was found for GUID '{0}'", guid));
             }
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;
             }
-
+            logger.Debug("********* End - Service to get employee leave plans by guid - End *********");
             return retval;
         }
 
@@ -198,6 +213,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>A list of EmployeeLeavePlan Dto objects</returns>
         public async Task<IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>> GetEmployeeLeavePlansV2Async(string effectivePersonId = null, bool bypassCache = false)
         {
+            logger.Debug("********* Start - Service to get employee leave plans - Start *********");
             //determine the effective person id and whether the current user needs/has proxy authority for that effective person id
             if (string.IsNullOrWhiteSpace(effectivePersonId))
             {
@@ -242,6 +258,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     employeeIds.AddRange((await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId)));
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;              
+                }
                 catch (Exception e)
                 {
                     logger.Error("Error getting supervisor employees", e.Message);
@@ -254,6 +274,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     employeeIds.AddRange((await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)));
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     logger.Error("Error getting supervisor employees", e.Message);
@@ -262,6 +286,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Include the  leave plans without any associated earning types.
             var employeeLeavePlanEntities = await employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(employeeIds.Distinct(), leavePlans, leaveTypes, earningTypes, true);
             var employeeLeavePlanEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>();
+            logger.Debug("********* End - Service to get employee leave plans - End *********");
             return employeeLeavePlanEntities.Select(lp => employeeLeavePlanEntityToDtoAdapter.MapToType(lp)).ToList();
 
         }
@@ -273,9 +298,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>A collection of EmployeeLeavePlan Dto objects</returns>
         public async Task<IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>> QueryEmployeeLeavePlanAsync(EmployeeLeavePlanQueryCriteria criteria)
         {
+            logger.Debug("********* Start - Service to query employee leave plan - Start *********");
             // verify criteria exists and if so, extract parts
             if (criteria == null)
             {
+                logger.Debug("Argument criteria cannot be null or empty");
                 throw new ArgumentNullException("criteria");
             }
 
@@ -320,11 +347,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             if (earningTypes == null || !earningTypes.Any())
             {
+                logger.Debug("No earning types defined.");
                 throw new ArgumentException("No earning types defined.");
             }
 
             var employeeLeavePlanEntities = await employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(validEmployeeIds.Distinct(), leavePlans, leaveTypes, earningTypes);
             var employeeLeavePlanEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>();
+            logger.Debug("********* End - Service to query employee leave plan - End *********");
             return employeeLeavePlanEntities.Select(lp => employeeLeavePlanEntityToDtoAdapter.MapToType(lp)).ToList();
         }
 
@@ -337,7 +366,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private Ellucian.Colleague.Dtos.EmployeeLeavePlans ConvertEmployeeLeavePlansEntityToDto(Perleave source,
             Dictionary<string, string> personGuidCollection, Dictionary<string, string> leavplanGuidCollection)
         {
-
+            logger.Debug("********* Start - Private Service method to convert employee leave plans entity to dto - Start *********");
             var employeeLeavePlans = new Ellucian.Colleague.Dtos.EmployeeLeavePlans()
             {
                 Id = source.Guid,
@@ -384,7 +413,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     employeeLeavePlans.Plan = new GuidObject2(leavePlanGuid);
                 }
             }
-
+            logger.Debug("********* End - Private Service method to convert employee leave plans entity to dto - End *********");
             return employeeLeavePlans;
         }
 
@@ -442,6 +471,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private async Task<List<string>> GetValidEmployeeIds(string supervisorId, IEnumerable<string> employeeIds, DateTime? lookupStartDate)
         {
+            logger.Debug("********* Start - Private Service method to get valid employee ids - Start *********");
             List<string> validEmployeeIds = new List<string>();
             IEnumerable<string> supervisedEmployeeIds = new List<string>();
             try
@@ -480,7 +510,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 // when only the supervisor id is defined, return all supervised employee ids
                 validEmployeeIds.AddRange(supervisedEmployeeIds);
             }
-
+            logger.Debug("********* End - Private Service method to get valid employee ids - End *********");
             return validEmployeeIds;
         }
     }

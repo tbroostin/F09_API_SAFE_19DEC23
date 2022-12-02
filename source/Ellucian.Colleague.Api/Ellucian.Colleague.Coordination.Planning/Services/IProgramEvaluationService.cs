@@ -26,5 +26,16 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// <param name="programCode">Code of the program</param>
         /// <returns>List of evaluation notices for this student and program</returns>
         Task<IEnumerable<Dtos.Student.EvaluationNotice>> GetEvaluationNoticesAsync(string studentId, string programCode);
+
+        /// <summary>
+        /// Return a list of program evaluations for the given applicant and programs
+        /// </summary>
+        /// <param name="applicantId">Id of the student</param>
+        /// <param name="programCodes">List of program codes</param>
+        /// /// <param name="catalogYear">The catalogYear code</param>
+        /// <returns>A list of <see cref="ProgramEvaluation">ProgramEvaluation</see> objects</returns>
+        Task<IEnumerable<Domain.Student.Entities.ProgramEvaluation>> EvaluateApplicantAsync(string applicantId, List<string> programCodes, string catalogYear);
+
+
     }
 }

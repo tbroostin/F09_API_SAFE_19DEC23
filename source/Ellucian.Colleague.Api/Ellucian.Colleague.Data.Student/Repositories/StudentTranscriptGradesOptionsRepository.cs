@@ -1,4 +1,4 @@
-﻿/*Copyright 2018-2019 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2018-2022 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -223,7 +224,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occurred while getting guids for {0} with a secondary key of {1}.", "STUDENT.ACAD.CRED", "STC.INTG.KEY.IDX"), ex);
+                throw new ColleagueWebApiException(string.Format("Error occurred while getting guids for {0} with a secondary key of {1}.", "STUDENT.ACAD.CRED", "STC.INTG.KEY.IDX"), ex);
             }
 
             return guidCollection;

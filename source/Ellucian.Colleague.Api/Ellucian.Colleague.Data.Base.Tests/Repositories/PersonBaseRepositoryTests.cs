@@ -16,6 +16,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {

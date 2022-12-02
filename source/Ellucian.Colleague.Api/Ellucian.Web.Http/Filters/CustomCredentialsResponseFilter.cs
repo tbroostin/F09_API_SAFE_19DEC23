@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Security;
 using System.Web;
 
@@ -30,6 +30,7 @@ namespace Ellucian.Web.Http.Filters
             }
             catch
             {
+                var doNothing = true; // avoid empty catch block
             }
 
             base.OnActionExecuted(actionExecutedContext);

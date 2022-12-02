@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GeneralLedgerTransactionRepository : BaseColleagueRepository, IGeneralLedgerTransactionRepository, IEthosExtended
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public int GlSecurityTransactionCallCount { get; set; }
         private RepositoryException exception = new RepositoryException();
@@ -337,9 +337,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     genLdgrTransactionDetail.SequenceNumber = (!string.IsNullOrEmpty(transDetail.IgpdTranSeqNoAssocMember)) ? (int?)int.Parse(transDetail.IgpdTranSeqNoAssocMember) : null;
                                     genLdgrTransactionDetail.SubmittedBy = transDetail.IgpdSubmittedByAssocMember;
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
                                     // Leave sequence number off the domain entity
+                                    logger.Error(ex, "Unable to get sequence number.");
                                 }
                                 transactionItem.TransactionDetailLines.Add(genLdgrTransactionDetail);
                             }
@@ -429,9 +430,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     genLdgrTransactionDetail.EncAdjustmentType = transDetail.IgpdEncAdjTypeAssocMember;
                                     genLdgrTransactionDetail.EncCommitmentType = transDetail.IgpdEncCommitmentTypeAssocMember;
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
                                     // Leave sequence number off the domain entity
+                                    logger.Error(ex, "Unable to get sequence number.");
                                 }
                                 transactionItem.TransactionDetailLines.Add(genLdgrTransactionDetail);
                             }
@@ -694,7 +696,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             var response = await CreateGeneralLedgerTransaction2(generalLedgerTransaction, GlConfig);
-            if(response != null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            if(response == null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 if (exception != null && exception.Errors != null && exception.Errors.Any())
                 {

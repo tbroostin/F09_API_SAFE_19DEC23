@@ -1,18 +1,23 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -23,20 +28,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IStudentRepository _studentRepository;
         private readonly ISectionRepository _sectionRepository;
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
+        private readonly IReferenceDataRepository _baseReferenceDataRepository;
 
         /// <summary>
         /// Initialize the service for accessing section permissions
         /// </summary>
         /// <param name="adapterRegistry">Dto adapter registry</param>
         /// <param name="sectionPermissionRepository">Section permissions for faculty consent and student petitions</param>
+        /// <param name="referenceDataRepository"></param>
+        /// <param name="baseReferenceDataRepository"></param>
         /// <param name="logger">error logging</param>
-        public SectionPermissionService(IAdapterRegistry adapterRegistry, ISectionPermissionRepository sectionPermissionRepository, IStudentRepository studentRepository, ISectionRepository sectionRepository, IStudentReferenceDataRepository referenceDataRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+        public SectionPermissionService(IAdapterRegistry adapterRegistry, ISectionPermissionRepository sectionPermissionRepository, IStudentRepository studentRepository, ISectionRepository sectionRepository, IStudentReferenceDataRepository referenceDataRepository, IReferenceDataRepository baseReferenceDataRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this._sectionPermissionRepository = sectionPermissionRepository;
             this._studentRepository = studentRepository;
             this._sectionRepository = sectionRepository;
             this._referenceDataRepository = referenceDataRepository;
+            this._baseReferenceDataRepository = baseReferenceDataRepository;
         }
 
         /// <summary>
@@ -48,13 +57,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             Dtos.Student.SectionPermission sectionPermissionDto = new Dtos.Student.SectionPermission();
             sectionPermissionDto.SectionId = sectionId;
+
             // Get the specified section from the repository
             Domain.Student.Entities.Section section = await GetSectionAsync(sectionId);
 
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await _baseReferenceDataRepository.DepartmentsAsync();
+
             // Ensure that the current user is a faculty of the given section. 
-            if (!IsSectionFaculty(section))
+            if (!IsSectionFaculty(section) &&
+                !(CheckDepartmentalOversightAccessForSection(section, allDepartments) &&
+                (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionStudentPetitions) ||
+                userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition) ||
+                userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionFacultyConsents) ||
+                userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent))))
             {
-                var message = "Current user is not a faculty of requested section " + sectionId + " and therefore cannot access waivers";
+                var message = "Current user is neither a faculty nor a departmental oversight of requested section " + sectionId + " and therefore cannot access waivers";
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
@@ -62,19 +80,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 Ellucian.Colleague.Domain.Student.Entities.SectionPermission sectionPermEntity = await _sectionPermissionRepository.GetSectionPermissionAsync(sectionId);
 
-                if (sectionPermEntity != null && ((sectionPermEntity.StudentPetitions != null && sectionPermEntity.StudentPetitions.Count() > 0) || (sectionPermEntity.FacultyConsents != null && sectionPermEntity.FacultyConsents.Count() > 0)))
+                if (sectionPermEntity != null && ((sectionPermEntity.StudentPetitions != null && sectionPermEntity.StudentPetitions.Count() > 0) ||
+                    (sectionPermEntity.FacultyConsents != null && sectionPermEntity.FacultyConsents.Count() > 0)))
                 {
                     //mapping
                     var sectionPermissionDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionPermission, Ellucian.Colleague.Dtos.Student.SectionPermission>();
                     sectionPermissionDto = sectionPermissionDtoAdapter.MapToType(sectionPermEntity);
                 }
-
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read student petitions from repository using section id " + sectionId + "Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             return sectionPermissionDto;
         }
@@ -86,7 +108,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>The newly created <see cref="Dtos.Student.StudentPetition">Student Petition</see></returns>
         public async Task<Dtos.Student.StudentPetition> AddStudentPetitionAsync(Dtos.Student.StudentPetition studentPetitionToAdd)
         {
-
+            var userPermissions = await GetUserPermissionCodesAsync();
             // Throw exception if incoming Student Petition is null
             if (studentPetitionToAdd == null)
             {
@@ -94,15 +116,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Throw exception if user does not have correct permissions for the item being added
-            // NOTE: It was decided to only check a person's permissions and not also verify that this is a section the person is teaching.
-            if (studentPetitionToAdd.Type == Dtos.Student.StudentPetitionType.StudentPetition && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentPetition))
+            if (studentPetitionToAdd.Type == Dtos.Student.StudentPetitionType.StudentPetition && !(userPermissions.Contains(StudentPermissionCodes.CreateStudentPetition) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition)))
             {
                 var message = "User does not have permissions required to create a Student Petition.";
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
 
-            if (studentPetitionToAdd.Type == Dtos.Student.StudentPetitionType.FacultyConsent && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateFacultyConsent))
+            if (studentPetitionToAdd.Type == Dtos.Student.StudentPetitionType.FacultyConsent && !(userPermissions.Contains(StudentPermissionCodes.CreateFacultyConsent) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent)))
             {
                 var message = "User does not have permissions required to create a Faculty Consent.";
                 logger.Error(message);
@@ -128,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!((await _referenceDataRepository.GetPetitionStatusesAsync()).Select(wr => wr.Code).Contains(studentPetitionToAdd.StatusCode)))
                     {
-                        throw new Exception("Petition Status Code is not valid.");
+                        throw new ColleagueWebApiException("Petition Status Code is not valid.");
                     }
                 }
                 catch (Exception ex)
@@ -150,7 +171,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!((await _referenceDataRepository.GetStudentPetitionReasonsAsync()).Select(wr => wr.Code).Contains(studentPetitionToAdd.ReasonCode)))
                     {
-                        throw new Exception("Petition Reason is not valid.");
+                        throw new ColleagueWebApiException("Petition Reason is not valid.");
                     }
                 }
                 catch (Exception ex)
@@ -164,7 +185,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //If there is no reason code then there should be a comment or the request to add is not valid
                 if (string.IsNullOrEmpty(studentPetitionToAdd.Comment))
                 {
-                    throw new Exception("Student Petition must have either a Reason or a comment to be valid.");
+                    throw new ColleagueWebApiException("Student Petition must have either a Reason or a comment to be valid.");
                 }
             }
 
@@ -181,6 +202,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error("Error converting incoming StudentPetitionToAdd Dto to StudentPetition Entity: " + ex.Message);
                 throw new ArgumentException("Student Petition to add is invalide", ex);
             }
+            // Now that we have retrieved it, see if petition can be added by person requesting.
+            // Get the specified section from the repository
+            Domain.Student.Entities.Section section = await GetSectionAsync(studentPetitionToAdd.SectionId);
+            var allDepartments = await _baseReferenceDataRepository.DepartmentsAsync();
+            // Ensure that the current user is a faculty of the given section or a departmental oversight member with the required permissions. 
+            if (!(IsSectionFaculty(section) && (userPermissions.Contains(StudentPermissionCodes.CreateStudentPetition) || userPermissions.Contains(StudentPermissionCodes.CreateFacultyConsent)))
+                && !(CheckDepartmentalOversightAccessForSection(section, allDepartments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent))))
+            {
+                var message = "Current user is neither a faculty nor a departmental oversight of requested section " + studentPetitionToAdd.SectionId + " with the required permissions and therefore cannot add student petition requested.";
+                logger.Info(message);
+                throw new PermissionsException(message);
+            }
             var studentPetitionAdded = await _sectionPermissionRepository.AddStudentPetitionAsync(petitionToAdd);
             var studentPetitionEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentPetition, Dtos.Student.StudentPetition>();
             var studentPetitionDto = studentPetitionEntityToDtoAdapter.MapToType(studentPetitionAdded);
@@ -194,6 +227,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns><see cref="Ellucian.Colleague.Dtos.Student.StudentPetition">StudentPetition</see> object that was updated</returns>
         public async Task<Dtos.Student.StudentPetition> UpdateStudentPetitionAsync(Dtos.Student.StudentPetition studentPetitionToUpdate)
         {
+            var userPermissions = await GetUserPermissionCodesAsync();
             // Throw exception if incoming Student Petition is null
             if (studentPetitionToUpdate == null)
             {
@@ -201,15 +235,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Throw exception if user does not have correct permissions for the item being updated
-            // NOTE: It was decided to only check a person's permissions and not also verify that this is a section the person is teaching.
-            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.StudentPetition && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentPetition))
+            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.StudentPetition && !(userPermissions.Contains(StudentPermissionCodes.CreateStudentPetition) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition)))
             {
                 var message = "User does not have permissions required to update a Student Petition.";
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
 
-            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.FacultyConsent && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateFacultyConsent))
+            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.FacultyConsent && !(userPermissions.Contains(StudentPermissionCodes.CreateFacultyConsent) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent)))
             {
                 var message = "User does not have permissions required to update a Faculty Consent.";
                 logger.Error(message);
@@ -235,7 +268,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!((await _referenceDataRepository.GetPetitionStatusesAsync()).Select(wr => wr.Code).Contains(studentPetitionToUpdate.StatusCode)))
                     {
-                        throw new Exception("Petition Status Code is not valid.");
+                        throw new ColleagueWebApiException("Petition Status Code is not valid.");
                     }
                 }
                 catch (Exception ex)
@@ -257,7 +290,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!((await _referenceDataRepository.GetStudentPetitionReasonsAsync()).Select(wr => wr.Code).Contains(studentPetitionToUpdate.ReasonCode)))
                     {
-                        throw new Exception("Petition Reason is not valid.");
+                        throw new ColleagueWebApiException("Petition Reason is not valid.");
                     }
                 }
                 catch (Exception ex)
@@ -271,7 +304,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //If there is no reason code then there should be a comment or the request to update is not valid
                 if (string.IsNullOrEmpty(studentPetitionToUpdate.Comment))
                 {
-                    throw new Exception("Student Petition must have either a Reason or a comment to be valid.");
+                    throw new ColleagueWebApiException("Student Petition must have either a Reason or a comment to be valid.");
                 }
             }
 
@@ -287,6 +320,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 logger.Error(ex, "Error converting incoming StudentPetitionToAdd Dto to StudentPetition Entity: " + ex.Message);
                 throw new ArgumentException("Student Petition to update is invalide", ex);
+            }
+            // Now that we have retrieved it, see if petition can be updated by person requesting.
+            // Get the specified section from the repository
+            Domain.Student.Entities.Section section = await GetSectionAsync(studentPetitionToUpdate.SectionId);
+            var allDepartments = await _baseReferenceDataRepository.DepartmentsAsync();
+            // Ensure that the current user is a faculty of the given section or a departmental oversight member with the required permissions. 
+            if (!(IsSectionFaculty(section) && (userPermissions.Contains(StudentPermissionCodes.CreateStudentPetition) || userPermissions.Contains(StudentPermissionCodes.CreateFacultyConsent)))
+                && !(CheckDepartmentalOversightAccessForSection(section, allDepartments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent))))
+            {
+                var message = "Current user is neither a faculty nor a departmental oversight of requested section " + studentPetitionToUpdate.SectionId + " with the required permissions and therefore cannot update student petition requested.";
+                logger.Info(message);
+                throw new PermissionsException(message);
             }
             var studentPetitionUpated = await _sectionPermissionRepository.UpdateStudentPetitionAsync(petitionToUpdate);
             var studentPetitionEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentPetition, Dtos.Student.StudentPetition>();
@@ -326,7 +371,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Domain.Student.Entities.StudentPetition studentPetition = null;
             try
             {
-                studentPetition =await  _sectionPermissionRepository.GetAsync(studentPetitionId, sectionId, entityType);
+                studentPetition = await _sectionPermissionRepository.GetAsync(studentPetitionId, sectionId, entityType);
             }
             catch (KeyNotFoundException)
             {
@@ -337,33 +382,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Exception occurred getting student petition from repository using student petition id " + studentPetitionId + " and type of " + type.ToString() + " Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
 
             // Now that we have retrieved it, see if it is a petition viewable by person requesting.
-            // Faculty can see only petitions for their own sections
+            // Faculty or departmental oversight can see only petitions for their own sections
             Domain.Student.Entities.Section section;
             try
             {
-                section =  await GetSectionAsync(studentPetition.SectionId);
+                section = await GetSectionAsync(studentPetition.SectionId);
             }
             catch
             {
                 var message = "Section Id " + studentPetition.SectionId + " specified in student petition could not be verified.";
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
-            if (!IsSectionFaculty(section))
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await _baseReferenceDataRepository.DepartmentsAsync();
+            if (!IsSectionFaculty(section) && !(CheckDepartmentalOversightAccessForSection(section, allDepartments) &&
+                (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionStudentPetitions) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition) || userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionFacultyConsents) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionFacultyConsent))))
             {
-                var message = "Current user is not a faculty of requested section " + studentPetition.SectionId + " and therefore cannot access student petition requested.";
+                var message = "Current user is neither a faculty nor a departmental oversight of requested section " + studentPetition.SectionId + " and therefore cannot access student petition requested.";
                 logger.Info(message);
                 throw new PermissionsException(message);
             }
 
             var studentPetitionEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentPetition, Dtos.Student.StudentPetition>();
             var studentPetitionDto = studentPetitionEntityToDtoAdapter.MapToType(studentPetition);
-           
+
             return studentPetitionDto;
         }
 
@@ -387,6 +435,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return section;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (ArgumentNullException aex)
             {
                 var message = "Section ID must be specified.";
@@ -403,7 +455,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Exception occurred while trying to read section from repository using id " + sectionId + "Exception message: " + ex.ToString();
                 logger.Error(message);
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -32,6 +32,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     {
         #region Initialize and Cleanup
 
+        private Mock<ILogger> loggerObject;
+        private Mock<IAdapterRegistry> adapterRegistry;
         private RequisitionService service;
         private RequisitionService service2;
         private RequisitionService serviceForNoPermission;
@@ -40,9 +42,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
         private TestGeneralLedgerUserRepository testGeneralLedgerUserRepository;
 
+        private TestColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository;
+        private Mock<IAccountFundsAvailableRepository> accountFundsAvailableRepo;
+        private Mock<IReferenceDataRepository> referenceDataRepo;
+        private Mock<IBuyerRepository> buyersDataRepo;
+        private Mock<IPersonRepository> personDataRepo;
+        private Mock<IVendorsRepository> vendorsDataRepo;
+        private Mock<IAddressRepository> addressDataRepo;
+        private Mock<IConfigurationRepository> confDatRepo;
+        private Mock<IProcurementsUtilityService> procurementsUtilityServiceMock;
+
         private Mock<IRequisitionRepository> mockRequisitionRepository;
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
+        private GeneralLedgerUser glUser;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -66,9 +81,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             roleRepositoryMock = new Mock<IRoleRepository>();
 
+            colleagueFinanceReferenceDataRepository = new TestColleagueFinanceReferenceDataRepository();
+            accountFundsAvailableRepo = new Mock<IAccountFundsAvailableRepository>();
+            referenceDataRepo = new Mock<IReferenceDataRepository>();
+            buyersDataRepo = new Mock<IBuyerRepository>();
+            personDataRepo = new Mock<IPersonRepository>();
+            vendorsDataRepo = new Mock<IVendorsRepository>();
+            addressDataRepo = new Mock<IAddressRepository>();
+            confDatRepo = new Mock<IConfigurationRepository>();
+            procurementsUtilityServiceMock = new Mock<IProcurementsUtilityService>();
+
+            // Set up and mock the adapter, and setup the GetAdapter method.
+            adapterRegistry = new Mock<IAdapterRegistry>();
+
+            loggerObject = new Mock<ILogger>();
+
             // Set up mock requisition repository
             mockRequisitionRepository = new Mock<IRequisitionRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                RequisitionsUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                RequisitionsUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
+
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
             staffRepositoryMock = new Mock<IStaffRepository>();
             generalLedgerAccountRepositoryMock = new Mock<IGeneralLedgerAccountRepository>();
@@ -106,6 +149,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockRequisitionRepository = null;
             mockGlConfigurationRepository = null;
             mockGeneralLedgerUserRepository = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
 
             roleRepositoryMock = null;
             roleRepository = null;
@@ -334,7 +379,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetRequisitionAsync(null);
+                var requisitionDto = await service.GetRequisitionAsync(null);
             }
             catch (ArgumentNullException aex)
             {
@@ -351,7 +396,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetRequisitionAsync("");
+                var requisitionDto = await service.GetRequisitionAsync("");
             }
             catch (ArgumentNullException aex)
             {
@@ -572,7 +617,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task RequisitionService_DeleteRequisitionsAsync()
         {
-            
+
             Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
             abc.PersonId = "0000001";
             abc.RequisitionId = "000123";
@@ -603,7 +648,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //var loggerObject = new Mock<ILogger>().Object;
 
             mockRequisitionRepository.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ReturnsAsync(res);
-            
+
             var deleteReqDtos = await service2.DeleteRequisitionsAsync(abc);
             Assert.IsNotNull(deleteReqDtos);
         }
@@ -618,7 +663,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await service2.QueryRequisitionSummariesAsync(null);
         }
 
-        
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task QueryRequisitionSummariesAsync_EmptyCriteria_ArgumentNullException()
@@ -632,7 +677,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task QueryRequisitionSummariesAsync_CurrentUserDifferentFromRequest()
         {
             filterCriteria = new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
-            filterCriteria.PersonId = "0016357";            
+            filterCriteria.PersonId = "0016357";
 
             await service2.QueryRequisitionSummariesAsync(filterCriteria);
         }
@@ -738,15 +783,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Set up the service objects
             service = new RequisitionService(testRequisitionRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, accountFundsAvailableRepo.Object, referenceDataRepo.Object, buyersDataRepo.Object, personDataRepo.Object,
-                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
+                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object,
+                generalLedgerAccountRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, procurementsUtilityServiceMock.Object, loggerObject);
             service2 = new RequisitionService(mockRequisitionRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
                 colleagueFinanceReferenceDataRepository, accountFundsAvailableRepo.Object, referenceDataRepo.Object, buyersDataRepo.Object, personDataRepo.Object,
-                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
+                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object,
+                generalLedgerAccountRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, procurementsUtilityServiceMock.Object, loggerObject);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new RequisitionService(testRequisitionRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, accountFundsAvailableRepo.Object, referenceDataRepo.Object, buyersDataRepo.Object, personDataRepo.Object,
-                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, noPermissionsUser, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
+                vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, noPermissionsUser, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, procurementsUtilityServiceMock.Object, loggerObject);
 
             filterCriteria = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
             filterCriteria.PersonId = currentUserFactory.CurrentUser.PersonId;
@@ -755,6 +802,164 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
         #endregion
     }
+
+
+
+
+    [TestClass]
+    public class RequisitionServiceGetRequisitionAsync_ApprovalRolesTests
+    {
+        [TestClass]
+        public class RequisitionServiceTests_GetRequisitionAsyncWithApprovalRoles : GeneralLedgerCurrentUser
+        {
+            #region DECLARATION
+
+            private Mock<ILogger> loggerMock;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private RequisitionService requisitionService;
+            private Mock<IProcurementsUtilityService> mockProcurementsUtilityService;
+
+
+            private Mock<IRequisitionRepository> requisitionRepositoryMock;
+            private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
+            private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
+            private Mock<IColleagueFinanceReferenceDataRepository> mockColleagueFinanceReferenceDataRepositoryMock;
+            private Mock<IAccountFundsAvailableRepository> mockAccountFundsAvailableRepo;
+            private Mock<IReferenceDataRepository> mockReferenceDataRepository;
+            private Mock<IBuyerRepository> mockBuyerRepository;
+            private Mock<IPersonRepository> mockPersonRepository;
+            private Mock<IVendorsRepository> mockVendorsRepository;
+            private Mock<IAddressRepository> mockAddressRepository;
+            private Mock<IConfigurationRepository> mockConfigurationRepository;
+            private Mock<IStaffRepository> mockStaffRepository;
+            private Mock<IGeneralLedgerAccountRepository> mockGLAccountRepository;
+            private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepository;
+
+            private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
+            private TestGeneralLedgerUserRepository testGeneralLedgerUserRepository;
+
+            private UserFactory currentUserFactory;
+            private GeneralLedgerUser glUser;
+            private Mock<IRoleRepository> mockRoleRepository;
+            private Domain.Entities.Role glUserRolePermissions;
+
+            #endregion
+
+            #region TEST SETUP
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                requisitionRepositoryMock = new Mock<IRequisitionRepository>();
+                mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+                mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
+                mockColleagueFinanceReferenceDataRepositoryMock = new Mock<IColleagueFinanceReferenceDataRepository>();
+                mockAccountFundsAvailableRepo = new Mock<IAccountFundsAvailableRepository>();
+                mockReferenceDataRepository = new Mock<IReferenceDataRepository>();
+                mockBuyerRepository = new Mock<IBuyerRepository>();
+                mockPersonRepository = new Mock<IPersonRepository>();
+                mockVendorsRepository = new Mock<IVendorsRepository>();
+                mockAddressRepository = new Mock<IAddressRepository>();
+                mockConfigurationRepository = new Mock<IConfigurationRepository>();
+                mockStaffRepository = new Mock<IStaffRepository>();
+                mockGLAccountRepository = new Mock<IGeneralLedgerAccountRepository>();
+                mockApprovalConfigurationRepository = new Mock<IApprovalConfigurationRepository>();
+                mockRoleRepository = new Mock<IRoleRepository>();
+
+                mockProcurementsUtilityService = new Mock<IProcurementsUtilityService>();
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                loggerMock = new Mock<ILogger>();
+
+                glUserRolePermissions = new Domain.Entities.Role(1, "REQUISITION.VIEWER");
+
+                currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
+
+                glUser = new GeneralLedgerUser("0000001", "Test");
+                glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
+
+                mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+                {
+                    return Task.FromResult(glUser);
+                });
+                mockApprovalConfigurationRepository.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+
+                glUserRolePermissions.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRequisitions));
+                glUserRolePermissions.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRequisition));
+                glUserRolePermissions.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.CreateUpdateRequisition));
+
+                mockRoleRepository.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { glUserRolePermissions });
+
+                testGeneralLedgerConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
+
+                requisitionService = new RequisitionService(requisitionRepositoryMock.Object, testGeneralLedgerConfigurationRepository, mockGeneralLedgerUserRepository.Object,
+                    mockColleagueFinanceReferenceDataRepositoryMock.Object, mockAccountFundsAvailableRepo.Object, mockReferenceDataRepository.Object, mockBuyerRepository.Object, mockPersonRepository.Object,
+                    mockVendorsRepository.Object, mockAddressRepository.Object, mockConfigurationRepository.Object, adapterRegistryMock.Object, currentUserFactory, mockRoleRepository.Object,
+                    mockStaffRepository.Object, mockGLAccountRepository.Object, mockApprovalConfigurationRepository.Object, mockProcurementsUtilityService.Object, loggerMock.Object);
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                requisitionRepositoryMock = null;
+                mockGlConfigurationRepository = null;
+                mockGeneralLedgerUserRepository = null;
+                mockColleagueFinanceReferenceDataRepositoryMock = null;
+                mockAccountFundsAvailableRepo = null;
+                mockReferenceDataRepository = null;
+                mockBuyerRepository = null;
+                mockPersonRepository = null;
+                mockVendorsRepository = null;
+                mockAddressRepository = null;
+                mockConfigurationRepository = null;
+                mockStaffRepository = null;
+                mockGLAccountRepository = null;
+                mockApprovalConfigurationRepository = null;
+
+                adapterRegistryMock = null;
+                mockRoleRepository = null;
+                loggerMock = null;
+                currentUserFactory = null;
+
+                requisitionService = null;
+                mockProcurementsUtilityService = null;
+            }
+
+            #endregion
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRequisitionAsync_NullApprovalConfiguration()
+            {
+                await requisitionService.GetRequisitionAsync("1");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRequisitionAsync_ApprovalConfigurationException()
+            {
+                mockApprovalConfigurationRepository.Setup(repo => repo.GetApprovalConfigurationAsync()).Throws(new Exception());
+
+                await requisitionService.GetRequisitionAsync("1");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetRequisitionAsync_ApprovalConfigurationRequisitionsUseApprovalRoles()
+            {
+                mockApprovalConfigurationRepository.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(new ApprovalConfiguration() { RequisitionsUseApprovalRoles = true }));
+                mockGeneralLedgerUserRepository.Setup(x => x.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(() =>
+                {
+                    IEnumerable<string> approvalAccess = new List<string>() { "11_11_11_11_00000_11111", "11_11_11_11_00000_11112" };
+                    return Task.FromResult(approvalAccess);
+                });
+
+                await requisitionService.GetRequisitionAsync("1");
+            }
+        }
+    }
+
 
     [TestClass]
     public class RequisitionServiceTests_V11
@@ -783,6 +988,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Mock<ILogger> loggerMock;
             private Mock<IAccountFundsAvailableRepository> accountFundsAvailableRepo;
             private UserFactorySubset currentUserFactory;
+            private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepository;
             private Mock<IProcurementsUtilityService> procurementsUtilityServiceMock;
 
             private RequisitionService requisitionService;
@@ -828,10 +1034,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 staffRepositoryMock = new Mock<IStaffRepository>();
                 generalLedgerAccountRepositoryMock = new Mock<IGeneralLedgerAccountRepository>();
                 currentUserFactory = new GeneralLedgerCurrentUser.UserFactorySubset();
+                mockApprovalConfigurationRepository = new Mock<IApprovalConfigurationRepository>();
                 procurementsUtilityServiceMock = new Mock<IProcurementsUtilityService>();
                 requisitionService = new RequisitionService(requisitionRepositoryMock.Object, generalLedgerConfigurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
                     colleagueFinanceReferenceDataRepositoryMock.Object, accountFundsAvailableRepo.Object, referenceDataRepositoryMock.Object, buyerRepositoryMock.Object, personRepositoryMock.Object, vendorsRepositoryMock.Object,
-                    addressRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerMock.Object);
+                    addressRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, mockApprovalConfigurationRepository.Object, procurementsUtilityServiceMock.Object, loggerMock.Object);
 
                 InitializeTestData();
 
@@ -987,7 +1194,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     VendorTerms = "1",
                     Comments = "comments",
                     InternalComments = "internal Comments",
-                    Type="procurement"
+                    Type = "procurement"
                 };
             }
 
@@ -1050,7 +1257,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 addressRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync("USA");
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
-            
+
                 var personGuidCollection = new Dictionary<string, string>();
                 personGuidCollection.Add("1", guid);
                 personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
@@ -1073,7 +1280,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.GetRequisitionsByGuidAsync(null);
             }
 
-            
+
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -1102,7 +1309,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
-           
+
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository3()
@@ -1173,7 +1380,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var personGuidCollection = new Dictionary<string, string>();
                 personGuidCollection.Add("99999", guid);
                 personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
-                
+
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
@@ -1422,7 +1629,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.DeleteRequisitionAsync(null);
             }
 
-         
+
             [TestMethod]
             public async Task RequisitionService_DeleteRequisitionAsync()
             {
@@ -1458,6 +1665,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Mock<ILogger> loggerMock;
             private Mock<IAccountFundsAvailableRepository> accountFundsAvailableRepo;
             private UserFactorySubset currentUserFactory;
+            private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepository;
             private Mock<IProcurementsUtilityService> procurementsUtilityServiceMock;
 
             private RequisitionService requisitionService;
@@ -1506,12 +1714,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 accountFundsAvailableRepo = new Mock<IAccountFundsAvailableRepository>();
                 staffRepositoryMock = new Mock<IStaffRepository>();
                 generalLedgerAccountRepositoryMock = new Mock<IGeneralLedgerAccountRepository>();
+                mockApprovalConfigurationRepository = new Mock<IApprovalConfigurationRepository>();
                 procurementsUtilityServiceMock = new Mock<IProcurementsUtilityService>();
                 currentUserFactory = new GeneralLedgerCurrentUser.UserFactorySubset();
 
                 requisitionService = new RequisitionService(requisitionRepositoryMock.Object, generalLedgerConfigurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
                     colleagueFinanceReferenceDataRepositoryMock.Object, accountFundsAvailableRepo.Object, referenceDataRepositoryMock.Object, buyerRepositoryMock.Object, personRepositoryMock.Object, vendorsRepositoryMock.Object,
-                    addressRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerMock.Object);
+                    addressRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, mockApprovalConfigurationRepository.Object, procurementsUtilityServiceMock.Object, loggerMock.Object);
 
                 InitializeTestData();
 
@@ -1775,7 +1984,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 };
             }
 
-            private async void  InitializeMock()
+            private async void InitializeMock()
             {
 
                 getRequisitions.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRequisitions));
@@ -1875,9 +2084,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.CreateRequisitionsAsync(new Dtos.Requisitions() { Id = null });
             }
 
-          
+
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_LineItems_With_Same_GLNumber()
             {
                 dtoRequistion.LineItems.FirstOrDefault().AccountDetail.Add(new Dtos.DtoProperties.RequisitionsAccountDetailDtoProperty()
@@ -1888,7 +2097,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_LineItems_Funds_NotAvailable()
             {
                 fundsAvailable.FirstOrDefault().AvailableStatus = FundsAvailableStatus.NotAvailable;
@@ -1896,7 +2105,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_RequestedOn_As_MinDate()
             {
                 dtoRequistion.RequestedOn = DateTime.MinValue;
@@ -1904,7 +2113,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_Initiator_As_Null()
             {
                 dtoRequistion.Initiator = null;
@@ -1912,7 +2121,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_InitiatorName_As_Null()
             {
                 dtoRequistion.Initiator.Name = null;
@@ -1920,7 +2129,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_LineItems_As_Empty()
             {
                 dtoRequistion.LineItems = new List<Dtos.RequisitionsLineItemsDtoProperty>() { };
@@ -1928,7 +2137,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_SubmittedBy_Null()
             {
                 personRepositoryMock.SetupSequence(p => p.GetPersonIdFromGuidAsync(It.IsAny<String>())).Returns(Task.FromResult<string>("1")).Returns(Task.FromResult<string>(null));
@@ -1936,19 +2145,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_Buyer_Null()
+            [ExpectedException(typeof(ColleagueWebApiException))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_Initiator_Null()
             {
                 personRepositoryMock.SetupSequence(p => p.GetPersonIdFromGuidAsync(It.IsAny<String>()))
-                                    .Returns(Task.FromResult<string>("1"))
+                                    .Returns(Task.FromResult<string>(null))
                                     .Returns(Task.FromResult<string>("1"))
                                     .Returns(Task.FromResult<string>(null));
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_Initiator_Null()
+            [ExpectedException(typeof(ColleagueWebApiException))]
+            public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_Buyer_Null()
             {
                 buyerRepositoryMock.SetupSequence(p => p.GetBuyerIdFromGuidAsync(It.IsAny<String>()))
                                     .Returns(Task.FromResult<string>(null))
@@ -1959,7 +2168,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_PaymentSource_Notfound()
             {
                 dtoRequistion.PaymentSource = new Dtos.GuidObject2(Guid.NewGuid().ToString());
@@ -1967,7 +2176,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ShipToDest_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetShipToDestinationsAsync(true)).ReturnsAsync(() => null);
@@ -1975,7 +2184,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ShipToDest_NotFound()
             {
                 dtoRequistion.Shipping.ShipTo = new Dtos.GuidObject2(Guid.NewGuid().ToString());
@@ -1983,7 +2192,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FreeOnBoard_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(() => null);
@@ -1991,7 +2200,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FreeOnBoard_NotFound()
             {
                 dtoRequistion.Shipping.FreeOnBoard = new Dtos.GuidObject2(Guid.NewGuid().ToString());
@@ -1999,7 +2208,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_RepositoryException_For_Vendor()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty()
@@ -2015,7 +2224,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_Vendor_Notfound()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty()
@@ -2032,7 +2241,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_RepositoryException_For_Address()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty()
@@ -2049,7 +2258,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_VendorAddress_Notfound()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty()
@@ -2066,7 +2275,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ManualVendorDetails_Type_noName()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty() { };
@@ -2077,7 +2286,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ManualVendorDetails_Name_NoType()
             {
                 dtoRequistion.Vendor = new Dtos.VendorDtoProperty() { };
@@ -2088,7 +2297,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_VendorTerm_Notfound()
             {
                 dtoRequistion.PaymentTerms = new Dtos.GuidObject2(Guid.NewGuid().ToString());
@@ -2096,7 +2305,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityCodes_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodesAsync(true)).ReturnsAsync(() => null);
@@ -2104,7 +2313,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FixedAssetDesignation_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(true)).ReturnsAsync(() => null);
@@ -2112,7 +2321,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityUnitTypes_Null()
             {
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(true)).ReturnsAsync(() => null);
@@ -2120,7 +2329,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityCode_Notfound()
             {
                 dtoRequistion.LineItems.FirstOrDefault().CommodityCode.Id = Guid.NewGuid().ToString();
@@ -2128,7 +2337,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FixedAssetDesignation_Notfound()
             {
                 dtoRequistion.LineItems.FirstOrDefault().fixedAssetDesignation.Id = Guid.NewGuid().ToString();
@@ -2136,7 +2345,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityUnitType_Notfound()
             {
                 dtoRequistion.LineItems.FirstOrDefault().UnitOfMeasure.Id = Guid.NewGuid().ToString();
@@ -2144,7 +2353,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_LineItem_TaxCode_Notfound()
             {
                 dtoRequistion.LineItems.FirstOrDefault().Taxes.FirstOrDefault().Id = Guid.NewGuid().ToString();
@@ -2289,7 +2498,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RequisitionService_UpdateRequisitionsAsync_Exception()
             {
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();

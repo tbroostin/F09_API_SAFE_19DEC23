@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="AcademicCredit.cs" />
     <Compile Include="AcademicCredit2.cs" />
+    <Compile Include="ApplicantAcademicCredit.cs" />
     <Compile Include="AcademicCreditsWithInvalidKeys.cs" />
     <Compile Include="AcademicCredit3.cs" />
     <Compile Include="AcademicRecordConfiguration.cs" />
@@ -88,8 +89,17 @@
     <Compile Include="CourseCatalogConfiguration3.cs" />
     <Compile Include="DegreePlans\CoursePlaceholder.cs" />
     <Compile Include="DeleteOfficeHours.cs" />
+    <Compile Include="DenyStudentRecordsReleaseAccessInformation.cs" />
+    <Compile Include="DepartmentalOversight.cs" />
+    <Compile Include="DepartmentalOversightPermissions.cs" />
+    <Compile Include="DeptOversightDetailsCriteria.cs" />
+    <Compile Include="DeptOversightSearchResult.cs" />
+    <Compile Include="DeptOversightSearchCriteria.cs" />
     <Compile Include="ExpandRequirementSetting.cs" />
+    <Compile Include="FacultyAttendanceConfiguration.cs" />
+    <Compile Include="FacultyGradingConfiguration2.cs" />
     <Compile Include="GraduationConfiguration2.cs" />
+    <Compile Include="IntentToWithdrawCode.cs" />
     <Compile Include="LastDateAttendedNeverAttendedFieldDisplayType.cs" />
     <Compile Include="LoanType2.cs" />
     <Compile Include="MyProgressConfiguration.cs" />
@@ -144,7 +154,9 @@
     <Compile Include="InstantEnrollment\PaymentMethod.cs" />
     <Compile Include="InstantEnrollment\PersonMatchCriteriaInstantEnrollment.cs" />
     <Compile Include="RetentionAlertWorkCase2.cs" />
+    <Compile Include="SectionAvailabilityInformationConfiguration.cs" />
     <Compile Include="SectionAvailabilityStatusType.cs" />
+    <Compile Include="SectionCensusConfiguration2.cs" />
     <Compile Include="SectionCensusToCertify.cs" />
     <Compile Include="SectionCensusCertification.cs" />
     <Compile Include="SectionCensusConfiguration.cs" />
@@ -266,6 +278,11 @@
     <Compile Include="StudentOverloadPetition.cs" />
     <Compile Include="StudentProfileConfiguration.cs" />
     <Compile Include="StudentProfilePersonConfiguration.cs" />
+    <Compile Include="ApplicantStudentProgram.cs" />
+    <Compile Include="StudentRecordsReleaseConfig.cs" />
+    <Compile Include="StudentRecordsReleaseDenyAccess.cs" />
+    <Compile Include="StudentReleaseAccess.cs" />
+    <Compile Include="StudentRecordsReleaseInfo.cs" />
     <Compile Include="StudentSectionsAttendances.cs" />
     <Compile Include="StudentSectionAttendancesQueryCriteria.cs" />
     <Compile Include="StudentAwardYear2.cs" />

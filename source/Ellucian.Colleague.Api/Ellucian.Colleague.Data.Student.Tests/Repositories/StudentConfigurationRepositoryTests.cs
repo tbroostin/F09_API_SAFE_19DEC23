@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -15,12 +15,15 @@ using System.Threading;
 using System;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
     [TestClass]
     public class StudentConfigurationRepositoryTests
     {
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
+
         [TestClass]
         public class GraduationConfigurationTests
         {
@@ -213,7 +216,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Set up repo response for stwebDefaults (added spaces that hopefully get stripped)
                 StwebDefaults stWebDefaultsResponse = new StwebDefaults();
                 stWebDefaultsResponse.StwebGradCapgownSizesUrl = "https://cap" + " " + "andgownsizes.com/other" + "/stuff&more";
-                stWebDefaultsResponse.StwebGradCapgownUrl = "www.cap" + " " + "and" + " " +  "gownorders.com";
+                stWebDefaultsResponse.StwebGradCapgownUrl = "www.cap" + " " + "and" + " " + "gownorders.com";
                 stWebDefaultsResponse.StwebGradCommencementUrl = "commencement" + "url" + " ";
                 stWebDefaultsResponse.StwebGradDiffProgramUrl = " " + "gradwithdifferentprogram.com";
                 stWebDefaultsResponse.StwebGradMaxGuests = 10;
@@ -255,7 +258,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task DefaultLookup_ThrowsExceptionForNullReturnedByDefaults()
             {
                 dataAccessorMock.Setup<Task<Data.Base.DataContracts.Defaults>>(acc => acc.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
@@ -671,6 +674,340 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             [TestMethod]
             public async Task GetFacultyGradingConfiguration_StwebMidtermGradeCountOver6()
+            {
+                var testdefaults = new StwebDefaults();
+                testdefaults.StwebGradeDropsFlag = "Y";
+                testdefaults.StwebGradeInclXlist = "y";
+                testdefaults.StwebMidtermGradeCount = "7";
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(testdefaults));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+                Assert.AreEqual(0, facultyGradingConfiguration.NumberOfMidtermGrades);
+            }
+
+            [TestMethod]
+            public async Task DefaultValuesIfDataReaderReturnsNull()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults nullResponse = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
+                // Act
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+                // Assert
+                Assert.IsFalse(facultyGradingConfiguration.IncludeCrosslistedStudents);
+                Assert.IsFalse(facultyGradingConfiguration.IncludeDroppedWithdrawnStudents);
+                Assert.AreEqual(0, facultyGradingConfiguration.AllowedGradingTerms.Count());
+                Assert.AreEqual(0, facultyGradingConfiguration.NumberOfMidtermGrades);
+            }
+
+            private StwebDefaults BuildStwebDefaultsResponse()
+            {
+                var defaults = new StwebDefaults();
+                defaults.StwebGradeDropsFlag = "Y";
+                defaults.StwebGradeInclXlist = "y";
+                defaults.StwebMidtermGradeCount = "5";
+                defaults.StwebRequireLdanaFacDrop = "Y";
+                defaults.StwebShowPassAudit = "y";
+                defaults.StwebShowRepeated = "y";
+                return defaults;
+            }
+
+            private StwebDefaults2 BuildStwebDefaults2Response()
+            {
+                var defaults = new StwebDefaults2();
+                defaults.Stweb2DisallowGrdeDrpWth = "Y";
+                defaults.Stweb2DisallowGrdeNvrAtd = "y";
+                return defaults;
+            }
+
+            private Defaults BuildDefaultsResponse()
+            {
+                var defaults = new Defaults();
+                defaults.DefaultWebEmailType = "PRI";
+                return defaults;
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+
+
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+        }
+
+        [TestClass]
+        public class FacultyGradingConfiguration2AsyncTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+
+            StwebDefaults stwebDefaults;
+            StwebDefaults2 stwebDefaults2;
+            Defaults defaults;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                // Collection of data accessor responses
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults2 = BuildStwebDefaults2Response();
+                defaults = BuildDefaultsResponse();
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                stwebDefaults = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_ReturnsTrueProperties()
+            {
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsTrue(facultyGradingConfiguration.IncludeCrosslistedStudents);
+                Assert.IsTrue(facultyGradingConfiguration.IncludeDroppedWithdrawnStudents);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.MidtermGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.MidtermGradesNeverAttendedDisplayBehavior);
+                Assert.IsTrue(facultyGradingConfiguration.RequireLastDateAttendedOrNeverAttendedFlagBeforeFacultyDrop);
+                Assert.IsTrue(facultyGradingConfiguration.ShowPassAudit);
+                Assert.IsTrue(facultyGradingConfiguration.ShowRepeated);
+                Assert.IsFalse(facultyGradingConfiguration.IsGradingAllowedForDroppedWithdrawnStudents);
+                Assert.IsFalse(facultyGradingConfiguration.IsGradingAllowedForNeverAttendedStudents);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Stwebdefaults2_Disallowed_Is_N()
+            {
+                stwebDefaults2 = BuildStwebDefaults2Response();
+                stwebDefaults2.Stweb2DisallowGrdeDrpWth = "N";
+                stwebDefaults2.Stweb2DisallowGrdeNvrAtd = "n";
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsTrue(facultyGradingConfiguration.IsGradingAllowedForDroppedWithdrawnStudents);
+                Assert.IsTrue(facultyGradingConfiguration.IsGradingAllowedForNeverAttendedStudents);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Stwebdefaults2_Disallowed_Is_Blank()
+            {
+                stwebDefaults2 = BuildStwebDefaults2Response();
+                stwebDefaults2.Stweb2DisallowGrdeDrpWth = string.Empty;
+                stwebDefaults2.Stweb2DisallowGrdeNvrAtd = "";
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsTrue(facultyGradingConfiguration.IsGradingAllowedForDroppedWithdrawnStudents);
+                Assert.IsTrue(facultyGradingConfiguration.IsGradingAllowedForNeverAttendedStudents);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Lda_Editable()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebLdaFinalGrading = "E";
+                stwebDefaults.StwebLdaMidtermGrading = "e";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, facultyGradingConfiguration.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, facultyGradingConfiguration.MidtermGradesLastDateAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Na_Editable()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebNaFinalGrading = "e";
+                stwebDefaults.StwebNaMidtermGrading = "E";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, facultyGradingConfiguration.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, facultyGradingConfiguration.MidtermGradesNeverAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Lda_Hidden()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebLdaFinalGrading = "h";
+                stwebDefaults.StwebLdaMidtermGrading = "H";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, facultyGradingConfiguration.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, facultyGradingConfiguration.MidtermGradesLastDateAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Na_Hidden()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebNaFinalGrading = "H";
+                stwebDefaults.StwebNaMidtermGrading = "h";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, facultyGradingConfiguration.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, facultyGradingConfiguration.MidtermGradesNeverAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Lda_ReadOnly()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebLdaFinalGrading = "R";
+                stwebDefaults.StwebLdaMidtermGrading = "r";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsTrue(facultyGradingConfiguration.IncludeCrosslistedStudents);
+                Assert.IsTrue(facultyGradingConfiguration.IncludeDroppedWithdrawnStudents);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, facultyGradingConfiguration.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, facultyGradingConfiguration.MidtermGradesLastDateAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_Na_ReadOnly()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebNaFinalGrading = "r";
+                stwebDefaults.StwebNaMidtermGrading = "R";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsTrue(facultyGradingConfiguration.IncludeCrosslistedStudents);
+                Assert.IsTrue(facultyGradingConfiguration.IncludeDroppedWithdrawnStudents);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, facultyGradingConfiguration.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, facultyGradingConfiguration.MidtermGradesNeverAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetFacultyGradingConfiguration2_FinalGradeLda_throws_exception_when_database_values_invalid()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebLdaFinalGrading = "X";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetFacultyGradingConfiguration2_MidtermGradeLda_throws_exception_when_database_values_invalid()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebLdaMidtermGrading = "1";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetFacultyGradingConfiguration2_FinalGradeNa_throws_exception_when_database_values_invalid()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebNaFinalGrading = "X";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetFacultyGradingConfiguration2_MidtermGradeNa_throws_exception_when_database_values_invalid()
+            {
+                stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults.StwebNaMidtermGrading = "1";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_ReturnsFalseProperties()
+            {
+                // Set up repo response for stwebDefault so that values are not "Y"
+                var otherDefaults = new StwebDefaults();
+                otherDefaults.StwebGradeDropsFlag = "N";
+                otherDefaults.StwebGradeInclXlist = "X";
+                otherDefaults.StwebRequireLdanaFacDrop = "";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(otherDefaults));
+
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfiguration2Async();
+                Assert.IsFalse(facultyGradingConfiguration.IncludeCrosslistedStudents);
+                Assert.IsFalse(facultyGradingConfiguration.IncludeDroppedWithdrawnStudents);
+                Assert.IsFalse(facultyGradingConfiguration.RequireLastDateAttendedOrNeverAttendedFlagBeforeFacultyDrop);
+
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.MidtermGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: facultyGradingConfiguration.MidtermGradesNeverAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_StwebMidtermGradeCountValid()
+            {
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+                Assert.AreEqual(5, facultyGradingConfiguration.NumberOfMidtermGrades);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_StwebMidtermGradeCountNull()
+            {
+                var testdefaults = new StwebDefaults();
+                testdefaults.StwebGradeDropsFlag = "Y";
+                testdefaults.StwebGradeInclXlist = "y";
+                testdefaults.StwebMidtermGradeCount = null;
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(testdefaults));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+                Assert.AreEqual(0, facultyGradingConfiguration.NumberOfMidtermGrades);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_StwebMidtermGradeCountNotNumeric()
+            {
+                var testdefaults = new StwebDefaults();
+                testdefaults.StwebGradeDropsFlag = "Y";
+                testdefaults.StwebGradeInclXlist = "y";
+                testdefaults.StwebMidtermGradeCount = "X";
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(testdefaults));
+                var facultyGradingConfiguration = await studentConfigurationRepository.GetFacultyGradingConfigurationAsync();
+                Assert.AreEqual(0, facultyGradingConfiguration.NumberOfMidtermGrades);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyGradingConfiguration2_StwebMidtermGradeCountOver6()
             {
                 var testdefaults = new StwebDefaults();
                 testdefaults.StwebGradeDropsFlag = "Y";
@@ -1791,7 +2128,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_ReturnsValidProperties()
             {
-                regDefaults = new RegDefaults() {  Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3, RgdAllowAddAuthWaitlist = "y"};
+                regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3, RgdAllowAddAuthWaitlist = "y" };
                 // Set up repo response for regDefault
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
 
@@ -1893,7 +2230,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "Y", StwebDropRsnRequiredFlag = "Y", StwebShowBksOnSchedPrt = "Y", StwebShowCmntOnSchedPrt = "Y", StwebAddDfltTermsToDp = "Y", StwebEnableQuickReg = "N", StwebQuickRegTerms = null };
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
-                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(),true)).Returns(Task.FromResult(stwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
 
                 var regConfiguration = await studentConfigurationRepository.GetRegistrationConfigurationAsync();
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
@@ -1957,7 +2294,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetRegistrationConfigurationAsync_PromptForReason_and_ShowBooks_and_AddDfltTermsToDp_IsN()
             {
                 regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3 };
-                stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "y", StwebDropRsnRequiredFlag ="n", StwebShowBksOnSchedPrt = "N", StwebShowCmntOnSchedPrt = "N", StwebAddDfltTermsToDp = "N" };
+                stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "y", StwebDropRsnRequiredFlag = "n", StwebShowBksOnSchedPrt = "N", StwebShowCmntOnSchedPrt = "N", StwebAddDfltTermsToDp = "N" };
 
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
@@ -2018,6 +2355,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Mock<ICacheProvider> cacheProviderMock;
             Mock<ILogger> loggerMock;
             StwebDefaults stwebDefaults;
+            StwebDefaults2 stwebDefaults2;
             CatalogSearchDefaults catalogSearchDefaults;
             StudentConfigurationRepository studentConfigurationRepository;
 
@@ -2027,6 +2365,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 loggerMock = new Mock<ILogger>();
                 // Collection of data accessor responses
                 stwebDefaults = BuildStwebDefaultsResponse();
+                stwebDefaults2 = BuildStwebDefaults2Response();
                 studentConfigurationRepository = BuildValidStudentConfigurationRepository();
             }
 
@@ -2037,6 +2376,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock = null;
                 cacheProviderMock = null;
                 stwebDefaults = null;
+                stwebDefaults2 = null;
                 studentConfigurationRepository = null;
             }
 
@@ -2055,8 +2395,29 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 StwebDefaults nullResponse = null;
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
 
+                StwebDefaults2 validResponse = BuildStwebDefaults2Response();
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(validResponse));
+
                 // Act
                 var instantEnrollmentConfiguration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+            }
+
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_StwebDefaults2ReturnsNull_DoesNotThrow()
+            {
+                // Arrange: Set up repo response for null stwebDefaults2 data contract and null Defaults data contract.
+                StwebDefaults validResponse = BuildStwebDefaultsResponse();
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(validResponse));
+
+                StwebDefaults2 nullResponse = null;
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
+
+                // Act
+                var instantEnrollmentConfiguration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(false, instantEnrollmentConfiguration.AllowNonCitizenRegistration);
             }
 
             [TestMethod]
@@ -2064,9 +2425,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+
                 response.StwebCeTenderGlDistCode = null;
                 response.StwebCeAddStuPrograms = "ANY";
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
                 // Assert
@@ -2077,6 +2442,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(configuration.WebPaymentsImplemented);
                 Assert.AreEqual(2, configuration.SubjectCodesToDisplayInCatalog.Count);
                 Assert.AreEqual(3, configuration.DemographicFields.Count);
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
             }
 
             [TestMethod]
@@ -2084,12 +2450,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
                 Assert.AreEqual(2, configuration.AcademicProgramOptions.Count);
@@ -2098,6 +2468,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(configuration.WebPaymentsImplemented);
                 Assert.AreEqual(2, configuration.SubjectCodesToDisplayInCatalog.Count);
                 Assert.AreEqual(3, configuration.DemographicFields.Count);
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
             }
 
             [TestMethod]
@@ -2105,13 +2476,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebPayImplFlag = null;
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
                 Assert.AreEqual(2, configuration.AcademicProgramOptions.Count);
@@ -2127,13 +2502,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebPayImplFlag = string.Empty;
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
                 Assert.AreEqual(2, configuration.AcademicProgramOptions.Count);
@@ -2149,13 +2528,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebPayImplFlag = "N";
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
                 Assert.AreEqual(2, configuration.AcademicProgramOptions.Count);
@@ -2171,11 +2554,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebCeRegUserRole = null;
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
             }
@@ -2185,11 +2571,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebCeRegUserRole = string.Empty;
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
             }
@@ -2199,13 +2588,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebCeRegUserRole = "CEUSER";
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms(null, "2015", ""));
                 response.WebCeAcadProgramsEntityAssociation.Add(new StwebDefaultsWebCeAcadPrograms("CE.DFLT", null, ""));
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.New, configuration.StudentProgramAssignmentBehavior);
                 Assert.AreEqual(2, configuration.AcademicProgramOptions.Count);
@@ -2220,12 +2613,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebCeRegUserRole = "CEUSER";
                 response.StwebCeSubjects = null;
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(0, configuration.SubjectCodesToDisplayInCatalog.Count);
             }
@@ -2235,14 +2632,144 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Arrange
                 StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
                 response.StwebCeAddStuPrograms = "NEW";
                 response.StwebCeRegUserRole = "CEUSER";
                 response.StwebCeSubjects = new List<string>();
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
                 // Act
                 var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
                 // Assert
                 Assert.AreEqual(0, configuration.SubjectCodesToDisplayInCatalog.Count);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_null()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = null;
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_empty()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = string.Empty;
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_no()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = "n";
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_No()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = "N";
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_yes()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = "y";
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(true, configuration.AllowNonCitizenRegistration);
+            }
+
+            [TestMethod]
+            public async Task GetInstantEnrollmentConfigurationAsync_valid_Stweb2CeAllowNoncitznReg_Yes()
+            {
+                // Arrange
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                StwebDefaults2 response2 = BuildStwebDefaults2Response();
+                response2.Stweb2CeAllowNoncitznReg = "Y";
+
+                response.StwebCeAddStuPrograms = "NEW";
+                response.StwebCeRegUserRole = "CEUSER";
+                response.StwebCeSubjects = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response2));
+
+                // Act
+                var configuration = await studentConfigurationRepository.GetInstantEnrollmentConfigurationAsync();
+
+                // Assert
+                Assert.AreEqual(true, configuration.AllowNonCitizenRegistration);
             }
 
             [TestMethod]
@@ -2344,6 +2871,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return defaults;
             }
 
+            private StwebDefaults2 BuildStwebDefaults2Response()
+            {
+                var defaults2 = new StwebDefaults2();
+                return defaults2;
+            }
+
             private CatalogSearchDefaults BuildCatalogSearchDefaultsResponse()
             {
                 var defaults = new CatalogSearchDefaults();
@@ -2376,6 +2909,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up repo response for stwebDefault
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                // Set up repo response for stwebDefault2
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+
+
                 StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return repository;
             }
@@ -2514,7 +3052,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionIfDataReaderReturnsNull()
             {
                 // Set up repo response for stwebDefaults
@@ -2837,7 +3375,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 {
                     null, // Nulls should be handled gracefully
                     new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: null, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
-                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 2, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),  
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 2, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
                     new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 3, inStwebCensusDateLabels: string.Empty, inStwebCensusDateDaysPrior: null),
                     new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 4, inStwebCensusDateLabels: "4th Census", inStwebCensusDateDaysPrior: null),
                     new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 5, inStwebCensusDateLabels: "5th Census", inStwebCensusDateDaysPrior: 10),
@@ -2868,5 +3406,642 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class GetSectionCensusConfiguration2AsyncTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            StwebDefaults stwebDefaults;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                // Collection of data accessor responses
+                stwebDefaults = BuildStwebDefaultsResponse();
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                stwebDefaults = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_ReturnsValidProperties()
+            {
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+                Assert.IsTrue(sectionCensusConfiguration2 is Ellucian.Colleague.Domain.Student.Entities.SectionCensusConfiguration2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetSectionCensusConfiguration2Async_StwebDefaultsReturnsNull()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults nullResponse = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
+
+                // Act
+                await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaNaCensusRoster = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_Empty()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = string.Empty;
+                response.StwebNaCensusRoster = string.Empty;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_Whitespace()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = "  ";
+                response.StwebNaCensusRoster = "  ";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_Editable()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = "E";
+                response.StwebNaCensusRoster = "e";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_ReadOnly()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = "r";
+                response.StwebNaCensusRoster = "R";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaNaCensusRoster_Hidden()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = "h";
+                response.StwebNaCensusRoster = "H";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Hidden, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Hidden, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetSectionCensusConfiguration2Async_StwebLdaCensusRoster_Invalid_Throws()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebLdaCensusRoster = "abc";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetSectionCensusConfiguration2Async_StwebNaCensusRoster_Invalid_Throws()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebNaCensusRoster = "xyz";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_valid_CensusDatePositionSubmissionRange_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                var nullSubmissionRange = new StwebDefaults();
+                nullSubmissionRange.StwebLdaCensusRoster = "H";
+                nullSubmissionRange.StwebNaCensusRoster = "R";
+                nullSubmissionRange.CensusDatePositionsEntityAssociation = null;
+                nullSubmissionRange.StwebDfltFctyDropReason = "D";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullSubmissionRange));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Hidden, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(0, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_valid_CensusDatePositionSubmissionRange_Empty()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                var emptySubmissionRange = new StwebDefaults();
+                emptySubmissionRange.StwebLdaCensusRoster = "R";
+                emptySubmissionRange.StwebNaCensusRoster = "e";
+                emptySubmissionRange.StwebDfltFctyDropReason = "D";
+                emptySubmissionRange.CensusDatePositionsEntityAssociation = new List<StwebDefaultsCensusDatePositions>();
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(emptySubmissionRange));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(0, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_valid_DuplicateCensusDatePositions_NotAddedToCensusDatePositionSubmissionRange()
+            {
+                var duplicateSubmissionRange = new StwebDefaults();
+                duplicateSubmissionRange.StwebDfltFctyDropReason = "D";
+                duplicateSubmissionRange.CensusDatePositionsEntityAssociation = new List<StwebDefaultsCensusDatePositions>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: null, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: null, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 2, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 2, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 3, inStwebCensusDateLabels: string.Empty, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 3, inStwebCensusDateLabels: string.Empty, inStwebCensusDateDaysPrior: null),
+
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 4, inStwebCensusDateLabels: "4th Census", inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 4, inStwebCensusDateLabels: "4th Census", inStwebCensusDateDaysPrior: null),
+
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 5, inStwebCensusDateLabels: "5th Census", inStwebCensusDateDaysPrior: 10),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 5, inStwebCensusDateLabels: "Different Value", inStwebCensusDateDaysPrior: 2),
+                };
+
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(duplicateSubmissionRange));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual("D", sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebDfltFctyDropReason_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebDfltFctyDropReason = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual(null, sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            [TestMethod]
+            public async Task GetSectionCensusConfiguration2Async_StwebDfltFctyDropReason_Empty()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = BuildStwebDefaultsResponse();
+                response.StwebDfltFctyDropReason = string.Empty;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+
+                // Act
+                var sectionCensusConfiguration2 = await studentConfigurationRepository.GetSectionCensusConfiguration2Async();
+
+                // Assert
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.LastDateAttendedCensusRoster);
+                Assert.AreEqual(Domain.Student.Entities.LastDateAttendedNeverAttendedFieldDisplayType.Editable, sectionCensusConfiguration2.NeverAttendedCensusRoster);
+                Assert.AreEqual(4, sectionCensusConfiguration2.CensusDatePositionSubmissionRange.Count);
+                Assert.AreEqual(string.Empty, sectionCensusConfiguration2.FacultyDropReasonCode);
+            }
+
+            private StwebDefaults BuildStwebDefaultsResponse()
+            {
+                var defaults = new StwebDefaults();
+                defaults.StwebLdaCensusRoster = "E";
+                defaults.StwebNaCensusRoster = "E";
+                defaults.StwebDfltFctyDropReason = "D";
+                defaults.CensusDatePositionsEntityAssociation = new List<StwebDefaultsCensusDatePositions>()
+                {
+                    null, // Nulls should be handled gracefully
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: null, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 2, inStwebCensusDateLabels: null, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 3, inStwebCensusDateLabels: string.Empty, inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 4, inStwebCensusDateLabels: "4th Census", inStwebCensusDateDaysPrior: null),
+                    new StwebDefaultsCensusDatePositions(inStwebCensusDatePositions: 5, inStwebCensusDateLabels: "5th Census", inStwebCensusDateDaysPrior: 10),
+                };
+                return defaults;
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+        }
+
+        [TestClass]
+        public class GetSectionAvailabilityInformationConfigurationAsync
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            RegDefaults regDefaults;
+            StwebDefaults stwebDefaults;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                stwebDefaults = BuildStwebDefaultsResponse();
+                // Collection of data accessor responses
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                regDefaults = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetSectionAvailabilityInformationConfigurationAsync_ReturnsValidProperties()
+            {
+                var configuration = await studentConfigurationRepository.GetSectionAvailabilityInformationConfigurationAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.SectionAvailabilityInformationConfiguration);
+                Assert.IsFalse(configuration.ShowNegativeSeatCounts);
+                Assert.IsTrue(configuration.IncludeSeatsTakenInAvailabilityInformation);
+            }
+
+            [TestMethod]
+            public async Task GetSectionAvailabilityInformationConfigurationAsync_ReturnsValidProperties_2()
+            {
+                stwebDefaults = new StwebDefaults()
+                {
+                    StwebUseAtcwFormat = string.Empty,
+                    StwebShowNegativeSeats = "y"
+                };
+                // Set up repo response for StwebDefaults
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var configuration = await studentConfigurationRepository.GetSectionAvailabilityInformationConfigurationAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.SectionAvailabilityInformationConfiguration);
+                Assert.IsTrue(configuration.ShowNegativeSeatCounts);
+                Assert.IsFalse(configuration.IncludeSeatsTakenInAvailabilityInformation);
+            }
+
+            [TestMethod]
+            public async Task GetRegistrationConfigurationAsync_StwebDfltsIsNull()
+            {
+                stwebDefaults = null;
+                // Set up repo response for StwebDefaults
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                var configuration = await studentConfigurationRepository.GetSectionAvailabilityInformationConfigurationAsync();
+                Assert.IsFalse(configuration.ShowNegativeSeatCounts);
+                Assert.IsFalse(configuration.IncludeSeatsTakenInAvailabilityInformation);
+                loggerMock.Verify(l => l.Info("Unable to access section availability information settings from ST.PARMS. STWEB.DEFAULTS."));
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+
+            private StwebDefaults BuildStwebDefaultsResponse()
+            {
+                var defaults = new StwebDefaults();
+                defaults.StwebShowNegativeSeats = "N";
+                defaults.StwebUseAtcwFormat = "Y";
+                return defaults;
+            }
+
+        }
+
+        [TestClass]
+        public class GetFacultyAttendanceConfigurationAsync
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            StwebDefaults2 stwebDefaults2;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                stwebDefaults2 = BuildStwebDefaults2Response();
+                // Collection of data accessor responses
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetFacultyAttendanceConfigurationAsync_ReturnsValidProperties()
+            {
+                var configuration = await studentConfigurationRepository.GetFacultyAttendanceConfigurationAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.FacultyAttendanceConfiguration);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttCensusNum, configuration.CloseAttendanceCensusTrackNumber);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttDaysPastCen, configuration.CloseAttendanceNumberOfDaysPastCensusTrackDate);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttDaysPastSec, configuration.CloseAttendanceNumberOfDaysPastSectionEndDate);
+            }
+
+            [TestMethod]
+            public async Task GetFacultyAttendanceConfigurationAsync_ReturnsValidProperties2()
+            {
+                stwebDefaults2 = new StwebDefaults2()
+                {
+                    Stweb2ClsAttCensusNum = 1,
+                    Stweb2ClsAttDaysPastCen = 2,
+                    Stweb2ClsAttDaysPastSec = 3,
+                };
+                // Set up repo response for StwebDefaults2
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+
+                var configuration = await studentConfigurationRepository.GetFacultyAttendanceConfigurationAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.FacultyAttendanceConfiguration);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttCensusNum, configuration.CloseAttendanceCensusTrackNumber);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttDaysPastCen, configuration.CloseAttendanceNumberOfDaysPastCensusTrackDate);
+                Assert.AreEqual(stwebDefaults2.Stweb2ClsAttDaysPastSec, configuration.CloseAttendanceNumberOfDaysPastSectionEndDate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ColleagueWebApiException))]
+            public async Task GetFacultyAttendanceConfigurationAsync_StwebDefaults2IsNull_Throws()
+            {
+                stwebDefaults2 = null;
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+
+                await studentConfigurationRepository.GetFacultyAttendanceConfigurationAsync();
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults2));
+
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+
+            private StwebDefaults2 BuildStwebDefaults2Response()
+            {
+                var stwebDefaults2 = new StwebDefaults2()
+                {
+                    Stweb2ClsAttCensusNum = 3,
+                    Stweb2ClsAttDaysPastCen = null,
+                    Stweb2ClsAttDaysPastSec = null,
+                };
+                return stwebDefaults2;
+            }
+        }
+
+        [TestClass]
+        public class GetStudentRecordsReleaseConfigAsync
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            StwebDefaults2 stwebDefaults2;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                stwebDefaults2 = BuildStwebDefaults2Response();
+                // Collection of data accessor responses
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetStudentRecordsReleaseConfigAsync_ReturnsValidProperties()
+            {
+                var configuration = await studentConfigurationRepository.GetStudentRecordsReleaseConfigAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.StudentRecordsReleaseConfig);
+                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(_VM).ToList(), configuration.Text);
+                Assert.IsTrue(configuration.IsPinRequired);
+                
+            }
+
+            [TestMethod]
+            public async Task GetStudentRecordsReleaseConfigAsync_ReturnsValidProperties2()
+            {
+                stwebDefaults2 = new StwebDefaults2()
+                {
+                   Stweb2StRecRelText="Student Records Release Configuration Information." 
+                };
+                // Set up repo response for StwebDefaults2
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(src => src.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), false)).Returns(Task.FromResult(stwebDefaults2));
+
+                var configuration = await studentConfigurationRepository.GetStudentRecordsReleaseConfigAsync();
+                Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.StudentRecordsReleaseConfig);
+                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(_VM).ToList(), configuration.Text);
+
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ColleagueWebApiException))]
+            public async Task GetStudentRecordsReleaseConfigAsync_StwebDefaults2IsNull_Throws()
+            {
+                stwebDefaults2 = null;
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(src => src.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), false)).Returns(Task.FromResult(stwebDefaults2));
+
+                await studentConfigurationRepository.GetStudentRecordsReleaseConfigAsync();
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                dataAccessorMock.Setup<Task<StwebDefaults2>>(acc => acc.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), false)).Returns(Task.FromResult(stwebDefaults2));
+
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+
+            private StwebDefaults2 BuildStwebDefaults2Response()
+            {
+                var stwebDefaults2 = new StwebDefaults2()
+                {
+                    Stweb2StRecRelText = "Information text related to PIN & FERPA Authorization.",
+                    Stweb2StRecRelPinReq = "Y"
+                };
+                return stwebDefaults2;
+            }
+        }
     }
 }

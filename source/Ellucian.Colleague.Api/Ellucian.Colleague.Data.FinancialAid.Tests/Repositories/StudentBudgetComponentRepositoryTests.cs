@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 var budgets = await actualRepository.GetStudentBudgetComponentsAsync(studentId, null);
                 Assert.AreEqual(0, budgets.Count());
 
-                loggerMock.Verify(l => l.Info(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId)));
             }
 
             [TestMethod]
@@ -126,7 +126,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 Assert.AreEqual(0, actualStudentBudgetComponents.Count());
 
-                loggerMock.Verify(l => l.Info(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId)));
             }
 
             [TestMethod]

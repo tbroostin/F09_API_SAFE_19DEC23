@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// The purchase order requestor name
         /// </summary>
-        public string RequestorName { get; set; }
+        public string RequestorName { get; set; }        
 
         /// <summary>
         /// List of requisitions.

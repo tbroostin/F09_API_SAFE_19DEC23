@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -39,11 +39,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string SortKey { get; set; }
 
-
         /// <summary>
         /// List of GL Budget pools included in the Umbrella GlAccount.
         /// </summary>
-        public List<FinanceQueryGlAccount> Poolees = new List<FinanceQueryGlAccount>();
+        private List<FinanceQueryGlAccount> poolees = new List<FinanceQueryGlAccount>();
+        public List<FinanceQueryGlAccount> Poolees { get { return poolees; } set { poolees = value; } }
 
         /// <summary>
         /// Constructor that initializes a finance query gl account line item object.

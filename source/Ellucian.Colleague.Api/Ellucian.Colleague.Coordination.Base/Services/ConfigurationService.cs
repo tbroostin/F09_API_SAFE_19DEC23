@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base;
@@ -11,6 +11,7 @@ using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Mvc.Install;
 using Ellucian.Web.Mvc.Install.Backup;
 using Ellucian.Web.Resource;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Newtonsoft.Json;
 using slf4net;
@@ -332,14 +333,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (backupDataResultList == null || backupDataResultList.Count == 0)
             {
-                throw new Exception("No backup config data record found for namespace " + nameSpace);
+                throw new ColleagueWebApiException("No backup config data record found for namespace " + nameSpace);
             }
 
             // use the record with the latest time stamp
             var latestRecord = backupDataResultList.OrderByDescending(bu => bu.CreatedDateTime).FirstOrDefault();
             if (latestRecord == null || string.IsNullOrEmpty(latestRecord.ConfigData))
             {
-                throw new Exception("Latest backup config data record for " + nameSpace + " is empty.");
+                throw new ColleagueWebApiException("Latest backup config data record for " + nameSpace + " is empty.");
             }
             ApiBackupConfigData apiBackupConfigData = JsonConvert.DeserializeObject<ApiBackupConfigData>(latestRecord.ConfigData);
 
@@ -500,6 +501,78 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var configuration = await configurationRepository.GetSessionConfigurationAsync();
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>();
             var configurationDto = adapter.MapToType(configuration);
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Calls configuration repository and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        public async Task<IEnumerable<Dtos.AuditLogConfiguration>> GetAuditLogConfigurationAsync(bool bypassCache = false)
+        {
+            var auditLogConfiguration = new List<Dtos.AuditLogConfiguration>();
+            var configurationEntities = await configurationRepository.GetAuditLogConfigurationAsync(bypassCache);
+            if (configurationEntities != null && configurationEntities.Any())
+            {
+                foreach (var configuration in configurationEntities)
+                {
+                    var adapter = _adapterRegistry.GetAdapter<Domain.Entities.AuditLogConfiguration, Dtos.AuditLogConfiguration>();
+                    var configurationDto = adapter.MapToType(configuration);
+                    auditLogConfiguration.Add(configurationDto);
+                }
+            }
+            return auditLogConfiguration;
+        }
+
+        /// <summary>
+        /// Calls configuration repository and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        public async Task<Dtos.AuditLogConfiguration> UpdateAuditLogConfigurationAsync(Dtos.AuditLogConfiguration auditLogConfiguration)
+        {
+            IntegrationApiException = new IntegrationApiException();
+            var configurationDto = new Dtos.AuditLogConfiguration();
+            var guid = auditLogConfiguration.EventId;
+            var code = auditLogConfiguration.Code;
+            var description = auditLogConfiguration.Description;
+            var isenabled = auditLogConfiguration.IsEnabled;
+            if (string.IsNullOrEmpty(guid))
+            {
+                IntegrationApiExceptionAddError("The required property 'eventid' is missing from the request body.", "Missing.Required.Property");
+                throw IntegrationApiException;
+            }
+            if (isenabled == null)
+            {
+                IntegrationApiExceptionAddError("The required property 'isenabled' is missing from the request body.", "Missing.Required.Property");
+                throw IntegrationApiException;
+            }
+            var categories = await configurationRepository.GetAuditLogCategoriesAsync(true);
+            var category = categories.FirstOrDefault(ct => ct.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            if (category == null)
+            {
+                IntegrationApiExceptionAddError(string.Format("The guid '{0}' is missing from the event categories table.", guid), "GUID.Not.Found");
+                throw IntegrationApiException;
+            }
+            else
+            {
+                guid = category.Guid;
+                code = category.Code;
+                description = category.Description;
+            }
+
+            var configurationEntity = new Domain.Entities.AuditLogConfiguration(guid, code, description, (bool)isenabled);
+
+            var configuration = await configurationRepository.UpdateAuditLogConfigurationAsync(configurationEntity);
+            if (configuration != null)
+            {
+                configurationDto = new Dtos.AuditLogConfiguration()
+                {
+                    EventId = configuration.EventId,
+                    Code = configuration.Code,
+                    Description = configuration.Description,
+                    IsEnabled = configuration.IsEnabled
+                };
+            }
             return configurationDto;
         }
 

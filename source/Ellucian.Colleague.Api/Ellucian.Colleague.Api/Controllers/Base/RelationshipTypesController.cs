@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -23,6 +23,7 @@ using System.Linq;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -38,7 +39,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly IRelationshipTypesService _relationshipTypesService;
         private readonly ILogger _logger;
-
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
         /// <summary>
         /// Initializes a new instance of the RelationshipTypesController class.
         /// </summary>
@@ -60,19 +62,33 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>All <see cref="RelationshipType">relationship types.</see></returns>
         public async Task<IEnumerable<RelationshipType>> GetAsync()
         {
-            var relationshipTypeCollection = await _referenceDataRepository.GetRelationshipTypesAsync();
-
-            // Get the right adapter for the type mapping
-            var relationshipTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RelationshipType, RelationshipType>();
-
-            // Map the RelationshipType entity to the program DTO
-            var relationshipTypeDtoCollection = new List<RelationshipType>();
-            foreach (var relationshipType in relationshipTypeCollection)
+            try
             {
-                relationshipTypeDtoCollection.Add(relationshipTypeDtoAdapter.MapToType(relationshipType));
+                var relationshipTypeCollection = await _referenceDataRepository.GetRelationshipTypesAsync();
+
+                // Get the right adapter for the type mapping
+                var relationshipTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RelationshipType, RelationshipType>();
+
+                // Map the RelationshipType entity to the program DTO
+                var relationshipTypeDtoCollection = new List<RelationshipType>();
+                foreach (var relationshipType in relationshipTypeCollection)
+                {
+                    relationshipTypeDtoCollection.Add(relationshipTypeDtoAdapter.MapToType(relationshipType));
+                }
+
+                return relationshipTypeDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
 
-            return relationshipTypeDtoCollection;
         }
 
         /// <summary>

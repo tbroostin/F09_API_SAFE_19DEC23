@@ -5,6 +5,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -50,25 +51,26 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// GL account security access granted.
         /// </accessComments>
         [HttpPost]
-        public async Task<GlAccountActivityDetail> QueryGeneralLedgerActivityDetailsByPostAsync([FromBody]GlActivityDetailQueryCriteria criteria)
+        public async Task<GlAccountActivityDetail> QueryGeneralLedgerActivityDetailsByPostAsync([FromBody] GlActivityDetailQueryCriteria criteria)
         {
-            if (criteria == null)
-            {
-                throw new ArgumentNullException("criteria", "The query criteria must be specified.");
-            }
-
-            if (string.IsNullOrEmpty(criteria.GlAccount))
-            {
-                throw new ArgumentNullException("GlAccount", "A GL account must be specified.");
-            }
-
-            if (string.IsNullOrEmpty(criteria.FiscalYear))
-            {
-                throw new ArgumentNullException("FiscalYear", "A fiscal year must be specified.");
-            }
-
             try
             {
+                if (criteria == null)
+                {
+                    throw new ArgumentNullException("criteria", "The query criteria must be specified.");
+                }
+
+                if (string.IsNullOrEmpty(criteria.GlAccount))
+                {
+                    throw new ArgumentNullException("GlAccount", "A GL account must be specified.");
+                }
+
+                if (string.IsNullOrEmpty(criteria.FiscalYear))
+                {
+                    throw new ArgumentNullException("FiscalYear", "A fiscal year must be specified.");
+                }
+
+
                 return await generalLedgerActivityDetailsService.QueryGlAccountActivityDetailAsync(criteria.GlAccount, criteria.FiscalYear);
             }
             catch (PermissionsException peex)
@@ -85,6 +87,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Colleague session expired - unable to get activity for the GL account");
+                throw CreateHttpResponseException("Colleague session expired - unable to get activity for the GL account", HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

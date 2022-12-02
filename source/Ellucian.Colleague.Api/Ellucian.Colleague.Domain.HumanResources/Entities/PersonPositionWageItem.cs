@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 
@@ -10,7 +10,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
     [Serializable]
     public class PersonPositionWageItem
     {
-        public string recordkey;
+        public string recordkey { get; set; }
 
         public string FundingSourceId { get; set; }
         public string HourlyOrSalary { get; set; }

@@ -12,6 +12,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -80,8 +81,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (defaultAwardPeriodEntities == null || !defaultAwardPeriodEntities.Any())
             {
                 var message = string.Format("Student {0} has no default award periods", studentId);
-                logger.Info(message);
-                throw new InvalidOperationException(message);
+                logger.Debug(message);
+                throw new ColleagueSessionExpiredException("Session has expired, please login again.");
+                //throw new InvalidOperationException(message);
             }
             
             var awardPeriodEntityAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.FinancialAid.Entities.StudentDefaultAwardPeriod,StudentDefaultAwardPeriod>();

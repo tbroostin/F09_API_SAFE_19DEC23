@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,6 +15,7 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -55,8 +56,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </returns>
         /// <accessComments>
         /// User must have correct permission code, depending on petition type:
+        /// 1.A faculty member assigned to the section can add student petition with any of the following permission codes
         /// CREATE.STUDENT.PETITION
         /// CREATE.FACULTY.CONSENT
+        /// 2.A departmental oversight member assigned to the section can add student petition with any of the following permission codes
+        /// CREATE.SECTION.STUDENT.PETITION
+        /// CREATE.SECTION.FACULTY.CONSENT
         /// </accessComments>
         public async Task<HttpResponseMessage> PostStudentPetitionAsync([FromBody]Dtos.Student.StudentPetition studentPetition)
         {
@@ -100,8 +105,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </returns>
         /// <accessComments>
         /// User must have correct permission code, depending on petition type:
+        /// 1.A faculty member assigned to the section can update student petition with any of the following permission codes
         /// CREATE.STUDENT.PETITION
         /// CREATE.FACULTY.CONSENT
+        /// 2.A departmental oversight member assigned to the section can update student petition with any of the following permission codes
+        /// CREATE.SECTION.STUDENT.PETITION
+        /// CREATE.SECTION.FACULTY.CONSENT
         /// </accessComments>
         public async Task<HttpResponseMessage> PutStudentPetitionAsync([FromBody] Dtos.Student.StudentPetition studentPetition)
         {
@@ -133,7 +142,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="type">Type of student petition desired since same ID can yield either type. If not provided it will default to a petition of type StudentPetition.</param>
         /// <returns>Student Petition object</returns>
         /// <accessComments>
-        /// User must be faculty in specified section to get data.
+        /// 1.User must be faculty in specified section to get data.
+        /// 2.A departmental oversight member assigned to the section may retrieve student petition with any of the following permission codes
+        /// VIEW.SECTION.STUDENT.PETITIONS
+        /// CREATE.SECTION.STUDENT.PETITION
+        /// VIEW.SECTION.FACULTY.CONSENTS
+        /// CREATE.SECTION.FACULTY.CONSENT
         /// </accessComments>
         public async Task<Dtos.Student.StudentPetition> GetAsync(string studentPetitionId, string sectionId, StudentPetitionType type)
         {
@@ -187,15 +201,24 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _studentPetitionService.GetAsync(studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student petitions";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
-                _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException("Access to Student Petition is forbidden.", System.Net.HttpStatusCode.Forbidden);
+                string message = "Access to Student Petition is forbidden.";
+                _logger.Error(pe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving the student petitions." + System.Net.HttpStatusCode.BadRequest);
+                string message = "Error occurred retrieving the student petitions.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
             }
         }
 
@@ -230,15 +253,24 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _studentPetitionService.GetStudentOverloadPetitionsAsync(studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student overload petitions";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
-                _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException("Access to Student Overload Petition is forbidden.", System.Net.HttpStatusCode.Forbidden);
+                string message = "Access to Student Overload Petition is forbidden.";
+                _logger.Error(pe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving the student overload petitions." + System.Net.HttpStatusCode.BadRequest);
+                string message = "Error occurred retrieving the student overload petitions.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message , System.Net.HttpStatusCode.BadRequest);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -128,10 +129,17 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
                 return coursesPage;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString() + ex.StackTrace);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                string errorMessage = "Exception occurred while searching for courses";
+                _logger.Error(ex, errorMessage);
+                throw CreateHttpResponseException(errorMessage, HttpStatusCode.BadRequest);
             }
         }
         /// <summary>
@@ -346,7 +354,20 @@ namespace Ellucian.Colleague.Api.Controllers
         [Obsolete("Obsolete as of API version 1.3, use version 3 of this API")]
         public async Task<Course> GetCourseAsync(string courseId)
         {
-            return await _courseService.GetCourseByIdAsync(courseId);
+            try
+            {
+                return await _courseService.GetCourseByIdAsync(courseId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, "Timeout exception has occurred while retrieving course");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>
@@ -1384,15 +1405,23 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _courseService.GetCourses2Async(criteria);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving courses";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException ex)
             {
-                _logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                string errorMessage = "Arguments were not properly sent to retrieve courses";
+                _logger.Error(ex,errorMessage);
+                throw CreateHttpResponseException(errorMessage, HttpStatusCode.BadRequest);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.InternalServerError);
+                string errorMessage = "Exception occurred while retrieving courses";
+                _logger.Error(ex, errorMessage);
+                throw CreateHttpResponseException(errorMessage, HttpStatusCode.BadRequest);
             }
         }
 

@@ -63,6 +63,45 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public ReadOnlyCollection<string> QuickRegistrationTermCodes { get; private set; }
 
         private readonly List<string> _quickRegistrationTermCodes = new List<string>();
+
+        /// <summary>
+        /// Flag indicating whether or not to *always* present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution
+        /// </summary>
+        public bool AlwaysPromptUsersForIntentToWithdrawWhenDropping 
+        {
+            get { return _alwaysPromptUsersForIntentToWithdrawWhenDropping; }
+            set
+            {
+                if (value && CensusDateNumberForPromptingIntentToWithdraw.HasValue)
+                {
+                    throw new ArgumentException("Intent to withdraw prompt can only be configured to show (a) always, or (b) after a census date number, but not both.");
+                }
+                _alwaysPromptUsersForIntentToWithdrawWhenDropping = value;
+            }
+        }
+        private bool _alwaysPromptUsersForIntentToWithdrawWhenDropping;
+
+        /// <summary>
+        /// Numeric position of the census date to check when deciding whether or not to present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution; Today's date must be on or after the census date at the specified position for the course section being dropped
+        /// </summary>
+        public int? CensusDateNumberForPromptingIntentToWithdraw
+        {
+            get { return _censusDateNumberForPromptingIntentToWithdraw; }
+            set
+            {
+                if (value.HasValue && AlwaysPromptUsersForIntentToWithdrawWhenDropping)
+                {
+                    throw new ArgumentException("Intent to withdraw prompt can only be configured to show (a) always, or (b) after a census date number, but not both.");
+                }
+                if (value.HasValue && value < 1)
+                {
+                    throw new ArgumentOutOfRangeException("Census date numbers must be greater than or equal to 1. Cannot present intent to withdraw prompt only after a census date number when that number is not valid.");
+                }
+                _censusDateNumberForPromptingIntentToWithdraw = value;
+            }
+        }
+        private int? _censusDateNumberForPromptingIntentToWithdraw;
+
         /// <summary>
         /// Adds a quick registration term to the registration configuration object.
         /// </summary>
@@ -102,7 +141,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             this.AddDefaultTermsToDegreePlan = true;
             this.QuickRegistrationIsEnabled = quickRegistrationIsEnabled;
             this.QuickRegistrationTermCodes = _quickRegistrationTermCodes.AsReadOnly();
+            this.CensusDateNumberForPromptingIntentToWithdraw = null;
+            this.AlwaysPromptUsersForIntentToWithdrawWhenDropping = false;
         }
-
     }
 }

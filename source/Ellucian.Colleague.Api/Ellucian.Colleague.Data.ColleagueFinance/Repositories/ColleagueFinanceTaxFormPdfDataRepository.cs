@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -748,6 +749,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     throw new ApplicationException("No T4A form can be produced for tax year " + t4aBinReposContract.TftbrYear.ToString() + " for recipient " + t4aBinReposContract.TftbrBinId);
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e.Message);
@@ -763,7 +768,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>The pdf data for tax form 1099-MISC</returns>
         public async Task<Form1099MIPdfData> GetForm1099MiPdfDataAsync(string personId, string recordId)
         {
-
             if (string.IsNullOrEmpty(personId))
                 throw new ArgumentNullException("personId", "Person ID must be specified.");
 
@@ -771,12 +775,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("recordId", "Record ID must be specified.");
 
             Form1099MIPdfData domainEntity1099Mi = null;
-
-            // Get 1099MI detail record information, like year, state, ein, vendorid
-            var currentMiDetailRecord = await DataReader.ReadRecordAsync<Tax1099miDetailRepos>(recordId);
-
+            
             try
             {
+                // Get 1099MI detail record information, like year, state, ein, vendorid
+                var currentMiDetailRecord = await DataReader.ReadRecordAsync<Tax1099miDetailRepos>(recordId);
+
                 if (currentMiDetailRecord == null)
                 {
                     throw new ApplicationException("1099Mi Detail Record cannot be null.");
@@ -1033,6 +1037,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 pdfRequest.APersonId = currentMiDetailRecord.TmidtlrVendorId;
                 pdfRequest.ARecordId = recordId;
                 var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyCfPdfAccessRequest, TxNotifyCfPdfAccessResponse>(pdfRequest);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -1326,6 +1334,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 pdfRequest.APersonId = currentNecDetailRecord.TnedtlrVendorId;
                 pdfRequest.ARecordId = recordId;
                 var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyCfPdfAccessRequest, TxNotifyCfPdfAccessResponse>(pdfRequest);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {

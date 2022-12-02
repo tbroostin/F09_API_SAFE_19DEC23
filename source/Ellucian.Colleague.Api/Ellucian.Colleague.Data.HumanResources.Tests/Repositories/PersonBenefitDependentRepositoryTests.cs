@@ -17,6 +17,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -167,7 +168,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PersonBenefitDependentsRepo_GetsGetPersonBenefitDependents_Exception()
             {
                 dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);

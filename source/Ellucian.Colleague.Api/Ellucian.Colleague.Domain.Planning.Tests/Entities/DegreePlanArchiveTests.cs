@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var notes = new List<DegreePlanNote>() { note1, note2 };
                 var academicCredits = new List<AcademicCredit>();
                 degreePlan.Notes = notes;
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
             }
 
             [TestCleanup]
@@ -275,7 +275,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var ac1 = new AcademicCredit("123");
                 ac1 = null;
                 academicCredits = new List<AcademicCredit>() { ac1 };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(placeholderDegreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(placeholderDegreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 7);
             }
 
@@ -285,7 +285,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var ac1 = new AcademicCredit("123");
                 ac1 = null;
                 academicCredits = new List<AcademicCredit>() { ac1 };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 0);
             }
 
@@ -294,7 +294,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             {
                 var ac1 = new AcademicCredit("123");
                 academicCredits = new List<AcademicCredit>() { ac1 };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 0);
             }
 
@@ -306,7 +306,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var plannedCourse = new PlannedCourse(course.Id, null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, "0000011", DateTime.Now);
                 degreePlan.AddCourse(plannedCourse, termCode);
                 academicCredits = new List<AcademicCredit>();
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.AreEqual(course.Id, archive.ArchivedCourses.ElementAt(0).CourseId);
@@ -334,7 +334,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 degreePlan.AddApproval(denialPerson, DegreePlanApprovalStatus.Denied, denialDate, plannedCourse.CourseId, termCode);
                 academicCredits = new List<AcademicCredit>();
 
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.AreEqual(course.Id, archive.ArchivedCourses.ElementAt(0).CourseId);
@@ -353,7 +353,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 degreePlan.AddCourse(plannedCourse, termCode);
                 academicCredits = new List<AcademicCredit>();
                 
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.AreEqual(course.Id, archive.ArchivedCourses.ElementAt(0).CourseId);
@@ -370,7 +370,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 academicCredits = new List<AcademicCredit>() { ac1 };
                 degreePlan.AddCourse(new PlannedCourse("47"), registrationTerms.ElementAt(0).Code);
                 academicCredits = new List<AcademicCredit>() { (await new TestAcademicCreditRepository().GetAsync()).First() };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 2);
             }
 
@@ -393,7 +393,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 // Verifies two different sections have been selected.
                 Assert.AreNotEqual(section1.Id, section2.Id);
 
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 2);
                 Assert.IsNotNull(archive.ArchivedCourses.Where(ac=>ac.SectionId == section1.Id));
@@ -416,7 +416,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var grade = grades.Where(g=>g.IsWithdraw==true).FirstOrDefault();
                 var academicCredit = new AcademicCredit("1111", course, section.Id) { Credit = 6m, ContinuingEducationUnits = 7m, VerifiedGrade = grade, GradeSchemeCode = "UG", TermCode = section.TermId, AdjustedCredit = 3m };
                 academicCredits = new List<AcademicCredit>() { academicCredit };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.AreEqual(academicCredit.Status.ToString(), archive.ArchivedCourses.ElementAt(0).RegistrationStatus);
                 Assert.AreEqual(academicCredit.AdjustedCredit, archive.ArchivedCourses.ElementAt(0).Credits);
@@ -439,7 +439,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var academicCredit = new AcademicCredit("1111", course, section1.Id) { TermCode = section1.TermId };
                 academicCredits = new List<AcademicCredit>() { academicCredit };
 
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.IsNotNull(archive.ArchivedCourses.Where(ac=>ac.SectionId == section1.Id));
@@ -462,7 +462,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 var academicCredit2 = new AcademicCredit("2222", course, section2.Id) { TermCode = section2.TermId };
                 academicCredits = new List<AcademicCredit>() { academicCredit1, academicCredit2 };
 
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
 
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 2);
                 Assert.IsNotNull(archive.ArchivedCourses.Where(ac => ac.SectionId == section1.Id));
@@ -484,7 +484,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 // Add an academic credit for nonterm/noncourse item (also verifies linq select against nonterm academic credits is successful)
                 var academicCredit = new AcademicCredit("1111") { SectionId = section.Id, Credit = 6m, ContinuingEducationUnits = 7m, Status = CreditStatus.TransferOrNonCourse };
                 academicCredits = new List<AcademicCredit>() { academicCredit };
-                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades, null);
                 Assert.IsTrue(archive.ArchivedCourses.Count() == 1);
                 Assert.AreEqual(plannedCourse.CourseId, archive.ArchivedCourses.ElementAt(0).CourseId);
             }

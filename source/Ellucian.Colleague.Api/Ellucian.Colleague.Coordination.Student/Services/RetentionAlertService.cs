@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using slf4net;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Base;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -124,6 +125,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.RetentionAlertPermissions, RetentionAlertPermissions>();
                 RetentionAlertPermissions permissionsDto = entityToDtoAdapter.MapToType(permissionsEntity);
                 return permissionsDto;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while retrieving retention alert permissions.";
+                logger.Error(ce, message);
+                throw;
             }
             catch (Exception ex)
             {

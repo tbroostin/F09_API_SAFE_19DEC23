@@ -1,4 +1,5 @@
-﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 
 using System;
@@ -24,9 +25,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <summary>
         /// Gets a single LeaveRequest object matching the given id. 
         /// </summary>
-        /// <param name="id">Leave Request Id</param>     
+        /// <param name="id">Leave Request Id</param>  
+        /// <param name="currentUserId">Current User Id(optional)</param>     
         /// <returns>LeaveRequest Entity</returns>
-        Task<LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string leaveRequestId);
+        Task<LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string leaveRequestId, string currentUserId = null);
 
         /// <summary>
         /// Creates a new leave request record
@@ -66,6 +68,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <returns>List of Leave Request Domain Entities</returns>
         Task<IEnumerable<Domain.HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, IEnumerable<string> employeeIds);
 
-   
+        /// <summary>
+        /// Gets the Person Hierarchy Name from the Person Name Service
+        /// </summary>
+        /// <param name="personBase">person base entity</param>
+        /// <returns></returns>
+        Task<PersonHierarchyName> GetPersonNameFromNameHierarchy(PersonBase personBase);
+
+
+
     }
 }

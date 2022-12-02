@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Web.Http.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -318,7 +319,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     catch
                     {
                         // Tired of re-running this to figure out which one broke it.
-                        throw new Exception("Problem in TestCourseRepository.  Course " + c.Id.ToString() + " exists multiple times.");
+                        throw new ColleagueWebApiException("Problem in TestCourseRepository.  Course " + c.Id.ToString() + " exists multiple times.");
                     }
                 }
 
@@ -345,7 +346,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     }
                     catch (Exception)
                     {
-                        throw new Exception("Could not find " + courseId + " in the courses dictionary");
+                        throw new ColleagueWebApiException("Could not find " + courseId + " in the courses dictionary");
                     }
                     //if (c.ToString() == "ENGL-101")
                     //{

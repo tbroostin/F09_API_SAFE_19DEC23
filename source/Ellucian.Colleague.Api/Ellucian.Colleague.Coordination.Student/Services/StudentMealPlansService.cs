@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -1013,7 +1013,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
 
@@ -1055,7 +1055,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
 
@@ -1175,7 +1175,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        throw new Exception(ex.Message);
+                        throw new ColleagueWebApiException(ex.Message);
                     }
                 }
 
@@ -1193,7 +1193,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     if (mealPlanRates == null)
                     {
-                        throw new Exception("Unable to retrieve meal plan rates");
+                        throw new ColleagueWebApiException("Unable to retrieve meal plan rates");
                     }
                     var mealPlanRate = mealPlanRates.Where(mpr => mpr.Code == source.MealPlan && mpr.MealPlansMealPlanRates != null)
                         .OrderByDescending(mpr => mpr.MealPlansMealPlanRates.EffectiveDates);
@@ -1233,7 +1233,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        throw new Exception(ex.Message);
+                        throw new ColleagueWebApiException(ex.Message);
                     }
                 }                  
                 //get person guid
@@ -1244,7 +1244,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (string.IsNullOrEmpty(studentGuid))
                     {
                         //throw new KeyNotFoundException(string.Concat("Student guid not found, StudentId: '", StuProgram.StudentId, "', Record ID: '", StuProgram.Guid, "'"));
-                        throw new Exception(string.Concat("Person guid not found for person Id: '", source.PersonId));
+                        throw new ColleagueWebApiException(string.Concat("Person guid not found for person Id: '", source.PersonId));
                     }
                     else
                     {
@@ -1329,7 +1329,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var mealPlans = await GetMealPlansAsync(bypassCache);
                 if (mealPlans == null)
                 {
-                    throw new Exception("Unable to retrieve meal plans");
+                    throw new ColleagueWebApiException("Unable to retrieve meal plans");
                 }
                 var mealPlan = mealPlans.FirstOrDefault(mp => mp.Guid == source.MealPlan.Id);
                 if (mealPlan == null)
@@ -1397,12 +1397,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (academicPeriodEntities == null)
                 {
-                    throw new Exception("Unable to retrieve academic periods");
+                    throw new ColleagueWebApiException("Unable to retrieve academic periods");
                 }
                 var term = academicPeriodEntities.FirstOrDefault(mp => mp.Guid == source.AcademicPeriod.Id);
                 if (term == null)
                 {
-                    throw new Exception(string.Concat(" Academic Period '", source.AcademicPeriod.Id, "' was not found."));
+                    throw new ColleagueWebApiException(string.Concat(" Academic Period '", source.AcademicPeriod.Id, "' was not found."));
                 }
                 studentMealPlans.Term = term.Code;
             }
@@ -1449,18 +1449,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var mealPlanRates = await GetMealPlanRatesAsync(bypassCache);
                     if (mealPlanRates == null)
                     {
-                        throw new Exception("Unable to retrieve meal plan rates");
+                        throw new ColleagueWebApiException("Unable to retrieve meal plan rates");
                     }
                     var mealPlanRate = mealPlanRates.FirstOrDefault(mpr => mpr.Guid == defaultRate.Id);
                     if (mealPlanRate == null)
                     {
-                        throw new Exception(string.Concat(" Meal Plan rate '", defaultRate.Id.ToString(), "' was not found."));
+                        throw new ColleagueWebApiException(string.Concat(" Meal Plan rate '", defaultRate.Id.ToString(), "' was not found."));
                     }
                     else
                     {
                         if (mealPlanRate.Code != mealplanId)
                         {
-                            throw new Exception(string.Concat("Meal plan '", mealPlanRate.Code, "' from meal plan rate does not match assignment's meal plan '", mealplanId, "'"));
+                            throw new ColleagueWebApiException(string.Concat("Meal plan '", mealPlanRate.Code, "' from meal plan rate does not match assignment's meal plan '", mealplanId, "'"));
                         }
                         var correctMealPlanRate = string.Empty;
                         //
@@ -1487,7 +1487,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         if (correctMealPlanRate != defaultRate.Id)
                         {
-                            throw new Exception(string.Concat(" Invalid meal plan rate '", defaultRate.Id.ToString(), "' with effective date '", effectiveDate, "' for start date of '", startDate, "'"));
+                            throw new ColleagueWebApiException(string.Concat(" Invalid meal plan rate '", defaultRate.Id.ToString(), "' with effective date '", effectiveDate, "' for start date of '", startDate, "'"));
                         }
                     }                    
                 }
@@ -1505,12 +1505,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var accountingCodeEntities = await GetAccountingCodesAsync(bypassCache);
                         if (accountingCodeEntities == null)
                         {
-                            throw new Exception("Unable to retrieve accounting codes");
+                            throw new ColleagueWebApiException("Unable to retrieve accounting codes");
                         }
                         var accountingCode = accountingCodeEntities.FirstOrDefault(mpr => mpr.Guid == source.OverrideRate.AccountingCode.Id);
                         if (accountingCode == null)
                         {
-                            throw new Exception(string.Concat(" Accounting Code '", source.OverrideRate.AccountingCode.Id.ToString(), "' was not found."));
+                            throw new ColleagueWebApiException(string.Concat(" Accounting Code '", source.OverrideRate.AccountingCode.Id.ToString(), "' was not found."));
                         }
                         studentMealPlans.OverrideArCode = accountingCode.Code;
                     }
@@ -1520,12 +1520,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var billingOverrideReasonsEntities = await GetBillingOverrideReasonsAsync(bypassCache);
                         if (billingOverrideReasonsEntities == null)
                         {
-                            throw new Exception("Unable to retrieve billing override reasons");
+                            throw new ColleagueWebApiException("Unable to retrieve billing override reasons");
                         }
                         var billingOverrideReason = billingOverrideReasonsEntities.FirstOrDefault(mpr => mpr.Guid == source.OverrideRate.OverrideReason.Id);
                         if (billingOverrideReason == null)
                         {
-                            throw new Exception(string.Concat("Override Reason '", source.OverrideRate.OverrideReason.Id.ToString(), "' was not found."));
+                            throw new ColleagueWebApiException(string.Concat("Override Reason '", source.OverrideRate.OverrideReason.Id.ToString(), "' was not found."));
                         }
                         studentMealPlans.RateOverrideReason = billingOverrideReason.Code;
                     }
@@ -1545,7 +1545,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
 
@@ -1570,7 +1570,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 
                 if (mealPlanRates == null)
                 {
-                    throw new Exception("Unable to retrieve meal plan rates");
+                    throw new ColleagueWebApiException("Unable to retrieve meal plan rates");
                 }
                 var mealPlanRate = mealPlanRates.Where(mpr => mpr.Code == source.MealPlan && mpr.MealPlansMealPlanRates != null)
                     .OrderByDescending(mpr => mpr.MealPlansMealPlanRates.EffectiveDates);
@@ -1610,12 +1610,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var accountingCodeEntities = await GetAccountingCodesAsync(bypassCache);
                 if (accountingCodeEntities == null)
                 {
-                    throw new Exception("Unable to retrieve accounting codes");
+                    throw new ColleagueWebApiException("Unable to retrieve accounting codes");
                 }
                 var accountingCode = accountingCodeEntities.FirstOrDefault(mpr => mpr.Code == source.OverrideArCode);
                 if (accountingCode == null)
                 {
-                    throw new Exception(string.Concat("Unable to locate guid for override AR code: ", source.OverrideArCode, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "'",
+                    throw new ColleagueWebApiException(string.Concat("Unable to locate guid for override AR code: ", source.OverrideArCode, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "'",
                         " Student: '", source.PersonId, "'", " Term: '", source.Term, '"'));
 
                 }
@@ -1627,12 +1627,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var billingOverrideReasonsEntities = await GetBillingOverrideReasonsAsync(bypassCache);
                 if (billingOverrideReasonsEntities == null)
                 {
-                    throw new Exception("Unable to retrieve billing override reasons");
+                    throw new ColleagueWebApiException("Unable to retrieve billing override reasons");
                 }
                 var billingOverrideReason = billingOverrideReasonsEntities.FirstOrDefault(mpr => mpr.Code == source.RateOverrideReason);
                 if (billingOverrideReason == null)
                 {
-                    throw new Exception(string.Concat("Unable to locate guid for rate override reason: ", source.RateOverrideReason, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
+                    throw new ColleagueWebApiException(string.Concat("Unable to locate guid for rate override reason: ", source.RateOverrideReason, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
                         " Student: '", source.PersonId, "'", " Term: '", source.Term, '"'));
 
                 }
@@ -1654,12 +1654,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (mealPlans == null)
                 {
-                    throw new Exception("Unable to retrieve meal plans");
+                    throw new ColleagueWebApiException("Unable to retrieve meal plans");
                 }
                 var mealPlan = mealPlans.FirstOrDefault(mpr => mpr.Code == source.MealPlan);
                 if (mealPlan == null)
                 {
-                    throw new Exception(string.Concat("Unable to locate guid for MealPlan: ", source.MealPlan, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
+                    throw new ColleagueWebApiException(string.Concat("Unable to locate guid for MealPlan: ", source.MealPlan, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
                         " Student: '", source.PersonId, "'", " Term: '", source.Term, '"'));
 
                 }
@@ -1776,7 +1776,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var accountingCodeEntities = await GetAccountingCodesAsync( bypassCache );
                 if( accountingCodeEntities == null )
                 {
-                    //throw new Exception("Unable to retrieve accounting codes");
+                    //throw new ColleagueWebApiException("Unable to retrieve accounting codes");
                     IntegrationApiExceptionAddError( "Unable to retrieve accounting codes.", "Validation.Exception" );
                 }
                 else

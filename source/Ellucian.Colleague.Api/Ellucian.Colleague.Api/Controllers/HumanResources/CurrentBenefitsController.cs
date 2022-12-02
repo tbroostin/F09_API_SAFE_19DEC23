@@ -1,10 +1,11 @@
-/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ICurrentBenefitsService currentBenefitsService;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the CurrentBenefitsController class.
@@ -57,22 +59,21 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 return await currentBenefitsService.GetEmployeesCurrentBenefitsAsync(effectivePersonId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
-            }
-            catch (RepositoryException re)
-            {
-                var message = re.Message;
-                logger.Error(re, message);
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(re));
+                throw CreateHttpResponseException("User does not have permission to view the requested current benefits information", HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 var message = "Something unexpected occured. Unable to fetch Employee current benefits details";
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

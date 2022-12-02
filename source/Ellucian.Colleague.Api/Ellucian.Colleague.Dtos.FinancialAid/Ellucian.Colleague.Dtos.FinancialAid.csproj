@@ -124,6 +124,9 @@
     <Compile Include="AwardStatusCategory.cs" />
     <Compile Include="AwardType.cs" />
     <Compile Include="AwardYear.cs" />
+    <Compile Include="CourseCreditAssociation.cs" />
+    <Compile Include="AwardPeriodCredits.cs" />
+    <Compile Include="AwardYearCredits.cs" />
     <Compile Include="BudgetComponent.cs" />
     <Compile Include="BudgetComponentCostType.cs" />
     <Compile Include="ChecklistItemControlStatus.cs" />
@@ -196,6 +199,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.FinancialAid\Ellucian.Colleague.Domain.FinancialAid.csproj">
+      <Project>{0ECC52BC-BFAA-4E44-9AAB-7781BAF39F30}</Project>
+      <Name>Ellucian.Colleague.Domain.FinancialAid</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
       <Project>{a147bd58-ecc6-409b-a633-128946aaa456}</Project>
       <Name>Ellucian.Colleague.Dtos.Base</Name>

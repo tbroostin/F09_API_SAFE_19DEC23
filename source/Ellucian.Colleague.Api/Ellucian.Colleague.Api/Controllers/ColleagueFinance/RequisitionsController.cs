@@ -25,6 +25,7 @@ using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -88,6 +89,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the requisition.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)
@@ -162,7 +168,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
-                return await requisitionService.CreateUpdateRequisitionAsync(requisitionCreateUpdateRequest);                
+                return await requisitionService.CreateUpdateRequisitionAsync(requisitionCreateUpdateRequest);
             }
             catch (PermissionsException peex)
             {
@@ -178,6 +184,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found to create/update the requisition.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to create/update the requisition.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -234,7 +245,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
-      
+
         /// <summary>
         /// Delete a requisition.
         /// </summary>
@@ -269,6 +280,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found to delete the requisition.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to delete the requisition.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -311,6 +327,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found to search requisitions.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to search the requisition.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -413,7 +434,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 requisitionService.ValidatePermissions(GetPermissionsMetaData());
-                
+
                 var bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -474,7 +495,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="requisitions">DTO of the updated requisitions</param>
         /// <returns>A Requisitions object <see cref="Dtos.Requisitions"/> in EEDM format</returns>
         [HttpPut, EedmResponseFilter]
-        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.UpdateRequisitions})]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.UpdateRequisitions })]
         public async Task<Dtos.Requisitions> PutRequisitionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Requisitions requisitions)
         {
             if (string.IsNullOrEmpty(guid))
@@ -504,7 +525,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 requisitionService.ValidatePermissions(GetPermissionsMetaData());
-                
+
                 //get Data Privacy List
                 var dpList = await requisitionService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -580,7 +601,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 requisitionService.ValidatePermissions(GetPermissionsMetaData());
-                
+
                 //call import extend method that needs the extracted extension data and the config
                 await requisitionService.ImportExtendedEthosData(await ExtractExtendedData(await requisitionService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
 

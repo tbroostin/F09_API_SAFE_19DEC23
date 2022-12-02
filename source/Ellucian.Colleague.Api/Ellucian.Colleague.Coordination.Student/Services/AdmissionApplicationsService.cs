@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -121,7 +121,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -176,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -321,7 +321,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -372,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -521,9 +521,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        //Owner id is not required so no need to throw error
+                        logger.Info(ex, "Unable to retrieve owner ID.");
                     }
                 }
 
@@ -559,7 +559,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var error = string.Concat("Something unexpected happened for guid ", source.Guid);
-                throw new Exception(error, ex);
+                throw new ColleagueWebApiException(error, ex);
             }
         }
 
@@ -655,9 +655,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        //Owner id is not required so no need to throw error
+                        logger.Info(ex, "Unable to retrieve owner ID.");
                     }
                 }
 
@@ -694,7 +694,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var error = string.Concat("Something unexpected happened for guid ", source.Guid);
-                throw new Exception(error, ex);
+                throw new ColleagueWebApiException(error, ex);
             }
         }
 
@@ -788,11 +788,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             }
                         }
                     }
-                    catch
-                    {
-                        //Owner id is not required so no need to throw error
-                    }
+                catch (Exception ex)
+                {
+                    logger.Info(ex, "Unable to retrieve owner ID.");
                 }
+            }
 
                 admissionApplication.ReferenceID = string.IsNullOrEmpty(source.ApplicationNo) ? null : source.ApplicationNo;
                 admissionApplication.Type = await ConvertEntityToTypeGuidObjectDto3Async(source.ApplicationIntgType, bypassCache, source.Guid, source.ApplicationRecordKey);
@@ -3146,7 +3146,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var error = string.Concat("Something unexpected happened for guid ", source.Guid);
-                throw new Exception(error, ex);
+                throw new ColleagueWebApiException(error, ex);
             }
         }
 

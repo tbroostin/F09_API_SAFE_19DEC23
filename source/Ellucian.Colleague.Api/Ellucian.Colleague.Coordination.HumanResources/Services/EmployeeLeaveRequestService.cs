@@ -1,4 +1,4 @@
-﻿/* Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -72,12 +73,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var personIds = new List<string>() { effectivePersonId };
 
+            logger.Debug("Leave Requests will be retrieved for the person :- " + effectivePersonId);
             //Check if user has leave approver permission
             if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
             {
                 try
                 {
+                    logger.Debug(string.Format("{0} has Leave Approver Permission", effectivePersonId));
                     personIds.AddRange(await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId));
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
@@ -117,6 +124,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var personIds = new List<string>() { effectivePersonId };
             var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId);
+            logger.Debug("Supervisees data retrieved");
             if (superviseeIds == null || !superviseeIds.Any())
             {
                 logger.Error(string.Format("Supervisor {0} does not supervise any employees", effectivePersonId));
@@ -161,7 +169,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             try
             {
-                var leaveRequestEntity = await employeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(id);
+                //Added new param currentUserId to compute the flag to show/hide Delete button for Supervisor user
+                var leaveRequestEntity = await employeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(id, CurrentUser.PersonId);
                 if (leaveRequestEntity == null)
                 {
                     var message = "Unexpected null returned from the repository";
@@ -180,10 +189,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 return leaveRequestEntityToDtoAdapter.MapToType(leaveRequestEntity);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e.ToString());
-                throw e;
+                throw;
             }
         }
 
@@ -204,7 +217,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
+
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+            if (!CurrentUser.IsPerson(leaveRequest.EmployeeId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
                 throw new PermissionsException("User does not have permission to create leave request information");
             }
@@ -212,20 +227,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Get adapter to convert the dto to domain entity...
             var leaveRequestDtoToEntityAdapter = _adapterRegistry.GetAdapter<Dtos.HumanResources.LeaveRequest, Domain.HumanResources.Entities.LeaveRequest>();
             var leaveRequestEntity = leaveRequestDtoToEntityAdapter.MapToType(leaveRequest);
-            IEnumerable<string> personIds = new List<string>() { effectivePersonId };
+            IEnumerable<string> personIds = new List<string>()
+            {
+                leaveRequestEntity.EmployeeId
+            };
 
             //Check if the employee whose leave request is being created, is actually a valid supervisee of this logged in user(Supervisor)
             if (effectivePersonId != leaveRequestEntity.EmployeeId)
             {
-                if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+                if (!await IsAuthorizedLeaveSupervisorAsync(effectivePersonId, leaveRequestEntity.EmployeeId))
                 {
-                    if (!await IsAuthorizedLeaveSupervisorAsync(effectivePersonId, leaveRequestEntity.EmployeeId))
-                    {
-                        throw new PermissionsException("User does not have permission to create leave request information");
-                    }
+                    throw new PermissionsException("User does not have permission to create leave request information");
                 }
             }
 
+            logger.Debug(string.Format("Permission checks cleared. {0} is allowed to create a new leave request", effectivePersonId));
             // Check if the user already has an existing leave request record same as the input leaveRequest.
             string existingLeaveRequestRecordId;
 
@@ -268,7 +284,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task<Dtos.HumanResources.LeaveRequestStatus> CreateLeaveRequestStatusAsync(Dtos.HumanResources.LeaveRequestStatus status, string effectivePersonId = null)
         {
 
-
             if (status == null)
             {
                 throw new ArgumentNullException("status");
@@ -304,6 +319,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new PermissionsException(string.Format("User {0} does not have permission to create the leave request status for the leave request of {1}", effectivePersonId, leaveRequestEntity.EmployeeId));
             }
+            logger.Debug(string.Format("Permission checks cleared. {0} is allowed to create a new leave request status", effectivePersonId));
 
             var statusDtoToEntityAdapter = _adapterRegistry.GetAdapter<Dtos.HumanResources.LeaveRequestStatus, Domain.HumanResources.Entities.LeaveRequestStatus>();
             var statusEntity = statusDtoToEntityAdapter.MapToType(status);
@@ -337,6 +353,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             // Get all the supervisorIds for the input positionId
             var supervisorIds = await supervisorsRepository.GetSupervisorsByPositionIdAsync(positionId, effectivePersonId);
+
+            logger.Debug(string.Format("Supervisors based on position id {0} fetched", positionId));
             List<PersonBase> personBaseEntities = new List<PersonBase>();
             if (supervisorIds != null && supervisorIds.Any())
             {
@@ -344,8 +362,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 if (personEntities != null && personEntities.Any())
                     personBaseEntities = personEntities.ToList();
             }
-
-
 
             var personBaseEntityToHumanResourceDemographicsDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>();
             return personBaseEntities.Select(pb => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(pb)).ToList();
@@ -375,19 +391,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Convert the input leaveRequest DTO to LeaveRequest Entity
             var leaveRequestDtoToEntityAdapter = _adapterRegistry.GetAdapter<Dtos.HumanResources.LeaveRequest, Domain.HumanResources.Entities.LeaveRequest>();
             var leaveRequestEntity = leaveRequestDtoToEntityAdapter.MapToType(leaveRequest);
-            IEnumerable<string> personIds = new List<string>() { effectivePersonId };
+            IEnumerable<string> personIds = new List<string>()
+            {
+                leaveRequestEntity.EmployeeId
+            };
 
             // Check if the employee whose leave request is being created, is actually a valid supervisee of this logged in user(Supervisor)
             if (effectivePersonId != leaveRequestEntity.EmployeeId)
             {
-                if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+                if (!await IsAuthorizedLeaveSupervisorAsync(effectivePersonId, leaveRequestEntity.EmployeeId))
                 {
-                    if (!await IsAuthorizedLeaveSupervisorAsync(effectivePersonId, leaveRequestEntity.EmployeeId))
-                    {
-                        throw new PermissionsException("User does not have permission to update leave request information");
-                    }
+                    throw new PermissionsException("User does not have permission to update leave request information");
                 }
             }
+
             string existingLeaveRequestRecordId;
 
             // Fetch all the existing leave requests for the effectivePerson
@@ -421,13 +438,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             // Permission checks - User can only update their own leave requests.
-            if (!CurrentUser.IsPerson(existingLeaveRequest.EmployeeId))
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(existingLeaveRequest.EmployeeId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
                 var message = string.Format("Current user doesn't have the permission to update the leave request {0}.", leaveRequest.Id);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
+            logger.Debug(string.Format("Permission checks cleared. {0} is allowed to Update the leave request", effectivePersonId));
             // Check for 24 hours validation for leave request details.
             var dailyHoursErrorDetails = CheckForDailyHoursLimitPerDay(existingLeaveRequests, leaveRequestEntity);
 
@@ -491,7 +510,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new PermissionsException(string.Format("User {0} does not have permission to create a comment for the leave request of {1}", effectivePersonId, leaveRequestEntity.EmployeeId));
             }
-
+            logger.Debug(string.Format("Permission checks cleared. {0} is allowed to create the leave request comment", effectivePersonId));
             //Get the Comment Authour name from person base
             var personBaseEntity = await personBaseRepository.GetPersonBaseAsync(CurrentUser.PersonId);
             string commentAuthorName = CurrentUser.PersonId;
@@ -567,6 +586,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Delete those leave request detail records that are in the DB but not in the input LeaveRequest object            
             leaveRequestHelper.LeaveRequestDetailsToDelete = existingLeaveRequest.LeaveRequestDetails.Where(e => !leaveRequestToUpdate.LeaveRequestDetails.Contains(e)).ToList();
 
+            //if the current logged in user is not Employee, then set the IsLeaveRequestFromSupervisorOrProxy to true.
+            if (!CurrentUser.IsPerson(leaveRequestToUpdate.EmployeeId))
+            {
+                leaveRequestHelper.IsLeaveRequestFromSupervisorOrProxy = true;
+            }
+
             return leaveRequestHelper;
         }
 
@@ -598,15 +623,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 if (filteredExistingLeaveRequests != null && filteredExistingLeaveRequests.Any())
                 {
+                    //Exclude existing leave request. Allow the updation of an existing leave request.
+                    filteredExistingLeaveRequests = filteredExistingLeaveRequests.Where(x => x.Id != leaveRequest.Id);
                     foreach (var existingLeaveRequest in filteredExistingLeaveRequests)
                     {
                         if (existingLeaveRequest != null)
                         {
-                            // Allow the updation of an existing leave request.
-                            if (!string.IsNullOrEmpty(leaveRequest.Id) && existingLeaveRequest.Id == leaveRequest.Id)
-                            {
-                                return false;
-                            }
 
                             if (existingLeaveRequest != null)
                             {
@@ -690,15 +712,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
             }
-
+            logger.Debug(string.Format("Permission checks cleared for employee  {0}", effectivePersonId));
             // Get all the supervisorIds for the input positionId
             var supervisorIds = await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
+            logger.Debug("Supervisees by primary position retrieved for supervisor {0}",effectivePersonId);
+
             List<PersonBase> personBaseEntities = new List<PersonBase>();
             if (supervisorIds != null && supervisorIds.Any())
             {
                 var personEntities = await personBaseRepository.GetPersonsBaseAsync(supervisorIds);
                 if (personEntities != null && personEntities.Any())
+                {
                     personBaseEntities = personEntities.ToList();
+                    foreach(var personBaseEntity in personBaseEntities)
+                    {
+                        var personDisplayName = await employeeLeaveRequestRepository.GetPersonNameFromNameHierarchy(personBaseEntity);
+                        personBaseEntity.PersonDisplayName = personDisplayName;
+                    }
+                }
             }
             var personBaseEntityToHumanResourceDemographicsDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>();
             return personBaseEntities.Select(pb => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(pb)).ToList();

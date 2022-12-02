@@ -345,7 +345,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             Assert.IsTrue(emptyEfcAwardLetterActual.IsNeedBlockActive);
             Assert.AreEqual(expectedAmount, emptyEfcAwardLetterActual.EstimatedFamilyContributionAmount);
 
-            loggerMock.Verify(logger => logger.Info(string.Format("CsFc has invalid value {0}. CS.{1} with key {2} may be corrupt", corruptEfcCsRecord.CsFc, corruptEfcAwardLetterYear, studentId)));
+            loggerMock.Verify(logger => logger.Debug(string.Format("CsFc has invalid value {0}. CS.{1} with key {2} may be corrupt", corruptEfcCsRecord.CsFc, corruptEfcAwardLetterYear, studentId)));
         }
 
         [TestMethod]

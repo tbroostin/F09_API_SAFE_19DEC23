@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,6 +17,7 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -31,7 +32,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
     {
         private readonly ILogger logger;
         private readonly IPayableDepositDirectiveService payableDepositDirectiveService;
-
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
         private const string stepUpAuthenticationHeaderKey = "X-Step-Up-Authentication";
 
         /// <summary>
@@ -53,7 +54,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
-                return await payableDepositDirectiveService.GetPayableDepositDirectivesAsync();
+                logger.Debug("************Start- Process to get Payable Deposit Directives - Start************");
+                var response = await payableDepositDirectiveService.GetPayableDepositDirectivesAsync();
+                logger.Debug("************End- Process to get Payable Deposit Directives - End************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -73,12 +82,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             if (string.IsNullOrEmpty(id))
             {
+                logger.Debug("************ Payable Deposit Directive Id must be provided ************");
                 throw CreateHttpResponseException("payableDepositDirectiveId is required");
             }
 
             try
             {
+                logger.Debug("************Start- Process to get Payable Deposit Directive - Start************");
                 var payableDepositDirective = await payableDepositDirectiveService.GetPayableDepositDirectiveAsync(id);
+                logger.Debug("************End- Process to get Payable Deposit Directive - End************");
 
                 return payableDepositDirective;
             }
@@ -114,6 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             if (payableDepositDirective == null)
             {
+                logger.Debug("************ Payable deposit directive cannot be null ************");
                 throw CreateHttpResponseException("payableDepositDirective object is required in request body");
             }
 
@@ -121,13 +134,20 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                logger.Debug("************ Start- Process to Create Payable Deposit Directive - Start ************");
                 var newPayableDepositDirective = await payableDepositDirectiveService.CreatePayableDepositDirectiveAsync(token, payableDepositDirective);
                 var response = Request.CreateResponse<PayableDepositDirective>(HttpStatusCode.Created, newPayableDepositDirective);
                 SetResourceLocationHeader("GetPayableDepositDirective", new { id = newPayableDepositDirective.Id });
+                logger.Debug("************ End - Process to Create Payable Deposit Directive - End ************");
                 return response;
             }
 
             // need to catch all the exceptions from the layers below this one
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentException ae)
             {
                 logger.Error(ae, ae.Message);
@@ -172,6 +192,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             if (updatedPayableDepositDirective == null)
             {
+                logger.Debug("************ Updated Payable Deposit Directive cannot be null when updating Payable deposit directives ************");
                 throw CreateHttpResponseException("updatedPayableDepositDirective object is required in request body");
             }
 
@@ -179,7 +200,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                return await payableDepositDirectiveService.UpdatePayableDepositDirectiveAsync(token, updatedPayableDepositDirective);
+                logger.Debug("************Start- Process to Update Payable Deposit Directives - Start************");
+                var response = await payableDepositDirectiveService.UpdatePayableDepositDirectiveAsync(token, updatedPayableDepositDirective);
+                logger.Debug("************ End- Process to Update Payable Deposit Directives - End ************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException ae)
             {
@@ -232,6 +261,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             if (string.IsNullOrEmpty(id))
             {
+                logger.Debug("************ Payable deposit directive Id must be provided ************");
                 throw CreateHttpResponseException("Id is required in request body");
             }
 
@@ -239,9 +269,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                logger.Debug("************Start- Process to Delete Payable Deposit Directive - Start************");
                 await payableDepositDirectiveService.DeletePayableDepositDirectiveAsync(token, id);
                 var response = Request.CreateResponse(HttpStatusCode.NoContent);
+                logger.Debug("************End- Process to Delete Payable Deposit Directive - End************");
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException ae)
             {
@@ -288,12 +325,21 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             if (challenge == null)
             {
+                logger.Debug("************Challenge object must be provided ************");
                 throw CreateHttpResponseException("challenge object is required in body of request");
             }
 
             try
             {
-                return await payableDepositDirectiveService.AuthenticatePayableDepositDirectiveAsync(challenge.PayableDepositDirectiveId, challenge.ChallengeValue, challenge.AddressId);
+                logger.Debug("************Start- Process to Authenticate Payable Deposit Directive - Start************");
+                var response =  await payableDepositDirectiveService.AuthenticatePayableDepositDirectiveAsync(challenge.PayableDepositDirectiveId, challenge.ChallengeValue, challenge.AddressId);
+                logger.Debug("************End- Process to Authenticate Payable Deposit Directive - End************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {

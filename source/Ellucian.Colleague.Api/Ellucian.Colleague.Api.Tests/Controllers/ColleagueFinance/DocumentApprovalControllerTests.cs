@@ -1,8 +1,9 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private DocumentApprovalRequest documentApprovalRequestDto;
         private DocumentApprovalResponse documentApprovalResponseDto;
         private ApprovalDocumentRequest approvalDocumentRequestDto;
+        private ApprovedDocumentFilterCriteria approvedDocumentFilterCriteriaDto;
 
         [TestInitialize]
         public void Initialize()
@@ -72,6 +74,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             documentApprovalResponseDto = new DocumentApprovalResponse() { UpdatedApprovalDocumentResponses = new System.Collections.Generic.List<ApprovalDocumentResponse>(),
                                                                             NotUpdatedApprovalDocumentResponses = new System.Collections.Generic.List<ApprovalDocumentResponse>() };
+            approvedDocumentFilterCriteriaDto = new ApprovedDocumentFilterCriteria();
         }
 
         [TestCleanup]
@@ -138,6 +141,25 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             try
             {
                 _documentApprovalServiceMock.Setup(x => x.GetAsync()).ThrowsAsync(new Exception());
+                await _documentApprovalController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get the document approval.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task DocumentApprovalController_GetAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _documentApprovalServiceMock.Setup(x => x.GetAsync()).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
                 await _documentApprovalController.GetAsync();
             }
             catch (HttpResponseException ex)
@@ -222,6 +244,46 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task DocumentApprovalController_PostDocumentApprovalAsync_NullDto()
         {
             await _documentApprovalController.PostDocumentApprovalAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task DocumentApprovalController_PostDocumentApprovalAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _documentApprovalServiceMock.Setup(x => x.UpdateDocumentApprovalRequestAsync(It.IsAny<DocumentApprovalRequest>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _documentApprovalController.PostDocumentApprovalAsync(documentApprovalRequestDto);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to update a document approval.", responseJson.Message);
+                throw;
+            }
+        }
+        #endregion
+
+        #region Query tests
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task DocumentApprovalController_QueryApprovedDocumentsAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _documentApprovalServiceMock.Setup(x => x.QueryApprovedDocumentsAsync(It.IsAny<ApprovedDocumentFilterCriteria>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _documentApprovalController.QueryApprovedDocumentsAsync(approvedDocumentFilterCriteriaDto);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get approved documents.", responseJson.Message);
+                throw;
+            }
         }
         #endregion
     }

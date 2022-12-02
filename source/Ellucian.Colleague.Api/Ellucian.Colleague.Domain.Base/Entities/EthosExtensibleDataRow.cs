@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Text;
@@ -11,14 +11,55 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public class EthosExtensibleDataRow
     {
-        public string associationController;
-        public string transType;
-        public string databaseUsageType;
+        /// <summary>
+        /// Association
+        /// </summary>
+        public string AssociationController { get; set; }
+        
+        /// <summary>
+        /// Transaction Type
+        /// </summary>
+        public string TransType { get; set; }
+
+        /// <summary>
+        /// Database Usage Type
+        /// </summary>
+        public string DatabaseUsageType { get; set; }
+
+        /// <summary>
+        /// Indicates whether this field is required 
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Description of the Data Row
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Data Conversion associated to the Data Row (such as Date or number)
+        /// </summary>
+        public string Conversion { get; set; }
 
         /// <summary>
         /// Collumn name from Colleague
         /// </summary>
         public string ColleagueColumnName { get; private set; }
+
+        /// <summary>
+        /// Translation Column Name for straight translations
+        /// </summary>
+        public string TransColumnName { get; set; }
+
+        /// <summary>
+        /// Translation Valcode Table Name where the translation is defined
+        /// </summary>
+        public string TransTableName { get; set; }
+
+        /// <summary>
+        /// Translation File Name where the translation is defined
+        /// </summary>
+        public string TransFileName { get; set; }
 
         /// <summary>
         /// File name from Colleague
@@ -29,6 +70,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// Length of the property in Colleague if it has any
         /// </summary>
         public int? ColleaguePropertyLength { get; private set; }
+
+        /// <summary>
+        /// Position of the Colleague field within the file, primarily used for keys.
+        /// </summary>
+        public int? ColleaguePropertyPosition { get; set; }
 
         /// <summary>
         /// Title of the extended property in the Ethos json schema
@@ -54,7 +100,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The actual data in the colleague field to return to the API call
         /// </summary>
         public string ExtendedDataValue { get; private set; }
-
+        
         /// <summary>
         /// constructor for the row of extended data
         /// </summary>

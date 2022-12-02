@@ -194,6 +194,115 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return financeQueryDtos;
         }
 
+        /// <summary>
+        /// Returns the finance query detail object DTOs that are associated with the user logged into self-service for the 
+        /// specified fiscal year.
+        /// </summary>
+        /// <param name="criteria">Finance query filter criteria.</param>
+        /// <returns>List of finance query activity objects for the fiscal year.</returns>
+        public async Task<IEnumerable<dtoDomain.FinanceQueryActivityDetail>> QueryFinanceQueryDetailSelectionByPostAsync(dtoDomain.FinanceQueryCriteria criteria)
+        {
+            // If the user does not have any gl accounts assigned, return an empty list of DTOs.
+            List<Dtos.ColleagueFinance.FinanceQueryActivityDetail> financeQueryActivityDetailDtos = new List<Dtos.ColleagueFinance.FinanceQueryActivityDetail>();
+            Dtos.ColleagueFinance.FinanceQueryActivityDetail financeQueryActivityDetailDto = new Dtos.ColleagueFinance.FinanceQueryActivityDetail();
+
+            // The query criteria can be empty, but it cannot be null.
+            if (criteria == null)
+            {
+                logger.Debug("==> Filter criteria (criteria) is null <==");
+                throw new ArgumentNullException("criteria", "Filter criteria must be specified.");
+            }
+
+            // in case fiscal year in criteria not sent we need to default the fiscal year to
+            // the one for today's date because the user does not yet get a change to select one from the list.
+            // Get the fiscal year configuration data to get the fiscal year for today's date.
+            var fiscalYear = criteria.FiscalYear;
+            if (string.IsNullOrEmpty(fiscalYear))
+            {
+                logger.Debug("==> Getting the fiscal year configuration <==");
+                var fiscalYearConfiguration = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
+                criteria.FiscalYear = fiscalYearConfiguration.FiscalYearForToday.ToString();
+                logger.Debug(string.Format("==> criteria.FiscalYear is {0} <==", criteria.FiscalYear));
+            }
+
+            // Get the account structure configuration.
+            var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null)
+            {
+                logger.Error("==> glAccountStructure is null <==");
+                throw new ApplicationException("GL account structure is not set up.");
+            }
+
+            if (glAccountStructure.MajorComponents == null && glAccountStructure.Subcomponents == null)
+            {
+                logger.Error("==> glAccountStructure.MajorComponents/Subcomponents is null <==");
+                throw new ConfigurationException("GL account structure - major / sub-components set up is missing.");
+            }
+
+            if (!ValidateSortCriteria(glAccountStructure, criteria))
+            {
+                logger.Error("==> Invalid sort/subtotal component criteria specified <==");
+                throw new InvalidOperationException("Invalid sort/subtotal component criteria specified.");
+            }
+
+            // Get the GL class configuration because it is used by the GL user repository.
+            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+            if (glClassConfiguration == null)
+            {
+                logger.Error("==> glClassConfiguration is null <==");
+                throw new ApplicationException("GL class configuration is not set up.");
+            }
+
+            // Get the ID for the person who is logged in, and use the ID to get his list of assigned GL accounts.
+            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
+            if (generalLedgerUser == null)
+            {
+                logger.Error("==> generalLedgerUser is null <==");
+                throw new ApplicationException("No GL user definition available.");
+            }
+
+            // If the user does not have any GL accounts assigned, return an empty list of finance query object.
+            if ((generalLedgerUser.AllAccounts == null || !generalLedgerUser.AllAccounts.Any()))
+            {
+                logger.Error(string.Format("==> user '{0}' does not have any GL accounts assigned <==", CurrentUser.PersonId));
+                return financeQueryActivityDetailDtos;
+            }
+
+            // If the user has GL accounts assigned, convert the filter criteria DTO
+            // into a domain entity, and pass it into the finance query repository.
+            var financeQueryCriteriaAdapter = new FinanceQueryCriteriaDtoToEntityAdapter(_adapterRegistry, logger);
+            var queryCriteriaEntity = financeQueryCriteriaAdapter.MapToType(criteria);
+
+            var glAccountActivityDetailEntities = await financeQueryRepository.GetFinanceQueryActivityDetailAsync(generalLedgerUser, glAccountStructure, glClassConfiguration, queryCriteriaEntity, CurrentUser.PersonId);
+
+            if (glAccountActivityDetailEntities == null || !glAccountActivityDetailEntities.Any())
+            {
+                logger.Debug("==> glAccountActivityDetailEntities is null or empty <==");
+                return financeQueryActivityDetailDtos;
+            }
+
+            var glAccountNumbers = glAccountActivityDetailEntities.Select(x => x.GlAccountNumber).ToList();
+            var glAccountDescriptionsDictionary = await generalLedgerAccountRepository.GetGlAccountDescriptionsAsync(glAccountNumbers, glAccountStructure);
+            foreach (var entity in glAccountActivityDetailEntities)
+            {
+                if (entity != null)
+                {
+                    AssignDetailGlAccountDescription(entity, glAccountDescriptionsDictionary);
+                }
+            }
+
+            // Create the adapter to convert finance query domain entities to DTOs.
+            // Convert the domain entity into a DTO.
+            var financeQueryActivityDetailDtoAdapter = new FinanceQueryActivityDetailEntityToDtoAdapter(_adapterRegistry, logger);
+            foreach (var entity in glAccountActivityDetailEntities)
+            {
+                financeQueryActivityDetailDto = financeQueryActivityDetailDtoAdapter.MapToType(entity, glAccountStructure.MajorComponentStartPositions);
+                financeQueryActivityDetailDtos.Add(financeQueryActivityDetailDto);
+            }
+
+            return financeQueryActivityDetailDtos;
+        }
+
         #region private methods
         /// <summary>
         /// if any one of sort/subtotal criteria is not valid, return false
@@ -265,6 +374,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
+        private void AssignDetailGlAccountDescription(FinanceQueryActivityDetail glAccountItem, Dictionary<string, string> glAccountDescriptionsDictionary)
+        {
+            glAccountItem.GlAccountDescription = GetGlAccountDescription(glAccountItem.GlAccountNumber, glAccountDescriptionsDictionary);
+        }
+
         private string GetGlAccountDescription(string glAccountNumber, Dictionary<string, string> glAccountDescriptionsDictionary)
         {
             string description = "";
@@ -274,7 +388,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return description ?? string.Empty;
         }
-
 
         private string BuildSortKeyForGlAccount(string glAccountNumber, List<FinanceQueryComponentSortCriteria> sortCriteria, Dictionary<string, Tuple<int, int>> glSubComponentStructureDictionary)
         {
@@ -347,6 +460,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
         }
+
         /// <summary>
         /// this method will return component description dictionary where 'major component type' as key and 'a dictionary of subcomponent values 
         /// and respective subcomponent description' as value 

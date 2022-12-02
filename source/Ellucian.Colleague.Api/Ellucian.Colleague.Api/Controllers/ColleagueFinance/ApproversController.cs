@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -69,17 +69,17 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Get the list of initiators based on keyword search.
+        /// Get the list of next apporvers based on keyword search.
         /// </summary>
         /// <param name="queryKeyword">parameter for passing search keyword</param>
-        /// <returns> The Next approver search results</returns>      
+        /// <returns>The Next approver search results</returns>      
         /// <accessComments>
-        /// Requires at least one of the permissions CREATE.UPDATE.REQUISITION or CREATE.UPDATE.PURCHASE.ORDER or CREATE.UPDATE.VOUCHER.
+        /// Requires at least one of the permissions VIEW.ANY.PERSON or CREATE.UPDATE.REQUISITION or CREATE.UPDATE.PURCHASE.ORDER or CREATE.UPDATE.VOUCHER or CREATE.UPDATE.BUDGET.ADJUSTMENT
         /// </accessComments>
+        [Obsolete("Obsolete as of API 1.34. Use QueryNextApproverByKeywordAsync.")]
         [HttpGet]
         public async Task<IEnumerable<NextApprover>> GetNextApproverByKeywordAsync(string queryKeyword)
         {
-
             if (string.IsNullOrEmpty(queryKeyword))
             {
                 string message = "query keyword is required to query.";
@@ -90,6 +90,53 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 var nextApproverSearchResults = await approverService.QueryNextApproverByKeywordAsync(queryKeyword);
+                return nextApproverSearchResults;
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, "Invalid argument.");
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex, "Insufficient permissions to get the approver info.");
+                throw CreateHttpResponseException("Insufficient permissions to get the approver info.", HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, "Record not found.");
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to search approver");
+                throw CreateHttpResponseException("Unable to search approver", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Get the list of Next Approvers based on keyword search.
+        /// </summary>
+        /// <param name="criteria">KeywordSearchCriteria parameter for passing search keyword</param>
+        /// <returns> The Next approver search results</returns>      
+        /// <accessComments>
+        /// Requires at least one of the permissions VIEW.ANY.PERSON or CREATE.UPDATE.REQUISITION or CREATE.UPDATE.PURCHASE.ORDER or CREATE.UPDATE.VOUCHER or CREATE.UPDATE.BUDGET.ADJUSTMENT
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync([FromBody] KeywordSearchCriteria criteria)
+        {
+
+            if (criteria == null || string.IsNullOrEmpty(criteria.Keyword))
+            {
+                string message = "query keyword is required to query.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var nextApproverSearchResults = await approverService.QueryNextApproverByKeywordAsync(criteria.Keyword);
                 return nextApproverSearchResults;
             }
             catch (ArgumentNullException anex)

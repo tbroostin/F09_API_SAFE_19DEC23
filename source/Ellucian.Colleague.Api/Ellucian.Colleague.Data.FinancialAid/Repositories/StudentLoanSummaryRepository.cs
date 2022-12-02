@@ -274,11 +274,11 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             plusAppItem.FaYear = faYear;
                             if (!string.IsNullOrEmpty(response2.AP1LastName))
                             {
-                                plusAppItem.PlusApplicationLastName = response.AP1LastName;
+                                plusAppItem.PlusApplicationLastName = response2.AP1LastName;
                             }
                             if (!string.IsNullOrEmpty(response2.AP1FirstName))
                             {
-                                plusAppItem.PlusApplicationFirstName = response.AP1FirstName;
+                                plusAppItem.PlusApplicationFirstName = response2.AP1FirstName;
                             }
                             plusAppItem.IsLoanApplicationItemComplete = true;
                             plusAppItem.FaYear = faYear;
@@ -292,6 +292,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             plusAppItem.FaYear = faYear;
                             plusAppItem.IsGPLUS = false;
                             plusAppItems.Add(plusAppItem);
+                            //Support showing the parent name even if the item is incomplete
+                            if (!string.IsNullOrEmpty(response2.AP1LastName))
+                            {
+                                plusAppItem.PlusApplicationLastName = response2.AP1LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response2.AP1FirstName))
+                            {
+                                plusAppItem.PlusApplicationFirstName = response2.AP1FirstName;
+                            }
                         }
                     }
                     if (!string.IsNullOrEmpty(response2.APlusRslt2))
@@ -319,6 +328,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             plusAppItem2.FaYear = faYear;
                             plusAppItem2.IsGPLUS = false;
                             plusAppItems.Add(plusAppItem2);
+                            //Support showing the parent name even if the item is incomplete
+                            if (!string.IsNullOrEmpty(response2.AP2LastName))
+                            {
+                                plusAppItem2.PlusApplicationLastName = response2.AP2LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response2.AP2FirstName))
+                            {
+                                plusAppItem2.PlusApplicationFirstName = response2.AP2FirstName;
+                            }
                         }
                     }
                     if (!string.IsNullOrEmpty(response2.GplusRslt))

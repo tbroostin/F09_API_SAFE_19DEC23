@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -98,6 +98,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             _nonAcademicAttendanceRequirementsController = new NonAcademicAttendanceRequirementsController(_nonAcademicAttendanceServiceMock.Object,
                 _loggerMock.Object);
             var expectedDtos = await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendanceRequirementsAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task NonAcademicAttendanceRequirementsControlle_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendanceRequirementsAsync(personId))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+
+                _nonAcademicAttendanceRequirementsController = new NonAcademicAttendanceRequirementsController(_nonAcademicAttendanceServiceMock.Object,
+                    _loggerMock.Object);
+                await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendanceRequirementsAsync(personId);
+
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
         }
 
         [TestMethod]

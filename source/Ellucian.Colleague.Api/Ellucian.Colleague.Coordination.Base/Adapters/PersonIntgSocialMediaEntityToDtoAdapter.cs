@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -88,9 +88,10 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
                     
                     socialMediaEntries.Add(socialMedia);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Do not include code since we couldn't find a category
+                    logger.Error(ex.Message, "could not find SocialMediaTypeCategory");
                 }
             }
 

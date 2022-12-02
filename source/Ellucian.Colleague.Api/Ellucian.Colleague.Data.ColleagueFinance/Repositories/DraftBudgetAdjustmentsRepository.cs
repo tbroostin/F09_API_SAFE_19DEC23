@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -73,6 +74,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
+            logger.Debug("==> DraftBudgetAdjustmentsRepository TR date: " + draftBudgetAdjustmentInput.TransactionDate + " <==");
+
             // Determine the action for the CTX from the existence of a draft budget ID in the incoming draft budget
             // adjustment. Also, normally on GLBE, the FROM amount is the DEBIT and TO the CREDIT. However, we "swap the columns" since
             // we're dealing with budget amounts.
@@ -95,38 +98,46 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 ATrDate = DateTime.SpecifyKind(draftBudgetAdjustmentInput.TransactionDate, DateTimeKind.Unspecified)
             };
 
-            var response = await transactionInvoker.ExecuteAsync<TxUpdateDraftBudgetAdjustmentRequest, TxUpdateDraftBudgetAdjustmentResponse>(request);
-
-            // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
-            DraftBudgetAdjustment draftBudgetAdjustmentOutput = null;
-            if (!string.IsNullOrEmpty(response.ADraftBudgetEntryId))
+            try
             {
-                draftBudgetAdjustmentOutput = new DraftBudgetAdjustment(draftBudgetAdjustmentInput.Reason);
-                draftBudgetAdjustmentOutput.AdjustmentLines = draftBudgetAdjustmentInput.AdjustmentLines;
-                draftBudgetAdjustmentOutput.TransactionDate = draftBudgetAdjustmentInput.TransactionDate;
-                draftBudgetAdjustmentOutput.Id = response.ADraftBudgetEntryId;
-                draftBudgetAdjustmentOutput.Initiator = draftBudgetAdjustmentInput.Initiator;
-                draftBudgetAdjustmentOutput.Comments = draftBudgetAdjustmentInput.Comments;
+                var response = await transactionInvoker.ExecuteAsync<TxUpdateDraftBudgetAdjustmentRequest, TxUpdateDraftBudgetAdjustmentResponse>(request);
 
-                draftBudgetAdjustmentOutput.NextApprovers = new List<NextApprover>();
-                if (draftBudgetAdjustmentInput.NextApprovers != null && draftBudgetAdjustmentInput.NextApprovers.Any())
+                // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
+                DraftBudgetAdjustment draftBudgetAdjustmentOutput = null;
+                if (!string.IsNullOrEmpty(response.ADraftBudgetEntryId))
                 {
-                    foreach (var nextApprover in draftBudgetAdjustmentInput.NextApprovers)
+                    draftBudgetAdjustmentOutput = new DraftBudgetAdjustment(draftBudgetAdjustmentInput.Reason);
+                    draftBudgetAdjustmentOutput.AdjustmentLines = draftBudgetAdjustmentInput.AdjustmentLines;
+                    draftBudgetAdjustmentOutput.TransactionDate = draftBudgetAdjustmentInput.TransactionDate;
+                    draftBudgetAdjustmentOutput.Id = response.ADraftBudgetEntryId;
+                    draftBudgetAdjustmentOutput.Initiator = draftBudgetAdjustmentInput.Initiator;
+                    draftBudgetAdjustmentOutput.Comments = draftBudgetAdjustmentInput.Comments;
+
+                    draftBudgetAdjustmentOutput.NextApprovers = new List<NextApprover>();
+                    if (draftBudgetAdjustmentInput.NextApprovers != null && draftBudgetAdjustmentInput.NextApprovers.Any())
                     {
-                        if (nextApprover != null)
+                        foreach (var nextApprover in draftBudgetAdjustmentInput.NextApprovers)
                         {
-                            draftBudgetAdjustmentOutput.NextApprovers.Add(nextApprover);
+                            if (nextApprover != null)
+                            {
+                                draftBudgetAdjustmentOutput.NextApprovers.Add(nextApprover);
+                            }
                         }
                     }
                 }
-            }
-            else
-            {
-                draftBudgetAdjustmentInput.ErrorMessages = response.AlErrorMessages;
-                draftBudgetAdjustmentOutput = draftBudgetAdjustmentInput;
-            }
+                else
+                {
+                    draftBudgetAdjustmentInput.ErrorMessages = response.AlErrorMessages;
+                    draftBudgetAdjustmentOutput = draftBudgetAdjustmentInput;
+                }
 
-            return draftBudgetAdjustmentOutput;
+                return draftBudgetAdjustmentOutput;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> TxUpdateDraftBudgetAdjustmentRequest session expired <==");
+                throw;
+            }
         }
 
         /// <summary>
@@ -227,17 +238,26 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 ADraftBeId = id
             };
-            TxDeleteDraftBudgetAdjustmentResponse response = await transactionInvoker.ExecuteAsync<TxDeleteDraftBudgetAdjustmentRequest, TxDeleteDraftBudgetAdjustmentResponse>(request);
 
-            if (response.AErrorCode == "MissingRecord")
+            try
             {
-                logger.Error(response.AErrorMessage);
-                throw new KeyNotFoundException(string.Format("Unable to delete record: no record was found with the specified id: {0}.", id));
+                TxDeleteDraftBudgetAdjustmentResponse response = await transactionInvoker.ExecuteAsync<TxDeleteDraftBudgetAdjustmentRequest, TxDeleteDraftBudgetAdjustmentResponse>(request);
+
+                if (response.AErrorCode == "MissingRecord")
+                {
+                    logger.Error(response.AErrorMessage);
+                    throw new KeyNotFoundException(string.Format("Unable to delete record: no record was found with the specified id: {0}.", id));
+                }
+                if (!string.IsNullOrEmpty(response.AErrorCode))
+                {
+                    logger.Error(response.AErrorMessage);
+                    throw new ApplicationException(string.Format("Unable to delete record with the specified id: {0}.", id));
+                }
             }
-            if (!string.IsNullOrEmpty(response.AErrorCode))
+            catch (ColleagueSessionExpiredException csee)
             {
-                logger.Error(response.AErrorMessage);
-                throw new ApplicationException(string.Format("Unable to delete record with the specified id: {0}.", id));
+                logger.Error(csee, "==> TxDeleteDraftBudgetAdjustmentRequest session expired <==");
+                throw;
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -211,21 +211,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             if (!glUsersContract.GlusStartDate.HasValue)
                             {
                                 // GLUSERS record has no start date.
-                                logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
+                                logger.Error(string.Format("Person {0} has insufficient GL access definition. GLUSERS record has no start date.", id));
                             }
                             else
                             {
                                 if (DateTime.Today < glUsersContract.GlusStartDate)
                                 {
                                     // GLUSERS record is in the future.
-                                    logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
+                                    logger.Error(string.Format("Person {0} has insufficient GL access definition. GLUSERS record is in the future.", id));
                                 }
                                 else
                                 {
                                     if ((DateTime.Today >= glUsersContract.GlusEndDate) && glUsersContract.GlusEndDate.HasValue)
                                     {
                                         // GLUSERS record is expired.
-                                        logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
+                                        logger.Error(string.Format("Person {0} has insufficient GL access definition. GLUSERS record is expired.", id));
                                     }
                                     else
                                     {
@@ -331,6 +331,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                             {
                                                 if (activeUserRoles.Count > 0)
                                                 {
+                                                    // Logging the number of activeUserRoles for the person for TLS/troubleshooting.
+                                                    logger.Debug("Person {0} has {1} activeUserRoles.", id, activeUserRoles.Count);
                                                     string[] userGlAccounts = null;
                                                     if (generalLedgerUserEntity.GlAccessLevel == GlAccessLevel.Full_Access)
                                                     {
@@ -394,14 +396,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                                     }
                                                     else
                                                     {
+                                                        logger.Debug("Person {0} has no userGlAccounts based on their activeUserRoles", id);
                                                         generalLedgerUserEntity.SetGlAccessLevel(GlAccessLevel.No_Access);
                                                     }
+                                                }
+                                                else
+                                                {
+                                                    // Logging the absence of activeUserRoles for the person for TLS/troubleshooting.
+                                                    logger.Debug("Person {0} has no activeUserRoles.", id);
                                                 }
                                             }
 
                                             if (generalLedgerUserEntity.GlAccessLevel == GlAccessLevel.No_Access)
                                             {
-                                                logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
+                                                logger.Error(string.Format("Person {0} has insufficient GL access definition.", id));
                                             }
                                         }
                                     }
@@ -414,7 +422,138 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }, ThirtyMinuteCacheTimeout);
         }
 
-        public async Task<bool> CheckOverride (string id)
+        /// <summary>
+        /// Obtain the combined list of GL accounts the user can access and approve.
+        /// </summary>
+        /// <param name="id">This is the user ID.</param>
+        /// <param name="glAccessAccounts">List of GL accounts the user has GL access to.</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<string>> GetGlUserApprovalAndGlAccessAccountsAsync(string id, IEnumerable<string> glAccessAccounts)
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<string>>("GLUserAccessAndApproval" + id, async () =>
+            {
+                // Determine the current approval roles for the user. There are approval roles that
+                // have an amount limit and there are approval policy roles. We only need to determine
+                // what GL accounts are included in the user's current approval roles regardless of
+                // type or amount.
+
+                var activeUserApprovalRoles = new List<string>();
+
+                // Add the GL access accounts to the return oject.
+                // These are the GL accounts the user has access to based on their current GL access roles.
+                List<string> allAccessAndApprovalAccounts = glAccessAccounts.ToList();
+
+                // Initialize the object that will get the GL accounts the user can approve based on their GL approval roles.
+                IEnumerable<string> userApprovalGlAccounts = new List<string>();
+
+                // Read the STAFF record for the user to get their login ID.
+                var staffContract = await DataReader.ReadRecordAsync<Staff>("STAFF", id);
+                if (staffContract == null)
+                {
+                    // The general ledger user has no Staff record.
+                    logger.Error("==> The person ID has no Staff record <==");
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(staffContract.StaffLoginId))
+                    {
+                        // There is no login (operator ID) on the Staff record.
+                        logger.Error("==> The person ID has an incomplete Staff record <==");
+                    }
+                    else
+                    {
+                        // Confirm that the user has GLUSERS record that is active for the current date.
+                        var glUsersContract = await DataReader.ReadRecordAsync<Glusers>("GLUSERS", staffContract.StaffLoginId);
+                        if (glUsersContract == null)
+                        {
+                            // There is no GLUSERS record for the general ledger user.
+                            logger.Error("==> The person ID has no GL access definition <==");
+                        }
+                        else
+                        {
+                            if (!glUsersContract.GlusStartDate.HasValue)
+                            {
+                                // GLUSERS record has no start date.
+                                logger.Error("==> The person ID has insufficient GL access definition. GLUSERS record has no start date. <==");
+                            }
+                            else
+                            {
+                                if (DateTime.Today < glUsersContract.GlusStartDate)
+                                {
+                                    // GLUSERS record is in the future.
+                                    logger.Error("==> The person ID has insufficient GL access definition. GLUSERS record is in the future. <==");
+                                }
+                                else
+                                {
+                                    if ((DateTime.Today >= glUsersContract.GlusEndDate) && glUsersContract.GlusEndDate.HasValue)
+                                    {
+                                        // GLUSERS record is expired.
+                                        logger.Error("==> The person ID has insufficient GL access definition. GLUSERS record is expired. <==");
+                                    }
+                                    else
+                                    {
+                                        // If any of the user's approval roles are for use on the web, 
+                                        // loop through them and determine which approval roles are current.
+
+                                        if (glUsersContract.ApprovalRolesEntityAssociation != null && glUsersContract.ApprovalRolesEntityAssociation.Any())
+                                        {
+                                            // Get a list of current GL approval roles for the user.
+                                            IEnumerable<GlusersApprovalRoles> activeApprovalRoles = new List<GlusersApprovalRoles>();
+                                            activeApprovalRoles = glUsersContract.ApprovalRolesEntityAssociation.Where(x => x != null && !string.IsNullOrWhiteSpace(x.GlusApprRoleIdsAssocMember)
+                                            && (x.GlusApprStartDatesAssocMember != null) && (DateTime.Today >= x.GlusApprStartDatesAssocMember)
+                                            && (x.GlusApprEndDatesAssocMember.HasValue ? DateTime.Today < x.GlusApprEndDatesAssocMember.Value : true)).ToList();
+
+                                            if (activeApprovalRoles != null && activeApprovalRoles.Any())
+                                            {
+                                                // Remove role ID duplicates just in case.
+                                                string[] activeApprovalRoleIDs;
+                                                activeApprovalRoleIDs = activeApprovalRoles.Select(x => x.GlusApprRoleIdsAssocMember).Distinct().ToArray();
+
+                                                // Determine which of these roles are for use on the web.
+                                                var searchString = "WITH GLR.ROLE.USE EQ 'W' OR WITH GLR.ROLE.USE EQ 'B'";
+                                                var webApprovalRoles = await DataReader.SelectAsync("GLROLES", activeApprovalRoleIDs, searchString);
+
+                                                // If the user has any active web GL roles, get the list of GL.ACCTS
+                                                // by selecting against the GL.ACCTS.ROLES entity. 
+                                                if (webApprovalRoles != null && webApprovalRoles.Any())
+                                                {
+                                                    var criteria = "GLAR.INCL.IN.ROLES EQ '?'";
+                                                    userApprovalGlAccounts = await DataReader.SelectAsync("GL.ACCTS.ROLES", criteria, webApprovalRoles.ToArray());
+
+                                                    // If there are any GL accounts the user can approve, add them
+                                                    // to the list of GL access accounts to get the combined list
+                                                    // removing duplicates, nulls and empty or blanks.
+                                                    if (userApprovalGlAccounts != null && userApprovalGlAccounts.Any())
+                                                    {
+                                                        allAccessAndApprovalAccounts.AddRange(userApprovalGlAccounts.Except(allAccessAndApprovalAccounts).Distinct().Where(x => !string.IsNullOrEmpty(x)));
+                                                    }
+                                                    else
+                                                    {
+                                                        logger.Debug("==> User has no GL accounts that they can approve <==");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    logger.Debug("==> User has no active approval roles <==");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                logger.Debug("==> User has no approval roles <==");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return allAccessAndApprovalAccounts;
+            }, ThirtyMinuteCacheTimeout);
+        }
+
+
+        public async Task<bool> CheckOverride(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -431,11 +570,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 var staffContract = await DataReader.ReadRecordAsync<Staff>("STAFF", id);
                 login = staffContract.StaffLoginId;
-            } else
+            }
+            else
             {
                 login = user[0];
             }
-            
+
             if (!string.IsNullOrWhiteSpace(login))
             {
                 var utOpers = await DataReader.ReadRecordAsync<DataContracts.Opers>("UT.OPERS", login);
@@ -443,11 +583,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var chars = await GetSeclassCharacteristics(classId);
                 hasOverride = false;
                 if (chars != null && chars.Any())
-                 hasOverride = true;
+                    hasOverride = true;
             }
-            
+
             return hasOverride;
         }
+
 
         /// <summary>
         /// Gets CLASS.CHARACTERISTICS
@@ -467,7 +608,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ConfigurationException("GL account structure is not defined.");
             }
 
-            if(!string.IsNullOrEmpty(glStruct.AcctOverrideTokens.FirstOrDefault()))
+            if (!string.IsNullOrEmpty(glStruct.AcctOverrideTokens.FirstOrDefault()))
             {
                 var seclasses = await DataReader.BulkReadRecordAsync<DataContracts.ApplSeclass>("SECLASS", string.Format("WITH SYS.CLASS.ID EQ '{0}'", classId));
                 if (seclasses == null)
@@ -475,12 +616,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     return null;
                 }
                 var seclass = seclasses.FirstOrDefault();
-                seclass.ClassCharacteristics.ForEach(i => 
+                seclass.ClassCharacteristics.ForEach(i =>
                 {
                     chars.Add(i);
                 });
-            }          
-            return chars.Any()? chars : null;
+            }
+            return chars.Any() ? chars : null;
         }
     }
 }

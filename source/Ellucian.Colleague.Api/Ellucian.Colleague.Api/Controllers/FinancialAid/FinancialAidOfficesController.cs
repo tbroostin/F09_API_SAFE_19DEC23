@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.FinancialAid.Services;
 using Ellucian.Colleague.Dtos.FinancialAid;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -53,6 +54,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             try
             {
                 return await financialAidOfficeService.GetFinancialAidOffices3Async();
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Linq;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -103,6 +104,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 SetResourceLocationHeader("GetStudentTranscriptRequest", new { id = gaex.ExistingResourceId });
                 throw CreateHttpResponseException(gaex.Message, HttpStatusCode.Conflict);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while creating student transcript request.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -163,6 +170,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Info(peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while creating enrollment verification requests";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (ExistingResourceException gaex)
             {
                 _logger.Info(gaex.ToString());
@@ -205,6 +218,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(knfe, knfe.Message);
                 throw CreateHttpResponseException("Invalid request Id specified to retrieve student transcript request", System.Net.HttpStatusCode.NotFound);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving the student transcript request.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
@@ -235,6 +254,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(pe, pe.Message);
                 throw CreateHttpResponseException("Access to student enrollment verification request is forbidden.", System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student enrollment verification request.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {
@@ -272,11 +297,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     enrollmentRequests.Add(req as Dtos.Student.StudentEnrollmentRequest);
                 }
                 return enrollmentRequests;
-            }
+            }           
             catch (PermissionsException pe)
             {
                 _logger.Error(pe, pe.Message);
                 throw CreateHttpResponseException("Access to student enrollment verification requests is forbidden.", System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving the student enrollment verification requests.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -314,6 +345,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(pe, pe.Message);
                 throw CreateHttpResponseException("Access to student transcript requests is forbidden.", System.Net.HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving student transcript requests for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
@@ -344,6 +381,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(pe, pe.Message);
                 throw CreateHttpResponseException("Access to student transcript requests fees is forbidden.", System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving the student request fee for this program.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

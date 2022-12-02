@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Web.Dependency;
 using System;
@@ -144,7 +144,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Services
         }
 
         /// <summary>
-        /// 
+        /// Prepare pay statement report entity from the source data
         /// </summary>
         /// <param name="sourceData"></param>
         /// <returns></returns>

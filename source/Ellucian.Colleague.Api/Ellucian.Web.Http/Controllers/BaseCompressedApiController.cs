@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
@@ -22,6 +22,7 @@ using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Routes;
 using Ellucian.Colleague.Dtos;
 using System.Collections;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Web.Http.Controllers
 {
@@ -81,6 +82,7 @@ namespace Ellucian.Web.Http.Controllers
                     catch (Exception)
                     {
                         // do nothing.. and continue to use the existing routeTemplate name
+                        var doNothing = true; // avoid empty catch block
                     }
                 }
             }
@@ -302,6 +304,7 @@ namespace Ellucian.Web.Http.Controllers
             catch
             {
                 // return empty
+                outValue = null; // avoid empty catch block
             }
             return outValue;
         }
@@ -446,7 +449,7 @@ namespace Ellucian.Web.Http.Controllers
                 }
             }
 
-            throw new Exception("Unable to get route resource name");
+            throw new ColleagueWebApiException("Unable to get route resource name");
         }
 
         /// <summary>
@@ -564,7 +567,7 @@ namespace Ellucian.Web.Http.Controllers
 
             if (DataPrivacy.ApplyDataPrivacy(json, dataPrivacyList, logger) != null)
             {
-                throw new Exception(string.Concat("Update on ", GetRouteResourceName(), " has been rejected for attempting to update restricted properties."));
+                throw new ColleagueWebApiException(string.Concat("Update on ", GetRouteResourceName(), " has been rejected for attempting to update restricted properties."));
             }
             return false;
         }
@@ -698,6 +701,10 @@ namespace Ellucian.Web.Http.Controllers
             catch (FormatException e)
             {
                 throw new IntegrationApiException(e.Message, new IntegrationApiError("Extract.Extended.Data.Property", e.InnerException.Message, e.Message));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
             }
             catch (Exception e)
             {

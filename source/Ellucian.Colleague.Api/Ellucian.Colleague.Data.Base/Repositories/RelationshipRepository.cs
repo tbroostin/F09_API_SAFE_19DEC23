@@ -1,10 +1,11 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -27,7 +28,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class RelationshipRepository : BaseColleagueRepository, IRelationshipRepository
     {
         private List<Domain.Base.Entities.Relationship> _relationships;
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         RepositoryException exception = new RepositoryException();
         private string colleagueTimeZone;
 
@@ -153,6 +154,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
 
                 return BuildRelationship(data);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -474,8 +479,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             relationIds.Add(string.Concat(relId, "*", personId));
                                     }
                                 }
-                                catch
-                                { }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex.Message, "Null or duplicate relation ID.");
+                                }
                             }
                         }
                     }
@@ -1461,7 +1468,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                              var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                              logger.Info(errorMessage);
                              // If we cannot read the international parameters default to US with a / delimiter.
-                             // throw new Exception(errorMessage);
+                             // throw new ColleagueWebApiException(errorMessage);
                              Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                              newIntlParams.HostShortDateFormat = "MDY";
                              newIntlParams.HostDateDelimiter = "/";
@@ -1502,8 +1509,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         personGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex.Message, "Cannot add person guid to collection.");
                 }
             }
 

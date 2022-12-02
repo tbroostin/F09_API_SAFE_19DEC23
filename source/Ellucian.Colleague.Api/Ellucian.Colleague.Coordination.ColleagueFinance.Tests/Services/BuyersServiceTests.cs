@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
@@ -99,7 +100,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task BuyersService_GetBuyersByGuidAsync_Exception()
         {
             var id = "3af740fe-ef2b-49f1-9f66-e7d9491e2064";

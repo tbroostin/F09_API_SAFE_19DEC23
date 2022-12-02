@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -394,7 +394,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 if ((!string.IsNullOrEmpty(enrollmentStatus)) && (!ValidEnumerationValue(typeof(EnrollmentStatusType), enrollmentStatus)))
                 {
-                    throw new Exception(string.Concat("'", enrollmentStatus, "' is an invalid enumeration value. "));
+                    throw new ColleagueWebApiException(string.Concat("'", enrollmentStatus, "' is an invalid enumeration value. "));
                 }
 
                 var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicProgramsAsync(page.Offset, page.Limit, bypassCache, student, startOn, endOn, program,

@@ -1394,6 +1394,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Services
             [TestMethod]
             public void IdentityChanged_IsVerified()
             {
+                configuration.CanViewUpdateChosenName = UserProfileViewUpdateOption.Updatable;
+                configuration.CanViewUpdateGenderIdentity = UserProfileViewUpdateOption.Updatable;
+                configuration.CanViewUpdatePronoun = UserProfileViewUpdateOption.Updatable;
+                configuration.CanViewUpdateNickname = UserProfileViewUpdateOption.Updatable;
                 newProfile.Nickname = "Nickname";
                 newProfile.ChosenFirstName = "ChosenFirst";
                 newProfile.ChosenMiddleName = "ChosenMiddle";
@@ -1419,12 +1423,12 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Services
             public void NoChangesMade()
             {
                 var verifiedProfile = ProfileProcessor.VerifyProfileUpdate2(newProfile, repoProfile, configuration, currentUser, userPermissions, out isProfileChanged);
-                Assert.AreEqual(verifiedProfile.Nickname, newProfile.Nickname);
+                Assert.AreEqual(verifiedProfile.Nickname, repoProfile.Nickname);
                 Assert.AreEqual(verifiedProfile.ChosenFirstName, repoProfile.ChosenFirstName);
-                Assert.AreEqual(verifiedProfile.ChosenMiddleName, newProfile.ChosenMiddleName);
+                Assert.AreEqual(verifiedProfile.ChosenMiddleName, repoProfile.ChosenMiddleName);
                 Assert.AreEqual(verifiedProfile.ChosenLastName, repoProfile.ChosenLastName);
-                Assert.AreEqual(verifiedProfile.GenderIdentityCode, newProfile.GenderIdentityCode);
-                Assert.AreEqual(verifiedProfile.PersonalPronounCode, newProfile.PersonalPronounCode);
+                Assert.AreEqual(verifiedProfile.GenderIdentityCode, repoProfile.GenderIdentityCode);
+                Assert.AreEqual(verifiedProfile.PersonalPronounCode, repoProfile.PersonalPronounCode);
             }
 
         }

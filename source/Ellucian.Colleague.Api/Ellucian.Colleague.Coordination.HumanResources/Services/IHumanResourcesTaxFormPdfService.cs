@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Threading.Tasks;
@@ -15,6 +15,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// </summary>
         /// <returns>Boolean value where true = Guam and false = USA</returns>
         Task<bool> GetW2GuamFlag();
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the American Samoa version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = American Samoa and false = USA</returns>
+        Task<bool> GetW2AmericanSamoaFlag();
 
         /// <summary>
         /// Returns the pdf data to print a W-2 tax form.

@@ -1,8 +1,9 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student.TransferWork;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -78,6 +79,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 var message = string.Format(ex.Message);
                 _logger.Error(ex, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student transfer and non course equivelancy work";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

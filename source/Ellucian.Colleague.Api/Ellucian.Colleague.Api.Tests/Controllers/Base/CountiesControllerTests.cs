@@ -1,7 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -90,6 +91,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var counties = await countiesController.GetAsync();
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CountiesController_GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetCountiesAsync(It.IsAny<bool>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await countiesController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
+        }
 
         private IEnumerable<Domain.Base.Entities.County> BuildCounties()
         {

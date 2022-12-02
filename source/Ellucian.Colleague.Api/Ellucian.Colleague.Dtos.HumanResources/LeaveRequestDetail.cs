@@ -34,5 +34,10 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Indicates if this detail record has been processed in a pay period by payroll
         /// </summary>
         public bool ProcessedInPayPeriod { get; set; }
+
+        /// <summary>
+        /// Leave request detail change operator
+        /// </summary>
+        public string LeaveRequestDetailChgopr { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Data.Colleague.DataContracts;
 using System.Collections.ObjectModel;
@@ -25,6 +26,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -38,6 +40,25 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         char _SM = Convert.ToChar(DynamicArray.SM);
         char _TM = Convert.ToChar(DynamicArray.TM);
         char _XM = Convert.ToChar(250);
+
+        /// <summary>
+        /// Contains a Tuple where Item1 is a bool set to true if any fields are denied or secured, 
+        /// Item2 is a list of DeniedAccess Fields and Item3 is a list of Restricted fields.
+        /// </summary>
+        public Tuple<bool, List<string>, List<string>> SecureDataDefinition { get; set; }
+
+        /// <summary>
+        /// Get the Denied and Secured Data Properties from the CTX call.
+        /// </summary>
+        /// <returns>Returns a Tuple with the secure flag and list of denied data fields and list of secure data fields.</returns>
+        public Tuple<bool, List<string>, List<string>> GetSecureDataDefinition()
+        {
+            if (SecureDataDefinition == null)
+            {
+                SecureDataDefinition = new Tuple<bool, List<string>, List<string>>(false, new List<string>(), new List<string>());
+            }
+            return SecureDataDefinition;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationRepository"/> class.
@@ -95,7 +116,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<bool> IsThisTheEmaUser(string userName, bool bypassCache)
         {
             const string hubCincRecord = "HubRecordFromCINC";
-
             if (bypassCache && ContainsKey(BuildFullCacheKey(hubCincRecord)))
             {
                 ClearCache(new List<string> { hubCincRecord });
@@ -108,30 +128,31 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return hubRecordToCheck != null && hubRecordToCheck.CintApiUsername.Equals(userName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<EdmExtVersions> _ethosExtensiblitySettingsList = null;
+        private IEnumerable<EdmExtVersions> _ethosExtensiblitySettingsListByResource = null;
         /// <summary>
         /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
         /// </summary>
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of DataContracts.EdmExtVersions</returns>
-        public async Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(bool bypassCache = false)
+        private async Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(string resource, bool bypassCache = false)
         {
-            if (_ethosExtensiblitySettingsList == null)
+            if (_ethosExtensiblitySettingsListByResource == null)
             {
-                const string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettings";
+                string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettingsByResource" + resource;
 
                 if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
                 {
                     ClearCache(new List<string> { ethosExtensiblityCacheKey });
                 }
 
+                string criteria = string.Format("WITH EDMV.RESOURCE.NAME = '{0}'", resource);
                 var ethosExtensiblitySettingsList =
                     await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", "")).ToList(), CacheTimeout);
+                        async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", criteria)).ToList(), CacheTimeout);
 
-                _ethosExtensiblitySettingsList = ethosExtensiblitySettingsList;
+                _ethosExtensiblitySettingsListByResource = ethosExtensiblitySettingsList;
             }
-            return _ethosExtensiblitySettingsList;
+            return _ethosExtensiblitySettingsListByResource;
         }
 
         private IEnumerable<EdmCodeHooks> _ethosExtensibleCodeHooks = null;
@@ -158,9 +179,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         await GetOrAddToCacheAsync<List<EdmCodeHooks>>(ethosExtensiblityCacheKey,
                             async () => (await DataReader.BulkReadRecordAsync<EdmCodeHooks>("EDM.CODE.HOOKS", "")).ToList(), CacheTimeout);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // If we are missing code hooks table, then do not throw an exception.
+                    logger.Error(ex.Message, "Missing code hooks table.");
                 }
 
                 _ethosExtensibleCodeHooks = ethosExtensiblityCodeHooks;
@@ -187,20 +209,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             List<string> edmeVersions = new List<string>();
+            ICollection<EdmExtensions> extensions = null;
             if (customOnly)
-            {
-                var extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "WITH EDME.PRIMARY.GUID.SOURCE NE '' OR WITH EDME.PRIMARY.KEY NE ''");
-                foreach (var ext in extensions)
-                {
-                    edmeVersions.AddRange(ext.EdmeVersions);
-                }
+               extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "WITH EDME.PRIMARY.GUID.SOURCE NE '' OR WITH EDME.PRIMARY.KEY NE ''");
+            else
+                extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "");
 
-            }
+            foreach (var ext in extensions)
+            {
+                edmeVersions.AddRange(ext.EdmeVersions);
+            }         
+          
             var ethosExtensiblitySettingsList =
                 await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey + "VERSIONS",
-                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.Any() ? edmeVersions.ToArray() : null,
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.ToArray(),
                         false)).ToList(), CacheTimeout);
 
+
+            /*  var ethosExtensiblitySettingsList =
+                await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey + "VERSIONS",
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.Any() ? edmeVersions.ToArray() : null,
+                        false)).ToList(), CacheTimeout); 
+             */
             var deprecatedData =
                  await GetOrAddToCacheAsync<List<EdmDepNotices>>(ethosExtensiblityCacheKey + "DEPRECATED",
                     async () => (await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES", "")).ToList(), CacheTimeout);
@@ -215,7 +245,114 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             foreach (var ethosExtensiblitySetting in ethosExtensiblitySettingsList)
             {
                 var extendedEthosConfiguration = (await GetExtendedEthosConfigurationByResource(ethosExtensiblitySetting.EdmvResourceName, ethosExtensiblitySetting.EdmvVersionNumber,
-                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant()));
+                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant(), bypassCache));
+                if (extendedEthosConfiguration != null)
+                {
+                    if (deprecatedData != null)
+                    {
+                        try
+                        {
+                            var depKey = string.Concat(extendedEthosConfiguration.ApiResourceName.ToUpper(), "*", extendedEthosConfiguration.ApiVersionNumber);
+                            if (!string.IsNullOrEmpty(depKey))
+                            {
+                                //var depData = await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES", new string[] { depKey }, false);
+                                var depData = deprecatedData.FirstOrDefault(x => x.Recordkey.Equals(depKey));
+                                if (depData != null)
+                                {
+                                    extendedEthosConfiguration.DeprecationDate = depData.EdmpDeprecationDate;
+                                    extendedEthosConfiguration.DeprecationNotice = depData.EdmpDeprecationNotice.Replace(_VM, ' ');
+                                    extendedEthosConfiguration.SunsetDate = depData.EdmpSunsetDate;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            //do not throw error on supplemental data.
+                            logger.Error(ex.Message, "Error on supplemental data.");
+                        }
+                    }
+
+                    if (extensionsData != null)
+                    {
+                        try
+                        {
+                            //var extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS",
+                            //    string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", extendedEthosConfiguration.ApiResourceName), false);
+                            var extensionData = extensionsData.FirstOrDefault(ext => ext.EdmeResourceName.Equals(extendedEthosConfiguration.ApiResourceName));
+                            if (extensionData != null)
+                            {
+                                extendedEthosConfiguration.HttpMethodsSupported = extensionData.EdmeHttpMethods;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            //do not throw error on supplemental data.
+                            logger.Error(ex.Message, "Error on supplemental data.");
+                        }
+                    }
+
+                    retVal.Add(extendedEthosConfiguration);
+                }
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS for a specific resource 
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
+        public async Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntitiesByResource(string resourceName, bool customOnly = true, bool bypassCache = false)
+        {
+            var retVal = new List<Domain.Base.Entities.EthosExtensibleData>();
+            string ethosExtensiblityCacheKey = string.Concat("AllEthosExtensibiltySettingsAndData", resourceName);
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
+            {
+                ClearCache(new List<string> { ethosExtensiblityCacheKey + "VERSIONS" ,
+                                              ethosExtensiblityCacheKey + "DEPRECATED",
+                                              ethosExtensiblityCacheKey + "EXTENSIONS"});
+            }
+
+            List<string> edmeVersions = new List<string>();
+            ICollection<EdmExtensions> extensionsData = null;
+            if (customOnly)
+                extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", string.Format("WITH (EDME.PRIMARY.GUID.SOURCE NE '' OR EDME.PRIMARY.KEY NE '' OR EDME.PROCESS.ID NE '') AND EDME.RESOURCE.NAME EQ '{0}'", resourceName));
+            else
+                extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "");
+
+            foreach (var ext in extensionsData)
+            {
+                edmeVersions.AddRange(ext.EdmeVersions);
+            }
+
+            var ethosExtensiblitySettingsList =
+                await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey + "VERSIONS",
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.ToArray(),
+                        false)).ToList(), CacheTimeout);
+
+
+            /*  var ethosExtensiblitySettingsList =
+                await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey + "VERSIONS",
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.Any() ? edmeVersions.ToArray() : null,
+                        false)).ToList(), CacheTimeout); 
+             */
+            var deprecatedData =
+                 await GetOrAddToCacheAsync<List<EdmDepNotices>>(ethosExtensiblityCacheKey + "DEPRECATED",
+                    async () => (await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES", "")).ToList(), CacheTimeout);
+
+            //var extensionsData =
+            // await GetOrAddToCacheAsync<List<EdmExtensions>>(ethosExtensiblityCacheKey + "EXTENSIONS",
+            // async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "")).ToList(), CacheTimeout);
+
+                    //await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES");
+                    // var extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS");
+
+            foreach (var ethosExtensiblitySetting in ethosExtensiblitySettingsList)
+            {
+                var extendedEthosConfiguration = (await GetExtendedEthosConfigurationByResource(ethosExtensiblitySetting.EdmvResourceName, ethosExtensiblitySetting.EdmvVersionNumber,
+                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant(),bypassCache,true));
                 if (extendedEthosConfiguration != null)
                 {
                     if (deprecatedData != null)
@@ -238,6 +375,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         catch (Exception ex)
                         {
                             //do not throw error on supplemental data.
+                            logger.Error(ex.Message, "Error on supplemental data.");
                         }
                     }
 
@@ -247,15 +385,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             //var extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS",
                             //    string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", extendedEthosConfiguration.ApiResourceName), false);
-                            var extensions = extensionsData.FirstOrDefault(ext => ext.EdmeResourceName.Equals(extendedEthosConfiguration.ApiResourceName));
-                            if (extensions != null)
+                            var extensionData = extensionsData.FirstOrDefault(ext => ext.EdmeResourceName.Equals(extendedEthosConfiguration.ApiResourceName));
+                            if (extensionData != null)
                             {
-                                extendedEthosConfiguration.HttpMethodsSupported = extensions.EdmeHttpMethods;
+                                extendedEthosConfiguration.HttpMethodsSupported = extensionData.EdmeHttpMethods;
                             }
                         }
                         catch (Exception ex)
                         {
                             //do not throw error on supplemental data.
+                            logger.Error(ex.Message, "Error on supplemental data.");
                         }
                     }
 
@@ -272,27 +411,67 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="resourceName"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false)
+        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false, string requestedVersion = "")
         {
-            string defaultVersion = string.Empty;
-            try
+            string ethosExtensiblityCacheKey = "AllExtendedEthosDefaultVersionBy" + resourceName + requestedVersion;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
-                var matchingExtendedConfigData = extendConfigData.Where(e =>
-                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
-                var availableVersions = matchingExtendedConfigData.Where(e => !string.IsNullOrEmpty(e.EdmvVersionNumber)).Select(e => e.EdmvVersionNumber).OrderBy(n => n.Split('.')[0]).ToList();
-                defaultVersion = availableVersions.LastOrDefault();
-                if (string.IsNullOrEmpty(defaultVersion))
-                {
-                    defaultVersion = "1.0.0";
-                }
-            }
-            catch (Exception e)
-            {
-                logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName));
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
 
-            return defaultVersion;
+            var defaultVersionNumber =
+                await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
+                    async () =>
+                    {
+                        string defaultVersion = string.Empty;
+                        try
+                        {
+                            var extendConfigData = (await GetEthosExtensibilityConfiguration(resourceName, bypassCache)).ToList();
+                            var matchingExtendedConfigData = extendConfigData.Where(e =>
+                                e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
+
+                            List<EdmExtVersions> availableVersions = new List<EdmExtVersions>();
+                            if (!string.IsNullOrEmpty(requestedVersion))
+                            {
+                                if (requestedVersion.Split('.').Count() > 2)
+                                {
+                                    return requestedVersion;
+                                }
+                                else
+                                {
+                                    availableVersions = matchingExtendedConfigData.Where(e => !string.IsNullOrEmpty(e.EdmvVersionNumber) && e.EdmvVersionNumber.StartsWith(requestedVersion)).OrderByDescending(n => n.EdmvVersionNumber.Split('.')[0]).ToList();
+                                }
+                            }
+                            else
+                            {
+                                availableVersions = matchingExtendedConfigData.Where(e => !string.IsNullOrEmpty(e.EdmvVersionNumber)).OrderByDescending(n => n.EdmvVersionNumber.Split('.')[0]).ToList();
+                            }
+                            foreach (var availVersion in availableVersions)
+                            {
+                                if (string.IsNullOrEmpty(defaultVersion) && availVersion.EdmvVersionStatus != "B")
+                                {
+                                    if (string.IsNullOrEmpty(defaultVersion))
+                                        defaultVersion = availVersion.EdmvVersionNumber;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(defaultVersion))
+                            {
+                                defaultVersion = availableVersions.FirstOrDefault().EdmvVersionNumber;
+                                if (string.IsNullOrEmpty(defaultVersion) && string.IsNullOrEmpty(requestedVersion))
+                                    defaultVersion = "1.0.0";
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Error(e, string.Concat("Retreiving Ethos Extended Confguration has failed for resource : ", resourceName));
+                        }
+
+                        return defaultVersion;
+
+                    }, CacheTimeout);
+
+            return defaultVersionNumber;
         }
 
         /// <summary>
@@ -302,7 +481,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false, bool readRtFields = false)
         {
             string ethosExtensiblityCacheKey = "AllExtendedEthosConfigurationBy" + resourceName + resourceVersionNumber;
 
@@ -317,12 +496,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         try
                         {
-                            var extendResourceConfigData = (await GetEthosApiConfiguration(bypassCache)).ToList();
+                            var extendResourceConfigData = (await GetEthosApiConfiguration(resourceName, bypassCache)).ToList();
+
+                            //make sure there is extended config data, if not return null
+                            if (extendResourceConfigData == null || !extendResourceConfigData.Any())
+                            {
+                                return new EthosExtensibleData();
+
+                            }
+
                             var apiConfiguration = extendResourceConfigData.FirstOrDefault(ex => ex.EdmeResourceName == resourceName);
+
+                            //make sure there is extended config data for this resource, if not return null
+                            if (apiConfiguration == null)
+                            {
+                                return new EthosExtensibleData();
+
+                            }
 
                             var parentApi = apiConfiguration.EdmeParentApi;
 
-                            var extendVersionConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
+                            var extendVersionConfigData = (await GetEthosExtensibilityConfiguration(resourceName, bypassCache)).ToList();
+
+                            //make sure there is extended version config data, if not return null
+                            if (extendVersionConfigData == null || !extendVersionConfigData.Any())
+                            {
+                                return new EthosExtensibleData();
+
+                            }
 
                             // Look for version specific configuration first
                             var matchingExtendedConfigData = extendVersionConfigData.FirstOrDefault(e =>
@@ -388,8 +589,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             //create EthosExtensibleData with no resource id since this is just to get the config data for each row
                             var extendedDataConfigReturn = new EthosExtensibleData(resourceName, versionNumber,
                                 matchingExtendedConfigData.EdmvExtendedSchemaType, string.Empty, colleagueTimeZone);
+                            extendedDataConfigReturn.ApiType = apiConfiguration.EdmeType;
                             extendedDataConfigReturn.ParentApi = parentApi;
-
+                            extendedDataConfigReturn.Description = matchingExtendedConfigData.EdmvDescription;
+                            extendedDataConfigReturn.CurrentUserIdPath = apiConfiguration.EdmeCurrentUserPath;
+                            extendedDataConfigReturn.ColleagueFileNames = apiConfiguration.EdmeResourceEntities;
+                            extendedDataConfigReturn.ColleagueKeyNames = apiConfiguration.EdmeNkElementName;
+                            extendedDataConfigReturn.InquiryFields = matchingExtendedConfigData.EdmvInquiryFields;
+                            extendedDataConfigReturn.VersionReleaseStatus = string.IsNullOrEmpty(matchingExtendedConfigData.EdmvVersionStatus) ? apiConfiguration.EdmeApiStatus : matchingExtendedConfigData.EdmvVersionStatus;
+                            extendedDataConfigReturn.IsCustomResource = true;
+                            if (apiConfiguration.EdmeType.Equals("T", StringComparison.OrdinalIgnoreCase)) extendedDataConfigReturn.IsCustomResource = false;
+                            if (apiConfiguration.EdmeType.Equals("S", StringComparison.OrdinalIgnoreCase)) extendedDataConfigReturn.IsCustomResource = false;
+                            if (matchingExtendedConfigData.Recordkey.StartsWith("d01", StringComparison.OrdinalIgnoreCase)) extendedDataConfigReturn.IsCustomResource = false;
 
                             //list of linked column config data for datetime columns, exlcuding date or time only ones.
                             var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
@@ -400,6 +611,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             //loop through and add each row
                             foreach (var edmvColumn in matchingExtendedConfigData.EdmvColumnsEntityAssociation)
                             {
+                                var absoluteColumnName = edmvColumn.EdmvColumnNameAssocMember;
+                                if (absoluteColumnName.Contains(':'))
+                                {
+                                    var splitColumnNames = absoluteColumnName.Split(':');
+                                    int idx = splitColumnNames.Count();
+                                    if (idx > 0) absoluteColumnName = splitColumnNames[idx - 1];
+                                }
                                 //if the datetime link assoc has a value it is part of a pair
                                 //only add the value that is marked as the datetime
                                 if (!string.IsNullOrEmpty(edmvColumn.EdmvDateTimeLinkAssocMember))
@@ -410,9 +628,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
                                         edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember)
                                     {
-                                        associationController = edmvColumn.EdmvAssociationControllerAssocMember,
-                                        transType = edmvColumn.EdmvTransTypeAssocMember,
-                                        databaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember
+                                        AssociationController = edmvColumn.EdmvAssociationControllerAssocMember,
+                                        TransType = edmvColumn.EdmvTransTypeAssocMember,
+                                        DatabaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember,
+                                        ColleaguePropertyPosition = edmvColumn.EdmvFieldNumberAssocMember,
+                                        Required = edmvColumn.EdmvColumnRequiredAssocMember.Equals("Y") ? true : false,
+                                        Description = edmvColumn.EdmvColumnDescAssocMember,
+                                        Conversion = edmvColumn.EdmvConversionAssocMember
                                     };
 
                                     extendedDataConfigReturn.AddItemToExtendedData(row);
@@ -427,9 +649,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
                                             edmvColumn.EdmvJsonPropertyTypeAssocMember, "", timeConfig.EdmvLengthAssocMember)
                                         {
-                                            associationController = timeConfig.EdmvAssociationControllerAssocMember,
-                                            transType = timeConfig.EdmvTransTypeAssocMember,
-                                            databaseUsageType = timeConfig.EdmvDatabaseUsageTypeAssocMember
+                                            AssociationController = timeConfig.EdmvAssociationControllerAssocMember,
+                                            TransType = timeConfig.EdmvTransTypeAssocMember,
+                                            DatabaseUsageType = timeConfig.EdmvDatabaseUsageTypeAssocMember,
+                                            ColleaguePropertyPosition = edmvColumn.EdmvFieldNumberAssocMember,
+                                            Required = edmvColumn.EdmvColumnRequiredAssocMember.Equals("Y") ? true : false,
+                                            Description = timeConfig.EdmvColumnDescAssocMember,
+                                            Conversion = edmvColumn.EdmvConversionAssocMember
                                         };
 
                                         extendedDataConfigReturn.AddItemToExtendedData(timeRow);
@@ -441,20 +667,68 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
                                         edmvColumn.EdmvJsonPropertyTypeAssocMember, "", edmvColumn.EdmvLengthAssocMember)
                                     {
-                                        associationController = edmvColumn.EdmvAssociationControllerAssocMember,
-                                        transType = edmvColumn.EdmvTransTypeAssocMember,
-                                        databaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember
+                                        AssociationController = edmvColumn.EdmvAssociationControllerAssocMember,
+                                        TransType = edmvColumn.EdmvTransTypeAssocMember,
+                                        DatabaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember,
+                                        ColleaguePropertyPosition = edmvColumn.EdmvFieldNumberAssocMember,
+                                        Required = edmvColumn.EdmvColumnRequiredAssocMember.Equals("Y") ? true : false,
+                                        Description = edmvColumn.EdmvColumnDescAssocMember,
+                                        Conversion = edmvColumn.EdmvConversionAssocMember
                                     };
+                                    //add validation info
+                                    row.TransFileName = edmvColumn.EdmvTransFileNameAssocMember;
+                                    row.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
+                                    row.TransColumnName = edmvColumn.EdmvTransColumnNameAssocMember;
 
+                                    //if there is still no validation, get it from RT.FIELDS
+                                    if (readRtFields && apiConfiguration.EdmeType != "T" && string.IsNullOrEmpty(row.TransFileName) )
+                                    {
+                                        if (string.IsNullOrEmpty(row.TransFileName))
+                                        {
+                                            var fieldName = string.Empty;
+                                            if (!string.IsNullOrEmpty(row.ColleagueColumnName))
+                                            {
+                                                if (row.ColleagueColumnName.Contains(":"))
+                                                {
+                                                    var colnames = row.ColleagueColumnName.Split(':');
+                                                    var count = row.ColleagueColumnName.Count(x => x == ':');
+                                                    fieldName = colnames[count];
+                                                }
+                                                else
+                                                {
+                                                    fieldName = row.ColleagueColumnName;
+                                                }
+                                            }
+
+                                            if (!string.IsNullOrEmpty(fieldName))
+                                            {
+                                                var record = await DataReader.ReadRecordAsync<RtFields>("RT.FIELDS", fieldName);
+                                                if (record != null)
+                                                {
+                                                    if (!string.IsNullOrEmpty(record.RtfldsValTableApplication) && !string.IsNullOrEmpty(record.RtfldsValidationTable))
+                                                    {
+                                                        row.TransFileName = string.Concat(record.RtfldsValTableApplication, ".VALCODES - ", record.RtfldsValidationTable);
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(record.RtfldsValidationFile))
+                                                    {
+                                                        row.TransFileName = record.RtfldsValidationFile;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     extendedDataConfigReturn.AddItemToExtendedData(row);
                                 }
-
+                                // If we don't have a select file name, then skip this property for filtering
+                                if (string.IsNullOrEmpty(edmvColumn.EdmvFileNameAssocMember))
+                                {
+                                    continue;
+                                }
                                 // Add Filter Criteria to configuration
                                 EdmSelectCriteria selectCriteria = null;
                                 if (!string.IsNullOrEmpty(edmvColumn.EdmvFilterCriteriaAssocMember))
                                 {
-                                    var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
-                                    selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == edmvColumn.EdmvFilterCriteriaAssocMember);
+                                    selectCriteria = (await GetEthosApiSelectCriteria(edmvColumn.EdmvFilterCriteriaAssocMember, bypassCache));
                                 }
                                 else
                                 {
@@ -468,15 +742,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             selectCriteria = new EdmSelectCriteria()
                                             {
                                                 EdmsSelectFileName = edmvColumn.EdmvFileNameAssocMember,
-                                                EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember,
+                                                EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember.TrimEnd(']').TrimEnd('['),
                                                 EdmsSelectEntityAssociation = new List<EdmSelectCriteriaEdmsSelect>()
                                                 {
                                                     new EdmSelectCriteriaEdmsSelect()
                                                     {
-                                                        EdmsSelectColumnAssocMember = edmvColumn.EdmvColumnNameAssocMember,
+                                                        EdmsSelectColumnAssocMember = absoluteColumnName,
                                                         EdmsSelectConnectorAssocMember = "WITH",
                                                         EdmsSelectOperAssocMember = "EQ",
-                                                        EdmsSelectValueAssocMember = '"' + edmvColumn.EdmvJsonLabelAssocMember + '"'
+                                                        EdmsSelectValueAssocMember = '"' + edmvColumn.EdmvJsonLabelAssocMember.TrimEnd(']').TrimEnd('[') + '"'
                                                     }
                                                 },
                                                 EdmsAdvanceQueryOpers = new List<string>(),
@@ -513,7 +787,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                 selectCriteria = new EdmSelectCriteria()
                                                 {
                                                     EdmsSelectFileName = fileName,
-                                                    EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember,
+                                                    EdmsSelectColumnName = edmvColumn.EdmvJsonLabelAssocMember.TrimEnd(']').TrimEnd('['),
                                                     EdmsSelectEntityAssociation = new List<EdmSelectCriteriaEdmsSelect>()
                                                     {
                                                         new EdmSelectCriteriaEdmsSelect()
@@ -525,7 +799,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                         },
                                                         new EdmSelectCriteriaEdmsSelect()
                                                         {
-                                                            EdmsSelectColumnAssocMember = edmvColumn.EdmvColumnNameAssocMember,
+                                                            EdmsSelectColumnAssocMember = absoluteColumnName,
                                                             EdmsSelectConnectorAssocMember = "WITH",
                                                             EdmsSelectOperAssocMember = "EQ",
                                                             EdmsSelectValueAssocMember = '"' + edmvColumn.EdmvJsonLabelAssocMember + '"'
@@ -544,11 +818,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 if (selectCriteria != null)
                                 {
-                                    var filterRow = new EthosExtensibleDataFilter(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                    var filterRow = new EthosExtensibleDataFilter(absoluteColumnName, edmvColumn.EdmvFileNameAssocMember,
                                             edmvColumn.EdmvJsonLabelAssocMember, edmvColumn.EdmvJsonPathAssocMember,
                                             edmvColumn.EdmvJsonPropertyTypeAssocMember, new List<string>());
 
                                     filterRow.DatabaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember;
+                                    filterRow.ColleagueFieldPosition = edmvColumn.EdmvFieldNumberAssocMember;
+                                    filterRow.Required = edmvColumn.EdmvColumnRequiredAssocMember == "Y" ? true : false;
                                     filterRow.SelectFileName = selectCriteria.EdmsSelectFileName;
                                     filterRow.SelectSubroutineName = selectCriteria.EdmsSelectSubroutine;
                                     filterRow.SavingField = selectCriteria.EdmsSavingField;
@@ -557,6 +833,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     filterRow.SelectRules = selectCriteria.EdmsSelectRules;
                                     filterRow.SelectParagraph = selectCriteria.EdmsSelectParagraph;
                                     filterRow.ValidFilterOpers = selectCriteria.EdmsAdvanceQueryOpers;
+                                    if (apiConfiguration.EdmeNkElementName.Contains(absoluteColumnName))
+                                    {
+                                        filterRow.KeyQuery = true;
+                                    }
 
                                     filterRow.SelectionCriteria = new List<EthosApiSelectCriteria>();
                                     foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
@@ -611,15 +891,31 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                             }
 
+                            // Add columns for prepared responses
+                            foreach (var prmpt in apiConfiguration.EdmePreparedResponsesEntityAssociation)
+                            {
+                                if (!string.IsNullOrEmpty(prmpt.EdmePromptResponseTextAssocMember) && !string.IsNullOrEmpty(prmpt.EdmePromptResponseTitleAssocMember))
+                                {
+                                    var columnName = prmpt.EdmePromptResponseTitleAssocMember.ToUpper();
+                                    var path = string.Concat("/predefinedInputs/");
+                                    var row = new EthosExtensibleDataRow(columnName, "", prmpt.EdmePromptResponseTitleAssocMember, path, "string", "")
+                                    {
+                                        Required = false,
+                                        Description = prmpt.EdmePromptResponseTextAssocMember,
+                                        TransFileName = prmpt.EdmePromptResponseOptsAssocMember,
+                                        TransType = prmpt.EdmePromptResponseDfltAssocMember
+                                    };
+                                    extendedDataConfigReturn.AddItemToExtendedData(row);
+                                }
+                            }
+
                             // Add Named Queries to configuration
                             if (matchingExtendedConfigData.EdmvNamedQueries != null && matchingExtendedConfigData.EdmvNamedQueries.Any())
                             {
                                 foreach (var edmQuery in matchingExtendedConfigData.EdmvNamedQueries)
                                 {
-                                    var queryConfigData = (await GetEthosApiNamedQueries(bypassCache)).ToList();
-                                    var queryData = queryConfigData.FirstOrDefault(sc => sc.Recordkey == edmQuery);
-                                    var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
-                                    var selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == queryData.EdmqSelectCriteria);
+                                    var queryData = await GetEthosApiNamedQueries(edmQuery, bypassCache);
+                                    var selectCriteria = await GetEthosApiSelectCriteria(queryData.EdmqSelectCriteria, bypassCache);
                                     if (queryData != null && selectCriteria != null)
                                     {
                                         var filterRow = new EthosExtensibleDataFilter(queryData.EdmqJsonLabel, "",
@@ -633,8 +929,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         filterRow.SelectColumnName = selectCriteria.EdmsSelectColumnName;
                                         filterRow.SelectRules = selectCriteria.EdmsSelectRules;
                                         filterRow.SelectParagraph = selectCriteria.EdmsSelectParagraph;
-                                        filterRow.ValidFilterOpers = selectCriteria.EdmsAdvanceQueryOpers;
-
+                                        filterRow.ValidFilterOpers = selectCriteria.EdmsAdvanceQueryOpers;                                        
                                         filterRow.SelectionCriteria = new List<EthosApiSelectCriteria>();
                                         foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
                                         {
@@ -666,6 +961,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         filterRow.TransColumnName = queryData.EdmqTransColumnName;
                                         filterRow.TransFileName = queryData.EdmqTransFileName;
                                         filterRow.TransTableName = queryData.EdmqTransTableName;
+                                        filterRow.Description = queryData.EdmqDescription;
                                         filterRow.Enumerations = new List<EthosApiEnumerations>();
                                         var collValue = queryData.EdmqTransEnumValue;
                                         var enumValue = queryData.EdmqTransCollValue;
@@ -679,6 +975,91 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                 filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
                                             }
                                         }
+                                        extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
+                                    }
+                                }
+                            }
+
+                            // Add key names to filter table
+                            if (apiConfiguration.EdmeNkElementName != null && apiConfiguration.EdmeNkElementName.Any())
+                            {
+                                foreach (var columnName in apiConfiguration.EdmeNkElementName)
+                                {
+                                    var edmvColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(ea => ea.EdmvColumnNameAssocMember == columnName);
+                                    var existingFilter = extendedDataConfigReturn.ExtendedDataFilterList.FirstOrDefault(edf => edf.ColleagueColumnName == columnName && edf.JsonPath == "/"); 
+                                    if (edmvColumn != null && existingFilter == null)
+                                    {
+                                        var filterRow = new EthosExtensibleDataFilter(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                            edmvColumn.EdmvJsonLabelAssocMember, "/",
+                                            edmvColumn.EdmvJsonPropertyTypeAssocMember, new List<string>(), null, false, true);
+
+                                        filterRow.DatabaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember;
+                                        filterRow.ColleagueFieldPosition = edmvColumn.EdmvFieldNumberAssocMember;
+                                        filterRow.Required = edmvColumn.EdmvColumnRequiredAssocMember == "Y" ? true : false;
+
+                                        filterRow.SelectFileName = edmvColumn.EdmvFileNameAssocMember;
+                                        filterRow.ColleagueFieldPosition = edmvColumn.EdmvFieldNumberAssocMember;
+                                        filterRow.GuidColumnName = edmvColumn.EdmvGuidColumnNameAssocMember;
+                                        filterRow.GuidFileName = edmvColumn.EdmvGuidFileNameAssocMember;
+                                        filterRow.TransColumnName = edmvColumn.EdmvTransColumnNameAssocMember;
+                                        filterRow.TransFileName = edmvColumn.EdmvTransFileNameAssocMember;
+                                        filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
+                                        filterRow.Enumerations = new List<EthosApiEnumerations>();
+                                        var enums = edmvColumn.EdmvTransEnumTableAssocMember;
+                                        var enumTable = enums.Split(_SM);
+                                        if (enumTable != null && enumTable.Count() == 2)
+                                        {
+                                            var collValue = enumTable[0].Split(_TM);
+                                            var enumValue = enumTable[1].Split(_TM);
+                                            int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
+                                            for (int i = 0; i < total; i++)
+                                            {
+                                                string value1 = enumValue.Count() > i ? enumValue[i] : string.Empty;
+                                                string value2 = collValue.Count() > i ? collValue[i] : string.Empty;
+                                                if (!string.IsNullOrEmpty(value1) || !string.IsNullOrEmpty(value2))
+                                                {
+                                                    filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
+                                                }
+                                            }
+                                        }
+                                        extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
+                                    }
+                                    existingFilter = extendedDataConfigReturn.ExtendedDataFilterList.FirstOrDefault(edf => edf.ColleagueColumnName == columnName && edf.FullJsonPath.StartsWith("/id/"));
+                                    if (edmvColumn != null && existingFilter == null)
+                                    {
+                                        var filterRow = new EthosExtensibleDataFilter(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
+                                            edmvColumn.EdmvJsonLabelAssocMember, "/id/",
+                                            edmvColumn.EdmvJsonPropertyTypeAssocMember, new List<string>(), null, false, true);
+
+                                        filterRow.DatabaseUsageType = edmvColumn.EdmvDatabaseUsageTypeAssocMember;
+                                        filterRow.ColleagueFieldPosition = edmvColumn.EdmvFieldNumberAssocMember;
+                                        filterRow.Required = edmvColumn.EdmvColumnRequiredAssocMember == "Y" ? true : false;
+
+                                        filterRow.SelectFileName = edmvColumn.EdmvFileNameAssocMember;
+                                        filterRow.ColleagueFieldPosition = edmvColumn.EdmvFieldNumberAssocMember;
+                                        filterRow.GuidColumnName = edmvColumn.EdmvGuidColumnNameAssocMember;
+                                        filterRow.GuidFileName = edmvColumn.EdmvGuidFileNameAssocMember;
+                                        filterRow.TransColumnName = edmvColumn.EdmvTransColumnNameAssocMember;
+                                        filterRow.TransFileName = edmvColumn.EdmvTransFileNameAssocMember;
+                                        filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
+                                        filterRow.Enumerations = new List<EthosApiEnumerations>();
+                                        var enums = edmvColumn.EdmvTransEnumTableAssocMember;
+                                        var enumTable = enums.Split(_SM);
+                                        if (enumTable != null && enumTable.Count() == 2)
+                                        {
+                                            var collValue = enumTable[0].Split(_TM);
+                                            var enumValue = enumTable[1].Split(_TM);
+                                            int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
+                                            for (int i = 0; i < total; i++)
+                                            {
+                                                string value1 = enumValue.Count() > i ? enumValue[i] : string.Empty;
+                                                string value2 = collValue.Count() > i ? collValue[i] : string.Empty;
+                                                if (!string.IsNullOrEmpty(value1) || !string.IsNullOrEmpty(value2))
+                                                {
+                                                    filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
+                                                }
+                                            }
+                                        }                                       
                                         extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
                                     }
                                 }
@@ -707,82 +1088,66 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         }
 
-        private IEnumerable<EdmExtensions> _ethosExtensibilitySettings = null;
+        private IEnumerable<EdmExtensions> _ethosExtensibilityByResourceSettings = null;
         /// <summary>
         /// Gets all of the Ethos API builder settings stored on EDM.EXTENSIONS
         /// </summary>
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of DataContracts.EdmExtensions</returns>
-        private async Task<IEnumerable<EdmExtensions>> GetEthosApiConfiguration(bool bypassCache = false)
+        private async Task<IEnumerable<EdmExtensions>> GetEthosApiConfiguration(string resource, bool bypassCache = false)
         {
-            if (_ethosExtensibilitySettings == null)
+            if (_ethosExtensibilityByResourceSettings == null)
             {
-                const string ethosExtensiblityCacheKey = "AllEthosApiBuilderConfigurationSettings";
+                string ethosExtensiblityCacheKey = "EthosApiBuilderConfigurationSettingsByResource" + resource;
 
                 if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
                 {
                     ClearCache(new List<string> { ethosExtensiblityCacheKey });
                 }
-
+                string criteria = string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", resource);
                 var ethosExtensiblitySettingsList =
                     await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "")).ToList(), CacheTimeout);
+                        async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", criteria)).ToList(), CacheTimeout);
 
-                _ethosExtensibilitySettings = ethosExtensiblitySettingsList;
+                _ethosExtensibilityByResourceSettings = ethosExtensiblitySettingsList;
             }
-            return _ethosExtensibilitySettings;
+            return _ethosExtensibilityByResourceSettings;
         }
 
-        private IEnumerable<EdmSelectCriteria> _ethosSelectionCriteria = null;
         /// <summary>
         /// Gets all of the Ethos API builder settings stored on EDM.SELECT.CRITERIA
         /// </summary>
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of DataContracts.EdmExtensions</returns>
-        private async Task<IEnumerable<EdmSelectCriteria>> GetEthosApiSelectCriteria(bool bypassCache = false)
+        private async Task<EdmSelectCriteria> GetEthosApiSelectCriteria(string id, bool bypassCache = false)
         {
-            if (_ethosSelectionCriteria == null)
+            string ethosExtensiblityCacheKey = "EthosApiSelectCriteriaConfigurationSettingsById" + id;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                const string ethosExtensiblityCacheKey = "AllEthosApiSelectCriteriaConfigurationSettings";
-
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
-                {
-                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
-                }
-
-                var ethosExtensiblitySettingsList =
-                    await GetOrAddToCacheAsync<List<EdmSelectCriteria>>(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmSelectCriteria>("EDM.SELECT.CRITERIA", "")).ToList(), CacheTimeout);
-
-                _ethosSelectionCriteria = ethosExtensiblitySettingsList;
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
-            return _ethosSelectionCriteria;
+
+            return await GetOrAddToCacheAsync<EdmSelectCriteria>(ethosExtensiblityCacheKey,
+                    async () => (await DataReader.ReadRecordAsync<EdmSelectCriteria>("EDM.SELECT.CRITERIA", id)), CacheTimeout);
         }
 
-        private IEnumerable<EdmQueries> _ethosExtensibilityQueries = null;
         /// <summary>
         /// Gets all of the Ethos API builder settings stored on EDM.QUERIES
         /// </summary>
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of DataContracts.EdmExtensions</returns>
-        private async Task<IEnumerable<EdmQueries>> GetEthosApiNamedQueries(bool bypassCache = false)
+        private async Task<EdmQueries> GetEthosApiNamedQueries(string id, bool bypassCache = false)
         {
-            if (_ethosExtensibilityQueries == null)
+            string ethosExtensiblityCacheKey = "EthosApiNamedQueriesConfigurationSettingsById" + id;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                const string ethosExtensiblityCacheKey = "AllEthosApiNamedQueriesConfigurationSettings";
-
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
-                {
-                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
-                }
-
-                var ethosExtensiblitySettingsList =
-                    await GetOrAddToCacheAsync<List<EdmQueries>>(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmQueries>("EDM.QUERIES", "")).ToList(), CacheTimeout);
-
-                _ethosExtensibilityQueries = ethosExtensiblitySettingsList;
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
-            return _ethosExtensibilityQueries;
+
+            return await GetOrAddToCacheAsync<EdmQueries>(ethosExtensiblityCacheKey,
+                    async () => (await DataReader.ReadRecordAsync<EdmQueries>("EDM.QUERIES", id)), CacheTimeout);
         }
 
         /// <summary>
@@ -806,13 +1171,27 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         try
                         {
                             EdmSelectCriteria selectCriteria = null;
-                            var extendConfigData = (await GetEthosApiConfiguration(bypassCache)).ToList();
+                            var extendConfigData = (await GetEthosApiConfiguration(resourceName, bypassCache)).ToList();
+
+                            //make sure there is extended config data, if not return null
+                            if (extendConfigData == null || !extendConfigData.Any())
+                            {
+                                return new EthosApiConfiguration();
+
+                            }
+
                             var apiConfiguration = extendConfigData.FirstOrDefault(ex => ex.EdmeResourceName == resourceName);
+
+                            //make sure there is extended config data, if not return null
+                            if (apiConfiguration == null)
+                            {
+                                return new EthosApiConfiguration();
+
+                            }
 
                             if (!string.IsNullOrEmpty(apiConfiguration.EdmeSelectCriteria))
                             {
-                                var selectConfigData = (await GetEthosApiSelectCriteria(bypassCache)).ToList();
-                                selectCriteria = selectConfigData.FirstOrDefault(sc => sc.Recordkey == apiConfiguration.EdmeSelectCriteria);
+                                selectCriteria = await GetEthosApiSelectCriteria(apiConfiguration.EdmeSelectCriteria, bypassCache);
                             }
                             if (apiConfiguration != null)
                             {
@@ -820,6 +1199,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     ResourceName = apiConfiguration.EdmeResourceName,
                                     ProcessId = apiConfiguration.EdmeProcessId,
+                                    ColleagueFileNames = apiConfiguration.EdmeResourceEntities,
+                                    ColleagueKeyNames = apiConfiguration.EdmeNkElementName,
                                     ParentResourceName = apiConfiguration.EdmeParentApi,
                                     ApiType = apiConfiguration.EdmeType,
                                     PrimaryEntity = apiConfiguration.EdmePrimaryEntity.EndsWith("VALCODES")
@@ -839,9 +1220,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         && !string.IsNullOrEmpty(apiConfiguration.EdmePrimaryTableName)
                                         ? (await ValidateValcodeTable(apiConfiguration.EdmePrimaryApplication, apiConfiguration.EdmePrimaryTableName))
                                         : apiConfiguration.EdmePrimaryGuidFileName,
-                                    PageLimit = apiConfiguration.EdmePageLimit
+                                    PageLimit = apiConfiguration.EdmePageLimit,
+                                    CurrentUserIdPath = apiConfiguration.EdmeCurrentUserPath,
+                                    Description = apiConfiguration.EdmeComments,
+                                    ProcessDesc = apiConfiguration.EdmeProcessDesc,
+                                    ApiDomain = apiConfiguration.EdmeApiDomain,
+                                    ReleaseStatus = apiConfiguration.EdmeApiStatus
                                 };
-
                                 ethosApiConfiguration.HttpMethods = new List<EthosApiSupportedMethods>();
                                 foreach (var method in apiConfiguration.EdmeMethodsEntityAssociation)
                                 {
@@ -849,7 +1234,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     {
                                         ethosApiConfiguration.HttpMethods.Add(
                                             new EthosApiSupportedMethods(method.EdmeHttpMethodsAssocMember,
-                                            method.EdmeHttpPermissionsAssocMember)
+                                            method.EdmeHttpPermissionsAssocMember, method.EdmeHttpMethodDescAssocMember, method.EdmeHttpMethodSummaryAssocMember)
+                                        );
+                                    }
+                                }
+                                ethosApiConfiguration.PreparedResponses = new List<EthosApiPreparedResponse>();
+                                foreach (var response in apiConfiguration.EdmePreparedResponsesEntityAssociation)
+                                {
+                                    if (!string.IsNullOrEmpty(response.EdmePromptResponseTextAssocMember))
+                                    {
+                                        ethosApiConfiguration.PreparedResponses.Add(
+                                            new EthosApiPreparedResponse(response.EdmePromptResponseTextAssocMember,
+                                            response.EdmePromptResponseTitleAssocMember, response.EdmePromptResponseOptsAssocMember,
+                                            response.EdmePromptResponseDfltAssocMember)
                                         );
                                     }
                                 }
@@ -980,13 +1377,29 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="reportEthosApiErrors">Flag to determine if we should throw an exception on Extended Errors.</param>
         /// <param name="bypassCache">Flag to indicate if we should bypass the cache and read directly from disk.</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resourceIds, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false)
+        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber,
+            string extendedSchemaResourceId, IEnumerable<string> resourceIds, Dictionary<string, Dictionary<string, string>> allColumnData = null,
+            bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false, bool returnRestrictedFields = false)
         {
+
+            var retConfigData = new List<EthosExtensibleData>();
             var exception = new RepositoryException("Extensibility configuration errors.");
 
-            var extensionConfigData = await GetEthosApiConfiguration(bypassCache);
-            var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
+            var extensionConfigData = await GetEthosApiConfiguration(resourceName, bypassCache);
+            if (extensionConfigData == null || !extensionConfigData.Any())
+            {
+                return retConfigData;
+            }
+            var extendConfigData = (await GetEthosExtensibilityConfiguration(resourceName, bypassCache)).ToList();
+            if (extendConfigData == null || !extendConfigData.Any())
+            {
+                return retConfigData;
+            }
             var apiConfiguration = await GetEthosApiConfigurationByResource(resourceName, bypassCache);
+            if (apiConfiguration == null)
+            {
+                return retConfigData;
+            }
 
             var matchingExtensionConfigData = extensionConfigData.FirstOrDefault(e =>
                 e.Recordkey.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
@@ -1046,7 +1459,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             //    };
             //}
 
-            var retConfigData = new List<EthosExtensibleData>();
             if (resourceIds == null || !resourceIds.Any())
             {
                 return retConfigData;
@@ -1068,11 +1480,503 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return retConfigData;
             }
 
-            var allColumnData = new Dictionary<string, Dictionary<string, string>>();
+            GetEthosExtendedDataResponse response = null;
             var colleagueSecondaryKeys = new Dictionary<string, string>();
+
+            // Only execute the transaction if we don't already have the column data coming into the method
+            // Data is passed into the method using the service layer property EthosExtendedDataDictionary
+            // and used in the BaseCoordinationService to build allColumnData before passing it into this
+            // method for processing.  Only business process APIs will pass in this data on POST or PUT requests.
+            if (allColumnData == null || !allColumnData.Any() || !matchingExtensionConfigData.EdmeType.Equals("T", StringComparison.OrdinalIgnoreCase))
+            {
+                allColumnData = new Dictionary<string, Dictionary<string, string>>();
+                response = await GetEthosExtendedDataResponse(apiConfiguration, matchingExtendedConfigData, resourceName, resourceVersionNumber,
+                    resourceIds, reportEthosApiErrors, bypassCache, useRecordKey, returnRestrictedFields);
+
+                if (response == null || response.ResourceDataObject == null || !response.ResourceDataObject.Any())
+                {
+                    return retConfigData;
+                }
+                // Process the Data returned by the GET request (Or POST response in some cases)
+                try
+                {
+                    if (response.Error || (response.GetEthosExtendDataErrors != null && response.GetEthosExtendDataErrors.Any()))
+                    {
+                        var message = string.Format("Extensibility configuration errors for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber);
+                        logger.Error(message);
+                        exception.AddError(new RepositoryError("Bad.Data", message));
+
+                        foreach (var error in response.GetEthosExtendDataErrors)
+                        {
+                            message = string.Concat(error.ErrorCodes, " - ", error.ErrorMessages);
+                            logger.Error(message);
+                            if (reportEthosApiErrors)
+                            {
+                                exception.AddError(new RepositoryError("Bad.Data", message));
+                            }
+                        }
+                        if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            throw exception;
+                        }
+                        return retConfigData;
+                    }
+
+                    if (response.ResourceDataObject != null && response.ResourceDataObject.Any())
+                    {
+                        foreach (var resp in response.ResourceDataObject)
+                        {
+                            if (resp.ColumnNames != null && resp.PropertyValues != null)
+                            {
+                                var columnNames = resp.ColumnNames.Split(_SM).ToList();
+                                var columnValues = resp.PropertyValues.Split(_SM).ToList();
+                                Dictionary<string, string> columnDataItem = new Dictionary<string, string>();
+                                var index = 0;
+                                foreach (var columnName in columnNames)
+                                {
+                                    try
+                                    {
+                                        var inputData = columnValues.ElementAt(index).Replace(_TM, _VM).Replace(_XM, _SM);
+                                        var outputData = await GetOutputDataHookAsync(columnName, inputData, columnNames, columnValues, resourceName, resourceVersionNumber, reportEthosApiErrors, bypassCache);
+
+
+                                        if (!columnDataItem.ContainsKey(columnName))
+                                        {
+                                            if (!string.IsNullOrEmpty(outputData))
+                                            {
+                                                columnDataItem.Add(columnName, outputData);
+                                            }
+                                            else
+                                            {
+                                                columnDataItem.Add(columnName, inputData);
+                                            }
+                                        }
+                                    }
+                                    catch (ColleagueSessionExpiredException csee)
+                                    {
+                                        logger.Error(csee, "Colleague session expired while retrieving extensibility configuration property on a resource");
+                                        throw;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        var message = string.Concat(ex.Message, ": Extensibility configuration property setup error(s). ", resourceName, " version number ", resourceVersionNumber);
+                                        logger.Error(message);
+                                        exception.AddError(new RepositoryError("Data.Access", message));
+                                        continue;
+                                    }
+                                    index++;
+                                }
+                                var guidIndex = resp.ResourceGuids;
+                                if (!string.IsNullOrEmpty(resp.ResourceSecondaryKeys))
+                                {
+                                    if (!string.IsNullOrEmpty(apiConfiguration.PrimaryKeyName) && !string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName))
+                                    {
+                                        guidIndex = EncodePrimaryKey(string.Concat(resp.ResourceFileNames, "+", resp.ResourcePrimaryKeys, "+", resp.ResourceSecondaryKeys));
+                                    }
+                                    if (!colleagueSecondaryKeys.ContainsKey(guidIndex))
+                                    {
+                                        colleagueSecondaryKeys.Add(guidIndex, resp.ResourceSecondaryKeys);
+                                    }
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(apiConfiguration.PrimaryKeyName))
+                                    {
+                                        if (!UnEncodePrimaryKey(guidIndex).Contains('+'))
+                                        {
+                                            guidIndex = EncodePrimaryKey(string.Concat(resp.ResourceFileNames, "+", resp.ResourcePrimaryKeys));
+                                        }
+                                    }
+                                }
+                                //if the allColumndata contains the key column data has already been added for this record 
+                                //so the new column data must be combined with the existing column data
+                                if (allColumnData.ContainsKey(guidIndex))
+                                {
+                                    var currentColumnDictionary = allColumnData[guidIndex];
+                                    var unionOfResults = currentColumnDictionary.Union(columnDataItem)
+                                        .ToDictionary(k => k.Key, v => v.Value);
+                                    allColumnData[guidIndex] = unionOfResults;
+                                }
+                                else //key didn't exist yet so just add the guid as the key with the current column data set
+                                {
+                                    allColumnData.Add(guidIndex, columnDataItem);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee.Message);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    if (reportEthosApiErrors)
+                    {
+                        throw ex;
+                    }
+                    logger.Error(string.Concat(ex.Message));
+                    return retConfigData;
+                }
+            }            
+
+            //list of linked column config data for datetime columns, exlcuding date or time only ones.
+            var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
+                .Where(l => !string.IsNullOrEmpty(l.EdmvDateTimeLinkAssocMember) &&
+                            !l.EdmvJsonPropertyTypeAssocMember.Equals("date", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            foreach (var cData in allColumnData)
+            {
+                var newEthosThing = new EthosExtensibleData(resourceName, resourceVersionNumber, matchingExtendedConfigData.EdmvExtendedSchemaType, cData.Key, colleagueTimeZone);
+                newEthosThing.CurrentUserIdPath = matchingExtensionConfigData.EdmeCurrentUserPath;
+
+                //dictionary to hold linked columns for special processing
+                //T1 - data type(date or time), T2 - link value, T3 - column name, T4 - column value 
+                var linkedColumnsTuple = new List<Tuple<string, string, string, string>>();
+
+                foreach (var colKeyValuePair in cData.Value.ToList())
+                {
+                    string colleagueValue = colKeyValuePair.Value;
+                    //check if the column returned has a value, if not continue to next item
+                    if (string.IsNullOrEmpty(colKeyValuePair.Value))
+                    {
+                        continue;
+                    }
+                    var columnConfigDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
+                        m.EdmvColumnNameAssocMember.Equals(colKeyValuePair.Key, StringComparison.OrdinalIgnoreCase));
+                    //if a column detail isn't matched continue out
+                    if (columnConfigDetails == null)
+                    {
+                        if (apiConfiguration.ApiType == null || string.IsNullOrEmpty(apiConfiguration.ApiType) || !apiConfiguration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var message = string.Concat("Extensibility configuration does not have a column configuration for ", colKeyValuePair.Key, " for resource ", resourceName);
+                            logger.Error(message);
+                            //exception.AddError(new RepositoryError("Data.Access", message));
+                        }
+                        continue;
+                    }
+                    // Determine the Colleague Data value to be returned with each record key.
+                    if (!string.IsNullOrEmpty(columnConfigDetails.EdmvAssociationControllerAssocMember) && (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.ToUpper() == "A"))
+                    {
+                        // If we are dealing with a Valcode table, we need to find the guid key and
+                        // compare that to the resource key to find the associated value in a multi-valued
+                        // associated data element.
+                        var associationColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
+                            m.EdmvColumnNameAssocMember.Equals(columnConfigDetails.EdmvAssociationControllerAssocMember));
+
+                        var secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember);
+                        //if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && columnConfigDetails.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && !apiConfiguration.SecondaryKeyName.Equals(columnConfigDetails.EdmvAssociationControllerAssocMember))
+                        {
+                            // If we are using a primary and secondary key to expose records, then find the colleague value
+                            // that matches the secondary key assigned to this record.
+                            secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == apiConfiguration.SecondaryKeyName);
+                            var tempColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
+                             m.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName));
+                            if (tempColumn != null)
+                            {
+                                associationColumn = tempColumn;
+                            }
+                        }
+
+                        if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
+                        {
+                            var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                            var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
+                            if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
+                            {
+                                var secondaryKey = colleagueSecondaryKey.Value;
+                                if (secondaryKeyList != null && secondaryKey != null)
+                                {
+                                    for (var i = 0; i < secondaryKeyList.Count(); i++)
+                                    {
+                                        var secondaryKeyListValue = await ConvertExtendedValueToColleagueValue(associationColumn, secondaryKeyList[i]);
+                                        if (associationColumn != null && associationColumn.EdmvJsonPropertyTypeAssocMember.StartsWith("date", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            try
+                                            {
+                                                var dateValues = secondaryKeyListValue.Split('-');
+                                                if (dateValues.Count() >= 3)
+                                                {
+                                                    var year = Convert.ToInt32(dateValues[0]);
+                                                    var month = Convert.ToInt32(dateValues[1]);
+                                                    var day = Convert.ToInt32(dateValues[2]);
+                                                    secondaryKeyListValue = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
+                                                }
+                                            }
+                                            catch (ColleagueSessionExpiredException csee)
+                                            {
+                                                logger.Error(csee, "Colleague session expired while processing date value.");
+                                                throw;
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                // Ignore for now.
+                                                logger.Error(ex.Message, "Cannot process date value.");
+                                            }
+                                        }
+                                        if (secondaryKeyListValue == secondaryKey)
+                                        {
+                                            var newValue = colKeyValuePair.Value.Split(_VM);
+                                            if (i < newValue.Count())
+                                            {
+                                                colleagueValue = newValue[i];
+                                            }
+                                            else colleagueValue = string.Empty;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // If we have comments or text, then convert value mark or sub-value marks to spaces.
+                        if (!columnConfigDetails.EdmvJsonLabelAssocMember.EndsWith("[]"))
+                        {
+                            if (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("C", StringComparison.OrdinalIgnoreCase) || columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("T", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var secondaryUsageType = columnConfigDetails.EdmvSecDatabaseUsageTypeAssocMember.ToUpper();
+                                if (secondaryUsageType == "Q" || secondaryUsageType == "A" || secondaryUsageType == "L")
+                                {
+                                    colleagueValue = colKeyValuePair.Value.Replace(_SM, ' ');
+                                }
+                                else
+                                {
+                                    colleagueValue = colKeyValuePair.Value.Replace(_VM, ' ');
+                                }
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && columnConfigDetails.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // If we are using a primary and secondary key to expose records, then find the colleague value
+                                    // that matches the secondary key assigned to this record.
+                                    var secondaryKeyValue = colKeyValuePair;
+                                    if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
+                                    {
+                                        var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                                        var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
+                                        if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
+                                        {
+                                            var secondaryKey = colleagueSecondaryKey.Value;
+                                            if (secondaryKeyList != null && secondaryKey != null)
+                                            {
+                                                for (var i = 0; i < secondaryKeyList.Count(); i++)
+                                                {
+                                                    var secondaryKeyListValue = secondaryKeyList[i];
+                                                    if (columnConfigDetails != null && columnConfigDetails.EdmvJsonPropertyTypeAssocMember.StartsWith("date", StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        try
+                                                        {
+                                                            var dateValues = secondaryKeyListValue.Split('-');
+                                                            if (dateValues.Count() >= 3)
+                                                            {
+                                                                var year = Convert.ToInt32(dateValues[0]);
+                                                                var month = Convert.ToInt32(dateValues[1]);
+                                                                var day = Convert.ToInt32(dateValues[2]);
+                                                                secondaryKeyListValue = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
+                                                            }
+                                                        }
+                                                        catch (ColleagueSessionExpiredException csee)
+                                                        {
+                                                            logger.Error(csee, "Colleague session expired while processing date value.");
+                                                            throw;
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            // Ignore for now.
+                                                            logger.Error(ex.Message, "Cannot process date value.");
+                                                        }
+                                                    }
+                                                    if (secondaryKeyListValue == secondaryKey)
+                                                    {
+                                                        var newValue = colKeyValuePair.Value.Split(_VM);
+                                                        if (i < newValue.Count())
+                                                        {
+                                                            colleagueValue = newValue[i];
+                                                        }
+                                                        else colleagueValue = string.Empty;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(colleagueValue))
+                    {
+                        continue;
+                    }
+                    if (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase) && colleagueValue.Contains("*"))
+                    {
+                        int counter = 1;
+                        if (!string.IsNullOrEmpty(matchingExtensionConfigData.EdmeSecondaryKey)) counter++;
+                        if (matchingExtensionConfigData == null || matchingExtensionConfigData.EdmeNewKeyStrategyEntityAssociation == null || matchingExtensionConfigData.EdmeNewKeyStrategyEntityAssociation.Count() > counter)
+                        {
+                            var collIdValue = colleagueValue.Split('*');
+                            var index = columnConfigDetails.EdmvFieldNumberAssocMember;
+                            if (index != null && index > 0)
+                            {
+                                if (collIdValue.Count() >= index)
+                                {
+                                    colleagueValue = collIdValue[(int)index - 1];
+                                }
+                            }
+                        }
+                    }
+
+                    // if this is a match to an item i the linkedColumnDetail this means it is a linked column and needs to be treated different
+                    if (linkedColumnDetails.Any(c => c.EdmvColumnNameAssocMember.Equals(colKeyValuePair.Key, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var jsonPropType = columnConfigDetails.EdmvConversionAssocMember.StartsWith("D", StringComparison.OrdinalIgnoreCase)
+                            ? "date" : "time";
+
+                        linkedColumnsTuple.Add(new Tuple<string, string, string, string>(jsonPropType,
+                            columnConfigDetails.EdmvDateTimeLinkAssocMember, colKeyValuePair.Key,
+                            colleagueValue));
+                    }
+                    else 
+                    {
+                        // If this is a row for a key field in the list of key properties then create a new
+                        // "id" row for this property.
+                        if (!string.IsNullOrEmpty(apiConfiguration.ApiType) && apiConfiguration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase) && apiConfiguration.ColleagueKeyNames != null && apiConfiguration.ColleagueKeyNames.Contains(columnConfigDetails.EdmvColumnNameAssocMember))
+                        {
+                            string jsonPath = !string.IsNullOrEmpty(columnConfigDetails.EdmvJsonPathAssocMember) ? columnConfigDetails.EdmvJsonPathAssocMember : "/";
+                            string propertyName = columnConfigDetails.EdmvJsonLabelAssocMember;
+                            if (!jsonPath.StartsWith("/id/") || columnConfigDetails.EdmvJsonLabelAssocMember.Equals("id", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (apiConfiguration.ColleagueKeyNames.Count() == 1)
+                                {
+                                    // Setup ID property to contain a single string/id value
+                                    jsonPath = "/";
+                                    propertyName = "id";
+                                }
+                                else
+                                {
+                                    // Setup ID object to contain multiple property names.
+                                    jsonPath = string.Concat("/id", jsonPath);
+                                }
+                                var idRow = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember,
+                                    columnConfigDetails.EdmvFileNameAssocMember, propertyName, jsonPath,
+                                    columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
+                                {
+                                    AssociationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
+                                    TransType = columnConfigDetails.EdmvTransTypeAssocMember,
+                                    DatabaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember,
+                                    Description = columnConfigDetails.EdmvColumnDescAssocMember
+
+                                };
+                                newEthosThing.AddItemToExtendedData(idRow);
+
+                                if (apiConfiguration.ColleagueKeyNames.Count() == 1)
+                                {
+                                    // Add original row to return values
+                                    var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
+                                    columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
+                                    columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
+                                    {
+                                        AssociationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
+                                        TransType = columnConfigDetails.EdmvTransTypeAssocMember,
+                                        DatabaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember,
+                                        Description = columnConfigDetails.EdmvColumnDescAssocMember
+
+                                    };
+                                    newEthosThing.AddItemToExtendedData(row);
+                                }
+                            }
+                            else
+                            {
+                                var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
+                                    columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
+                                    columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
+                                {
+                                    AssociationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
+                                    TransType = columnConfigDetails.EdmvTransTypeAssocMember,
+                                    DatabaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember,
+                                    Description = columnConfigDetails.EdmvColumnDescAssocMember
+
+                                };
+                                newEthosThing.AddItemToExtendedData(row);
+                            }
+                        }
+
+                        // else this is just a single value column
+                        // if (!columnConfigDetails.EdmvJsonPathAssocMember.StartsWith("/id/") && !(columnConfigDetails.EdmvJsonPathAssocMember.Equals("/", StringComparison.OrdinalIgnoreCase) && columnConfigDetails.EdmvJsonLabelAssocMember.Equals("id", StringComparison.OrdinalIgnoreCase)))
+                        else
+                        {
+                            var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
+                                columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
+                                columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
+                            {
+                                AssociationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
+                                TransType = columnConfigDetails.EdmvTransTypeAssocMember,
+                                DatabaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember,
+                                Description = columnConfigDetails.EdmvColumnDescAssocMember
+
+                            };
+                            newEthosThing.AddItemToExtendedData(row);
+                        }
+                    }
+                }
+                try
+                {
+                    var datetimeExtensions = ConvertColleageDateAndTimeValues(linkedColumnsTuple, linkedColumnDetails);
+
+                    datetimeExtensions.ForEach(e => newEthosThing.AddItemToExtendedData(e));
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee, "Colleague session expired while getting dateTime for resource id ", cData.Key);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, string.Concat("DateTime get failed for resource id ", cData.Key));
+                    var message = string.Concat(ex.Message, " DateTime get failed for resource id '", cData.Key, "'.");
+                    exception.AddError(new RepositoryError("Data.Access", message));
+                }
+
+                var variableCalcuations = await GetVariableCalculationHookAsync(resourceName, resourceVersionNumber, newEthosThing.ExtendedDataList, reportEthosApiErrors, bypassCache);
+                if (variableCalcuations != null && variableCalcuations.Any())
+                {
+                    variableCalcuations.ForEach(e => newEthosThing.AddItemToExtendedData(e));
+                }
+
+                retConfigData.Add(newEthosThing);
+            }
+
+            if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return retConfigData;
+        }
+
+        /// <summary>
+        /// Execute the proper CTX to get Extended Data from Colleague
+        /// </summary>
+        /// <param name="apiConfiguration"></param>
+        /// <param name="matchingExtendedConfigData"></param>
+        /// <param name="resourceName"></param>
+        /// <param name="resourceVersionNumber"></param>
+        /// <param name="resourceIds"></param>
+        /// <param name="reportEthosApiErrors"></param>
+        /// <param name="bypassCache"></param>
+        /// <param name="useRecordKey"></param>
+        /// <returns>Returns the proper response from the CTX call in a single formatted response.</returns>
+        private async Task<GetEthosExtendedDataResponse> GetEthosExtendedDataResponse(EthosApiConfiguration apiConfiguration, EdmExtVersions matchingExtendedConfigData,
+            string resourceName, string resourceVersionNumber, IEnumerable<string> resourceIds, bool reportEthosApiErrors, bool bypassCache, bool useRecordKey, bool returnRestrictedFields)
+        {
+            var exception = new RepositoryException("Extensibility configuration errors.");
             GetEthosExtendedDataResponse response = null;
             if (apiConfiguration.ApiType != null && apiConfiguration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
             {
+                bool isFileSuite = !string.IsNullOrEmpty(apiConfiguration.SelectFileName) ? await IsEthosFileSuiteTemplateFile(apiConfiguration.SelectFileName, bypassCache) : false;
                 var request = new ProcessScreenApiRequest()
                 {
                     ProcessId = apiConfiguration.ProcessId,
@@ -1080,21 +1984,121 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     KeyData = new List<KeyData>(),
                     ColumnData = new List<ColumnData>()
                 };
-                foreach (var key in resourceIds)
+
+                foreach (var resourceKey in resourceIds)
                 {
-                    var recordKey = UnEncodePrimaryKey(key);
-                    var fileName = apiConfiguration.PrimaryEntity;
-                    if (recordKey.Contains("+"))
+                    var splitKey = UnEncodePrimaryKey(resourceKey).Split(_XM);
+                    if (splitKey.Count() > 0)
                     {
-                        var idSplit = recordKey.Split('+');
-                        fileName = idSplit[0];
-                        recordKey = idSplit[1];
+                        string fieldNames = string.Empty;
+                        string fieldValues = string.Empty;
+                        string fileNames = string.Empty;
+                        string fileValues = string.Empty;
+
+                        for (int i = 0; i < splitKey.Count(); i++)
+                        {
+                            if (!string.IsNullOrEmpty(splitKey[i]))
+                            {
+                                var keyPart = splitKey[i];
+                                if (keyPart.Contains("+"))
+                                {
+                                    var idSplit = keyPart.Split('+');
+                                    var fldName = idSplit[0];
+                                    var fldValue = idSplit[1];
+                                    if (matchingExtendedConfigData.EdmvColumnName.Contains(fldName))
+                                    {
+                                        if (!string.IsNullOrEmpty(fldName) && !string.IsNullOrEmpty(fldValue))
+                                        {
+                                            if (!string.IsNullOrEmpty(fieldNames))
+                                            {
+                                                fieldNames = string.Concat(fieldNames, _SM);
+                                                fieldValues = string.Concat(fieldValues, _SM);
+                                            }
+                                            fieldNames = string.Concat(fieldNames, fldName);
+                                            fieldValues = string.Concat(fieldValues, fldValue);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Add the file name and key to the list of file names and keys
+                                        if (!string.IsNullOrEmpty(fileNames))
+                                        {
+                                            fileNames = string.Concat(fileNames, _SM);
+                                            fileValues = string.Concat(fileValues, _SM);
+                                        }
+                                        fileNames = string.Concat(fileNames, fldName);
+                                        fileValues = string.Concat(fileValues, fldValue);
+
+                                        // Add a column for the primary key value
+                                        var keyColumnAssociation = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Where(edc => edc.EdmvFileNameAssocMember == fldName && edc.EdmvDatabaseUsageTypeAssocMember == "K");
+                                        if (keyColumnAssociation != null)
+                                        {
+                                            foreach (var keyAssoc in keyColumnAssociation)
+                                            {
+                                                var fieldName = keyAssoc.EdmvColumnNameAssocMember;
+                                                if (!string.IsNullOrEmpty(fieldName))
+                                                {
+                                                    if (!string.IsNullOrEmpty(fieldNames))
+                                                    {
+                                                        fieldNames = string.Concat(fieldNames, _SM);
+                                                        fieldValues = string.Concat(fieldValues, _SM);
+                                                    }
+                                                    fieldNames = string.Concat(fieldNames, fieldName);
+                                                    fieldValues = string.Concat(fieldValues, fldValue);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // If we are working with a file suite, then add the CDD name and value
+                                        // to the list of column names and column values.
+                                        if (isFileSuite && fldName.Contains("."))
+                                        {
+                                            var faYear = fldName.Split('.')[1];
+                                            var faName = "FA.YEAR";
+                                            var glName = "FISCAL.YEAR";
+                                            if (!string.IsNullOrEmpty(fieldNames))
+                                            {
+                                                fieldNames = string.Concat(fieldNames, _SM);
+                                                fieldValues = string.Concat(fieldValues, _SM);
+                                            }
+
+                                            // Add FA.YEAR and FISCAL.YEAR to list of data elements
+                                            fieldNames = string.Concat(fieldNames, faName, _SM, glName);
+                                            fieldValues = string.Concat(fieldValues, faYear, _SM, faYear);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(fileNames))
+                                    {
+                                        fileNames = string.Concat(fileNames, _SM);
+                                        fileValues = string.Concat(fileValues, _SM);
+                                    }
+                                    fileNames = string.Concat(fileNames, apiConfiguration.PrimaryEntity);
+                                    fileValues = string.Concat(fileValues, keyPart);
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(fieldNames) && !string.IsNullOrEmpty(fieldValues))
+                        {
+                            request.ColumnData.Add(new ColumnData()
+                            {
+                                ColumnNames = fieldNames,
+                                ColumnValues = fieldValues
+                            });
+                        }
+                        if (!string.IsNullOrEmpty(fileNames) && !string.IsNullOrEmpty(fileValues))
+                        {
+                            request.KeyData.Add(new KeyData()
+                            {
+                                PrimaryKeyNames = fileNames,
+                                PrimaryKeyValues = fileValues
+                            });
+                        }
                     }
-                    request.KeyData.Add(new KeyData()
-                    {
-                        PrimaryKeyNames = fileName,
-                        PrimaryKeyValues = recordKey
-                    });
+
                     request.CallChain = new List<string>();
                     foreach (var column in matchingExtendedConfigData.EdmvColumnName)
                     {
@@ -1103,13 +2107,79 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var splitColumns = column.Split(':');
                             for (int i = 0; i < splitColumns.Count() - 1; i++)
                             {
-                                request.CallChain.Add(splitColumns[i]);
+                                if (splitColumns[0].Contains('*'))
+                                {
+                                    request.CallChain.Add(splitColumns[i].Split('*')[1]);
+                                }
+                                else
+                                {
+                                    request.CallChain.Add(splitColumns[i]);
+                                }
                             }
                         }
                     }
                     request.CallChain = request.CallChain.Distinct().ToList();
                 }
+
+                // Update the prepared Responses from the Configuration for GET request
+                request.PreparedResponses = new List<PreparedResponses>();
+                if (apiConfiguration.PreparedResponses != null)
+                {
+                    foreach (var prpr in apiConfiguration.PreparedResponses)
+                    {
+                        if (!string.IsNullOrEmpty(prpr.DefaultOption))
+                        {
+                            request.PreparedResponses.Add(new PreparedResponses()
+                            {
+                                PreparedResponsePrompts = prpr.Text,
+                                PreparedResponseOptions = prpr.Options,
+                                PreparedResponseValues = prpr.DefaultOption
+                            });
+                        }
+                    }
+                }
+
+                // Update request for Restricted Fields to be returned from the UI form process
+                request.ReturnSecureData = returnRestrictedFields;
+
                 var getResponse = await transactionInvoker.ExecuteAsync<ProcessScreenApiRequest, ProcessScreenApiResponse>(request);
+
+                if (getResponse.Error || (getResponse.ProcessScreenApiErrors != null && getResponse.ProcessScreenApiErrors.Any()))
+                {
+                    exception = new RepositoryException();
+                    foreach (var error in getResponse.ProcessScreenApiErrors)
+                    {
+                        var message = string.Concat(error.ErrorCodes, " - ", error.ErrorMessages);
+                        logger.Error(message);
+                        if (reportEthosApiErrors)
+                        {
+                            var guid = EncodePrimaryKey(error.ErrorKeys);
+                            var sourceId = !string.IsNullOrEmpty(error.ErrorKeys) && error.ErrorKeys.Contains('+') ? error.ErrorKeys.Split('+')[1] : error.ErrorKeys;
+                            if (string.IsNullOrEmpty(sourceId) || sourceId.ToUpper().Contains("$NEW"))
+                            {
+                                guid = string.Empty;
+                                sourceId = string.Empty;
+                            }
+                            exception.AddError(new RepositoryError(error.ErrorCodes, error.ErrorMessages)
+                            {
+                                Id = guid,
+                                SourceId = sourceId
+                            });
+                        }
+                    }
+                    if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
+                    {
+                        throw exception;
+                    }
+
+                    return response;
+                }
+
+                // Set variables needed to respond with X-Content-Restricted of "partial"
+                if (getResponse.ReturnSecureData)
+                {
+                    SecureDataDefinition = new Tuple<bool, List<string>, List<string>>(getResponse.ReturnSecureData, getResponse.DeniedFieldsList, getResponse.SecureFieldsList);
+                }
 
                 // Convert response to a GetEthosExtendedDataResponse
                 response = new GetEthosExtendedDataResponse()
@@ -1129,12 +2199,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 int idx = 0;
                 foreach (var dataObjects in getResponse.ColumnData)
                 {
-                    response.ResourceDataObject.Add(new ResourceDataObject()
+                    if (resourceIds.Count() > idx)
                     {
-                        ColumnNames = dataObjects.ColumnNames,
-                        PropertyValues = dataObjects.ColumnValues,
-                        ResourceGuids = resourceIds.ElementAt(idx)
-                    });
+                        var guidIndex = resourceIds.ElementAt(idx);
+                        if (!UnEncodePrimaryKey(guidIndex).Contains('+'))
+                        {
+                            guidIndex = EncodePrimaryKey(string.Concat(apiConfiguration.PrimaryEntity, "+", guidIndex));
+                        }
+                        response.ResourceDataObject.Add(new ResourceDataObject()
+                        {
+                            ColumnNames = dataObjects.ColumnNames,
+                            PropertyValues = dataObjects.ColumnValues,
+                            ResourceGuids = guidIndex
+                        });
+                    }
                     idx++;
                 }
             }
@@ -1211,406 +2289,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 response = await transactionInvoker.ExecuteAsync<GetEthosExtendedDataRequest, GetEthosExtendedDataResponse>(request);
             }
-            try
-            {
-                if (response.Error || (response.GetEthosExtendDataErrors != null && response.GetEthosExtendDataErrors.Any()))
-                {
-                    var message = string.Format("Extensibility configuration errors for resource '{0}' version number '{1}'", resourceName, resourceVersionNumber);
-                    logger.Error(message);
-                    exception.AddError(new RepositoryError("Bad.Data", message));
-
-                    foreach (var error in response.GetEthosExtendDataErrors)
-                    {
-                        message = string.Concat(error.ErrorCodes, " - ", error.ErrorMessages);
-                        logger.Error(message);
-                        if (reportEthosApiErrors)
-                        {
-                            exception.AddError(new RepositoryError("Bad.Data", message));
-                        }
-                    }
-                    if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
-                    {
-                        throw exception;
-                    }
-                    return retConfigData;
-                }
-
-                foreach (var resp in response.ResourceDataObject)
-                {
-                    if (resp.ColumnNames != null && resp.PropertyValues != null)
-                    {
-                        var columnNames = resp.ColumnNames.Split(_SM).ToList();
-                        var columnValues = resp.PropertyValues.Split(_SM).ToList();
-                        Dictionary<string, string> columnDataItem = new Dictionary<string, string>();
-                        var index = 0;
-                        foreach (var columnName in columnNames)
-                        {
-                            try
-                            {
-                                var inputData = columnValues.ElementAt(index).Replace(_TM, _VM).Replace(_XM, _SM);
-                                var outputData = await GetOutputDataHookAsync(columnName, inputData, columnNames, columnValues, resourceName, resourceVersionNumber, reportEthosApiErrors, bypassCache);
-
-                                if (!string.IsNullOrEmpty(outputData))
-                                {
-                                    columnDataItem.Add(columnName, outputData);
-                                }
-                                else
-                                {
-                                    columnDataItem.Add(columnName, inputData);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                var message = string.Concat(ex.Message, ": Extensibility configuration property setup error(s). ", resourceName, " version number ", resourceVersionNumber);
-                                logger.Error(message);
-                                exception.AddError(new RepositoryError("Data.Access", message));
-                                continue;
-                            }
-                            index++;
-                        }
-                        var guidIndex = resp.ResourceGuids;
-                        if (!string.IsNullOrEmpty(resp.ResourceSecondaryKeys))
-                        {
-                            if (!string.IsNullOrEmpty(apiConfiguration.PrimaryKeyName) && !string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName))
-                            {
-                                guidIndex = EncodePrimaryKey(string.Concat(resp.ResourceFileNames, "+", resp.ResourcePrimaryKeys, "+", resp.ResourceSecondaryKeys));
-                            }
-                            if (!colleagueSecondaryKeys.ContainsKey(guidIndex))
-                            {
-                                colleagueSecondaryKeys.Add(guidIndex, resp.ResourceSecondaryKeys);
-                            }
-                        }
-                        else
-                        {
-                            if (!string.IsNullOrEmpty(apiConfiguration.PrimaryKeyName))
-                            {
-                                if (!UnEncodePrimaryKey(guidIndex).Contains('+'))
-                                {
-                                    guidIndex = EncodePrimaryKey(string.Concat(resp.ResourceFileNames, "+", resp.ResourcePrimaryKeys));
-                                }
-                            }
-                        }
-                        //if the allColumndata contains the key column data has already been added for this record 
-                        //so the new column data must be combined with the existing column data
-                        if (allColumnData.ContainsKey(guidIndex))
-                        {
-                            var currentColumnDictionary = allColumnData[guidIndex];
-                            var unionOfResults = currentColumnDictionary.Union(columnDataItem)
-                                .ToDictionary(k => k.Key, v => v.Value);
-                            allColumnData[guidIndex] = unionOfResults;
-                        }
-                        else //key didn't exist yet so just add the guid as the key with the current column data set
-                        {
-                            allColumnData.Add(guidIndex, columnDataItem);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (reportEthosApiErrors)
-                {
-                    throw ex;
-                }
-                logger.Error(string.Concat(ex.Message));
-                return retConfigData;
-            }
-
-            //list of linked column config data for datetime columns, exlcuding date or time only ones.
-            var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
-                .Where(l => !string.IsNullOrEmpty(l.EdmvDateTimeLinkAssocMember) &&
-                            !l.EdmvJsonPropertyTypeAssocMember.Equals("date", StringComparison.OrdinalIgnoreCase)).ToList();
-
-            foreach (var cData in allColumnData)
-            {
-                var newEthosThing = new EthosExtensibleData(resourceName, resourceVersionNumber, matchingExtendedConfigData.EdmvExtendedSchemaType, cData.Key, colleagueTimeZone);
-
-                //dictionary to hold linked columns for special processing
-                //T1 - data type(date or time), T2 - link value, T3 - column name, T4 - column value 
-                var linkedColumnsTuple = new List<Tuple<string, string, string, string>>();
-
-                foreach (var colKeyValuePair in cData.Value.ToList())
-                {
-                    string colleagueValue = colKeyValuePair.Value;
-                    //check if the column returned has a value, if not continue to next item
-                    if (string.IsNullOrEmpty(colKeyValuePair.Value))
-                    {
-                        continue;
-                    }
-                    var columnConfigDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
-                        m.EdmvColumnNameAssocMember.Equals(colKeyValuePair.Key, StringComparison.OrdinalIgnoreCase));
-                    //if a column detail isn't matched continue out
-                    if (columnConfigDetails == null)
-                    {
-                        var message = string.Concat("Extensibility configuration does not have a column configuration for ", colKeyValuePair.Key, " for resource ", resourceName);
-                        logger.Error(message);
-                        //exception.AddError(new RepositoryError("Data.Access", message));
-                        continue;
-                    }
-                    // Determine the Colleague Data value to be returned with each record key.
-                    if (!string.IsNullOrEmpty(columnConfigDetails.EdmvAssociationControllerAssocMember) && (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.ToUpper() == "A"))
-                    {
-                        // If we are dealing with a Valcode table, we need to find the guid key and
-                        // compare that to the resource key to find the associated value in a multi-valued
-                        // associated data element.
-                        var associationColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
-                            m.EdmvColumnNameAssocMember.Equals(columnConfigDetails.EdmvAssociationControllerAssocMember));
-
-                        var secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == columnConfigDetails.EdmvAssociationControllerAssocMember);
-                        //if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && columnConfigDetails.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName, StringComparison.OrdinalIgnoreCase))
-                        if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && !apiConfiguration.SecondaryKeyName.Equals(columnConfigDetails.EdmvAssociationControllerAssocMember))
-                        {
-                            // If we are using a primary and secondary key to expose records, then find the colleague value
-                            // that matches the secondary key assigned to this record.
-                            secondaryKeyValue = cData.Value.FirstOrDefault(cdv => cdv.Key == apiConfiguration.SecondaryKeyName);
-                            var tempColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(m =>
-                             m.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName));
-                            if (tempColumn != null)
-                            {
-                                associationColumn = tempColumn;
-                            }
-                        }
-
-                        if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
-                        {
-                            var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
-                            var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
-                            if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
-                            {
-                                var secondaryKey = colleagueSecondaryKey.Value;
-                                if (secondaryKeyList != null && secondaryKey != null)
-                                {
-                                    for (var i = 0; i < secondaryKeyList.Count(); i++)
-                                    {
-                                        var secondaryKeyListValue = await ConvertExtendedValueToColleagueValue(associationColumn, secondaryKeyList[i]);
-                                        if (associationColumn != null && associationColumn.EdmvJsonPropertyTypeAssocMember.StartsWith("date", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            try
-                                            {
-                                                var dateValues = secondaryKeyListValue.Split('-');
-                                                if (dateValues.Count() >= 3)
-                                                {
-                                                    var year = Convert.ToInt32(dateValues[0]);
-                                                    var month = Convert.ToInt32(dateValues[1]);
-                                                    var day = Convert.ToInt32(dateValues[2]);
-                                                    secondaryKeyListValue = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
-                                                }
-                                            }
-                                            catch
-                                            {
-                                                // Ignore for now.
-                                            }
-                                        }
-                                        if (secondaryKeyListValue == secondaryKey)
-                                        {
-                                            var newValue = colKeyValuePair.Value.Split(_VM);
-                                            if (i < newValue.Count())
-                                            {
-                                                colleagueValue = newValue[i];
-                                            }
-                                            else colleagueValue = string.Empty;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // If we have comments or text, then convert value mark or sub-value marks to spaces.
-                        if (!columnConfigDetails.EdmvJsonLabelAssocMember.EndsWith("[]"))
-                        {
-                            if (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("C", StringComparison.OrdinalIgnoreCase) || columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("T", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var secondaryUsageType = columnConfigDetails.EdmvSecDatabaseUsageTypeAssocMember.ToUpper();
-                                if (secondaryUsageType == "Q" || secondaryUsageType == "A" || secondaryUsageType == "L")
-                                {
-                                    colleagueValue = colKeyValuePair.Value.Replace(_SM, ' ');
-                                }
-                                else
-                                {
-                                    colleagueValue = colKeyValuePair.Value.Replace(_VM, ' ');
-                                }
-                            }
-                            else
-                            {
-                                if (!string.IsNullOrEmpty(apiConfiguration.SecondaryKeyName) && columnConfigDetails.EdmvColumnNameAssocMember.Equals(apiConfiguration.SecondaryKeyName, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    // If we are using a primary and secondary key to expose records, then find the colleague value
-                                    // that matches the secondary key assigned to this record.
-                                    var secondaryKeyValue = colKeyValuePair;
-                                    if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
-                                    {
-                                        var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
-                                        var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
-                                        if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
-                                        {
-                                            var secondaryKey = colleagueSecondaryKey.Value;
-                                            if (secondaryKeyList != null && secondaryKey != null)
-                                            {
-                                                for (var i = 0; i < secondaryKeyList.Count(); i++)
-                                                {
-                                                    var secondaryKeyListValue = secondaryKeyList[i];
-                                                    if (columnConfigDetails != null && columnConfigDetails.EdmvJsonPropertyTypeAssocMember.StartsWith("date", StringComparison.OrdinalIgnoreCase))
-                                                    {
-                                                        try
-                                                        {
-                                                            var dateValues = secondaryKeyListValue.Split('-');
-                                                            if (dateValues.Count() >= 3)
-                                                            {
-                                                                var year = Convert.ToInt32(dateValues[0]);
-                                                                var month = Convert.ToInt32(dateValues[1]);
-                                                                var day = Convert.ToInt32(dateValues[2]);
-                                                                secondaryKeyListValue = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
-                                                            }
-                                                        }
-                                                        catch
-                                                        {
-                                                            // Ignore for now.
-                                                        }
-                                                    }
-                                                    if (secondaryKeyListValue == secondaryKey)
-                                                    {
-                                                        var newValue = colKeyValuePair.Value.Split(_VM);
-                                                        if (i < newValue.Count())
-                                                        {
-                                                            colleagueValue = newValue[i];
-                                                        }
-                                                        else colleagueValue = string.Empty;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (string.IsNullOrEmpty(colleagueValue))
-                    {
-                        continue;
-                    }
-                    if (columnConfigDetails.EdmvDatabaseUsageTypeAssocMember.Equals("K", StringComparison.OrdinalIgnoreCase) && colleagueValue.Contains("*"))
-                    {
-                        int counter = 1;
-                        if (!string.IsNullOrEmpty(matchingExtensionConfigData.EdmeSecondaryKey)) counter++;
-                        if (matchingExtensionConfigData == null || matchingExtensionConfigData.EdmeNewKeyStrategyEntityAssociation == null || matchingExtensionConfigData.EdmeNewKeyStrategyEntityAssociation.Count() > counter)
-                        {
-                            var collIdValue = colleagueValue.Split('*');
-                            var index = columnConfigDetails.EdmvFieldNumberAssocMember;
-                            if (index != null && index > 0)
-                            {
-                                if (collIdValue.Count() >= index)
-                                {
-                                    colleagueValue = collIdValue[(int)index - 1];
-                                }
-                            }
-                        }
-                    }
-
-                    // if this is a match to an item i the linkedColumnDetail this means it is a linked column and needs to be treated different
-                    if (linkedColumnDetails.Any(c => c.EdmvColumnNameAssocMember.Equals(colKeyValuePair.Key, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        var jsonPropType = columnConfigDetails.EdmvConversionAssocMember.StartsWith("D", StringComparison.OrdinalIgnoreCase)
-                            ? "date" : "time";
-
-                        linkedColumnsTuple.Add(new Tuple<string, string, string, string>(jsonPropType,
-                            columnConfigDetails.EdmvDateTimeLinkAssocMember, colKeyValuePair.Key,
-                            colleagueValue));
-                    }
-                    else //else this is just a single value column
-                    {
-                        var row = new EthosExtensibleDataRow(columnConfigDetails.EdmvColumnNameAssocMember, columnConfigDetails.EdmvFileNameAssocMember,
-                            columnConfigDetails.EdmvJsonLabelAssocMember, columnConfigDetails.EdmvJsonPathAssocMember,
-                            columnConfigDetails.EdmvJsonPropertyTypeAssocMember, colleagueValue)
-                        {
-                            associationController = columnConfigDetails.EdmvAssociationControllerAssocMember,
-                            transType = columnConfigDetails.EdmvTransTypeAssocMember,
-                            databaseUsageType = columnConfigDetails.EdmvDatabaseUsageTypeAssocMember
-
-                        }; ;
-
-                        newEthosThing.AddItemToExtendedData(row);
-                    }
-                }
-                try
-                {
-                    var datetimeExtensions = ConvertColleageDateAndTimeValues(linkedColumnsTuple, linkedColumnDetails);
-
-                    datetimeExtensions.ForEach(e => newEthosThing.AddItemToExtendedData(e));
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex, string.Concat("DateTime get failed for resource id ", cData.Key));
-                    var message = string.Concat(ex.Message, " DateTime get failed for resource id '", cData.Key, "'.");
-                    exception.AddError(new RepositoryError("Data.Access", message));
-                }
-
-                var variableCalcuations = await GetVariableCalculationHookAsync(resourceName, resourceVersionNumber, newEthosThing.ExtendedDataList, reportEthosApiErrors, bypassCache);
-                if (variableCalcuations != null && variableCalcuations.Any())
-                {
-                    variableCalcuations.ForEach(e => newEthosThing.AddItemToExtendedData(e));
-                }
-
-                retConfigData.Add(newEthosThing);
-            }
 
             if (reportEthosApiErrors && exception != null && exception.Errors != null && exception.Errors.Any())
             {
                 throw exception;
             }
 
-            return retConfigData;
-        }
-
-        /// <summary>
-        /// Adds the Metadata objects to the extended data configuration. 
-        /// </summary>
-        /// <param name="matchingExtendedConfigData">Configuration for extended data.</param>
-        /// <param name="idDict">dictionary containing the ids for the resources in guidlookup form</param>
-        /// <returns>List of extensions with all of the metadata objects defined.</returns>
-        private async Task<EdmExtVersions> AddEthosMetadataConfigurationData(EdmExtVersions matchingExtendedConfigData, Dictionary<string, GuidLookupResult> idDict, bool bypassCache = false)
-        {
-            var matchingColumnConfigDetails = new List<EdmExtVersionsEdmvColumns>();
-
-            var allFileNames = new List<string>();
-            var fileNamesForGuids = idDict.Where(i => i.Value != null && i.Value.Entity != null).Select(i => i.Value.Entity).Distinct().ToList();
-            foreach (var fileName in fileNamesForGuids)
-            {
-                // Found in some cases, the guid lookup fails to return a GUID record causing object reference error.
-                if (fileName != null)
-                {
-                    var templateFileName = await GetEthosFileSuiteTemplate(fileName, bypassCache);
-                    if (!allFileNames.Contains(templateFileName))
-                    {
-                        allFileNames.Add(templateFileName);
-                    }
-                }
-            }
-
-            foreach (var fileName in allFileNames)
-            {
-                var metadataColumnConfig = GetMetadataColumnConfigDetails(fileName);
-                foreach (var metadataColumn in metadataColumnConfig)
-                {
-                    if (!matchingExtendedConfigData.EdmvColumnName.Contains(metadataColumn.EdmvColumnNameAssocMember))
-                    {
-                        matchingExtendedConfigData.EdmvColumnName.Add(metadataColumn.EdmvColumnNameAssocMember);
-                        matchingExtendedConfigData.EdmvConversion.Add(metadataColumn.EdmvConversionAssocMember);
-                        matchingExtendedConfigData.EdmvDatabaseUsageType.Add(metadataColumn.EdmvDatabaseUsageTypeAssocMember);
-                        matchingExtendedConfigData.EdmvDateTimeLink.Add(metadataColumn.EdmvDateTimeLinkAssocMember);
-                        matchingExtendedConfigData.EdmvFileName.Add(metadataColumn.EdmvFileNameAssocMember);
-                        matchingExtendedConfigData.EdmvJsonLabel.Add(metadataColumn.EdmvJsonLabelAssocMember);
-                        matchingExtendedConfigData.EdmvJsonPath.Add(metadataColumn.EdmvJsonPathAssocMember);
-                        matchingExtendedConfigData.EdmvJsonPropertyType.Add(metadataColumn.EdmvJsonPropertyTypeAssocMember);
-                        matchingExtendedConfigData.EdmvLength.Add(metadataColumn.EdmvLengthAssocMember);
-
-                        matchingExtendedConfigData.EdmvColumnsEntityAssociation.Add(metadataColumn);
-                    }
-                }
-            }
-
-            return matchingExtendedConfigData;
+            return response;
         }
 
         /// <summary>
@@ -1792,125 +2477,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return string.Empty;
         }
 
-        private List<EdmExtVersionsEdmvColumns> GetMetadataColumnConfigDetails(string physicalFileName)
-        {
-            var matchingColumnConfigDetails = new List<EdmExtVersionsEdmvColumns>();
-
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".ADDOPR",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "createdBy",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "string",
-                EdmvLengthAssocMember = 10
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".ADDDATE",
-                EdmvConversionAssocMember = "D2/",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "createdOn",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "datetime",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Z"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".ADDTIME",
-                EdmvConversionAssocMember = "MTHS",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "createTime",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "time",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Z"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".ADD.OPERATOR",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "createdBy",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "string"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".ADD.DATE",
-                EdmvConversionAssocMember = "D2/",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "createdOn",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "datetime",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Z"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".CHGOPR",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "modifiedBy",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "string",
-                EdmvLengthAssocMember = 10
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".CHGDATE",
-                EdmvConversionAssocMember = "D2/",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "modifiedOn",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "datetime",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Y"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".CHGTIME",
-                EdmvConversionAssocMember = "MTHS",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "modifiedTime",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "time",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Y"
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".CHANGE.OPERATOR",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "modifiedBy",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "string",
-                EdmvLengthAssocMember = 10
-            });
-            matchingColumnConfigDetails.Add(new EdmExtVersionsEdmvColumns()
-            {
-                EdmvColumnNameAssocMember = physicalFileName + ".CHANGE.DATE",
-                EdmvConversionAssocMember = "D2/",
-                EdmvDatabaseUsageTypeAssocMember = "D",
-                EdmvFileNameAssocMember = physicalFileName,
-                EdmvJsonLabelAssocMember = "modifiedOn",
-                EdmvJsonPathAssocMember = "/metadata/",
-                EdmvJsonPropertyTypeAssocMember = "datetime",
-                EdmvLengthAssocMember = 10,
-                EdmvDateTimeLinkAssocMember = "Y"
-            });
-
-            return matchingColumnConfigDetails;
-        }
-
         private IEnumerable<EthosExtensibleDataRow> ConvertColleageDateAndTimeValues(IEnumerable<Tuple<string, string, string, string>> valuesTuples, IEnumerable<EdmExtVersionsEdmvColumns> columnConfigs)
         {
             //T1 - data type(date or time), T2 - link value, T3 - column name, T4 - column value
@@ -2000,9 +2566,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
                     utcDateTimeStringValues.TrimStart(_VM))
                 {
-                    associationController = dateColumnConfig.EdmvAssociationControllerAssocMember,
-                    transType = dateColumnConfig.EdmvTransTypeAssocMember,
-                    databaseUsageType = dateColumnConfig.EdmvDatabaseUsageTypeAssocMember
+                    AssociationController = dateColumnConfig.EdmvAssociationControllerAssocMember,
+                    TransType = dateColumnConfig.EdmvTransTypeAssocMember,
+                    DatabaseUsageType = dateColumnConfig.EdmvDatabaseUsageTypeAssocMember,
+                    Description = dateColumnConfig.EdmvColumnDescAssocMember
 
                 };
 
@@ -2246,6 +2813,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Encoded string to use as guid on a non-guid based API.</returns>
         public string EncodePrimaryKey(string id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return id;
+            }
             // Preserve all lower case and dashes in original key by manually escaping those characters.
             var returnData = id.Replace("-", "-2D").Replace("a", "-61").
                 Replace("b", "-62").Replace("c", "-63").Replace("d", "-64").
@@ -2267,6 +2838,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Un-Encoded string taken from a non-guid based API guid.</returns>
         public string UnEncodePrimaryKey(string id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return id;
+            }
             var primaryKey = id.Replace("-", "%").ToUpper();
             return Uri.UnescapeDataString(primaryKey);
         }
@@ -2399,6 +2974,39 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Updates a single item in the list of Audit Log configuration records from Colleague
+        /// </summary>
+        /// <param name="auditLogConfiguration">Audit Log Configuration to update</param>
+        /// <returns>An <see cref="AuditLogConfiguration">Updated Audit Log configuration</see></returns>
+        public async Task<AuditLogConfiguration> UpdateAuditLogConfigurationAsync(AuditLogConfiguration auditLogConfiguration)
+        {
+            UpdateAuditLogParmsRequest updateRequest = new UpdateAuditLogParmsRequest();
+            var auditLogCategories = await GetAuditLogCategoriesAsync(true);
+            if (auditLogCategories != null && auditLogCategories.Any())
+            {
+                var auditCategory = auditLogCategories.FirstOrDefault(ac => ac.Guid == auditLogConfiguration.EventId);
+                if (auditCategory == null)
+                {
+                    auditCategory = auditLogCategories.FirstOrDefault(ac => ac.Code == auditLogConfiguration.Code);
+                    if (auditCategory == null)
+                    {
+                        auditCategory = auditLogCategories.FirstOrDefault(ac => ac.Description == auditLogConfiguration.Description);
+                    }
+                }
+                if (auditCategory != null)
+                { 
+                    updateRequest.AuditLogCategory = auditCategory.Code;
+                    updateRequest.AuditLogEnabled = auditLogConfiguration.IsEnabled == true ? true : false;
+                    UpdateAuditLogParmsResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateAuditLogParmsRequest, UpdateAuditLogParmsResponse>(updateRequest);
+
+                    var auditLogEntities = await GetAuditLogConfigurationAsync(true);
+                    return auditLogEntities.FirstOrDefault(ale => ale.EventId == auditLogConfiguration.EventId || ale.Code == auditLogConfiguration.Code || ale.Description == auditLogConfiguration.Description);
+                }
+            }
+            return new AuditLogConfiguration(string.Empty, string.Empty, string.Empty, false);
+        }
+
+        /// <summary>
         /// Retrieve user profile configuration servicing old versions of the API.
         /// </summary>
         /// <returns>User profile configuration</returns>
@@ -2493,9 +3101,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 corewebDefaultsRecord = await GetCorewebDefaultsAsync();
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                logger.Info(e, "Error retrieving COREWEB.DEFAULTS record");
+                logger.Error(e, "Error retrieving COREWEB.DEFAULTS record");
                 return configuration;
             }
             if (corewebDefaultsRecord != null)
@@ -2518,6 +3130,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 if (corewebDefaultsRecord.CorewebUserProfileText != null)
                 {
                     configuration.Text = corewebDefaultsRecord.CorewebUserProfileText;
+                    configuration.AuthorizePhonesForText = string.Equals(corewebDefaultsRecord.CorewebPhoneTextAuth, "Y", StringComparison.OrdinalIgnoreCase);
                 }
 
                 configuration.CanUpdateAddressWithoutPermission = string.Equals(corewebDefaultsRecord.CorewebAddrUpdtNoPerm, "Y", StringComparison.OrdinalIgnoreCase);
@@ -3201,6 +3814,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             });
         }
+
         /// <summary>
         /// Gets an OfficeCollectionMapp data contract
         /// </summary>
@@ -3245,7 +3859,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access RELATIONSHIP.CATEGORIES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return relationshipTable;
                 }, Level1CacheTimeoutValue);
@@ -4440,7 +5054,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 outputData = string.Concat(outputData, data);
                             }
                             var returnEthosDataRow = new EthosExtensibleDataRow(string.Concat("VAR", calcProperties.Recordkey),
-                                "", calcProperties.EdmcJsonLabel, calcProperties.EdmcJsonPath, calcProperties.EdmcJsonPropertyType, outputData);
+                                "", calcProperties.EdmcJsonLabel, calcProperties.EdmcJsonPath, calcProperties.EdmcJsonPropertyType, outputData)
+                            {
+                                Description = calcProperties.EdmcDescription
+                            };
 
                             extensibleCalculatedRows.Add(returnEthosDataRow);
                         }

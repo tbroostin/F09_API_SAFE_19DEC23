@@ -1,5 +1,8 @@
 ﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 using Ellucian.Colleague.Domain.Finance.Entities.Payments;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Finance.Repositories
 {
@@ -31,5 +34,13 @@ namespace Ellucian.Colleague.Domain.Finance.Repositories
         /// <param name="cashRcptsId">ID of cash receipt</param>
         /// <returns>Receipt acknowledgement detail</returns>
         PaymentReceipt GetCashReceipt(string ecPayTransId, string cashRcptsId);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="allPaymentMethods"></param>
+        /// <returns></returns>
+        Task<IEnumerable<AvailablePaymentMethod>> GetRestrictedPaymentMethodsAsync(string studentId, IEnumerable<AvailablePaymentMethod> allPaymentMethods);
     }
 }

@@ -105,7 +105,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualProfileApplications = await actualRepository.GetProfileApplicationsAsync(studentId, studentAwardYears);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No CsIsirTransIds exist in any award year for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No CsIsirTransIds exist in any award year for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -128,7 +128,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualProfileApplications = await actualRepository.GetProfileApplicationsAsync(studentId, studentAwardYears);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Warn(string.Format("Record ids in CS.ISIR.TRANS.IDS for all award years do not exist in ISIR.FASFA for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Record ids in CS.ISIR.TRANS.IDS for all award years do not exist in ISIR.FASFA for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -147,7 +147,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
 
-                loggerMock.Verify(l => l.Warn(
+                loggerMock.Verify(l => l.Debug(
                     string.Format("Error getting CsAcyr record for student {0}, awardYear {1}. Possible data corruption between CsAcyr and ProfileRecord Id {2}", studentId, It.IsAny<string>(), It.IsAny<string>())));
             }
 
@@ -158,7 +158,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualProfileApplications = await actualRepository.GetProfileApplicationsAsync(studentId, studentAwardYears);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Warn(
+                loggerMock.Verify(l => l.Debug(
                     string.Format("Error getting CsAcyr record for student {0}, awardYear {1}. Possible data corruption between CsAcyr and ProfileRecord Id {2}", studentId, It.IsAny<string>(), It.IsAny<string>())));
             }
 
@@ -241,7 +241,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 Assert.IsTrue(actualProfileApplications.Any(p => p.IsFederallyFlagged));
                 Assert.IsTrue(actualProfileApplications.All(p => !p.FamilyContribution.HasValue));
 
-                loggerMock.Verify(l => l.Warn(string.Format("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", It.IsAny<string>(), studentId, It.IsAny<string>())));
+                loggerMock.Verify(l => l.Debug(string.Format("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", It.IsAny<string>(), studentId, It.IsAny<string>())));
             }
 
 

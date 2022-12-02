@@ -358,10 +358,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -1231,10 +1231,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -1959,10 +1959,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -3567,7 +3567,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetProfile_NotFoundPersonThrowsException()
             {
                 Domain.Base.Entities.Profile nullProfile = null;
@@ -4136,7 +4136,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_PrivacyStatus_Mismatch()
             {
                 //setup role
@@ -4155,7 +4155,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_PrivacyStatus_EmptyDetail()
             {
                 //setup role
@@ -4174,7 +4174,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_PrivacyStatus_InvalidDetail()
             {
                 //setup role
@@ -4256,7 +4256,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_MaritalStatus_Mismatch()
             {
                 //setup role
@@ -4277,7 +4277,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_MaritalStatus_EmptyDetail()
             {
                 //setup role
@@ -4296,7 +4296,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_MaritalStatus_EmptyCategory()
             {
                 //setup role
@@ -4371,7 +4371,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_Religion_Invalid()
             {
                 //setup role
@@ -4392,7 +4392,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_Religion_Null()
             {
                 //setup role
@@ -4448,7 +4448,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_Language_EmptyCode()
             {
                 //setup role
@@ -4471,7 +4471,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_Language_MultiplePreferred()
             {
                 //setup role
@@ -4534,7 +4534,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_CountryOfBirth_Invalid()
             {
                 //setup role
@@ -4549,7 +4549,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_CreatePerson3Async_CitizenshipCountry_Invalid()
             {
                 //setup role
@@ -4584,7 +4584,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson3_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -4597,7 +4597,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Username_Exception()
             {
                 //setup role
@@ -4924,10 +4924,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -5195,7 +5195,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_PrivacyStatus_Mismatch()
             {
                 //setup role
@@ -5214,7 +5214,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_PrivacyStatus_EmptyDetail()
             {
                 //setup role
@@ -5233,7 +5233,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_PrivacyStatus_InvalidDetail()
             {
                 //setup role
@@ -5315,7 +5315,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_MaritalStatus_Mismatch()
             {
                 //setup role
@@ -5336,7 +5336,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_MaritalStatus_EmptyDetail()
             {
                 //setup role
@@ -5355,7 +5355,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_MaritalStatus_EmptyCategory()
             {
                 //setup role
@@ -5430,7 +5430,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_Religion_Invalid()
             {
                 //setup role
@@ -5451,7 +5451,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_Religion_Null()
             {
                 //setup role
@@ -5507,7 +5507,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_Language_EmptyCode()
             {
                 //setup role
@@ -5530,7 +5530,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_Language_MultiplePreferred()
             {
                 //setup role
@@ -5593,7 +5593,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_CountryOfBirth_Invalid()
             {
                 //setup role
@@ -5608,7 +5608,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_CreatePerson4Async_CitizenshipCountry_Invalid()
             {
                 //setup role
@@ -5643,7 +5643,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreatePerson4_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -5656,7 +5656,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Username_Exception()
             {
                 //setup role
@@ -5983,10 +5983,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -7465,10 +7465,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -7772,7 +7772,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_PersonNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -7785,7 +7785,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -7799,7 +7799,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_PrimaryNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -7837,7 +7837,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_PrimaryNames_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -7903,7 +7903,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NICKNAME_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -7956,7 +7956,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Legal_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -8009,7 +8009,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Birth_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -8049,7 +8049,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Birth_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -8089,7 +8089,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NickName_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -8129,7 +8129,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_History_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -8169,7 +8169,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Prefered_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -8226,7 +8226,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_HISTORY_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -8244,7 +8244,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_PREFERRED_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -8297,7 +8297,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_BIRTHNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -8350,7 +8350,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_BirthNames_Empty_ArgumentNullException()
             {
                 //setup role
@@ -8654,10 +8654,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -9013,7 +9013,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_PlaceNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -9052,7 +9052,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_AddressLineNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -9092,7 +9092,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_PlaceCountryNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -9133,7 +9133,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_PlaceCountryLocalityNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -9174,7 +9174,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_SocialMediaTypeNull_Exception()
             {
                 //setup role
@@ -9192,7 +9192,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson2Async_SocialMediaAddressNull_Exception()
             {
                 //setup role
@@ -9210,7 +9210,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_UpdatePerson3Async_SocialMediaTypNotFound_Exception()
             {
                 //setup role
@@ -9228,7 +9228,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NullAddress_Exception()
             {
                 //setup role
@@ -9249,7 +9249,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NullType_Exception()
             {
                 //setup role
@@ -9270,7 +9270,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NullPhoneType_Exception()
             {
                 //setup role
@@ -9295,7 +9295,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NullPhoneNumber_Exception()
             {
                 //setup role
@@ -9321,7 +9321,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_InvalidPhoneType_Exception()
             {
                 //setup role
@@ -9347,7 +9347,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_NullPhoneTypeId_Exception()
             {
                 //setup role
@@ -9373,7 +9373,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson3_Username_Exception()
             {
                 //setup role
@@ -9743,10 +9743,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                          }
                      );
                 allPhones = new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         };
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(allPhones);
@@ -10031,7 +10031,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_PersonNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -10044,7 +10044,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_PrimaryNames_Null_ArgumentNullException()
             {
                 //setup role
@@ -10058,7 +10058,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_PrimaryNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -10096,7 +10096,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_PrimaryNames_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10111,7 +10111,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_LEGAL_NameTypes_Null_ArgumentNullException()
             {
                 var legalType = personNameTypes.FirstOrDefault(x => x.Code == "LEGAL");
@@ -10128,7 +10128,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_BIRTH_NameTypes_Null_ArgumentNullException()
             {
                 var birthType = personNameTypes.FirstOrDefault(x => x.Code == "BIRTH");
@@ -10145,7 +10145,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NICKNAME_NameTypes_Null_ArgumentNullException()
             {
                 var nickNameType = personNameTypes.FirstOrDefault(x => x.Code == "NICKNAME");
@@ -10162,7 +10162,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NICKNAME_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -10215,7 +10215,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Legal_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -10268,7 +10268,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Birth_FirstLastMiddle_Null_ArgumentNullException()
             {
                 //setup role
@@ -10308,7 +10308,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Birth_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10348,7 +10348,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NickName_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10388,7 +10388,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_History_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10428,7 +10428,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Prefered_FullName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10468,7 +10468,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_HISTORY_NameTypes_Null_ArgumentNullException()
             {
                 var historyNameType = personNameTypes.FirstOrDefault(x => x.Code == "HISTORY");
@@ -10485,7 +10485,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_HISTORY_LastName_Null_ArgumentNullException()
             {
                 //setup role
@@ -10503,7 +10503,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_PREFERRED_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -10556,7 +10556,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_BIRTHNames_GT_1_ArgumentNullException()
             {
                 //setup role
@@ -10609,7 +10609,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_BirthNames_Empty_ArgumentNullException()
             {
                 //setup role
@@ -10913,10 +10913,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -11271,7 +11271,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_PlaceNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -11310,7 +11310,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_AddressLineNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -11350,7 +11350,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_PlaceCountryNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -11391,7 +11391,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_PlaceCountryLocalityNull_Exception()
             {
                 addressesCollection = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
@@ -11432,7 +11432,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_SocialMediaTypeNull_Exception()
             {
                 //setup role
@@ -11450,7 +11450,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_SocialMediaAddressNull_Exception()
             {
                 //setup role
@@ -11468,7 +11468,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_UpdatePerson4Async_SocialMediaTypNotFound_Exception()
             {
                 //setup role
@@ -11486,7 +11486,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NullAddress_Exception()
             {
                 //setup role
@@ -11507,7 +11507,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NullType_Exception()
             {
                 //setup role
@@ -11528,7 +11528,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NullPhoneType_Exception()
             {
                 //setup role
@@ -11553,7 +11553,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NullPhoneNumber_Exception()
             {
                 //setup role
@@ -11579,7 +11579,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_InvalidPhoneType_Exception()
             {
                 //setup role
@@ -11605,7 +11605,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_NullPhoneTypeId_Exception()
             {
                 //setup role
@@ -11631,7 +11631,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatePerson4_Username_Exception()
             {
                 //setup role
@@ -12001,10 +12001,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                          }
                      );
                 allPhones = new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         };
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(allPhones);
@@ -13352,10 +13352,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -14493,10 +14493,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                          }
                      );
                 allPhones = new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         };
                 referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(allPhones);
@@ -14835,10 +14835,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -15228,10 +15228,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -15831,10 +15831,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType( Guid.NewGuid().ToString(), "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType( Guid.NewGuid().ToString(), "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType( Guid.NewGuid().ToString(), "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 
@@ -16864,10 +16864,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
                      .ReturnsAsync(
                          new List<PhoneType>() {
-                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home),
-                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile),
-                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation),
-                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business)
+                        new PhoneType("92c82d33-e55c-41a4-a2c3-f2f7d2c523d1", "HO", "Home", PhoneTypeCategory.Home, false),
+                        new PhoneType("b6def2cc-cc95-4d0e-a32c-940fbbc2d689", "MO", "Mobile", PhoneTypeCategory.Mobile, true),
+                        new PhoneType("f60e7b27-a3e3-4c92-9d36-f3cae27b724b", "VA", "Vacation", PhoneTypeCategory.Vacation, false),
+                        new PhoneType("30e231cf-a199-4c9a-af01-be2e69b607c9", "BU", "Business", PhoneTypeCategory.Business, false)
                         }
                      );
 

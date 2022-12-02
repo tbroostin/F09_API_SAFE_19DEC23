@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities
 {
@@ -444,7 +445,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void StudentWaiver_Equals_ThrowsExceptionWhenTermVsDates()
             {
                 id = "5";
@@ -467,7 +468,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void StudentWaiver_Equals_ThrowsExceptionWhenDatesVsTerm()
             {
                 id = "5";
@@ -533,7 +534,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void ThrowsExceptionIfNoRequisitesInWaiver()
             {
                 var waiver1 = new StudentWaiver("1", "Student1", "", "SEC1", "OTHER", "This is a waiver comment", "2014/FA");
@@ -541,7 +542,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void ThrowsExceptionIfNoWaiverableRequisitesInSection()
             {
                 course.Requisites = new List<Requisite>();
@@ -554,7 +555,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void ThrowsExceptionIfUnwaiverableRequisitesInWaiver()
             {
                 waiver.AddRequisiteWaiver(new RequisiteWaiver("R2", WaiverStatus.Waived));

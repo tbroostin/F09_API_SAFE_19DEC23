@@ -701,7 +701,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             rooms.Add(expected);
 
             var request = new RoomsAvailabilityRequest3();
-            var timePeriod = new RepeatTimePeriod2 { StartOn = new DateTime(2015, 2, 16) };
+            var timePeriod = new RepeatTimePeriod2 { StartOn = new DateTime(2015, 2, 16), EndOn = new DateTime(2015, 2, 23) };
             var repeatRuleEnds = new RepeatRuleEnds { Date = new DateTime(2015, 2, 21) };
             var repeatRule = new RepeatRuleWeekly { Type = FrequencyType2.Weekly, Ends = repeatRuleEnds, Interval = 1 };
 
@@ -732,7 +732,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             rooms.Add(expected);
 
             var request = new RoomsAvailabilityRequest3();
-            var timePeriod = new RepeatTimePeriod2 { StartOn = new DateTime(2015, 2, 21) };
+            var timePeriod = new RepeatTimePeriod2 { StartOn = new DateTime(2015, 2, 21), EndOn = new DateTime(2015, 3, 21) };
             var repeatRuleEnds = new RepeatRuleEnds { Date = new DateTime(2015, 2, 21) };
             var repeatRule = new RepeatRuleMonthly { Type = FrequencyType2.Monthly,
                 Ends = repeatRuleEnds, Interval = 1, RepeatBy = new RepeatRuleRepeatBy() { DayOfMonth = 2 } };
@@ -963,6 +963,42 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             _facilitiesServiceMock.Setup(x => x.CheckRoomAvailability4Async(request, It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
             await _roomsController.QueryAvailableRoomsByPost4Async(request);
-        }      
+        }
+
+        [ExpectedException(typeof(ArgumentNullException))]
+        [TestMethod]
+        public async Task RoomsController_QueryAvailableRoomsByPost4Async_NoEndDateException()
+        {
+            var rooms = new List<Room3>();
+            var expected = _allRoom3Dtos.FirstOrDefault();
+            rooms.Add(expected);
+
+            var request = new RoomsAvailabilityRequest3();
+            var timePeriod = new RepeatTimePeriod2
+            {
+                StartOn = new DateTime(2015, 2, 16)
+               
+            };
+
+
+            var roomType = new RoomType
+            {
+                RoomTypesGuid = new GuidObject2("31d8aa32-dbe6-4a49-a1c4-2cad39e232e4"),
+                Type = RoomTypeTypes.Classroom
+            };
+            var roomTypes = new List<RoomType> { roomType };
+            request.RoomType = roomTypes;
+
+            var occupancies = new List<Occupancy2>();
+            var occupancy = new Occupancy2 { MaximumOccupancy = 25, RoomLayoutType = RoomLayoutType2.Default };
+            occupancies.Add(occupancy);
+            request.Occupancies = occupancies;
+
+            request.Recurrence = new Recurrence3 { TimePeriod = timePeriod };
+
+            _facilitiesServiceMock.Setup(x => x.CheckRoomAvailability4Async(request, It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
+            await _roomsController.QueryAvailableRoomsByPost4Async(request);
+        }
+
     }
 }

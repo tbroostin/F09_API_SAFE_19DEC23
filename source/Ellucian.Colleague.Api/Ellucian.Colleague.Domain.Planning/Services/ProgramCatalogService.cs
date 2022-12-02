@@ -43,8 +43,8 @@ namespace Ellucian.Colleague.Domain.Planning.Services
                     {
                         logger.Debug(string.Format("Student {0}: only one active student program ({1}) - catalog year from student program will be used: {2}",
                             studentPrograms.First().StudentId,
-                            studentPrograms.First().ProgramCode + "*" + studentPrograms.First().CatalogCode),
-                            studentPrograms.First().CatalogCode);
+                            studentPrograms.First().ProgramCode + "*" + studentPrograms.First().CatalogCode,
+                            studentPrograms.First().CatalogCode));
                     }
 
                     return studentPrograms.ElementAt(0).CatalogCode;

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -12,6 +12,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         private List<FinanceQuery> financeQueryList = null;
         private TestGlAccountRepository testGlAccountRepository = null;
         List<FinanceQueryGlAccountLineItem> glAccountLineItems = null;
+        List<FinanceQueryActivityDetail> glActivityTransactions = null;
         public List<string> SeedGlNumbers { get { return seedGlNumbers; } }
         private List<string> seedGlNumbers = new List<string>();
 
@@ -20,6 +21,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             financeQueryList = new List<FinanceQuery>();
             FinanceQuery financeQuery = new FinanceQuery();
             glAccountLineItems = new List<FinanceQueryGlAccountLineItem>();
+            glActivityTransactions = new List<FinanceQueryActivityDetail>();
             List<FinanceQuerySubtotal> financeQuerySubtotals = new List<FinanceQuerySubtotal>();
             List<FinanceQuerySubtotalComponent> financeQuerySubtotalComponents = new List<FinanceQuerySubtotalComponent>();
 
@@ -41,12 +43,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             financeQuerySubtotals.Add(subtotal);
             financeQuery.FinanceQuerySubtotals = financeQuerySubtotals;
             financeQueryList.Add(financeQuery);
+
+            glActivityTransactions.Add(new FinanceQueryActivityDetail("11_00_01_00_20601_53000")
+            {
+                BudgetPoolIndicator = "",
+                GlAccountDescription = "Test"
+            });
         }
 
 
         public async Task<IEnumerable<FinanceQueryGlAccountLineItem>> GetGLAccountsListAsync(GeneralLedgerUser generalLedgerUser, GeneralLedgerAccountStructure glAccountStructure, GeneralLedgerClassConfiguration glClassConfiguration, FinanceQueryCriteria criteria, string personId)
         {
             return await Task.Run(() => glAccountLineItems);
+        }
+
+        public async Task<IEnumerable<FinanceQueryActivityDetail>> GetFinanceQueryActivityDetailAsync(GeneralLedgerUser generalLedgerUser, GeneralLedgerAccountStructure glAccountStructure, GeneralLedgerClassConfiguration glClassConfiguration, FinanceQueryCriteria criteria, string personId)
+        {
+            return await Task.Run(() => glActivityTransactions);
         }
 
         private FinanceQueryGlAccountLineItem PopulateFinanceQueryGlAccountLineItem(FinanceQueryGlAccount glAccount, GlBudgetPoolType poolType, bool isPooledAccount = false, bool isUmbrellaVisible = true)

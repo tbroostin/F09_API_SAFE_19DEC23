@@ -28,6 +28,9 @@ using System.Web.Http.Controllers;
 using System.Collections;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Colleague.Domain.HumanResources;
+using System.Reflection;
+using Newtonsoft.Json;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -119,7 +122,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string,string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -160,7 +163,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(resultList, 5);
 
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
 
             QueryStringFilter criteria = new QueryStringFilter("criteria", "{'arrangement':{'id':\'" + arrangementGuid + "\'}}");
 
@@ -206,7 +209,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -237,7 +240,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -268,7 +271,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -306,7 +309,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).Throws<Exception>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<Exception>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -315,7 +318,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiKeyNotFoundExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).Throws<KeyNotFoundException>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -324,7 +327,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiArgumentExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).Throws<ArgumentException>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<ArgumentException>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -333,7 +336,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiRepositoryExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<RepositoryException>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -342,7 +345,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiIntegrationExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -351,7 +354,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof (HttpResponseException))]
         public async Task ContributionPayrollDeductionsController_GetThrowsIntAppiPermissionExc()
         {
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),  It.IsAny<bool>())).Throws<PermissionsException>();
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<PermissionsException>();
 
             await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
         }
@@ -470,7 +473,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
             _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
-            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
 
             Object filterObject;
@@ -514,7 +517,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
                 var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
 
-                _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).Throws<PermissionsException>();
                 _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
                     .Throws(new PermissionsException("User 'npuser' does not have permission to view contribution-payroll-deductions."));
                 await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
@@ -613,6 +616,51 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             }
         }
 
+        [TestMethod]
+        public void ContributionPayrollDeductionsController_DeductedOn_SupportedFilterOperators()
+        {
+
+            var modelType = typeof(Dtos.ContributionPayrollDeductions);
+            var key = new List<string>() { "criteria" };
+            var memberName = "DeductedOn";
+
+            var filterAttributes = new List<string>();
+            var supportedFilterDict = new Dictionary<List<string>, List<string>>();
+
+            var properties = modelType.GetProperties();
+
+            PropertyInfo matchingProperty = properties
+               .FirstOrDefault(p => Attribute.IsDefined(p, typeof(JsonPropertyAttribute))
+               && (((JsonPropertyAttribute)Attribute.GetCustomAttribute(
+                                p, typeof(JsonPropertyAttribute))).PropertyName != null)
+               && (((JsonPropertyAttribute)Attribute.GetCustomAttribute(
+                                p, typeof(JsonPropertyAttribute))).PropertyName.ToLower() == memberName.ToLower()
+                                ));
+
+            var matchingFilterAttributes = matchingProperty.GetCustomAttributes(typeof(FilterPropertyAttribute), false);
+
+            foreach (FilterPropertyAttribute matchingFilterAttribute in matchingFilterAttributes)
+            {
+
+                filterAttributes = (matchingFilterAttribute.Name).ToList();
+
+                if (matchingFilterAttribute.Name[0] == key[0] && (matchingFilterAttribute.SupportedOperators != null))
+                {
+                    supportedFilterDict.Add((matchingFilterAttribute.Name).ToList(), (matchingFilterAttribute.SupportedOperators).ToList());
+                    break;
+                }
+            }
+
+            var expected = supportedFilterDict.FirstOrDefault(x => x.Key[0] == key[0]);
+
+            Assert.IsNotNull(expected, "expected");
+            Assert.IsTrue(expected.Value.Contains("$eq"), "Contains $eq");
+            Assert.IsTrue(expected.Value.Contains("$gte"), "Contains $gte");
+            Assert.IsTrue(expected.Value.Contains("$lte"), "Contains $lte");
+            Assert.IsTrue(expected.Value.Contains("$lt"), "Contains $lt");
+            Assert.IsTrue(expected.Value.Contains("$gt"), "Contains $gt");
+            Assert.IsFalse(expected.Value.Contains("$ne"), "Contains $ne");
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>

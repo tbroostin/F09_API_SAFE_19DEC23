@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.Finance.Entities;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Finance.DataContracts;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -51,26 +52,42 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
 
         public IEnumerable<AccountPeriod> GetAccountPeriods(string studentId)
         {
-            if (!_executedTransaction)
+            try
             {
-                PopulateLocalData(studentId);
+                if (!_executedTransaction)
+                {
+                    PopulateLocalData(studentId);
+                }
+
+                IEnumerable<AccountPeriod> accountPeriods = _cachedPeriods;
+
+                return accountPeriods;
             }
-
-            IEnumerable<AccountPeriod> accountPeriods = _cachedPeriods;
-
-            return accountPeriods;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         public AccountPeriod GetNonTermAccountPeriod(string studentId)
         {
-            if (!_executedTransaction)
+            try
             {
-                PopulateLocalData(studentId);
+                if (!_executedTransaction)
+                {
+                    PopulateLocalData(studentId);
+                }
+
+                AccountPeriod nonTermPeriod = _cachedNonTermPeriod;
+
+                return nonTermPeriod;
             }
-
-            AccountPeriod nonTermPeriod = _cachedNonTermPeriod;
-
-            return nonTermPeriod;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         [Obsolete("Obsolete as of API version 1.8, use GetTermActivityForStudent2 instead")]
@@ -88,9 +105,16 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("studentId");
             }
 
-            // Get the data from cache or get it and cache it for 1 minute
-            return GetOrAddToCache("GetTermActivity-" + studentId + "-" + termId,
-                () => ExecuteActivityByTermAdminCTX2(termId, studentId), 1);
+            try
+            {
+                // Get the data from cache or get it and cache it for 1 minute
+                return GetOrAddToCache("GetTermActivity-" + studentId + "-" + termId,
+                    () => ExecuteActivityByTermAdminCTX2(termId, studentId), 1);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         [Obsolete("Obsolete as of API version 1.8, use GetPeriodActivityForStudent2 instead")]
@@ -137,8 +161,15 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 period = PeriodType.Current;
             }
-            return GetOrAddToCache("GetPeriodActivity-" + studentId + "-" + period.ToString(),
-                () => ExecuteActivityByPeriodAdminCTX2(termIds, startDate, endDate, studentId), 1);
+            try
+            {
+                return GetOrAddToCache("GetPeriodActivity-" + studentId + "-" + period.ToString(),
+                    () => ExecuteActivityByPeriodAdminCTX2(termIds, startDate, endDate, studentId), 1);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -164,92 +195,108 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("awardId");
             }
 
-            string criteria = studentId + "*" + awardId;
-            string fileName = "";
-
-            //Create student award disbursement information entity with existing data
-            StudentAwardDisbursementInfo disbInfo = new StudentAwardDisbursementInfo(studentId, awardId, awardYearCode);
-
-            //Get separate disbursements information from SL.ACYR, TC.ACYR/DATE.AWARD, or PELL.ACYR based on the award category
-            if (awardCategory == TIVAwardCategory.Loan)
+            try
             {
-                fileName = "SL." + awardYearCode;
-                var loanData = await DataReader.ReadRecordAsync<SlAcyr>(fileName, criteria);
-                if(loanData == null)
+                string criteria = studentId + "*" + awardId;
+                string fileName = "";
+
+                //Create student award disbursement information entity with existing data
+                StudentAwardDisbursementInfo disbInfo = new StudentAwardDisbursementInfo(studentId, awardId, awardYearCode);
+
+                //Get separate disbursements information from SL.ACYR, TC.ACYR/DATE.AWARD, or PELL.ACYR based on the award category
+                if (awardCategory == TIVAwardCategory.Loan)
                 {
-                    string message = string.Format("Could not locate an SL.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
-                    LogDataError("SL.ACYR", fileName, null, null, message);
-                    throw new KeyNotFoundException(message);
-                }
-                foreach (var disb in loanData.SlLoanDisbEntityAssociation)
-                {
-                    disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.SlAntDisbTermAssocMember, disb.SlAntDisbDateAssocMember, disb.SlActDisbAmtAssocMember, disb.SlInitDisbDtAssocMember));
-                }
-            }
-            else if (awardCategory == TIVAwardCategory.Teach)
-            {
-                fileName = "TC." + awardYearCode;
-                var teachAwardData = await DataReader.ReadRecordAsync<TcAcyr>(fileName, criteria);
-                if(teachAwardData == null)
-                {
-                    string message = string.Format("Could not locate an TC.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
-                    LogDataError("TC.ACYR", fileName, null, null, message);
-                    throw new KeyNotFoundException(message);                    
-                }
-                string tcDateAwardId = teachAwardData.TcDateAwardId;
-                if (!string.IsNullOrEmpty(tcDateAwardId))
-                {
-                    var dateAwardData = await DataReader.ReadRecordAsync<DateAward>(tcDateAwardId);
-                    if(dateAwardData == null)
+                    fileName = "SL." + awardYearCode;
+                    var loanData = await DataReader.ReadRecordAsync<SlAcyr>(fileName, criteria);
+                    if (loanData == null)
                     {
-                        string message = string.Format("Could not locate an DATE.AWARD file with specified criteria: {0}", tcDateAwardId);
-                        LogDataError("DATE.AWARD", tcDateAwardId, null, null, message);
+                        string message = string.Format("Could not locate an SL.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
+                        LogDataError("SL.ACYR", fileName, null, null, message);
                         throw new KeyNotFoundException(message);
                     }
-                    var tcDisbData = await DataReader.BulkReadRecordAsync<DateAwardDisb>(dateAwardData.DawDateAwardDisbIds.ToArray());
-                    if(tcDisbData == null || !tcDisbData.Any())
+                    foreach (var disb in loanData.SlLoanDisbEntityAssociation)
                     {
-                        string message = "Could not locate an DATE.AWARD.DISB records with specified ids";
-                        LogDataError("DATE.AWARD.DISB", tcDateAwardId, null, null, message);
+                        disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.SlAntDisbTermAssocMember, disb.SlAntDisbDateAssocMember, disb.SlActDisbAmtAssocMember, disb.SlInitDisbDtAssocMember));
+                    }
+                }
+                else if (awardCategory == TIVAwardCategory.Teach)
+                {
+                    fileName = "TC." + awardYearCode;
+                    var teachAwardData = await DataReader.ReadRecordAsync<TcAcyr>(fileName, criteria);
+                    if (teachAwardData == null)
+                    {
+                        string message = string.Format("Could not locate an TC.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
+                        LogDataError("TC.ACYR", fileName, null, null, message);
                         throw new KeyNotFoundException(message);
                     }
-                    foreach(var disb in tcDisbData)
+                    string tcDateAwardId = teachAwardData.TcDateAwardId;
+                    if (!string.IsNullOrEmpty(tcDateAwardId))
                     {
-                        disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.DawdAwardPeriod, disb.DawdDate, disb.DawdXmitAmount, disb.DawdInitialXmitDate));
+                        var dateAwardData = await DataReader.ReadRecordAsync<DateAward>(tcDateAwardId);
+                        if (dateAwardData == null)
+                        {
+                            string message = string.Format("Could not locate an DATE.AWARD file with specified criteria: {0}", tcDateAwardId);
+                            LogDataError("DATE.AWARD", tcDateAwardId, null, null, message);
+                            throw new KeyNotFoundException(message);
+                        }
+                        var tcDisbData = await DataReader.BulkReadRecordAsync<DateAwardDisb>(dateAwardData.DawDateAwardDisbIds.ToArray());
+                        if (tcDisbData == null || !tcDisbData.Any())
+                        {
+                            string message = "Could not locate an DATE.AWARD.DISB records with specified ids";
+                            LogDataError("DATE.AWARD.DISB", tcDateAwardId, null, null, message);
+                            throw new KeyNotFoundException(message);
+                        }
+                        foreach (var disb in tcDisbData)
+                        {
+                            disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.DawdAwardPeriod, disb.DawdDate, disb.DawdXmitAmount, disb.DawdInitialXmitDate));
+                        }
                     }
                 }
+                else if (awardCategory == TIVAwardCategory.Pell)
+                {
+                    fileName = "PELL." + awardYearCode;
+                    var pellData = await DataReader.ReadRecordAsync<PellAcyr>(fileName, criteria);
+                    if (pellData == null)
+                    {
+                        string message = string.Format("Could not locate an PELL.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
+                        LogDataError("PELL.ACYR", fileName, null, null, message);
+                        throw new KeyNotFoundException(message);
+                    }
+                    foreach (var disb in pellData.PellDisbsEntityAssociation)
+                    {
+                        disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.PellDisbAwardPeriodsAssocMember, disb.PellDisbDatesAssocMember, disb.PellActDisbAmountsAssocMember, disb.PellInitDisbDatesAssocMember));
+                    }
+                }
+                return disbInfo;
             }
-            else if (awardCategory == TIVAwardCategory.Pell)
+            catch (ColleagueSessionExpiredException)
             {
-                fileName = "PELL." + awardYearCode;
-                var pellData = await DataReader.ReadRecordAsync<PellAcyr>(fileName, criteria);
-                if(pellData == null)
-                {
-                    string message = string.Format("Could not locate an PELL.ACYR file with specified criteria: {0}, {1}", fileName, criteria);
-                    LogDataError("PELL.ACYR", fileName, null, null, message);
-                    throw new KeyNotFoundException(message);
-                }
-                foreach(var disb in pellData.PellDisbsEntityAssociation)
-                {
-                    disbInfo.AwardDisbursements.Add(new StudentAwardDisbursement(disb.PellDisbAwardPeriodsAssocMember, disb.PellDisbDatesAssocMember, disb.PellActDisbAmountsAssocMember, disb.PellInitDisbDatesAssocMember));
-                }
+                throw;
             }
-            return disbInfo;
+
         }
 
         private void PopulateLocalData(string studentId)
         {
-            var periods = ExecuteAccountPeriodsAdminCTX(studentId);
+            try
+            {
+                var periods = ExecuteAccountPeriodsAdminCTX(studentId);
 
-            var accountPeriods = periods.Where(x => x.Id != NonTerm);
+                var accountPeriods = periods.Where(x => x.Id != NonTerm);
 
-            _cachedPeriods = accountPeriods;
+                _cachedPeriods = accountPeriods;
 
-            var nonTermPeriod = periods.Where(x => x.Id == NonTerm).FirstOrDefault(); ;
+                var nonTermPeriod = periods.Where(x => x.Id == NonTerm).FirstOrDefault(); ;
 
-            _cachedNonTermPeriod = nonTermPeriod;
+                _cachedNonTermPeriod = nonTermPeriod;
 
-            _executedTransaction = true;
+                _executedTransaction = true;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         #region Colleague Transactions

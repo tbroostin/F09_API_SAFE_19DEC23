@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -27,7 +27,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class VoucherRepository : BaseColleagueRepository, IVoucherRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         /// <summary>
         /// This constructor allows us to instantiate a voucher repository object.
         /// </summary>
@@ -135,6 +135,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
+            // Use a colleague transaction to get requestor name. 
+            List<string> personIds = new List<string>();
+            List<string> hierarchies = new List<string>();
+            List<string> personNames = new List<string>();
+            string requestorName = null;
+
+            if ((!string.IsNullOrEmpty(voucher.VouRequestor)))
+            {
+                personIds.Add(voucher.VouRequestor);
+                hierarchies.Add("PREFERRED");
+            }
+
+            // Call a colleague transaction to get the person names based on their hierarchies, if necessary
+            if ((personIds != null) && (personIds.Count > 0))
+            {
+                GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
+                {
+                    IoPersonIds = personIds,
+                    IoHierarchies = hierarchies
+                };
+                GetHierarchyNamesForIdsResponse response = transactionInvoker.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+
+                // The transaction returns the hierarchy names. If the name is multivalued, 
+                // the transaction only returns the first value of the name.
+                if (response != null)
+                {
+                    if (!((response.OutPersonNames == null) || (response.OutPersonNames.Count < 1)))
+                    {
+                        for (int x = 0; x < response.IoPersonIds.Count(); x++)
+                        {
+                            var ioPersonId = response.IoPersonIds[x];
+                            var hierarchy = response.IoHierarchies[x];
+                            var name = response.OutPersonNames[x];
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                    requestorName = name;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!voucher.VouDate.HasValue)
             {
                 throw new ApplicationException("Missing voucher date for voucher: " + voucher.Recordkey);
@@ -162,6 +204,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var voucherDomainEntity = new Voucher(voucher.Recordkey, voucher.VouDate.Value, voucherStatus, voucherVendorName);
             voucherDomainEntity.InvoiceNumber = voucher.VouDefaultInvoiceNo;
             voucherDomainEntity.InvoiceDate = voucher.VouDefaultInvoiceDate;
+            voucherDomainEntity.ApprovalReturnedIndicator = (!string.IsNullOrEmpty(voucher.VouReturnFlag) && voucher.VouReturnFlag.Equals("Y"));
             // The voucher status date contains one to many dates
             var voucherStatusDate = (voucher.VouStatusDate != null && voucher.VouStatusDate.Any()) ? voucher.VouStatusDate.First() : null;
             if (!voucherStatusDate.HasValue)
@@ -175,6 +218,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             voucherDomainEntity.CurrencyCode = voucher.VouCurrencyCode;
 
             voucherDomainEntity.VendorId = voucher.VouVendor;
+
+            if (!string.IsNullOrEmpty(requestorName))
+            {
+                voucherDomainEntity.RequestorName = requestorName;
+            }
+
             if (string.IsNullOrEmpty(voucher.VouAddressId))
             {
                 voucherDomainEntity.VendorAddressLines = voucher.VouMiscAddress;
@@ -456,7 +505,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 // The GL Distribution always uses the local currency amount.
                                 LineItemGlDistribution glDistribution = new LineItemGlDistribution(glDistr.ItmVouGlNoAssocMember,
                                     glDistr.ItmVouGlQtyAssocMember.HasValue ? glDistr.ItmVouGlQtyAssocMember.Value : 0,
-                                    glDistr.ItmVouGlAmtAssocMember.HasValue ? glDistr.ItmVouGlAmtAssocMember.Value : 0);
+                                    glDistr.ItmVouGlAmtAssocMember.HasValue ? glDistr.ItmVouGlAmtAssocMember.Value : 0,
+                                    glDistr.ItmVouGlPctAssocMember.HasValue ? glDistr.ItmVouGlPctAssocMember.Value : 0);
 
                                 if (!(string.IsNullOrEmpty(glDistr.ItmVouProjectCfIdAssocMember)))
                                 {
@@ -876,14 +926,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     response.ErrorMessages = createResponse.AlErrorMessages;
                     response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
                 }
-                response.WarningOccured = (!string.IsNullOrEmpty(createResponse.AWarning) && createResponse.AWarning == "1") ? true : false;
+                // The warning flag can contain the number of warnings.
+                response.WarningOccured = (!string.IsNullOrWhiteSpace(createResponse.AWarning) && createResponse.AWarning != "0") ? true : false;
                 response.WarningMessages = (createResponse.AlWarningMessages != null || createResponse.AlWarningMessages.Any()) ? createResponse.AlWarningMessages : new List<string>();
 
             }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -938,7 +989,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return address;
@@ -969,14 +1020,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     response.ErrorMessages = createResponse.AlErrorMessages;
                     response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
                 }
-                response.WarningOccured = (!string.IsNullOrEmpty(createResponse.AWarning) && createResponse.AWarning == "1") ? true : false;
+                // The warning flag can contain the number of warnings.
+                response.WarningOccured = (!string.IsNullOrWhiteSpace(createResponse.AWarning) && createResponse.AWarning != "0") ? true : false;
                 response.WarningMessages = (createResponse.AlWarningMessages != null || createResponse.AlWarningMessages.Any()) ? createResponse.AlWarningMessages : new List<string>();
 
             }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -1020,7 +1072,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -1186,6 +1238,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     };
                     var glAccts = new List<string>();
                     var glDistributionAmounts = new List<decimal?>();
+                    var glDistributionQuantities = new List<decimal?>();
+                    var glDistributionPercents = new List<decimal?>();
                     var projectNos = new List<string>();
                     if (apLineItem.GlDistributions != null && apLineItem.GlDistributions.Any())
                     {
@@ -1193,11 +1247,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
                             glDistributionAmounts.Add(item.Amount);
+                            glDistributionQuantities.Add(item.Quantity);
+                            glDistributionPercents.Add(item.Percent);
                             projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
                         }
                     }
                     lineItem.AlItemGlAccts = string.Join("|", glAccts);
                     lineItem.AlItemGlAcctAmts = string.Join("|", glDistributionAmounts);
+                    lineItem.AlItemGlAcctQtys = string.Join("|", glDistributionQuantities);
+                    lineItem.AlItemGlAcctPcts = string.Join("|", glDistributionPercents);
                     lineItem.AlItemProjectNos = string.Join("|", projectNos);
                     lineItems.Add(lineItem);
                 }
@@ -1349,6 +1407,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                         var glAccts = new List<string>();
                         var glDistributionAmounts = new List<decimal?>();
+                        var glDistributionQuantities = new List<decimal?>();
+                        var glDistributionPercents = new List<decimal?>();
                         var projectNos = new List<string>();
                         if (apLineItem.GlDistributions != null && apLineItem.GlDistributions.Any())
                         {
@@ -1356,11 +1416,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             {
                                 glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
                                 glDistributionAmounts.Add(item.Amount);
+                                glDistributionQuantities.Add(item.Quantity);
+                                glDistributionPercents.Add(item.Percent);
                                 projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
                             }
                         }
                         lineItem.AlItemGlAccts = string.Join("|", glAccts);
                         lineItem.AlItemGlAcctAmts = string.Join("|", glDistributionAmounts);
+                        lineItem.AlItemGlAcctQtys = string.Join("|", glDistributionQuantities);
+                        lineItem.AlItemGlAcctPcts = string.Join("|", glDistributionPercents);
                         lineItem.AlItemProjectNos = string.Join("|", projectNos);
                         lineItems.Add(lineItem);
                     }
@@ -1566,7 +1630,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 RequestorName = requestorName,
                 Amount = voucherDataContract.VouTotalAmt.HasValue ? voucherDataContract.VouTotalAmt.Value : 0,
                 InvoiceDate = voucherDataContract.VouDefaultInvoiceDate.HasValue ? voucherDataContract.VouDefaultInvoiceDate.Value : default(DateTime?),
-                InvoiceNumber = voucherDataContract.VouDefaultInvoiceNo
+                InvoiceNumber = voucherDataContract.VouDefaultInvoiceNo,
+                ApprovalReturnedIndicator = (!string.IsNullOrEmpty(voucherDataContract.VouReturnFlag) && voucherDataContract.VouReturnFlag.Equals("Y"))
             };
             // build approvers and add to entity
             if ((voucherDataContract.VouAuthEntityAssociation != null) && (voucherDataContract.VouAuthEntityAssociation.Any()))
@@ -1849,6 +1914,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             voucherDomainEntity.VendorId = voucher.VouVendor;
             voucherDomainEntity.InvoiceNumber = voucher.VouDefaultInvoiceNo;
             voucherDomainEntity.InvoiceDate = voucher.VouDefaultInvoiceDate;
+
             return voucherDomainEntity;
         }
 
@@ -2036,7 +2102,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch (Exception ex)
                     {
-                        throw ex;
+                        throw;
                     }
                 }
             }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -101,7 +101,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// List of Tax form boxes with their amounts.
         /// </summary>
-        public List<TaxFormBoxesPdfData> TaxFormBoxesList = new List<TaxFormBoxesPdfData>();
+        public List<TaxFormBoxesPdfData> TaxFormBoxesList { get { return taxFormBoxesList; } set { taxFormBoxesList = value; } }
+        private List<TaxFormBoxesPdfData> taxFormBoxesList = new List<TaxFormBoxesPdfData>();
 
         /// <summary>
         /// Initializes a new instance of the T4A pdf form.

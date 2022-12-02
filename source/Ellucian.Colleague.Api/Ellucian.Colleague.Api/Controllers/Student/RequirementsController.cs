@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Web.Http;
@@ -13,6 +13,9 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
+using System;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -49,12 +52,27 @@ namespace Ellucian.Colleague.Api.Controllers
         [ParameterSubstitutionFilter]
         public async Task<Ellucian.Colleague.Dtos.Student.Requirements.Requirement> GetAsync(string id)
         {
-            var requirementEntity = await _RequirementRepository.GetAsync(id);
+            try
+            {
+                var requirementEntity = await _RequirementRepository.GetAsync(id);
 
-            var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
+                var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
 
-            Requirement requirementDto = requirementDtoAdapter.MapToType(requirementEntity);
-            return requirementDto;
+                Requirement requirementDto = requirementDtoAdapter.MapToType(requirementEntity);
+                return requirementDto;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving requirement details";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occurred while retrieving requirement details";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <summary>
@@ -64,17 +82,33 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>List of the requested <see cref="Requirement">Requirement</see> objects</returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Requirements.Requirement>> QueryRequirementsByPostAsync([FromBody] RequirementQueryCriteria criteria )
         {
-            var requirementDtos = new List<Dtos.Student.Requirements.Requirement>();
-            
-            var requirementEntities = await _RequirementRepository.GetAsync(criteria.RequirementIds);
-
-            var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
-
-            foreach (var requirementEntity in requirementEntities)
+            try
             {
-                requirementDtos.Add(requirementDtoAdapter.MapToType(requirementEntity));
+                var requirementDtos = new List<Dtos.Student.Requirements.Requirement>();
+
+                var requirementEntities = await _RequirementRepository.GetAsync(criteria.RequirementIds);
+
+                var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
+
+                foreach (var requirementEntity in requirementEntities)
+                {
+                    requirementDtos.Add(requirementDtoAdapter.MapToType(requirementEntity));
+                }
+                return requirementDtos;
             }
-            return requirementDtos;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while querying requirements";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occurred while querying requirements";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
         }
 
     }

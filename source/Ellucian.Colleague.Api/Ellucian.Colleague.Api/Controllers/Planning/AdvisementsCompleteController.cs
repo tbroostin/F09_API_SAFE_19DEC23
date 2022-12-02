@@ -19,6 +19,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base;
 using System.Web;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Planning
 {
@@ -67,6 +68,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while posting completed advisement for student " + studentId;
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

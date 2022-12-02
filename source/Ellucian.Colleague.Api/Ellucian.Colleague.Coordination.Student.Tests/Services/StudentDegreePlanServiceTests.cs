@@ -20,6 +20,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Web.License;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -1496,7 +1497,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var result = await studentDegreePlanService.CreateDegreePlan5Async("0000896");
             }
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentDegreePlanService_CreateDegreePlan5Async_ExceptionIfStudentRepositoryReturnsNull()
             {
 
@@ -1649,7 +1650,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentDegreePlanService_CreateDegreePlan6Async_ExceptionIfStudentRepositoryReturnsNull()
             {
 

@@ -1,11 +1,6 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using slf4net;
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
+using slf4net;
 
 namespace Ellucian.Colleague.Coordination.Base.Adapters
 {
@@ -28,7 +23,7 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
         /// <returns>The corresponding Phone Entity</returns>
         public override Domain.Base.Entities.Phone MapToType(Dtos.Base.Phone Source)
         {
-            Domain.Base.Entities.Phone phoneEntity = new Domain.Base.Entities.Phone(Source.Number, Source.TypeCode, Source.Extension);
+            Domain.Base.Entities.Phone phoneEntity = new Domain.Base.Entities.Phone(Source.Number, Source.TypeCode, Source.Extension, Source.IsAuthorizedForText);
             return phoneEntity;
         }
     }

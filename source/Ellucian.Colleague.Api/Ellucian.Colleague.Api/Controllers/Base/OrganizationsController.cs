@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -212,9 +212,10 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(new ArgumentException("There is bad educational-institutions data preventing Organizations from making a required check.")));
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
                 //yes we are hiding other errors on purpose the method could fail with an error if the educational-institution is not found by the id
+                _logger.Error(ex.Message, "Error: educational-institution is not found by the id");
             }
 
 
@@ -442,10 +443,11 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(new ArgumentException("There is bad educational-institutions data preventing Organizations from making a required check.")));
             }
-            catch (Exception exception) 
+            catch (Exception ex)
             {
                 //yes we are hiding other errors on purpose, this check is being done to make sure the organization being updates is not an institution
                 //the method will fail with an error if the educational-institution is not found by the id
+                _logger.Error(ex.Message, "Error: educational-institution not found by the id");
             }
 
             try

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -2264,21 +2264,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsEmptyListForNoFacultyId()
+            public async Task GetFacultySections5_ReturnsEmptyListForNoFacultyId()
             {
                 var result = await facultyService.GetFacultySections5Async(null, null, null, false);
                 Assert.AreEqual(0, result.Dto.Count());
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsEmptyListForFacultyWithNoSections()
+            public async Task GetFacultySections5_ReturnsEmptyListForFacultyWithNoSections()
             {
                 var result = await facultyService.GetFacultySections5Async("0000003", null, null, false);
                 Assert.AreEqual(0, result.Dto.Count());
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsAllFaculty1Sections()
+            public async Task GetFacultySections5_ReturnsAllFaculty1Sections()
             {
                 // mainly setup validation
                 DateTime start = new DateTime(2011, 8, 1);
@@ -2288,7 +2288,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsAllFaculty2Sections()
+            public async Task GetFacultySections5_ReturnsAllFaculty2Sections()
             {
                 // mainly setup validation
                 DateTime start = new DateTime(2011, 8, 1);
@@ -2298,7 +2298,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsAllFaculty1FallSections()
+            public async Task GetFacultySections5_ReturnsAllFaculty1FallSections()
             {
                 DateTime start = new DateTime(2011, 8, 1);
                 DateTime end = new DateTime(2011, 12, 31);
@@ -2307,7 +2307,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsAllFaculty1FallSections_NoCache()
+            public async Task GetFacultySections5_ReturnsAllFaculty1FallSections_NoCache()
             {
                 DateTime start = new DateTime(2011, 8, 1);
                 DateTime end = new DateTime(2011, 12, 31);
@@ -2316,7 +2316,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsSixFaculty1FallSections()
+            public async Task GetFacultySections5_ReturnsSixFaculty1FallSections()
             {
                 DateTime start = new DateTime(2011, 9, 5);
                 DateTime end = new DateTime(2011, 12, 15);
@@ -2326,7 +2326,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsTwoFaculty1SpringSections()
+            public async Task GetFacultySections5_ReturnsTwoFaculty1SpringSections()
             {
                 DateTime start = new DateTime(2012, 1, 5);
                 DateTime end = new DateTime(2012, 5, 30);
@@ -2335,7 +2335,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsZeroFaculty1SummerSections()
+            public async Task GetFacultySections5_ReturnsZeroFaculty1SummerSections()
             {
                 DateTime start = new DateTime(2012, 6, 4);
                 DateTime end = new DateTime(2012, 8, 25);
@@ -2344,7 +2344,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_ReturnsFiveFaculty1FallSpringSections()
+            public async Task GetFacultySections5_ReturnsFiveFaculty1FallSpringSections()
             {
                 DateTime start = new DateTime(2011, 11, 16);
                 // null end date maps to 11/16/2011 + 90 days
@@ -2353,7 +2353,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4_EnsuresStartEndOrder()
+            public async Task GetFacultySections5_EnsuresStartEndOrder()
             {
                 DateTime start = new DateTime(2011, 11, 16);
                 DateTime end = new DateTime(2011, 10, 15);
@@ -2363,7 +2363,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4Async_result_has_no_Privacy_Restrictions()
+            public async Task GetFacultySections5_ReturnsDepartmentCodes()
+            {
+                DateTime start = new DateTime(2011, 8, 1);
+                DateTime end = new DateTime(2011, 12, 31);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false, false);
+                Assert.AreEqual(6, result.Dto.Count());
+                Assert.AreEqual(2, result.Dto.ElementAt(0).DepartmentCodes.Count());
+                Assert.AreEqual(2, result.Dto.ElementAt(1).DepartmentCodes.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections5Async_result_has_no_Privacy_Restrictions()
             {
                 DateTime start = new DateTime(2011, 11, 16);
                 DateTime end = new DateTime(2011, 10, 15);
@@ -2388,7 +2399,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            public async Task GetFacultySections4Async_result_has_Privacy_Restrictions()
+            public async Task GetFacultySections5Async_result_has_Privacy_Restrictions()
             {
                 DateTime start = new DateTime(2011, 11, 16);
                 DateTime end = new DateTime(2011, 10, 15);
@@ -3164,14 +3175,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
             //user does not have VIEW.ANY.ADVISEE permission
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
             public async Task FacultyDoesNotHaveViewAdviseePermission()
             {
                 //assign permission to current user
                 facultyRole.AddPermission(new Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { facultyRole });
                 var result = await facultyService.SearchFacultyIdsAsync(false, false);
-               
+                Assert.IsNotNull(result);
+                Assert.AreEqual(2, result.Count());
+                Assert.AreEqual("0002", result.ToList()[1]);
             }
             //when permission is empty or null
             [TestMethod]

@@ -17,6 +17,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Adapters
         UserProfileViewUpdateOption CanViewUpdateNickname;
         UserProfileViewUpdateOption CanViewUpdateGenderIdentity;
         UserProfileViewUpdateOption CanViewUpdatePronoun;
+        bool AuthorizePhonesForText;
 
         UserProfileConfiguration2 UserProfileConfigurationDto;
         Ellucian.Colleague.Domain.Base.Entities.UserProfileConfiguration2 UserProfileConfigurationEntity;
@@ -27,6 +28,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Adapters
         {
             CanUpdateEmailWithoutPermission = true;
             CanUpdatePhoneWithoutPermission = true;
+            AuthorizePhonesForText = true;
             CanViewUpdateChosenName = UserProfileViewUpdateOption.Viewable;
             CanViewUpdateNickname = UserProfileViewUpdateOption.Updatable;
             CanViewUpdateGenderIdentity = UserProfileViewUpdateOption.NotAllowed;
@@ -50,6 +52,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Adapters
             UserProfileConfigurationEntity.CanViewUpdateNickname = Ellucian.Colleague.Domain.Base.Entities.UserProfileViewUpdateOption.Updatable;
             UserProfileConfigurationEntity.CanViewUpdateGenderIdentity = Ellucian.Colleague.Domain.Base.Entities.UserProfileViewUpdateOption.NotAllowed;
             UserProfileConfigurationEntity.CanViewUpdatePronoun = Ellucian.Colleague.Domain.Base.Entities.UserProfileViewUpdateOption.Viewable;
+            UserProfileConfigurationEntity.AuthorizePhonesForText = true;
+
 
             UserProfileConfigurationDto = UserProfileConfigurationAdapter.MapToType(UserProfileConfigurationEntity);
         }
@@ -88,6 +92,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Adapters
         public void UserProfileConfigAdapterTests_CanViewUpdatePronoun()
         {
             Assert.AreEqual(CanViewUpdatePronoun, UserProfileConfigurationDto.CanViewUpdatePronoun);
+        }
+
+        [TestMethod]
+        public void UserProfileConfigAdapterTests_TextAuthorize()
+        {
+            Assert.AreEqual(AuthorizePhonesForText, UserProfileConfigurationDto.AuthorizePhonesForText);
         }
     }
 }

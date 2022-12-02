@@ -1,9 +1,10 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -84,7 +85,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch(Exception ex)
             {
-                throw new Exception("Grade Change Reason not found for id " + id, ex);
+                throw new ColleagueWebApiException("Grade Change Reason not found for id " + id, ex);
             }
         }
 

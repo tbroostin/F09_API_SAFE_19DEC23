@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (evaluationResultEntities == null || !evaluationResultEntities.Any())                
             {
                 var message = string.Format("No evaluationResults exist for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<AcademicProgressEvaluation>();
             }
 
@@ -101,14 +101,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     var studentProgram = studentPrograms.FirstOrDefault(p => p.ProgramCode == evaluationResultEntity.AcademicProgramCode);
                     if (studentProgram == null)
                     {
-                        logger.Warn("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", evaluationResultEntity.AcademicProgramCode, evaluationResultEntity.Id, studentId);
+                        logger.Debug("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", evaluationResultEntity.AcademicProgramCode, evaluationResultEntity.Id, studentId);
                         continue;
                     }
 
                     var programRequirements = await programRequirementsRepository.GetAsync(studentProgram.ProgramCode, studentProgram.CatalogCode);
                     if (programRequirements == null)
                     {
-                        logger.Warn("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", studentProgram.ProgramCode, studentProgram.CatalogCode, evaluationResultEntity.Id, studentId);
+                        logger.Debug("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", studentProgram.ProgramCode, studentProgram.CatalogCode, evaluationResultEntity.Id, studentId);
                         continue;
                     }
 
@@ -149,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (evaluationResultEntities == null || !evaluationResultEntities.Any())
             {
                 var message = string.Format("No evaluationResults exist for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<AcademicProgressEvaluation2>();
             }
 
@@ -171,7 +171,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     var studentProgram = studentPrograms.FirstOrDefault(p => p.ProgramCode == evaluationResultEntity.AcademicProgramCode);
                     if (studentProgram == null)
                     {
-                        logger.Warn("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", evaluationResultEntity.AcademicProgramCode, evaluationResultEntity.Id, studentId);
+                        logger.Debug("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", evaluationResultEntity.AcademicProgramCode, evaluationResultEntity.Id, studentId);
                         continue;
                     }
                     Domain.FinancialAid.Entities.AcademicProgressProgramDetail programDetail = null;
@@ -181,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     }
                     catch(KeyNotFoundException knfe)
                     {
-                        logger.Warn("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", studentProgram.ProgramCode, studentProgram.CatalogCode, evaluationResultEntity.Id, studentId);                        
+                        logger.Debug("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", studentProgram.ProgramCode, studentProgram.CatalogCode, evaluationResultEntity.Id, studentId);                        
                     }
 
                     academicProgressEvaluationEntities.Add(new Domain.FinancialAid.Entities.AcademicProgressEvaluation2(evaluationResultEntity, programDetail, studentAppeals));

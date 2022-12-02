@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IConfigurationRepository _configurationRepository;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public VendorsService(
             IColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository,
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("No vendor was found for guid  " + guid, ex);
+                throw new ColleagueWebApiException("No vendor was found for guid  " + guid, ex);
             }
         }
 
@@ -391,7 +391,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -433,7 +433,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
             List<Institution> institutions = null;
             if (createdVendor != null)
@@ -748,11 +748,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             relatedVendors.Add(relatedVendor);
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // do not throw error 
-                    }
-
+                        // do not throw error
+                        logger.Error(ex, "Unable to add related vendor.");
+                    } 
                 }
                 if (relatedVendors.Any())
                 {
@@ -1068,7 +1068,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("No vendor was found for guid  " + guid, ex);
+                throw new ColleagueWebApiException("No vendor was found for guid  " + guid, ex);
             }
         }
 
@@ -1400,7 +1400,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     vendorGuidId = await _vendorsRepository.GetVendorIdFromGuidAsync(vendorDto.Id);
                 }
-                catch {}
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Unable to get vendor from guid.");
+                }
             }
             var vendorEntity = new Domain.ColleagueFinance.Entities.Vendors(vendorDto.Id);
 
@@ -1441,8 +1444,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Institution.Id);
                     }
-                    catch (Exception)
-                    { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Unable to get person by guid.");
+                    }
                     if (person == null)
                     {
                         IntegrationApiExceptionAddError(string.Concat("Unable to locate person record for institution for guid: ", vendorDetail.Institution.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
@@ -1470,7 +1475,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Organization.Id);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Unable to get person by guid.");
+                    }
                     if (person == null)
                     {
                         IntegrationApiExceptionAddError(string.Concat("Unable to locate organization record for guid: ", vendorDetail.Organization.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
@@ -1499,8 +1507,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Person.Id);
                     }
-                    catch
-                    { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Unable to get person by guid.");
+                    }
                     if (person == null)
                     {
                         IntegrationApiExceptionAddError(string.Concat("Unable to locate person record for guid: ", vendorDetail.Person.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
@@ -1842,11 +1852,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                         relatedVendors.Add(relatedVendor);
                                     }
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    // do not throw error 
+                                    // do not throw error
+                                    logger.Error(ex, "Unable to add related vendor.");
                                 }
-
                             }
                             if (relatedVendors.Any())
                             {
@@ -2488,7 +2498,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("No vendor was found for guid  " + guid, ex);
+                throw new ColleagueWebApiException("No vendor was found for guid  " + guid, ex);
             }
         }
         

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Linq;
@@ -88,7 +88,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             if ((!string.IsNullOrEmpty(status)) && (!ValidEnumerationValue(typeof(SectionStatus2), status)))
             {
-                throw new Exception(string.Concat("'", status, "' is an invalid enumeration value. "));
+                throw new ColleagueWebApiException(string.Concat("'", status, "' is an invalid enumeration value. "));
             }
 
             var bypassCache = false;

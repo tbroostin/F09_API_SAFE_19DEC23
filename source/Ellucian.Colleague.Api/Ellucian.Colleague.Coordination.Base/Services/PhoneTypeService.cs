@@ -1,4 +1,4 @@
-﻿// Copyright 2015-16 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -89,6 +90,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         phoneTypeCollection.Add(adapter.MapToType(phoneType));
                     }
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

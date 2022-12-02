@@ -59,6 +59,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         public async Task<IHttpActionResult> GetContributionPayrollDeductionsAsync(Paging page, QueryStringFilter criteria)
         {
             string arrangement = string.Empty;
+            string deductedOn = string.Empty;
 
             var bypassCache = false;
 
@@ -81,12 +82,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 if (criteriaObj != null)
                 {
                     arrangement = criteriaObj.Arrangement != null ? criteriaObj.Arrangement.Id : string.Empty;
+                    deductedOn = criteriaObj.DeductedOn != null ? criteriaObj.DeductedOn.ToString() : string.Empty;
                 }
 
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.ContributionPayrollDeductions>>(new List<Dtos.ContributionPayrollDeductions>(), page, 0, this.Request);
+                
+                var filterQualifiers = GetFilterQualifiers(_logger);
 
-                var pageOfItems = await _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(page.Offset, page.Limit, arrangement, bypassCache);
+                var pageOfItems = await _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(page.Offset, page.Limit, arrangement, deductedOn, filterQualifiers, bypassCache);
 
                 AddEthosContextProperties(
                     await _contributionPayrollDeductionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

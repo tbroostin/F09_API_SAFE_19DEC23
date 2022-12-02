@@ -1,8 +1,9 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -10,6 +11,7 @@ using slf4net;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -26,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IStudentReferenceDataRepository referenceDataRepository;
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the CapSizesController class.
@@ -65,10 +68,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return capSizeDtoCollection;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (System.Exception e)
             {
                 this.logger.Error(e, "Unable to retrieve the Cap Size information");
-                throw CreateHttpResponseException("Unable to retrieve data");
+                throw CreateHttpResponseException("Unable to retrieve the Cap Size information.", System.Net.HttpStatusCode.BadRequest);
             }
         }
     }

@@ -1,12 +1,14 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -46,15 +48,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             //select PERPOS records that specify this supervisor Id as the supervisor
             var superviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId, lookupStartDate);
-
+            logger.Debug(string.Format("**********PERPOS records that specify {0} as the supervisor fetched**********", supervisorId));
             //next, get the supervisor's list of positions
             var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId, lookupStartDate);
-
+            logger.Debug(string.Format("**********List of positions for {0} fetched**********", supervisorId));
             // 2. now get positions where the supervisor's position is specified as the supervisorPosition; 
             var superviseePositionIds = await getPositionIdsSupervisedByPositionIds(supervisorPositionIds);
+            logger.Debug(string.Format("**********List of the Position records that have a Supervisor Position Id equal to one of {0} fetched**********", string.Join(",", supervisorPositionIds)));
 
             // 3.  get the people from perpos who have those positions of the supervisor assignment is empty
             var additionalSuperviseePerposKeys = await getPerposIdsByPositionIdsWithoutDirectSupervisor(superviseePositionIds, lookupStartDate);
+            logger.Debug(string.Format("**********List of the Perpos records that have a Position Id equal to one of {0} and that aren't already assigned to a specific supervisor fetched**********", string.Join(",", superviseePositionIds)));
 
             var allSuperviseePerposKeys = superviseePerposKeys.Concat(additionalSuperviseePerposKeys).ToArray();
 
@@ -64,14 +68,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 if (string.IsNullOrWhiteSpace(superviseePerposRecord.PerposHrpId))
                 {
-                    LogDataError("PerposHrpId", superviseePerposRecord.Recordkey, superviseePerposRecord);
+                    LogDataError("PerposHrpId", superviseePerposRecord.Recordkey, new object());
                 }
                 else
                 {
                     superviseeIds.Add(superviseePerposRecord.PerposHrpId);
                 }
             }
-
+            logger.Debug("*******Complete list of direct and position supervisors fetched successfully********");
             // return the complete list
             return superviseeIds.Distinct().ToList();
         }
@@ -96,10 +100,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // CH-12939: lookback added to limit PERPOS records to only those without an end date or with end dates after the lookback start date.
             var allSuperviseeIdPerposIds = await getSuperviseePerposIds(superviseeId, lookupStartDate);
 
+            logger.Debug(string.Format("***********PERPOS ids fetched for {0}*******", superviseeId));
+            
             if (allSuperviseeIdPerposIds.Any())
             {
                 // get all the PERPOS records for this supervisee
                 var superviseePerposRecords = await getPerposRecords(allSuperviseeIdPerposIds);
+                logger.Debug(string.Format("********PERPOS records fetched for {0}********", superviseeId));
 
                 foreach (var superviseePerposRecord in superviseePerposRecords)
                 {
@@ -117,7 +124,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                         else
                         {
-                            LogDataError("PERPOS", superviseePerposRecord.Recordkey, superviseePerposRecord, null, "PERPOS does not have position ID specified.");
+                            LogDataError("PERPOS", superviseePerposRecord.Recordkey, new object(), null, "PERPOS does not have position ID specified.");
                         }
                     }
                 }
@@ -142,7 +149,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 logger.Error("No supervisors returned for person.");
             }
-
+            logger.Debug(string.Format("********Direct and position supervisors fetched successfully for {0}********", superviseeId));
             return allSupervisorIds.Distinct().ToList();
         }
 
@@ -176,9 +183,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perposKeys.Any())
             {
-                logger.Info(string.Format("No PERPOS keys exist for positions: {0}", string.Join(", ", positionIds.Distinct())));
+                logger.Error(string.Format("No PERPOS keys exist for positions: {0}", string.Join(", ", positionIds.Distinct())));
             }
-
+            logger.Debug(string.Format("*********Ids of the Perpos records that have a PositionId equal to one of {0} obtained successfully*******", string.Join(",", positionIds.Distinct())));
             return perposKeys;
         }
 
@@ -196,8 +203,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // restricts PERPOS records to only ones with an end date after the lookupStartDate OR with no end date specified
             if (lookupStartDate.HasValue)
             {
-                superviseePerposCriteria += " AND (PERPOS.END.DATE GE '" + 
-                    UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, 
+                superviseePerposCriteria += " AND (PERPOS.END.DATE GE '" +
+                    UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat,
                     InternationalParameters.HostDateDelimiter)
                     + "' OR PERPOS.END.DATE EQ '')";
             }
@@ -213,8 +220,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!superviseePerposKeys.Any())
             {
-                logger.Info(string.Format("No PERPOS keys exist for employee {0}", superviseeId));
+                logger.Error(string.Format("No PERPOS keys exist for employee {0}", superviseeId));
             }
+            logger.Debug(string.Format("***********All PERPOS records obtained for {0}*********", superviseeId));
             return superviseePerposKeys;
         }
 
@@ -238,8 +246,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!superviseePerposKeys.Any())
             {
-                logger.Info("No PERPOS keys exist for given list of supervisees");
+                logger.Debug("No PERPOS keys exist for given list of supervisees");
             }
+
+            logger.Debug(string.Format("**********All PERPOS records obtained for {0}********", string.Join(",", superviseeIds.Distinct())));
+
             return superviseePerposKeys;
         }
 
@@ -265,6 +276,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     returnList.AddRange(perposRecords);
                 }
             }
+
+            logger.Debug(string.Format("*********PERPOS records obtained for {0}*********", string.Join(",", perposIds.Distinct())));
+
             return returnList;
         }
 
@@ -293,7 +307,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!superviseePerposKeys.Any())
             {
-                logger.Info(string.Format("No PERPOS keys exist where {0} is supervisor", supervisorId));
+                logger.Error(string.Format("No PERPOS keys exist where {0} is supervisor", supervisorId));
             }
             return superviseePerposKeys;
         }
@@ -326,7 +340,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 if (string.IsNullOrWhiteSpace(position.PerposPositionId))
                 {
-                    LogDataError("PerposPositionId", position.Recordkey, position);
+                    LogDataError("PerposPositionId", position.Recordkey, new object());
                 }
                 else
                 {
@@ -369,7 +383,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!superviseePositionKeys.Any())
             {
-                logger.Info(string.Format("No POSITION keys exist for position supervisors: {0}", string.Join(", ", supervisorPositionIds.Distinct())));
+                logger.Error(string.Format("No POSITION keys exist for position supervisors: {0}", string.Join(", ", supervisorPositionIds.Distinct())));
 
                 // this supervisor has no position subordinates so we can return our current list
                 return new List<string>();
@@ -393,7 +407,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 if (string.IsNullOrWhiteSpace(superviseePositionRecord.Recordkey))
                 {
-                    LogDataError("Position", "no record key!", superviseePositionRecord);
+                    LogDataError("Position", "no record key!", new object());
                 }
                 else
                 {
@@ -431,7 +445,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perposKeys.Any())
             {
-                logger.Info(string.Format("No PERPOS keys exist for supervisees: {0}", string.Join(", ", positionIds.Distinct())));
+                logger.Error(string.Format("No PERPOS keys exist for supervisees: {0}", string.Join(", ", positionIds.Distinct())));
             }
 
             return perposKeys;
@@ -485,6 +499,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
             // get all the supervisor perpos ids assigned to these positionIds
+            logger.Debug(string.Format("*******Fetching supervisor perpos ids assigned to the following positionIds - {0}***********", string.Join(", ", positionIds.Distinct())));
             var positionLevelSupervisorPerposIds = await getPerposIdsByPositionIds(positionIds);
             if (positionLevelSupervisorPerposIds.Any())
             {
@@ -501,7 +516,91 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                 }
             }
+            else  // Check if the Position is a Non Employee Position. Select HRPER Records based on Non Employee Position IDs and add them to the PositionId Dictionary.
+            {
+                // get all the supervisor Hrper ids assigned to these positionIds
+                logger.Debug(string.Format("*********Fetching supervisor Hrper ids assigned to the following positionIds - {0}***********", string.Join(", ", positionIds.Distinct())));
+                var positionLevelSupervisorHrPerIds = await getHrPerIdsByPositionIds(positionIds);
+
+                if (positionLevelSupervisorHrPerIds.Any())
+                {
+                    // get all the supervisor Hrper records
+                    var positionLevelSupervisorPerposRecords = await getHrPerRecords(positionLevelSupervisorHrPerIds);
+                    if (positionLevelSupervisorPerposRecords != null)
+                    {
+                        foreach (var hrPer in positionLevelSupervisorPerposRecords)
+                        {
+                            if (positionIdDictionary.ContainsKey(hrPer.HrpNonempPosition))
+                            {
+                                if (!positionIdDictionary[hrPer.HrpNonempPosition].Contains(hrPer.Recordkey))
+                                {
+                                    positionIdDictionary[hrPer.HrpNonempPosition].Add(hrPer.Recordkey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             return positionIdDictionary;
+        }
+
+        /// <summary>
+        /// Get the ids of the HRPER records that have Non Employee Position IDs equal to one of the given position ids 
+        /// </summary>
+        /// <param name="positionIds"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<string>> getHrPerIdsByPositionIds(IEnumerable<string> positionIds)
+        {
+            var HrPerCriteria = string.Format("WITH HRP.NONEMP.POSITION EQ ?");
+
+            var HrPerValues = positionIds.Distinct().Select(id => string.Format("\"{0}\"", id));
+
+            var HrPerKeys = await DataReader.SelectAsync("HRPER", HrPerCriteria, HrPerValues.ToArray());
+
+            if (HrPerKeys == null)
+            {
+                var message = "Unexpected null returned from HRPER SelectAsyc";
+                logger.Error(message);
+                HrPerKeys = new string[0];
+            }
+
+            if (!HrPerKeys.Any())
+            {
+                logger.Error(string.Format("No HRPER keys exist for positions: {0}", string.Join(", ", positionIds.Distinct())));
+            }
+
+
+            logger.Debug(string.Format("*********Ids of the HRPER records that have Non Employee Position IDs equal to one of {0} obtained*******", string.Join(",", positionIds.Distinct())));
+
+            return HrPerKeys;
+        }
+
+        /// <summary>
+        /// Get HrperRecords for the given ids
+        /// </summary>
+        /// <param name="hrPerIds"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<Hrper>> getHrPerRecords(IEnumerable<string> hrPerIds)
+        {
+            var distinctHrPerIdsIds = hrPerIds.Distinct();
+            var returnList = new List<Hrper>();
+            for (int i = 0; i < distinctHrPerIdsIds.Count(); i += bulkReadSize)
+            {
+                var subList = distinctHrPerIdsIds.Skip(i).Take(bulkReadSize);
+                var hrPerRecords = await DataReader.BulkReadRecordAsync<Hrper>(subList.ToArray());
+                if (hrPerRecords == null)
+                {
+                    logger.Error("Unexpected null from bulk read of HRPER records");
+                }
+                else
+                {
+                    returnList.AddRange(hrPerRecords);
+                }
+            }
+
+            logger.Debug(string.Format("********HrperRecords obtained successfully for {0}**********", string.Join(",", hrPerIds.Distinct())));
+
+            return returnList;
         }
 
         /// <summary>
@@ -524,6 +623,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var allSupervisorIds = new List<string>();
                 var positionsIdsWithoutDirectSupervisor = new List<string>();
                 // Get all the PERPOS ids for this supervisee
+                logger.Debug(string.Format("********Fetching the PERPOS ids for {0}***********", superviseeId));
                 var allSuperviseeIdPerposIds = await getSuperviseePerposIds(superviseeId);
                 if (allSuperviseeIdPerposIds != null && allSuperviseeIdPerposIds.Any())
                 {
@@ -533,14 +633,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         var message = string.Format("No PERPOS records were found for the supervisee {0}", superviseeId);
                         logger.Error(message);
-                        throw new Exception(message);
+                        throw new ColleagueWebApiException(message);
                     }
                     var requiredPerPosRecord = superviseePerposRecords.Where(ppr => ppr.PerposPositionId == positionId && (ppr.PerposStartDate <= DateTime.Today && (ppr.PerposEndDate == null || ppr.PerposEndDate >= DateTime.Today))).First();
                     if (requiredPerPosRecord == null)
                     {
                         var message = string.Format("No PERPOS records were found for position {0} of the supervisee {1}", positionId, superviseeId);
                         logger.Error(message);
-                        throw new Exception(message);
+                        throw new ColleagueWebApiException(message);
                     }
                     if (!string.IsNullOrWhiteSpace(requiredPerPosRecord.PerposSupervisorHrpId))
                     {
@@ -556,13 +656,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                         else
                         {
-                            LogDataError("PERPOS", requiredPerPosRecord.Recordkey, requiredPerPosRecord, null, "PERPOS does not have position ID specified.");
+                            LogDataError("PERPOS", requiredPerPosRecord.Recordkey, new object(), null, "PERPOS does not have position ID specified.");
                         }
                     }
                 }
                 if (positionsIdsWithoutDirectSupervisor.Any())
                 {
                     // Get all the position ids that supervise these position ids
+                    logger.Debug(string.Format("******Fetching the position ids that supervise the following position ids without direct supervisor - {0}*******", string.Join(", ", positionsIdsWithoutDirectSupervisor.Distinct())));
                     var supervisorPositionIds = await getSupervisorPositionIdsForPositions(positionsIdsWithoutDirectSupervisor);
 
                     if (supervisorPositionIds != null && supervisorPositionIds.Any())
@@ -575,9 +676,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
 
                 allSupervisorIds = allSupervisorIds.Distinct().ToList();
+                logger.Debug(string.Format("*********List of supervisors for employee {0} with position {1} obtained successfully********", superviseeId, positionId));
 
                 return allSupervisorIds;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception e)
             {
                 var message = "Unexpected error occurred while getting the position supervisors information";
@@ -608,6 +715,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var directSuperviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId);
 
             var directSuperviseePerposRecords = await getPerposRecords(directSuperviseePerposKeys);
+            logger.Debug(string.Format("**********PERPOS records that specify {0} as the supervisor fetched**********", supervisorId));
 
             //Extract PersonIds to fetch primary position from person employment status
             IEnumerable<string> directSuperviseesPersonIds = null;
@@ -636,6 +744,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             #region POSD level Supervisees
             //next, get the supervisor's list of positions
             var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId);
+            logger.Debug(string.Format("*********Supervisor position Ids obtained for {0}*********", supervisorId));
 
             if (supervisorPositionIds != null && supervisorPositionIds.Any())
             {
@@ -674,10 +783,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             #endregion
+            logger.Debug(string.Format("********List of supervisees for {0} retrieved successfully*********", supervisorId));
 
             // return the complete list of supervisees
             return superviseeIds.Distinct().ToList();
         }
+        
         /// <summary>
         /// Fetch list of PersonEmployment Statuses based on positionIds
         /// </summary>
@@ -700,7 +811,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perstatKeys.Any())
             {
-                logger.Info("No PERSTAT keys exist for the given person Ids: " + string.Join(",", superviseePositionIds));
+                logger.Error("No PERSTAT keys exist for the given person Ids: " + string.Join(",", superviseePositionIds));
             }
 
             var perstatRecords = new List<Perstat>();
@@ -724,7 +835,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 PersonEmploymentStatus entityToAdd = null;
                 try
                 {
-                    entityToAdd = new PersonEmploymentStatus(
+                    if (!string.IsNullOrEmpty(record.PerstatPrimaryPosId) && !string.IsNullOrEmpty(record.PerstatPrimaryPerposId))
+                    {
+                        entityToAdd = new PersonEmploymentStatus(
                         record.Recordkey,
                         record.PerstatHrpId,
                         record.PerstatPrimaryPosId,
@@ -732,16 +845,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         record.PerstatStartDate,
                         record.PerstatEndDate
                     );
+                    }
+
                 }
                 catch (Exception e)
                 {
                     // we don't want to use this record if there is an error creating it
-                    LogDataError("Perstat", record.Recordkey, record, e, e.Message);
+                    LogDataError("Perstat", record.Recordkey, new object(), e, e.Message);
                     entityToAdd = null;
                 }
                 if (entityToAdd != null)
                     domainPersonEmploymentStatuses.Add(entityToAdd);
             }
+            logger.Debug(string.Format("*************List of PersonEmployment Statuses based on the following positions {0} retrieved successfully**********", string.Join(",", superviseePositionIds.Distinct())));
             return domainPersonEmploymentStatuses;
         }
 
@@ -768,7 +884,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     if (string.IsNullOrWhiteSpace(perposrecord.PerposHrpId))
                     {
-                        LogDataError("PosdSuperviseePerposHrpId", perposrecord.Recordkey, perposrecord);
+                        LogDataError("PosdSuperviseePerposHrpId", perposrecord.Recordkey, new object());
                     }
                     else
                     {

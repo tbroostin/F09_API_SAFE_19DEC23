@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -1636,6 +1636,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<FinancialAidMaritalStatus> GetFinancialAidMaritalStatusAsync( string year, string code )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<IntentToWithdrawCode>> GetIntentToWithdrawCodesAsync(bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+        public Task<IEnumerable<StudentReleaseAccess>> GetStudentReleaseAccessCodesAsync()
         {
             throw new NotImplementedException();
         }

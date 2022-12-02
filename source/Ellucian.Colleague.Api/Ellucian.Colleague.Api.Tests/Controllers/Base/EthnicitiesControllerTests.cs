@@ -1,11 +1,13 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Hosting;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -100,6 +102,38 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(allEthnicities.ElementAt(i).Code, ethnicityDtos.ElementAt(i).Code);
                 Assert.AreEqual(allEthnicities.ElementAt(i).Description, ethnicityDtos.ElementAt(i).Description);
                 Assert.AreEqual(allEthnicities.ElementAt(i).Type.ToString(), ethnicityDtos.ElementAt(i).Type.ToString());
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                ReferenceDataRepositoryMock.Setup(x => x.EthnicitiesAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                await EthnicityController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GetAsync_Exception_ReturnsHttpResponseException_BadRequest()
+        {
+            try
+            {
+                ReferenceDataRepositoryMock.Setup(x => x.EthnicitiesAsync()).Throws(new ApplicationException());
+                await EthnicityController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                throw;
             }
         }
 

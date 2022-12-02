@@ -9,6 +9,7 @@ using slf4net;
 using Ellucian.Web.Dependency;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -65,10 +66,17 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <returns>A list of active StudentAwardYear entities</returns>
         protected async Task<IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear>> GetActiveStudentAwardYearEntitiesAsync(string studentId)
         {
-            var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, true);
-            if (studentAwardYears == null) { return null; }
+            try
+            {
+                var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, true);
+                if (studentAwardYears == null) { return null; }
 
-            return ApplyConfigurationService.FilterStudentAwardYears(studentAwardYears);
+                return ApplyConfigurationService.FilterStudentAwardYears(studentAwardYears);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -79,8 +87,15 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <returns>list of StudentAwardYear objects</returns>
         protected async Task<IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear>> GetStudentAwardYearEntitiesAsync(string studentId, bool getActiveYearsOnly = false)
         {
-            var currentOfficeService = new CurrentOfficeService(await financialAidOfficeRepository.GetFinancialAidOfficesAsync());
-            return await studentAwardYearRepository.GetStudentAwardYearsAsync(studentId, currentOfficeService, getActiveYearsOnly);
+            try
+            {
+                var currentOfficeService = new CurrentOfficeService(await financialAidOfficeRepository.GetFinancialAidOfficesAsync());
+                return await studentAwardYearRepository.GetStudentAwardYearsAsync(studentId, currentOfficeService, getActiveYearsOnly);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
     }
 }

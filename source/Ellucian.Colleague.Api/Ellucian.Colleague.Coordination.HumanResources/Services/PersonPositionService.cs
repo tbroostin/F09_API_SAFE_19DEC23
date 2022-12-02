@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 if (subordinateIds.Any())
                 {
-                    userAndSubordinateIds = userAndSubordinateIds.Concat(subordinateIds).ToList();
+                    userAndSubordinateIds = userAndSubordinateIds.Concat(subordinateIds).Distinct().ToList();
                 }
             }
 

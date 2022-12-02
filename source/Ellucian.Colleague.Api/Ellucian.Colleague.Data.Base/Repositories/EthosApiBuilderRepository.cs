@@ -1,4 +1,4 @@
-﻿/// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿/// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -29,6 +29,27 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         const int AllSelectedRecordsCacheTimeout = 20;
         char _VM = Convert.ToChar(DynamicArray.VM);
         char _SM = Convert.ToChar(DynamicArray.SM);
+        char _TM = Convert.ToChar(DynamicArray.TM);
+        char _XM = Convert.ToChar(250);
+
+        /// <summary>
+        /// Contains a Tuple where Item1 is a bool set to true if any fields are denied or secured, 
+        /// Item2 is a list of DeniedAccess Fields and Item3 is a list of Restricted fields.
+        /// </summary>
+        public Tuple<bool, List<string>, List<string>> SecureDataDefinition { get; set; }
+
+        /// <summary>
+        /// Get the Denied and Secured Data Properties from the CTX call.
+        /// </summary>
+        /// <returns>Returns a Tuple with the secure flag and list of denied data fields and list of secure data fields.</returns>
+        public Tuple<bool, List<string>, List<string>> GetSecureDataDefinition()
+        {
+            if (SecureDataDefinition == null)
+            {
+                SecureDataDefinition = new Tuple<bool, List<string>, List<string>>(false, new List<string>(), new List<string>());
+            }
+            return SecureDataDefinition;
+        }
 
         public EthosApiBuilderRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -48,6 +69,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool bypassCache)
         {
+            string savingFileName = string.Empty;
+            string savingCriteria = string.Empty;
             string instance = string.Empty;
             string secondaryKeyName = !string.IsNullOrEmpty(configuration.SecondaryKeyName) ? configuration.SecondaryKeyName : string.Empty;
             if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) && !configuration.PrimaryGuidDbType.Equals("K", StringComparison.OrdinalIgnoreCase))
@@ -96,7 +119,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             // Main Selection Criteria
             criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", configuration.SavingField,
-                configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns);
+                configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns, 
+                configuration.CurrentUserId);
+            
             if (selectParagraph != null && selectParagraph.Any())
             {
                 // If we don't have any criteria but we still have a paragraph to execute
@@ -140,7 +165,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 List<string> limitKeys = new List<string>();
                 var prefix = await GetFileSuitePrefix(fileName, bypassCache);
-                fileSuiteYears = await GetFileSuiteYearsAsync(prefix, bypassCache);
+                foreach (var filter in filterDictionary)
+                {
+                    if (filter.Value.ColleagueColumnName == "FA.YEAR" || filter.Value.ColleagueColumnName == "FISCAL.YEAR")
+                    {
+                        var specificYear = filter.Value.FilterValue;
+                        fileSuiteYears = specificYear;
+                    }
+                }
+                if (fileSuiteYears == null || !fileSuiteYears.Any())
+                {
+                    fileSuiteYears = await GetFileSuiteYearsAsync(prefix, bypassCache);
+                }
                 foreach (var year in fileSuiteYears)
                 {
                     try
@@ -173,9 +209,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         // Just skip this file selection if it fails.
+                        logger.Error(ex.Message, "Cannot process file suite file");
                     }
                 }
                 if (limitKeys != null && limitKeys.Any())
@@ -223,8 +260,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             // If we have filters but the selection criteria uses SAVING field then
             // We can't execute the main select and must rely on the filter to get
             // limitingKeys for the resulting data.
-            if (!string.IsNullOrEmpty(configuration.SavingField) && filterDictionary != null && filterDictionary.Any())
+            if (!string.IsNullOrEmpty(configuration.SavingField) && (filterDictionary != null && filterDictionary.Any()) || (configuration.ColleagueKeyNames != null && configuration.ColleagueKeyNames.Count() > 1 && configuration.ApiType == "T"))
             {
+                savingFileName = fileName;
+                savingCriteria = criteria.ToString();
                 fileName = string.Empty;
                 criteria.Clear();
             }
@@ -251,24 +290,35 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var columnData = dictItem.Value;
                             var filterValues = columnData.FilterValue;
                             var filterOper = columnData.FilterOper;
+                            if (string.IsNullOrEmpty(columnData.ColleagueFileName) && String.IsNullOrEmpty(columnData.SelectFileName))
+                            {
+                                continue;
+                            }
 
                             //attempt to populate a default selection criteria
                             if (columnData.SelectionCriteria == null || !columnData.SelectionCriteria.Any())
                             {
-                                var listEthosApiSelectCriteria = new List<EthosApiSelectCriteria>();
-                                listEthosApiSelectCriteria.Add(
-                                    new EthosApiSelectCriteria("WITH", columnData.ColleagueColumnName, "EQ", columnData.JsonTitle)
-                                    );
-                                columnData.SelectionCriteria = listEthosApiSelectCriteria;
+                                if (!columnData.NamedQuery)
+                                {
+                                    string valueString = string.Empty;
+                                    foreach (var val in columnData.FilterValue)
+                                    {
+                                        valueString = string.Concat(valueString, "'", val, "'");
+                                    }
+                                    var listEthosApiSelectCriteria = new List<EthosApiSelectCriteria>();
+                                    listEthosApiSelectCriteria.Add(
+                                        new EthosApiSelectCriteria("WITH", columnData.ColleagueColumnName, "EQ", valueString));
+                                    columnData.SelectionCriteria = listEthosApiSelectCriteria;
+                                }
                             }
 
                             if (filterValues != null && filterValues.Any())
                             {
-                                var selectFileName = columnData.SelectFileName;
+                                var selectFileName = !string.IsNullOrEmpty(columnData.SelectFileName) ? columnData.SelectFileName : columnData.ColleagueFileName;
 
                                 foreach (var filterValue in filterValues)
                                 {
-                                    var filterCriteria = BuildSelectCriteria(columnData.SelectColumnName, filterValue, filterOper, columnData.SavingField,
+                                    var filterCriteria = BuildSelectCriteria(columnData.SelectColumnName, await ConvertFilterValue(filterValue, columnData), filterOper, columnData.SavingField,
                                         columnData.SavingOption, columnData.SelectionCriteria, columnData.SortColumns);
 
                                     // File Suites Processing
@@ -339,7 +389,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         else
                                         {
                                             // Filter processing on primary key or GUID
-                                            var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
+                                            if (limitingKeys != null && limitingKeys.Count(lk => lk.Contains('+')) == limitingKeys.Count())
+                                            {
+                                                limitingKeys = limitingKeys.Select(gv => gv.Split('+')[1]).ToArray();
+                                            }
+                                             var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
 
                                             if (newLimitingKeys == null || !newLimitingKeys.Any())
                                             {
@@ -391,6 +445,40 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
 
                     limitingKeys = await GetRecordKeysHookAsync(configuration.PrimaryEntity, limitingKeys, configuration.ResourceName, "", true, bypassCache);
+                    
+                    // When working with a BPA (Business Process API) then we may need to figure out the keys
+                    // required for a single form phantom properties.  Only do this for BPA types. (API Type = "T")
+                    if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(savingFileName) && !string.IsNullOrEmpty(savingCriteria))
+                    {
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            var tempCriteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", "",
+                                "", configuration.SelectionCriteria, configuration.SortColumns,
+                                configuration.CurrentUserId);
+                            limitingKeys = await DataReader.SelectAsync(savingFileName, tempCriteria.ToString());
+                        }
+                        var newLimitingKey = await DataReader.SelectAsync(savingFileName, limitingKeys, savingCriteria);
+                        if (savingFileName != configuration.PrimaryEntity && limitingKeys != null && limitingKeys.Any() && newLimitingKey != null && newLimitingKey.Any())
+                        {
+                            string[] newKeys = new string[limitingKeys.Count()];
+                            int idx = 0;
+                            foreach (var key in limitingKeys)
+                            {
+                                if (idx < newLimitingKey.Count())
+                                {
+                                    var primaryKey = newLimitingKey[idx];
+                                    if (!string.IsNullOrEmpty(primaryKey) && !string.IsNullOrEmpty(key))
+                                    {
+                                        var newKey = string.Concat(configuration.PrimaryEntity, "+", primaryKey, "~", savingFileName, "+", key);
+                                        newKeys[idx] = newKey;
+                                    }
+                                }
+                                idx++;
+                            }
+                            newLimitingKey = newKeys.Where(nk => !string.IsNullOrEmpty(nk)).ToArray();
+                        }
+                        limitingKeys = newLimitingKey;
+                    }
 
                     return new CacheSupport.KeyCacheRequirements()
                     {
@@ -407,12 +495,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             totalCount = keyCacheObject.TotalCount.Value;
 
-            //Array.Sort(limitingKeys);
             var subList = keyCacheObject.Sublist.ToArray();          
 
             List<EthosApiBuilder> extendedDatas = new List<EthosApiBuilder>();
 
-            if (string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            if (string.IsNullOrEmpty(configuration.PrimaryKeyName) && !string.IsNullOrEmpty(configuration.PrimaryGuidSource))
             {
                 // We are using GUIDs to identify the record key
                 var guidCollectionAndKeys = await GetGuidCollectionAsync(subList, configuration, limitingKeys);
@@ -448,16 +535,24 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 foreach (var id in subList)
                 {
                     string recordKey = id.Contains('+') ? id.Split('+')[1] : id;
-                    string guid = EncodePrimaryKey(id);
-                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName) && !id.Contains('+'))
+                    if (recordKey.Contains("~")) recordKey = recordKey.Split('~')[0];
+                    string guid = EncodePrimaryKey(id.Replace('~',_XM));
+                    if (configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
                     {
-                        guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", configuration.PrimaryTableName, "+", recordKey));
+                        guid = EncodePrimaryKey(await AssembleKeyFromSpecsAsync(id.Replace('~',_XM), configuration, filterDictionary));
                     }
                     else
                     {
-                        if (!id.Contains('+'))
+                        if (!string.IsNullOrEmpty(configuration.PrimaryTableName) && !id.Contains('+'))
                         {
-                            guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", id));
+                            guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", configuration.PrimaryTableName, "+", recordKey));
+                        }
+                        else
+                        {
+                            if (!id.Contains('+'))
+                            {
+                                guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", id));
+                            }
                         }
                     }
                     EthosApiBuilder extendedData = await BuildEthosApiBuilder(guid, recordKey, configuration.PrimaryEntity);
@@ -487,9 +582,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var fileName = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
             string primaryKey = string.Empty;
             string secondaryKey = string.Empty;
-            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            string unencodedId = UnEncodePrimaryKey(id);
+
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName) || string.IsNullOrEmpty(fileName))
             {
-                var idSplit = UnEncodePrimaryKey(id).Split('+');
+                var idSplit = unencodedId.Split('+');
                 if (idSplit.Count() > 1)
                 {
                     fileName = idSplit[0];
@@ -503,9 +600,43 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     primaryKey = idSplit[0];
                 }
+                primaryKey = primaryKey.Split(_XM)[0];
+
+                // if we don't have a file name, then drop out and let extensibility take over.
+                if (string.IsNullOrEmpty(configuration.PrimaryEntity))
+                {
+                    if (string.IsNullOrEmpty(primaryKey))
+                    {
+                        primaryKey = id;
+                    }
+                    try
+                    {
+                        var ethosApiBuilderEntity = new EthosApiBuilder(id, primaryKey, primaryKey);
+                        return ethosApiBuilderEntity;
+                    }
+                    catch
+                    {
+                        throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
+                    }
+                }
+
                 // Attempt to select the primary record pointed to from the entity.  If we can't select the record, it may have been deleted.
-                var recordKey = await DataReader.SelectAsync(fileName, new string[] { primaryKey }, "");
-                if (recordKey == null || !recordKey.Any())
+                try
+                {
+                    if (!string.IsNullOrEmpty(configuration.SelectFileName) && string.IsNullOrEmpty(configuration.SavingField))
+                    {
+                        fileName = configuration.SelectFileName;
+                        if (!(await IsEthosFileSuiteTemplateFile(fileName)))
+                        {
+                            var recordKey = await DataReader.SelectAsync(fileName, new string[] { primaryKey }, "");
+                            if (recordKey == null || !recordKey.Any())
+                            {
+                                throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
+                            }
+                        }
+                    }
+                }
+                catch
                 {
                     throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
                 }
@@ -516,7 +647,24 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
                     }
                     var columns = new string[] { configuration.SecondaryKeyName };
-                    var readResult = await DataReader.ReadRecordColumnsAsync(fileName, primaryKey, columns);
+                    Dictionary<string, string> readResult = null;
+                    bool tryAgain = false;
+                    try
+                    {
+                        readResult = await DataReader.ReadRecordColumnsAsync(fileName, primaryKey, columns);
+                    }
+                    catch
+                    {
+                        tryAgain = true;
+                    }
+                    if (tryAgain)
+                    {
+                        if (fileName.EndsWith("VALCODES"))
+                        {
+                            fileName = "VALCODES";
+                        }
+                        readResult = await DataReader.ReadRecordColumnsAsync(fileName, primaryKey, columns);
+                    }
                     string columnValue = string.Empty;
                     if (readResult != null && readResult.TryGetValue(configuration.SecondaryKeyName, out columnValue))
                     {
@@ -586,6 +734,44 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         //exception.AddError(new RepositoryError("GUID.Not.Found", errorMessage));
                         //throw exception;
                     }
+                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName))
+                    {
+                        Dictionary<string, string> readResult = new Dictionary<string, string>();
+                        var columns = new string[] { "VAL.INTERNAL.CODE" };
+                        bool tryAgain = false;
+                        try
+                        {
+                            readResult = await DataReader.ReadRecordColumnsAsync(fileName, configuration.PrimaryTableName, columns);
+                        }
+                        catch
+                        {
+                            tryAgain = true;
+                        }
+                        if (fileName.EndsWith("VALCODES") && tryAgain)
+                        {
+                            try
+                            {
+                                readResult = await DataReader.ReadRecordColumnsAsync("VALCODES", configuration.PrimaryTableName, columns);
+                            }
+                            catch
+                            {
+                                throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
+                            }
+                        }
+                        string columnValue = string.Empty;
+                        if (readResult != null && readResult.TryGetValue("VAL.INTERNAL.CODE", out columnValue))
+                        {
+                            var columnSplit = columnValue.Replace(_SM, _VM).Split(_VM);
+                            if (!columnSplit.Contains(guidEntity.SecondaryKey))
+                            {
+                                throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
+                            }
+                        }
+                        else
+                        {
+                            throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
+                        }
+                    }
                 }
                 primaryKey = guidEntity.PrimaryKey;
                 secondaryKey = guidEntity.SecondaryKey;
@@ -597,10 +783,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 selectFileName = configuration.PrimaryGuidFileName;
             }
-            if (await IsEthosFileSuiteTemplateFile(selectFileName))
-            {
-                selectFileName = fileName;
-            }
+
             string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache, selectFileName, id);
 
             string[] limitingKeys = new string[] { primaryKey };
@@ -623,7 +806,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (string.IsNullOrEmpty(configuration.SavingField) && string.IsNullOrEmpty(configuration.PrimaryTableName))
             {
                 criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", configuration.SavingField,
-                    configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns);
+                    configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns,
+                    configuration.CurrentUserId);
                 if (selectParagraph != null && selectParagraph.Any())
                 {
                     // If we don't have any criteria but we still have a paragraph to execute
@@ -668,6 +852,31 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             }
 
+            if (await IsEthosFileSuiteTemplateFile(selectFileName))
+            {
+                string prefix = await GetFileSuitePrefix(selectFileName, false);
+                string[] idSplit = unencodedId.Split(_XM);
+                string specificYear = string.Empty;
+                if (idSplit.Count() > 1)
+                {
+                    foreach (var idComponent in idSplit)
+                    {
+                        var componentSplit = idComponent.Split('+');
+                        if (componentSplit.Count() > 1 && (componentSplit[0] == "FA.YEAR" || componentSplit[0] == "FISCAL.YEAR"))
+                        {
+                            specificYear = componentSplit[1];
+                            selectFileName = await GetEthosFileSuiteFileNameAsync(selectFileName, specificYear, false);
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(specificYear))
+                {
+                    criteria.Clear();
+                    selectFileName = string.Empty;
+                }
+            }
+
             var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
                 ContainsKey,
@@ -684,7 +893,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         selectParagraph.Add("ENDPA: DISPLAY Paragraph Complete.");
                     }
 
-                    limitingKeys = await GetRecordKeysHookAsync(configuration.PrimaryEntity, limitingKeys, configuration.ResourceName, "", true, true);
+                    limitingKeys = await GetRecordKeysHookAsync(selectFileName, limitingKeys, configuration.ResourceName, "", true, true);
 
                     return new CacheSupport.KeyCacheRequirements()
                     {
@@ -734,120 +943,347 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<Domain.Base.Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder extendedDataRequest, EthosApiConfiguration configuration)
         {
             EthosApiBuilder extendedDataResponse = null;
-            if (configuration.ApiType == "T")
+            UpdateEthosApiBuilderRequest updateRequest = new UpdateEthosApiBuilderRequest();
+
+            var extendedDataTuple = GetEthosExtendedDataLists();
+
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
             {
-                ProcessScreenApiRequest updateRequest = new ProcessScreenApiRequest();
-                updateRequest.ColumnData = new List<ColumnData>();
-                updateRequest.KeyData = new List<KeyData>();
-                updateRequest.ProcessId = configuration.ProcessId;
-                updateRequest.ProcessMode = (string.IsNullOrEmpty(extendedDataRequest.Code) || extendedDataRequest.Code.StartsWith("$NEW")) ? "POST" : "PUT";
-
-                var extendedDataTuple = GetEthosExtendedDataLists();
-
-                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                updateRequest.ExtendedValues = extendedDataTuple.Item2;
+            }
+            string secondaryKey = string.Empty;
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            {
+                updateRequest.RecordGuid = string.Empty;
+                updateRequest.RecordKey = extendedDataRequest.Code;
+                updateRequest.Entity = extendedDataRequest.Description;
+                updateRequest.ResourceName = configuration.ResourceName;
+                if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
                 {
-                    foreach (var extendedData in extendedDataTuple.Item1)
+                    if (!updateRequest.ExtendedNames.Contains(configuration.SecondaryKeyName))
                     {
-                        var extendedValue = extendedDataTuple.Item2.ElementAt(extendedDataTuple.Item1.IndexOf(extendedData));
-                        if (!string.IsNullOrEmpty(extendedData) && !extendedData.Equals("EDME.VERSION.NUMBER", StringComparison.OrdinalIgnoreCase))
-                        {
-                            updateRequest.ColumnData.Add(new ColumnData()
-                            {
-                                ColumnNames = extendedData,
-                                ColumnValues = !string.IsNullOrEmpty(extendedValue) ? extendedValue : String.Empty
-                            });
-                        }
+                        exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("The POST request is missing the secondary key field '{0}'. Create not allowed.", configuration.SecondaryKeyName)));
+                        throw exception;
                     }
-                }
-
-                updateRequest.KeyData.Add(new KeyData()
-                {
-                    PrimaryKeyNames = extendedDataRequest.Description,
-                    PrimaryKeyValues = extendedDataRequest.Code
-                });
-
-                ProcessScreenApiResponse updateResponse = await transactionInvoker.ExecuteAsync<ProcessScreenApiRequest, ProcessScreenApiResponse>(updateRequest);
-
-                if (updateResponse.ProcessScreenApiErrors.Any())
-                {
-                    var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
-                    var exception = new RepositoryException();
-                    updateResponse.ProcessScreenApiErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
-                    {
-                        SourceId = extendedDataRequest.Code == "$NEW" ? string.Empty : extendedDataRequest.Code
-                    })
-                    );
-
-                    logger.Error(errorMessage);
-                    throw exception;
-                }
-                var recordKeyData = updateResponse.KeyData.FirstOrDefault(kd => kd.PrimaryKeyNames == extendedDataRequest.Description);
-                if (recordKeyData != null && !string.IsNullOrEmpty(recordKeyData.PrimaryKeyValues))
-                {
-                    var recordKey = recordKeyData.PrimaryKeyValues;
-                    var recordGuid = EncodePrimaryKey(string.Concat(extendedDataRequest.Description, "+", recordKey));
-                    extendedDataResponse = new EthosApiBuilder(recordGuid, recordKey, extendedDataRequest.Description);
+                    var secondaryKeyIndex = updateRequest.ExtendedNames.IndexOf(configuration.SecondaryKeyName);
+                    if (secondaryKeyIndex >= 0) secondaryKey = updateRequest.ExtendedValues.ElementAt(secondaryKeyIndex);
                 }
             }
             else
             {
-                UpdateEthosApiBuilderRequest updateRequest = new UpdateEthosApiBuilderRequest();
+                updateRequest.RecordGuid = extendedDataRequest.Guid;
+                updateRequest.RecordKey = extendedDataRequest.Code != "$NEW" ? extendedDataRequest.Code : string.Empty;
+                updateRequest.Entity = extendedDataRequest.Description;
+                updateRequest.ResourceName = configuration.ResourceName;
+            }
 
-                var extendedDataTuple = GetEthosExtendedDataLists();
+            UpdateEthosApiBuilderResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateEthosApiBuilderRequest, UpdateEthosApiBuilderResponse>(updateRequest);
 
-                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
-                {
-                    updateRequest.ExtendedNames = extendedDataTuple.Item1;
-                    updateRequest.ExtendedValues = extendedDataTuple.Item2;
-                }
-                string secondaryKey = string.Empty;
-                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
-                {
-                    updateRequest.RecordGuid = string.Empty;
-                    updateRequest.RecordKey = extendedDataRequest.Code;
-                    updateRequest.Entity = extendedDataRequest.Description;
-                    updateRequest.ResourceName = configuration.ResourceName;
-                    if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
-                    {
-                        if (!updateRequest.ExtendedNames.Contains(configuration.SecondaryKeyName))
-                        {
-                            exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("The POST request is missing the secondary key field '{0}'. Create not allowed.", configuration.SecondaryKeyName)));
-                            throw exception;
-                        }
-                        var secondaryKeyIndex = updateRequest.ExtendedNames.IndexOf(configuration.SecondaryKeyName);
-                        if (secondaryKeyIndex >= 0) secondaryKey = updateRequest.ExtendedValues.ElementAt(secondaryKeyIndex);
-                    }
-                }
-                else
-                {
-                    updateRequest.RecordGuid = extendedDataRequest.Guid;
-                    updateRequest.RecordKey = extendedDataRequest.Code != "$NEW" ? extendedDataRequest.Code : string.Empty;
-                    updateRequest.Entity = extendedDataRequest.Description;
-                    updateRequest.ResourceName = configuration.ResourceName;
-                }
-
-                UpdateEthosApiBuilderResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateEthosApiBuilderRequest, UpdateEthosApiBuilderResponse>(updateRequest);
-
-                if (updateResponse.UpdateEthosApiBuilderErrors.Any())
-                {
-                    var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
-                    var exception = new RepositoryException();
-                    updateResponse.UpdateEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
+            if (updateResponse.UpdateEthosApiBuilderErrors.Any())
+            {
+                var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                var exception = new RepositoryException();
+                updateResponse.UpdateEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
                     {
                         SourceId = updateRequest.RecordKey == "$NEW" ? string.Empty : updateRequest.RecordKey,
                         Id = updateRequest.RecordGuid
                     })
-                    );
+                );
 
-                    logger.Error(errorMessage);
-                    throw exception;
-                }
-                extendedDataResponse = new EthosApiBuilder(updateResponse.RecordGuid, updateResponse.RecordKey, updateResponse.Entity);
+                logger.Error(errorMessage);
+                throw exception;
             }
-            
+            extendedDataResponse = new EthosApiBuilder(updateResponse.RecordGuid, updateResponse.RecordKey, updateResponse.Entity);
+
             return extendedDataResponse;
 
         }
+
+        /// <summary>
+        /// Updates A Business Process API using the a CTX which calls a generated subroutine built from the UI form process.
+        /// </summary>
+        /// <param name="extendedDataRequest">Domain.Base.Entities.EthosApiBuilderRequest</param>
+        /// <param name="configuration">Configuration from EthosApiBuilder</param>
+        /// <param name="filterDictionary">Dictionary of filter items to build a key from the POST or PUT request body</param>
+        /// <returns>Dictionary of Response Data coming from the UI form process</returns>
+        public async Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder extendedDataRequest, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
+        {
+            Dictionary<string, Dictionary<string, string>> allColumnData = new Dictionary<string, Dictionary<string, string>>();
+
+            ProcessScreenApiRequest updateRequest = new ProcessScreenApiRequest();
+            updateRequest.ColumnData = new List<ColumnData>();
+            updateRequest.KeyData = new List<KeyData>();
+            updateRequest.ProcessId = configuration.ProcessId;
+            updateRequest.ProcessMode = (string.IsNullOrEmpty(extendedDataRequest.Code) || extendedDataRequest.Code.StartsWith("$NEW")) ? "POST" : "PUT";
+
+            var extendedDataTuple = GetEthosExtendedDataLists();
+            if (extendedDataTuple == null || extendedDataTuple.Item1 == null || extendedDataTuple.Item2 == null)
+            {
+                // This should not happen but will if the extraction of the body properties fails.
+                exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("The extraction of the properties in the request has failed.  This could be a configuration issue with property names or paths.", configuration.SecondaryKeyName)));
+                throw exception;
+            }
+
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+            {
+                foreach (var extendedData in extendedDataTuple.Item1)
+                {
+                    var extendedValue = extendedDataTuple.Item2.ElementAt(extendedDataTuple.Item1.IndexOf(extendedData));
+                    if (!string.IsNullOrEmpty(extendedData) && !extendedData.Equals("EDME.VERSION.NUMBER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var newValue = string.Empty;
+                        if (configuration.ColleagueKeyNames.Contains(extendedData)) newValue = "$NEW";
+                        updateRequest.ColumnData.Add(new ColumnData()
+                        {
+                            ColumnNames = extendedData,
+                            ColumnValues = !string.IsNullOrEmpty(extendedValue) ? extendedValue : newValue
+                        });
+                    }
+                }
+            }
+
+            bool isFileSuite = !string.IsNullOrEmpty(configuration.SelectFileName) ? await IsEthosFileSuiteTemplateFile(configuration.SelectFileName) : false;
+            if (string.IsNullOrEmpty(extendedDataRequest.Code) || extendedDataRequest.Code.StartsWith("$NEW"))
+            {
+                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                {
+                    foreach (var keyName in configuration.ColleagueKeyNames)
+                    {
+                        if (!extendedDataTuple.Item1.Contains(keyName))
+                        {
+                            updateRequest.ColumnData.Add(new ColumnData()
+                            {
+                                ColumnNames = keyName,
+                                ColumnValues = "$NEW"
+                            });
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var splitKey = UnEncodePrimaryKey(extendedDataRequest.Guid).Split(_XM);
+                if (splitKey.Count() > 0)
+                {
+                    for (int i = 0; i < splitKey.Count(); i++)
+                    {
+                        if (!string.IsNullOrEmpty(splitKey[i]))
+                        {
+                            var keyPart = splitKey[i];
+                            if (keyPart.Contains("+"))
+                            {
+                                var idSplit = keyPart.Split('+');
+                                var fldName = idSplit[0];
+                                var fldValue = idSplit[1];
+                                if (configuration.ColleagueKeyNames.Contains(fldName))
+                                {
+                                    if (!string.IsNullOrEmpty(fldName) && !string.IsNullOrEmpty(fldValue))
+                                    {
+                                        updateRequest.ColumnData.Add(new ColumnData()
+                                        {
+                                            ColumnNames = fldName,
+                                            ColumnValues = fldValue
+                                        });
+                                    }
+                                }
+                                else
+                                {
+                                    if (configuration.ColleagueFileNames.Contains(fldName))
+                                    {
+                                        updateRequest.KeyData.Add(new KeyData()
+                                        {
+                                            PrimaryKeyNames = fldName,
+                                            PrimaryKeyValues = fldValue
+                                        });
+                                    }
+
+                                    // Add a column for the primary key value
+                                    if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                                    {
+                                        updateRequest.ColumnData.Add(new ColumnData()
+                                        {
+                                            ColumnNames = configuration.PrimaryKeyName,
+                                            ColumnValues = fldValue
+                                        });
+                                    }
+
+                                    // If we are working with a file suite, then add the CDD name and value
+                                    // to the list of column names and column values.
+                                    if (isFileSuite && fldName.Contains("."))
+                                    {
+                                        var faYear = fldName.Split('.')[1];
+                                        var faName = "FA.YEAR";
+                                        var glName = "FISCAL.YEAR";
+
+                                        // Add FA.YEAR and FISCAL.YEAR to list of data elements
+                                        updateRequest.ColumnData.Add(new ColumnData()
+                                        {
+                                            ColumnNames = faName,
+                                            ColumnValues = faYear
+                                        });
+                                        updateRequest.ColumnData.Add(new ColumnData()
+                                        {
+                                            ColumnNames = glName,
+                                            ColumnValues = faYear
+                                        });
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                updateRequest.KeyData.Add(new KeyData()
+                                {
+                                    PrimaryKeyNames = configuration.PrimaryEntity,
+                                    PrimaryKeyValues = keyPart
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            updateRequest.CallChain = new List<string>();
+            foreach (var column in extendedDataTuple.Item1)
+            {
+                if (column.Contains(':'))
+                {
+                    var splitColumns = column.Split(':');
+                    for (int i = 0; i < splitColumns.Count() - 1; i++)
+                    {
+                        if (splitColumns[0].Contains('*'))
+                        {
+                            updateRequest.CallChain.Add(splitColumns[i].Split('*')[1]);
+                        }
+                        else
+                        {
+                            updateRequest.CallChain.Add(splitColumns[i]);
+                        }
+                    }
+                }
+            }
+            updateRequest.CallChain = updateRequest.CallChain.Distinct().ToList();
+
+            // Update the prepared Responses from the Configuration or from the update payload
+            updateRequest.PreparedResponses = new List<PreparedResponses>();
+            if (configuration.PreparedResponses != null)
+            {
+                foreach (var prpr in configuration.PreparedResponses)
+                {
+                    string submittedResponse = prpr.DefaultOption;
+                    if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null && !string.IsNullOrEmpty(prpr.JsonTitle))
+                    {
+                        var extendIndex = extendedDataTuple.Item1.IndexOf(prpr.JsonTitle.ToUpper());
+                        if (extendIndex >= 0 && extendedDataTuple.Item2 != null && extendedDataTuple.Item2.Count > extendIndex && !string.IsNullOrEmpty(extendedDataTuple.Item2.ElementAt(extendIndex)))
+                        {
+                            submittedResponse = extendedDataTuple.Item2.ElementAt(extendIndex);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(prpr.DefaultOption))
+                    {
+                        updateRequest.PreparedResponses.Add(new PreparedResponses()
+                        {
+                            PreparedResponsePrompts = prpr.Text,
+                            PreparedResponseOptions = prpr.Options,
+                            PreparedResponseValues = submittedResponse
+                        });
+                    }
+                }
+            }
+
+            // Update request for Restricted Fields to be returned from the UI form process
+            updateRequest.ReturnSecureData = returnRestrictedFields;
+
+            ProcessScreenApiResponse updateResponse = await transactionInvoker.ExecuteAsync<ProcessScreenApiRequest, ProcessScreenApiResponse>(updateRequest);
+
+            if (updateResponse.ProcessScreenApiErrors.Any())
+            {
+                var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                var exception = new RepositoryException();
+                foreach (var error in updateResponse.ProcessScreenApiErrors)
+                {
+                    var errorCode = !string.IsNullOrEmpty(error.ErrorCodes) ? error.ErrorCodes : "Create.Update.Exception";
+                    var message = string.Concat(errorCode, " - ", error.ErrorMessages);
+                    logger.Error(message);
+                    var guid = EncodePrimaryKey(error.ErrorKeys);
+                    var sourceId = !string.IsNullOrEmpty(error.ErrorKeys) && error.ErrorKeys.Contains('+') ? error.ErrorKeys.Split('+')[1] : error.ErrorKeys;
+                    if (string.IsNullOrEmpty(sourceId) || sourceId.ToUpper().Contains("$NEW"))
+                    {
+                        guid = string.Empty;
+                        sourceId = string.Empty;
+                    }
+                    exception.AddError(new RepositoryError(errorCode, error.ErrorMessages)
+                    {
+                        Id = guid,
+                        SourceId = sourceId
+                    });
+                }
+
+                throw exception;
+            }
+
+            var responseDictionary = new Dictionary<string, string>();
+            foreach (var cd in updateResponse.ColumnData)
+            {
+                if (!responseDictionary.ContainsKey(cd.ColumnNames))
+                {
+                    responseDictionary.Add(cd.ColumnNames, cd.ColumnValues.TrimEnd(_VM).TrimEnd(_SM).TrimEnd(_TM).Replace(_SM, _VM).Replace(_TM, _SM).Replace(_XM, _SM));
+                }
+            }
+
+            var recordKeyData = updateResponse.KeyData.FirstOrDefault(kd => kd.PrimaryKeyNames == extendedDataRequest.Description);
+            string recordGuid = string.Empty;
+            if (recordKeyData != null && !string.IsNullOrEmpty(recordKeyData.PrimaryKeyValues))
+            {
+                var recordKey = recordKeyData.PrimaryKeyValues;
+                if (isFileSuite)
+                {
+                    if (configuration.SelectFileName.Contains("."))
+                    {
+                        var keySplit = configuration.SelectFileName.Split('.');
+                        var prefix = keySplit[0];
+                        foreach (var cd in updateResponse.ColumnData)
+                        {
+                            if (!recordKey.Contains("+"))
+                            {
+                                if (cd.ColumnNames == "FA.YEAR" && !string.IsNullOrEmpty(cd.ColumnValues))
+                                {
+                                    recordKey = string.Concat(prefix, ".", cd.ColumnValues, "+", recordKey);
+                                }
+                                else if (cd.ColumnNames == "FISCAL.YEAR" && !string.IsNullOrEmpty(cd.ColumnValues))
+                                {
+                                    recordKey = string.Concat(prefix, ".", cd.ColumnValues, "+", recordKey);
+                                }
+                            }
+                        }
+                    }
+                    recordGuid = EncodePrimaryKey(recordKey);
+                }
+                else
+                {
+                    recordGuid = EncodePrimaryKey(await AssembleKeyFromSpecsAsync(recordKey, configuration, filterDictionary, updateResponse.ColumnData));
+                }
+                //extendedDataResponse = new EthosApiBuilder(recordGuid, recordKey, extendedDataRequest.Description);
+                allColumnData.Add(recordGuid, responseDictionary);
+            }
+            else
+            {
+                recordGuid = EncodePrimaryKey(await AssembleKeyFromSpecsAsync("", configuration, filterDictionary, updateResponse.ColumnData));
+                if (string.IsNullOrEmpty(recordGuid)) recordGuid = extendedDataRequest.Guid;
+                //extendedDataResponse = new EthosApiBuilder(extendedDataRequest.Guid, extendedDataRequest.Code, extendedDataRequest.Description);
+                allColumnData.Add(recordGuid, responseDictionary);
+            }
+
+            // Set variables needed to respond with X-Content-Restricted of "partial"
+            if (updateResponse.ReturnSecureData)
+            {
+                SecureDataDefinition = new Tuple<bool, List<string>, List<string>>(updateResponse.ReturnSecureData, updateResponse.DeniedFieldsList, updateResponse.SecureFieldsList);
+            }
+
+            return allColumnData;
+
+        }
+
         #endregion
 
         #region DELETE
@@ -859,74 +1295,172 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Domain.Base.Entities.EthosApiBuilderResponse</returns>
         public async Task DeleteEthosApiBuilderAsync(string guid, EthosApiConfiguration configuration)
         {
-            DeleteEthosApiBuilderRequest deleteRequest = new DeleteEthosApiBuilderRequest();
-
-            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            if (configuration != null && !string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
             {
-                var entity = configuration.PrimaryEntity;
-                var primaryKey = string.Empty;
-                var secondaryKey = string.Empty;
-                var recordKey = UnEncodePrimaryKey(guid);
-                if (recordKey.Contains('+'))
+                ProcessScreenApiRequest deleteRequest = new ProcessScreenApiRequest();
+                deleteRequest.ColumnData = new List<ColumnData>();
+                deleteRequest.KeyData = new List<KeyData>();
+                deleteRequest.ProcessId = configuration.ProcessId;
+                deleteRequest.ProcessMode = "DELETE";
+
+                var splitKey = UnEncodePrimaryKey(guid).Split(_XM);
+                if (splitKey.Count() > 0)
                 {
-                    var idSplit = recordKey.Split('+');
-                    if (idSplit.Count() > 1)
+                    for (int i = 0; i < splitKey.Count(); i++)
                     {
-                        entity = idSplit[0];
-                        primaryKey = idSplit[1];
-                        if (idSplit.Count() > 2)
+                        if (!string.IsNullOrEmpty(splitKey[i]))
                         {
-                            secondaryKey = idSplit[2];
+                            var keyPart = splitKey[i];
+                            if (keyPart.Contains("+"))
+                            {
+                                var idSplit = keyPart.Split('+');
+                                var fldName = idSplit[0];
+                                var fldValue = idSplit[1];
+                                if (configuration.ColleagueKeyNames.Contains(fldName))
+                                {
+                                    if (!string.IsNullOrEmpty(fldName) && !string.IsNullOrEmpty(fldValue))
+                                    {
+                                        deleteRequest.ColumnData.Add(new ColumnData()
+                                        {
+                                            ColumnNames = fldName,
+                                            ColumnValues = fldValue
+                                        });
+                                    }
+                                }
+                                else if (configuration.ColleagueFileNames.Contains(fldName))
+                                {
+                                    deleteRequest.KeyData.Add(new KeyData()
+                                    {
+                                        PrimaryKeyNames = fldName,
+                                        PrimaryKeyValues = fldValue
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                deleteRequest.KeyData.Add(new KeyData()
+                                {
+                                    PrimaryKeyNames = configuration.PrimaryEntity,
+                                    PrimaryKeyValues = keyPart
+                                });
+                            }
                         }
                     }
-                    else
+                }
+
+                deleteRequest.CallChain = new List<string>();
+
+                // Update the prepared Responses from the Configuration or from the update payload
+                deleteRequest.PreparedResponses = new List<PreparedResponses>();
+                if (configuration.PreparedResponses != null)
+                {
+                    foreach (var prpr in configuration.PreparedResponses)
                     {
-                        primaryKey = idSplit[0];
+                        string submittedResponse = prpr.DefaultOption;
+                        if (!string.IsNullOrEmpty(prpr.DefaultOption))
+                        {
+                            deleteRequest.PreparedResponses.Add(new PreparedResponses()
+                            {
+                                PreparedResponsePrompts = prpr.Text,
+                                PreparedResponseOptions = prpr.Options,
+                                PreparedResponseValues = submittedResponse
+                            });
+                        }
+                    }
+                }
+
+                ProcessScreenApiResponse updateResponse = await transactionInvoker.ExecuteAsync<ProcessScreenApiRequest, ProcessScreenApiResponse>(deleteRequest);
+
+                if (updateResponse.ProcessScreenApiErrors.Any())
+                {
+                    var errorMessage = string.Format("Error(s) occurred deleting {0}.", configuration.ResourceName);
+                    var exception = new RepositoryException();
+                    foreach (var error in updateResponse.ProcessScreenApiErrors)
+                    {
+                        var message = string.Concat(error.ErrorCodes, " - ", error.ErrorMessages);
+                        logger.Error(message);
+                        guid = EncodePrimaryKey(error.ErrorKeys);
+                        exception.AddError(new RepositoryError(error.ErrorCodes, error.ErrorMessages)
+                        {
+                            Id = guid,
+                            SourceId = !string.IsNullOrEmpty(error.ErrorKeys) && error.ErrorKeys.Contains('+') ? error.ErrorKeys.Split('+')[1] : error.ErrorKeys
+                        });
                     }
 
+                    throw exception;
                 }
-                else
-                {
-                    primaryKey = recordKey;
-                }
-                if (!string.IsNullOrEmpty(configuration.PrimaryTableName))
-                {
-                    primaryKey = string.Concat(configuration.PrimaryTableName, "|", primaryKey);
-                }
-                if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
-                {
-                    entity = string.Concat(entity, "|", configuration.SecondaryKeyName);
-                    primaryKey = string.Concat(primaryKey, "|", secondaryKey);
-                }
-                deleteRequest.RecordKey = primaryKey;
-                deleteRequest.Entity = entity;
             }
             else
             {
-                deleteRequest.RecordGuid = guid;
-                deleteRequest.RecordKey = configuration.PrimaryTableName;
-                deleteRequest.Entity = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
-            }
-            deleteRequest.ResourceName = configuration.ResourceName;
+                DeleteEthosApiBuilderRequest deleteRequest = new DeleteEthosApiBuilderRequest();
 
-            DeleteEthosApiBuilderResponse deleteResponse = await transactionInvoker.ExecuteAsync<DeleteEthosApiBuilderRequest, DeleteEthosApiBuilderResponse>(deleteRequest);
+                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    var entity = configuration.PrimaryEntity;
+                    var primaryKey = string.Empty;
+                    var secondaryKey = string.Empty;
+                    var recordKey = UnEncodePrimaryKey(guid);
+                    if (recordKey.Contains('+'))
+                    {
+                        var idSplit = recordKey.Split('+');
+                        if (idSplit.Count() > 1)
+                        {
+                            entity = idSplit[0];
+                            primaryKey = idSplit[1];
+                            if (idSplit.Count() > 2)
+                            {
+                                secondaryKey = idSplit[2];
+                            }
+                        }
+                        else
+                        {
+                            primaryKey = idSplit[0];
+                        }
 
-            if (deleteResponse.DeleteEthosApiBuilderErrors.Any())
-            {
-                var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
-                var exception = new RepositoryException();
-                deleteResponse.DeleteEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
+                    }
+                    else
+                    {
+                        primaryKey = recordKey;
+                    }
+                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName))
+                    {
+                        primaryKey = string.Concat(configuration.PrimaryTableName, "|", primaryKey);
+                    }
+                    if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
+                    {
+                        entity = string.Concat(entity, "|", configuration.SecondaryKeyName);
+                        primaryKey = string.Concat(primaryKey, "|", secondaryKey);
+                    }
+                    deleteRequest.RecordKey = primaryKey;
+                    deleteRequest.Entity = entity;
+                }
+                else
+                {
+                    deleteRequest.RecordGuid = guid;
+                    deleteRequest.RecordKey = configuration.PrimaryTableName;
+                    deleteRequest.Entity = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
+                }
+                deleteRequest.ResourceName = configuration.ResourceName;
+
+                DeleteEthosApiBuilderResponse deleteResponse = await transactionInvoker.ExecuteAsync<DeleteEthosApiBuilderRequest, DeleteEthosApiBuilderResponse>(deleteRequest);
+
+                if (deleteResponse.DeleteEthosApiBuilderErrors.Any())
+                {
+                    var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                    var exception = new RepositoryException();
+                    deleteResponse.DeleteEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
                     {
                         Id = deleteRequest.RecordGuid
                     })
-                );
+                    );
 
-                logger.Error(errorMessage);
-                if (deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorCodes.Equals("GUID.Not.Found", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new KeyNotFoundException(deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorMessages);
+                    logger.Error(errorMessage);
+                    if (deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorCodes.Equals("GUID.Not.Found", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new KeyNotFoundException(deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorMessages);
+                    }
+                    throw exception;
                 }
-                throw exception;
             }
         }
         #endregion
@@ -935,8 +1469,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <summary>
         /// Builds EthosApiBuilder entity
         /// </summary>
-        /// <param name="foreignPersonContract">ForeignPerson</param>
-        /// <param name="personContract">Ellucian.Colleague.Data.Base.DataContracts.Person</param>
+        /// <param name="guid">Guid to assign to the the EthosApiBuilder Entity</param>
+        /// <param name="recordKey">The record key to assign to the entity</param>
+        /// <param name="entity">The table name to be assigned to the entity.</param>
         /// <returns>EthosApiBuilder</returns>
         private async Task<EthosApiBuilder> BuildEthosApiBuilder(string guid, string recordKey, string entity)
         {
@@ -948,7 +1483,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var recordInfo = await GetRecordInfoFromGuidAsync(guid);
                     recordKey = recordInfo.PrimaryKey;
                 }
-                extendedData = new EthosApiBuilder(guid, recordKey, entity);
+                if (string.IsNullOrEmpty(entity))
+                {
+                    extendedData = new EthosApiBuilder(guid, recordKey, recordKey);
+                }
+                else
+                {
+                    extendedData = new EthosApiBuilder(guid, recordKey, entity);
+                }
             }
             catch
             {
@@ -1096,8 +1638,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex.Message, "Cannot add record key to guid collection");
                 }
             }
 
@@ -1243,8 +1787,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         // guidCollection.Add(splitKeys[index], guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex.Message, "Cannot add record key to guid collection");
                 }
             }
 
@@ -1365,36 +1911,61 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>True if File Suite Template file</returns>
         private async Task<bool> IsEthosFileSuiteTemplateFile(string fileName, bool bypassCache = false)
         {
-            var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+            string ethosFileSuiteCacheKey = "SingleEthosApiBuilderIsFileSuite" + fileName;
 
-            foreach (var template in ethosFileSuitesList)
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosFileSuiteCacheKey)))
             {
-                foreach (var templateFile in template.FstmpltEntityAssociation)
-                {
-                    if (templateFile.FstTemplateAssocMember == fileName)
-                    {
-                        return true;
-                    }
-                }
+                ClearCache(new List<string> { ethosFileSuiteCacheKey });
             }
-            return false;
+            var isFileSuiteFile = await GetOrAddToCacheAsync(ethosFileSuiteCacheKey,
+                async () =>
+                {
+                    var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+
+                    foreach (var template in ethosFileSuitesList)
+                    {
+                        foreach (var templateFile in template.FstmpltEntityAssociation)
+                        {
+                            if (templateFile.FstTemplateAssocMember == fileName)
+                            {
+                                return "Y";
+                            }
+                        }
+                    }
+                    return "N";
+
+                }, CacheTimeout);
+
+            return isFileSuiteFile == "Y" ? true : false;
         }
 
         private async Task<string> GetFileSuitePrefix(string fileName, bool bypassCache = false)
         {
-            var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+            string ethosFileSuiteCacheKey = "SingleEthosApiBuilderFileSuitePrefix" + fileName;
 
-            foreach (var template in ethosFileSuitesList)
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosFileSuiteCacheKey)))
             {
-                foreach (var templateFile in template.FstmpltEntityAssociation)
-                {
-                    if (templateFile.FstTemplateAssocMember == fileName)
-                    {
-                        return templateFile.FstFilePrefixAssocMember;
-                    }
-                }
+                ClearCache(new List<string> { ethosFileSuiteCacheKey });
             }
-            return string.Empty;
+            var fileSuitePrefix = await GetOrAddToCacheAsync(ethosFileSuiteCacheKey,
+                async () =>
+                {
+                    var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+
+                    foreach (var template in ethosFileSuitesList)
+                    {
+                        foreach (var templateFile in template.FstmpltEntityAssociation)
+                        {
+                            if (templateFile.FstTemplateAssocMember == fileName)
+                            {
+                                return templateFile.FstFilePrefixAssocMember;
+                            }
+                        }
+                    }
+                    return string.Empty;
+                }, CacheTimeout);
+
+            return fileSuitePrefix;
         }
 
         /// <summary>
@@ -1406,26 +1977,38 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Physical file name for a template file and instance.</returns>
         private async Task<string> GetEthosFileSuiteFileNameAsync(string fileName, string instance, bool bypassCache = false)
         {
-            var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+            string ethosFileSuiteCacheKey = "SingleEthosApiBuilderFileSuiteInstance" + fileName + instance;
 
-            foreach (var template in ethosFileSuitesList)
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosFileSuiteCacheKey)))
             {
-                foreach (var templateFile in template.FstmpltEntityAssociation)
-                {
-                    if (templateFile.FstTemplateAssocMember == fileName)
-                    {
-                        var prefix = templateFile.FstFilePrefixAssocMember;
-                        var suffix = templateFile.FstFileSuffixAssocMember;
-                        var physicalFileName = string.Concat(prefix, ".", instance);
-                        if (!string.IsNullOrEmpty(suffix))
-                        {
-                            physicalFileName = string.Concat(physicalFileName, ".", suffix);
-                        }
-                        return physicalFileName;
-                    }
-                }
+                ClearCache(new List<string> { ethosFileSuiteCacheKey });
             }
-            return string.Empty;
+            var fileSuiteInstance = await GetOrAddToCacheAsync(ethosFileSuiteCacheKey,
+                async () =>
+                {
+                    var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+
+                    foreach (var template in ethosFileSuitesList)
+                    {
+                        foreach (var templateFile in template.FstmpltEntityAssociation)
+                        {
+                            if (templateFile.FstTemplateAssocMember == fileName)
+                            {
+                                var prefix = templateFile.FstFilePrefixAssocMember;
+                                var suffix = templateFile.FstFileSuffixAssocMember;
+                                var physicalFileName = string.Concat(prefix, ".", instance);
+                                if (!string.IsNullOrEmpty(suffix))
+                                {
+                                    physicalFileName = string.Concat(physicalFileName, ".", suffix);
+                                }
+                                return physicalFileName;
+                            }
+                        }
+                    }
+                    return string.Empty;
+                }, CacheTimeout);
+
+            return fileSuiteInstance;
         }
 
         private IEnumerable<FileSuiteTemplates> _fileSuiteTemplates = null;
@@ -1449,8 +2032,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var ethosFaFileSuitesList =
                             await DataReader.ReadRecordAsync<FileSuiteTemplates>("ST.PARMS", "FST_FA.FILE.SUITES");
-                    // Hack in the FA.YEARLY.USER.ACYR and FA.TERM.USER.ACYR file suites
-                    if (ethosFaFileSuitesList.FstTemplate.Any() && ethosFaFileSuitesList.FstFilePrefix.Any())
+                        // Hack in the FA.YEARLY.USER.ACYR and FA.TERM.USER.ACYR file suites
+                        if (ethosFaFileSuitesList.FstTemplate.Any() && ethosFaFileSuitesList.FstFilePrefix.Any())
                         {
                             ethosFaFileSuitesList.FstTemplate.Add("FA.YEARLY.USER.ACYR");
                             ethosFaFileSuitesList.FstTemplate.Add("FA.TERM.USER.ACYR");
@@ -1462,20 +2045,23 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                         var fsKeys = new List<string>()
                         {
-                        "FST_BCT",
-                        "FST_BJT",
-                        "FST_BOC",
-                        "FST_BWK",
-                        "FST_BPJ",
-                        "FST_GL.SUITES.WITH.GLU"
+                            "FST_BCT",
+                            "FST_BJT",
+                            "FST_BOC",
+                            "FST_BWK",
+                            "FST_BPJ",
+                            "FST_GL.SUITES.WITH.GLU"
                         };
                         var ethosCfFileSuitesList =
                             await DataReader.BulkReadRecordAsync<FileSuiteTemplates>("CF.PARMS", fsKeys.ToArray());
 
-                        var fileSuitesList = new List<FileSuiteTemplates>();
-                        fileSuitesList.Add(ethosFaFileSuitesList);
+                        var fileSuitesList = new List<FileSuiteTemplates>
+                        {
+                            ethosFaFileSuitesList
+                        };
                         fileSuitesList.AddRange(ethosCfFileSuitesList);
                         return fileSuitesList;
+
                     }, CacheTimeout);
 
                 _fileSuiteTemplates = fileSuiteTemplates;
@@ -1635,9 +2221,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         await GetOrAddToCacheAsync<List<EdmCodeHooks>>(ethosExtensiblityCacheKey,
                             async () => (await DataReader.BulkReadRecordAsync<EdmCodeHooks>("EDM.CODE.HOOKS", "")).ToList(), CacheTimeout);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // if the EDM.CODE.HOOKS file is missing, do not through an exception.
+                    logger.Error(ex.Message, "EDM.CODE.HOOKS file is missing.");
                 }
 
                 _ethosExtensibleCodeHooks = ethosExtensiblityCodeHooks;
@@ -1691,7 +2278,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return returnParagraph;
         }
 
-        private StringBuilder BuildSelectCriteria(string columnName, string value, string oper, string savingColumn, string savingOption, List<EthosApiSelectCriteria> selectionCriteria, List<EthosApiSortCriteria> sortCriteria)
+        private StringBuilder BuildSelectCriteria(string columnName, string value, string oper, string savingColumn, string savingOption, List<EthosApiSelectCriteria> selectionCriteria, List<EthosApiSortCriteria> sortCriteria, string currentUserId = "")
         {
             var criteria = new StringBuilder();
             if (selectionCriteria != null && selectionCriteria.Any())
@@ -1738,9 +2325,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     else
                     {
-                        criteria.Append(select.SelectOper);
-                        criteria.Append(" ");
-                        criteria.Append(select.SelectValue);
+                        if (!string.IsNullOrEmpty(currentUserId) && (select.SelectValue.ToLower().Contains("@userid")))
+                        {
+                            criteria.Append(select.SelectOper);
+                            criteria.Append(" ");
+                            criteria.Append('"' + currentUserId + '"');
+                        }
+                        else
+                        {
+                            criteria.Append(select.SelectOper);
+                            criteria.Append(" ");
+                            criteria.Append(select.SelectValue);
+                        }
                     }
                     criteria.Append(" ");
                 }
@@ -1866,6 +2462,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Encoded string to use as guid on a non-guid based API.</returns>
         private string EncodePrimaryKey(string id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return id;
+            }
             // Preserve all lower case and dashes in original key by manually escaping those characters.
             var returnData = id.Replace("-", "-2D").Replace("a", "-61").
                 Replace("b", "-62").Replace("c", "-63").Replace("d", "-64").
@@ -1887,8 +2487,79 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Un-Encoded string taken from a non-guid based API guid.</returns>
         private string UnEncodePrimaryKey(string id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return id;
+            }
             var primaryKey = id.Replace("-", "%").ToUpper();
             return Uri.UnescapeDataString(primaryKey);
+        }
+
+        /// <summary>
+        /// Convert the selected key value into a key for a Business Process UI form.
+        /// </summary>
+        /// <param name="id">The ID as it was selected from the tables</param>
+        /// <param name="configuration">The configuration of the API</param>
+        /// <param name="filterDictionary">The Filter Dictionary as passed in from the Controller</param>
+        /// <returns></returns>
+        private async Task<string> AssembleKeyFromSpecsAsync(string id, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, List<ColumnData> responseColumnData = null)
+        {
+            string recordKey = id.Contains('+') ? id.Split('+')[1] : id;
+            string guid = id.Contains('+') ? id : string.Concat(configuration.PrimaryEntity, "+", id);
+            if (configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
+            {
+                string selectedFileName = id.Contains('+') ? id.Split('+')[0] : configuration.PrimaryEntity;
+                guid = string.Empty;
+                foreach (var keyItem in configuration.ColleagueKeyNames)
+                {
+                    var dictItem = filterDictionary.FirstOrDefault(fd => fd.Value.ColleagueColumnName == keyItem);
+                    if (dictItem.Value != null)
+                    {
+                        var columnData = dictItem.Value;
+                        var filterValues = columnData.FilterValue;
+                        if (responseColumnData != null && responseColumnData.Any())
+                        {
+                            var responseValue = responseColumnData.FirstOrDefault(rcd => rcd.ColumnNames == columnData.ColleagueColumnName);
+                            if (responseValue != null && responseValue.ColumnValues != null && responseValue.ColumnValues.Any())
+                            {
+                                filterValues = new List<string>() { responseValue.ColumnValues };
+                            }
+                            else
+                            {
+                                filterValues = new List<string>() { recordKey };
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(guid))
+                        {
+                            // Append a special character to the GUID we are building before adding the next component.
+                            guid = string.Concat(guid, _XM);
+                        }
+                        if (string.IsNullOrEmpty(columnData.ColleagueFileName))
+                        {
+                            // Add column name only component
+                            guid = string.Concat(guid, columnData.ColleagueColumnName, "+", filterValues.FirstOrDefault());
+                        }
+                        else
+                        {
+                            // Add file based component (considering file suites)
+                            if ((await IsEthosFileSuiteTemplateFile(columnData.ColleagueFileName)))
+                            {
+                                guid = string.Concat(guid, selectedFileName, "+", filterValues.FirstOrDefault());
+                            }
+                            else
+                            {
+                                guid = string.Concat(guid, columnData.ColleagueFileName, "+", filterValues.FirstOrDefault());
+                            }
+                        }
+                    }
+                }
+                if (string.IsNullOrEmpty(guid))
+                {
+                    guid = id.Contains('+') ? id : string.Concat(selectedFileName, "+", id);
+                }
+            }
+
+            return guid;
         }
 
         /// <summary>
@@ -1934,7 +2605,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var secondarySelect = BuildSelectCriteria(columnData.SelectColumnName, filterValue, filterOper, secondaryKeyName,
                 string.Empty, columnData.SelectionCriteria, sortColumns).ToString();
             var secondaryKeyList = await DataReader.SelectAsync(primaryEntity, newLimitingKeys, secondarySelect);
-            var convertedValue = ConvertFilterValue(filterValue, columnData.JsonPropertyType.ToLower());
+            var convertedValue = await ConvertFilterValue(filterValue, columnData);
 
             for (int i = 0; i < primaryKeyList.Count(); i++)
             {
@@ -1960,7 +2631,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             bool tryAgain = false;
                             try
                             {
-                                dataRecordColumns = await DataReader.ReadRecordColumnsAsync(primaryEntity, primaryKeyList[i], columnNames.ToArray());
+                                dataRecordColumns = await DataReader.ReadRecordColumnsAsync(primaryEntity, primaryKeyList[i].Split(_VM)[0], columnNames.ToArray());
                             }
                             catch
                             {
@@ -1970,7 +2641,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 try
                                 {
-                                    dataRecordColumns = await DataReader.ReadRecordColumnsAsync("VALCODES", primaryKeyList[i], columnNames.ToArray());
+                                    dataRecordColumns = await DataReader.ReadRecordColumnsAsync("VALCODES", primaryKeyList[i].Split(_VM)[0], columnNames.ToArray());
                                 }
                                 catch
                                 {
@@ -1993,15 +2664,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 int idx = 0;
                                 foreach (var secondary in splitSecondary)
                                 {
-                                    if (secondary.Equals(secondaryKeyList[i], StringComparison.OrdinalIgnoreCase) && splitFilterData != null && splitFilterData.Count() > idx)
+                                    if (splitSecondary.Count() > idx && secondary.Equals(secondaryKeyList[i], StringComparison.OrdinalIgnoreCase))
                                     {
-                                        includeKey = CompareFilterValue(splitFilterData[idx], convertedValue, filterOper);
-                                    }
-                                    else
-                                    {
-                                        if (splitFilterData.Count() != splitSecondary.Count())
+                                        if (splitFilterData != null && splitFilterData.Count() > idx)
                                         {
-                                            includeKey = CompareFilterValue(splitFilterData[0], convertedValue, filterOper);
+                                            includeKey = CompareFilterValue(splitFilterData[idx], convertedValue, filterOper);
+                                        }
+                                        else
+                                        {
+                                            if (splitFilterData.Count() != splitSecondary.Count())
+                                            {
+                                                includeKey = CompareFilterValue(splitFilterData[0], convertedValue, filterOper);
+                                            }
                                         }
                                     }
                                     idx++;
@@ -2027,10 +2701,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// Convert a filter value into it's Unidata Value
         /// </summary>
         /// <param name="filterValue"></param>
-        /// <param name="propertyType"></param>
+        /// <param name="columnData"></param>
         /// <returns></returns>
-        private string ConvertFilterValue(string filterValue, string propertyType)
+        private async Task<string> ConvertFilterValue(string filterValue,EthosExtensibleDataFilter columnData)
         {
+            string propertyType = columnData.JsonPropertyType;
+            string transFileName = columnData.TransFileName;
+            string transColumnName = columnData.TransColumnName;
+            string transTableName = columnData.TransTableName;
+            string transGuidFileName = columnData.GuidFileName;
+            string transGuidColumnName = columnData.GuidColumnName;
+            List<EthosApiEnumerations> transEnumTable = columnData.Enumerations;
+
             string outputData = filterValue;
             switch (propertyType.ToLower())
             {
@@ -2049,7 +2731,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (FormatException ex)
                         {
-
+                            logger.Error(ex.Message, "Unable to convert date.");
                         }
                     }
                     break;
@@ -2062,7 +2744,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (FormatException ex)
                         {
-
+                            logger.Error(ex.Message, "Unable to convert datetime.");
                         }
                     }
                     break;
@@ -2076,7 +2758,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (FormatException ex)
                         {
-
+                            logger.Error(ex.Message, "Unable to convert time.");
                         }
                     }
                     break;
@@ -2089,7 +2771,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (FormatException ex)
                         {
-
+                            logger.Error(ex.Message, "Unable to convert number.");
                         }
                     }
                     break;

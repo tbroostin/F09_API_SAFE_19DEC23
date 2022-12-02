@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -203,5 +203,146 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
 
         }
+
+        public void UpdateRegistrationPrioritiesIncludeMessagesForUsersWithOverrides(IEnumerable<RegistrationPriority> registrationPriorities, IEnumerable<Term> allTerms)
+        {
+            if (registrationPriorities == null)
+            {
+                registrationPriorities = new List<RegistrationPriority>();
+            }
+            // sort priorities ascending by start, end, id
+            var sortedPriorities = registrationPriorities.OrderBy(a => (a.Start.HasValue ? a.Start.Value : DateTime.MinValue)).ThenBy(a => (a.End.HasValue ? a.End.Value : DateTime.MinValue)).ThenBy(a => a.Id.PadLeft(10, '0')).ToList();
+            foreach (var registrationEligibilityTerm in Terms)
+            {
+                // Only check the priorities if the registration eligibility term has check priority set to true.
+                // If the student is not currently eligibile to register because they have failed term registration rules then do not check the registration priorities
+                //   because failing term rules trumps the registration priorities.
+                if (registrationEligibilityTerm.CheckPriority && !registrationEligibilityTerm.FailedRegistrationTermRules)
+                {
+                    var termsToMatch = new List<string>();
+                    termsToMatch.Add(registrationEligibilityTerm.TermCode);
+                    var term = allTerms.Where(t => t.Code == registrationEligibilityTerm.TermCode).FirstOrDefault();
+                    // Note: if the term's code != the terms's reporting term, add the reporting term into the terms to match with
+                    if (term != null && !(string.IsNullOrEmpty(term.Code)) && !(string.IsNullOrEmpty(term.ReportingTerm)) && term.Code != term.ReportingTerm)
+                    {
+                        termsToMatch.Add(term.ReportingTerm);
+                    }
+                    DateTimeOffset? start = null;
+                    DateTimeOffset? end = null;
+                    DateTimeOffset? checkAgainOn = null;
+                    DateTimeOffset currentTime = DateTimeOffset.Now;
+                    bool validStudent = false;
+                    bool eligibilityError = false;
+                    string eligibilityMsg = null;
+                    bool failedPriorityTest = false;
+                    RegistrationEligibilityTermStatus status = registrationEligibilityTerm.Status;
+
+                    foreach (var priority in sortedPriorities)
+                    {
+                        if (priority.Start.HasValue)
+                        {
+                            if (string.IsNullOrEmpty(priority.TermCode) ||
+                               (!string.IsNullOrEmpty(priority.TermCode) && termsToMatch.Contains(priority.TermCode)))
+                            {
+
+                                if (start == null ||
+                                    (start != null && priority.Start < start))
+                                {
+                                    start = priority.Start;
+                                }
+
+                                if (end != null ||
+                                    (end != null && priority.End > end))
+                                {
+                                    end = priority.End;
+                                }
+                                else
+                                {
+                                    end = priority.End;
+                                }
+                                // check the priority
+                                if (priority.Start > currentTime)
+                                {
+                                    eligibilityError = true;
+                                    // RG134
+                                    eligibilityMsg = "Student Registration has not opened.";
+                                    checkAgainOn = start;
+                                    status = RegistrationEligibilityTermStatus.Future;
+                                    failedPriorityTest = true;
+                                }
+                                else
+                                {
+                                    if (priority.End.HasValue && priority.End < currentTime)
+                                    {
+                                        eligibilityError = true;
+                                        // RG135
+                                        eligibilityMsg = "Student Registration Priority has closed.";
+                                        start = null;
+                                        end = null;
+                                        status = RegistrationEligibilityTermStatus.Past;
+                                        failedPriorityTest = true;
+                                    }
+                                    else
+                                    {
+                                        eligibilityError = false;
+                                        validStudent = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (validStudent)
+                        {
+                            break;
+                        }
+                    }
+
+                    // If the student is not valid but there is an eligibility error it means they are either before or after their allowed time.
+                    // CR-000148260 The registration priority messages need to be returned even if the user has override permissions
+                    // CR-000148260 Do not change the status for users with override permissions so that they are still able to register
+                    if (!validStudent && eligibilityError)
+                    {
+                        // Only update the status if it is not currently overridden. But do update the messages and dates.
+                        if (registrationEligibilityTerm.Status != RegistrationEligibilityTermStatus.HasOverride)
+                        {
+                            registrationEligibilityTerm.Status = status;
+                            if (failedPriorityTest)
+                            {
+                                registrationEligibilityTerm.FailedRegistrationPriorities = true;
+                            }
+                        }
+                        registrationEligibilityTerm.Message = eligibilityMsg;
+                        registrationEligibilityTerm.AnticipatedTimeForAdds = checkAgainOn;
+                    }
+
+                    // If the student is not valid but there is no error and the term isn't priority overridable for this student
+                    // then the status for this student is not eligible.
+                    // CR-000148260 The registration priority messages need to be returned even if the user has override permissions
+                    // CR-000148260 Do not change the status for users with override permissions so that they are still able to register
+                    if (!validStudent && !eligibilityError)
+                    {
+                        foreach (var termCode in termsToMatch)
+                        {
+                            var checkTerm = allTerms.Where(t => t.Code == termCode).FirstOrDefault();
+                            if (checkTerm != null && checkTerm.RegistrationPriorityRequired)
+                            {
+                                // If the stauts is not overridden we still need to update the messages and date but do not change the status.
+                                if (registrationEligibilityTerm.Status != RegistrationEligibilityTermStatus.HasOverride)
+                                {
+                                    registrationEligibilityTerm.Status = RegistrationEligibilityTermStatus.NotEligible;
+                                }
+                                //// RG136
+                                registrationEligibilityTerm.Message = "Student has no Registration Priority. Term " + termCode + " requires one.";
+                                registrationEligibilityTerm.AnticipatedTimeForAdds = checkAgainOn;
+                                registrationEligibilityTerm.FailedRegistrationPriorities = true;
+                                //break;
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+
     }
 }

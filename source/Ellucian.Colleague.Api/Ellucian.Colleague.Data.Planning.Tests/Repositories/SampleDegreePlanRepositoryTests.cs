@@ -16,6 +16,7 @@ using Moq;
 using slf4net;
 using System.Threading.Tasks;
 using System.Threading;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
 {
@@ -127,7 +128,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ThrowsErrorIfNoCourseBlocks()
         {
             dataAccessorMock.Setup<Task<CurriculumTracks>>(acc => acc.ReadRecordAsync<CurriculumTracks>("CURRICULUM.TRACKS", It.IsAny<string>(), true)).ReturnsAsync(currTrackResponseData);

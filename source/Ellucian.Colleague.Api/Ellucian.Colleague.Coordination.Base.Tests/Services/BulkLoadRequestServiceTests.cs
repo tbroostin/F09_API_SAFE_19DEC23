@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -238,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task BulkLoadRequestService_CreateBulkLoadRequestAsync_Exception()
             {
                 _bulkRequestRepoMock.Setup(repo => repo.CreateBulkLoadRequestAsync(It.IsAny<BulkRequest>(), It.IsAny<List<string>>()))
@@ -398,7 +399,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus_EmptyId()
             {
                 await _bulkLoadRequestService.GetBulkLoadRequestStatus("", "", "VIEW.PERSON");
@@ -418,11 +419,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task BulkLoadRequestService_GetBulkLoadRequestStatus_Exception()
             {
                 _bulkRequestRepoMock.Setup(repo => repo.GetBulkRequestDetails(It.IsAny<string>(), _bulkRequestDetails.RequestorTrackingId))
-                     .ThrowsAsync(new Exception());
+                     .ThrowsAsync(new ColleagueWebApiException());
 
                 await _bulkLoadRequestService.GetBulkLoadRequestStatus("api", _bulkRequestDetails.RequestorTrackingId, "VIEW.ANY.PERSON");
 
@@ -450,7 +451,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void BulkLoadRequestService_IsBulkLoadSupported_Exception()
             {
                 _bulkRequestRepoMock.Setup(repo => repo.IsBulkLoadSupported()).Throws(new Exception());

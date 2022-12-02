@@ -15,6 +15,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
@@ -243,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
         public async Task NoDefaultStudentAwardPeriods_InvalidOperationExceptionThrownTest()
         {
             studentDefaultAwardPeriodRepositoryMock.Setup(m => m.GetStudentDefaultAwardPeriodsAsync(studentId, It.IsAny<IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear>>()))
@@ -252,7 +253,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
         public async Task NullDefaultStudentAwardPeriods_InvalidOperationExceptionThrownTest()
         {
             studentDefaultAwardPeriodRepositoryMock.Setup(m => m.GetStudentDefaultAwardPeriodsAsync(studentId, It.IsAny<IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear>>()))
@@ -269,9 +270,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             {
                 await studentDefaultAwardPeriodService.GetStudentDefaultAwardPeriodsAsync(studentId);
             }
-            catch (InvalidOperationException)
+            catch (ColleagueSessionExpiredException)
             {
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no default award periods", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no default award periods", studentId)));
             }
         }
 

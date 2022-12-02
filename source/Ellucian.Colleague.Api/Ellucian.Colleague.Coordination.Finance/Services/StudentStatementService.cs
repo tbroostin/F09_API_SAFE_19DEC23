@@ -26,6 +26,7 @@ using Ellucian.Colleague.Domain.Student.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -99,6 +100,10 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             try
             {
                 statementDto = await GenerateStatementAsync(accountHolderId, timeframeId, startDate, endDate);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -249,6 +254,10 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
                 return renderedBytes;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to generate student statement.");
@@ -272,60 +281,67 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>A StudentStatement</returns>
         private async Task<StudentStatement> GenerateStatementAsync(string accountHolderId, string timeframeId, DateTime? startDate, DateTime? endDate)
         {
-            var accountHolder = await _accountsReceivableRepository.GetAccountHolderAsync(accountHolderId);
-            var depositTypes = _accountsReceivableRepository.DepositTypes;
-            var terms = _termRepository.Get();
-            var financeConfiguration = _financeConfigurationRepository.GetFinanceConfiguration();
-            var termPeriods = _accountActivityRepository.GetAccountPeriods(accountHolderId).ToList();
-            var nonTermPeriod = _accountActivityRepository.GetNonTermAccountPeriod(accountHolderId);
-            var financialPeriods = _financeConfigurationRepository.GetFinancialPeriods().ToList();
-            var statementProcessor = new StudentStatementProcessor(timeframeId, financeConfiguration.ActivityDisplay,
-                financeConfiguration.PaymentDisplay, depositTypes, terms, termPeriods, financialPeriods);
-            var timeframeTermIds = statementProcessor.GetTermIdsForTimeframe().ToList();
-
-            var detailedAccountPeriod = GetAccountDetails(accountHolderId, financeConfiguration.ActivityDisplay, timeframeTermIds, startDate, endDate);
-            statementProcessor.SortAndConsolidateAccountDetails(detailedAccountPeriod);
-            if (detailedAccountPeriod.Refunds != null)
+            try
             {
-                statementProcessor.UpdateRefundDatesAndReferenceNumbers(detailedAccountPeriod.Refunds.Refunds);
+                var accountHolder = await _accountsReceivableRepository.GetAccountHolderAsync(accountHolderId);
+                var depositTypes = _accountsReceivableRepository.DepositTypes;
+                var terms = _termRepository.Get();
+                var financeConfiguration = _financeConfigurationRepository.GetFinanceConfiguration();
+                var termPeriods = _accountActivityRepository.GetAccountPeriods(accountHolderId).ToList();
+                var nonTermPeriod = _accountActivityRepository.GetNonTermAccountPeriod(accountHolderId);
+                var financialPeriods = _financeConfigurationRepository.GetFinancialPeriods().ToList();
+                var statementProcessor = new StudentStatementProcessor(timeframeId, financeConfiguration.ActivityDisplay,
+                    financeConfiguration.PaymentDisplay, depositTypes, terms, termPeriods, financialPeriods);
+                var timeframeTermIds = statementProcessor.GetTermIdsForTimeframe().ToList();
+
+                var detailedAccountPeriod = GetAccountDetails(accountHolderId, financeConfiguration.ActivityDisplay, timeframeTermIds, startDate, endDate);
+                statementProcessor.SortAndConsolidateAccountDetails(detailedAccountPeriod);
+                if (detailedAccountPeriod.Refunds != null)
+                {
+                    statementProcessor.UpdateRefundDatesAndReferenceNumbers(detailedAccountPeriod.Refunds.Refunds);
+                }
+                var depositsDue = statementProcessor.FilterAndUpdateDepositsDue(accountHolder.DepositsDue, timeframeTermIds, startDate, endDate);
+                var accountTerms = GetAccountTerms(accountHolderId, financeConfiguration.PaymentDisplay);
+                var dueDate = statementProcessor.CalculateDueDate(accountTerms, accountHolder.DepositsDue);
+                var currentBalance = statementProcessor.CalculateCurrentBalance(detailedAccountPeriod);
+                var previousBalance = statementProcessor.CalculatePreviousBalance();
+                var futureBalance = statementProcessor.CalculateFutureBalance();
+                var otherBalance = statementProcessor.CalculateOtherBalance(nonTermPeriod);
+                var payPlanAdjustments = statementProcessor.CalculatePaymentPlanAdjustments(accountTerms);
+                var currentDepositsDue = statementProcessor.CalculateCurrentDepositsDue(accountHolder.DepositsDue);
+                var overdueAmount = statementProcessor.CalculateOverdueAmount(accountTerms, accountHolder.DepositsDue);
+                var futureOverdueAmounts = statementProcessor.CalculateFutureOverdueAmounts(accountTerms);
+                var totalAmountDue = statementProcessor.CalculateTotalAmountDue(previousBalance, currentBalance, payPlanAdjustments,
+                    currentDepositsDue, futureOverdueAmounts);
+                var statementSummary = statementProcessor.BuildStatementSummary(detailedAccountPeriod, accountTerms,
+                    currentDepositsDue, startDate, endDate);
+                var statementSchedule = await BuildStatementScheduleAsync(accountHolderId, timeframeId, financeConfiguration, terms, financialPeriods);
+                var totalBalance = previousBalance + currentBalance + futureBalance + otherBalance;
+                var previousBalanceDescription = statementProcessor.BuildPreviousBalanceDescription(startDate);
+                var futureBalanceDescription = statementProcessor.BuildFutureBalanceDescription(endDate);
+                var statement = new Ellucian.Colleague.Domain.Finance.Entities.StudentStatement(accountHolder, timeframeId, DateTime.Today,
+                    dueDate, financeConfiguration, currentBalance, totalAmountDue, totalBalance, statementSummary, detailedAccountPeriod,
+                    statementSchedule, overdueAmount)
+                {
+                    PreviousBalance = previousBalance,
+                    PreviousBalanceDescription = previousBalanceDescription,
+                    FutureBalance = futureBalance,
+                    FutureBalanceDescription = futureBalanceDescription,
+                    OtherBalance = otherBalance,
+                    DisclosureStatement = null,
+                    DisplayDueDate = financeConfiguration.DisplayDueDates
+                };
+
+                StudentStatement statementDto = new StudentStatementEntityAdapter(_adapterRegistry, logger).MapToType(statement);
+                statementDto.DepositsDue = ConvertDepositsDueToStatementDepositsDue(depositsDue);
+                CleanStatementForDisplay(statementDto);
+
+                return statementDto;
             }
-            var depositsDue = statementProcessor.FilterAndUpdateDepositsDue(accountHolder.DepositsDue, timeframeTermIds, startDate, endDate);
-            var accountTerms = GetAccountTerms(accountHolderId, financeConfiguration.PaymentDisplay);
-            var dueDate = statementProcessor.CalculateDueDate(accountTerms, accountHolder.DepositsDue);
-            var currentBalance = statementProcessor.CalculateCurrentBalance(detailedAccountPeriod);
-            var previousBalance = statementProcessor.CalculatePreviousBalance();
-            var futureBalance = statementProcessor.CalculateFutureBalance();
-            var otherBalance = statementProcessor.CalculateOtherBalance(nonTermPeriod);
-            var payPlanAdjustments = statementProcessor.CalculatePaymentPlanAdjustments(accountTerms);
-            var currentDepositsDue = statementProcessor.CalculateCurrentDepositsDue(accountHolder.DepositsDue);
-            var overdueAmount = statementProcessor.CalculateOverdueAmount(accountTerms, accountHolder.DepositsDue);
-            var futureOverdueAmounts = statementProcessor.CalculateFutureOverdueAmounts(accountTerms);
-            var totalAmountDue = statementProcessor.CalculateTotalAmountDue(previousBalance, currentBalance, payPlanAdjustments,
-                currentDepositsDue, futureOverdueAmounts);
-            var statementSummary = statementProcessor.BuildStatementSummary(detailedAccountPeriod, accountTerms,
-                currentDepositsDue, startDate, endDate);
-            var statementSchedule = await BuildStatementScheduleAsync(accountHolderId, timeframeId, financeConfiguration, terms, financialPeriods);
-            var totalBalance = previousBalance + currentBalance + futureBalance + otherBalance;
-            var previousBalanceDescription = statementProcessor.BuildPreviousBalanceDescription(startDate);
-            var futureBalanceDescription = statementProcessor.BuildFutureBalanceDescription(endDate);
-            var statement = new Ellucian.Colleague.Domain.Finance.Entities.StudentStatement(accountHolder, timeframeId, DateTime.Today,
-                dueDate, financeConfiguration, currentBalance, totalAmountDue, totalBalance, statementSummary, detailedAccountPeriod,
-                statementSchedule, overdueAmount)
+            catch (ColleagueSessionExpiredException csee)
             {
-                PreviousBalance = previousBalance,
-                PreviousBalanceDescription = previousBalanceDescription,
-                FutureBalance = futureBalance,
-                FutureBalanceDescription = futureBalanceDescription,
-                OtherBalance = otherBalance,
-                DisclosureStatement = null,
-                DisplayDueDate = financeConfiguration.DisplayDueDates
-            };
-
-            StudentStatement statementDto = new StudentStatementEntityAdapter(_adapterRegistry, logger).MapToType(statement);
-            statementDto.DepositsDue = ConvertDepositsDueToStatementDepositsDue(depositsDue);
-            CleanStatementForDisplay(statementDto);
-
-            return statementDto;
+                throw;
+            }
         }
 
         /// <summary>
@@ -392,7 +408,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 var accountDue = _accountDueRepository.Get(studentId);
 
                 // Apply any due date overrides, then add account terms to the master list of account terms
-                DueDateOverrideProcessor.OverrideTermDueDates(_dueDateOverrides, accountDue);
+                var colleagueTimeZone = _financeConfigurationRepository.GetFinanceConfiguration().ColleagueTimezone;
+                DueDateOverrideProcessor.OverrideTermDueDates(_dueDateOverrides, accountDue, colleagueTimeZone);
                 accountTerms.AddRange(accountDue.AccountTerms);
             }
 

@@ -1,17 +1,11 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
-using System;
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
 {
     /// <summary>
-    /// 
+    /// Time Card Type
     /// </summary>
     [JsonConverter(typeof(StringEnumConverter))]
     public enum TimecardType
@@ -27,6 +21,10 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// <summary>
         /// Detailed time
         /// </summary>
-        Detailed
+        Detailed,
+        /// <summary>
+        /// Clock In/Clock Out
+        /// </summary>
+        Clock
     }
 }

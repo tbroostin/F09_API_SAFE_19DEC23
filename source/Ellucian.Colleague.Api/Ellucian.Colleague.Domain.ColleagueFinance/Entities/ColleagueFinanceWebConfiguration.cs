@@ -107,6 +107,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public bool AllowNonExpenseGlAccounts { get; set; }
 
         /// <summary>
+        /// ID of the Attachment Collection that corresponds to Projects Accounting.
+        /// </summary>
+        public string ProjectsAccountingAttachmentCollectionId { get; set; }
+
+        /// <summary>
+        /// ID of the Attachment Collection that corresponds to Journal Entry or Budget Adjustment.
+        /// </summary>
+        public string JournalBudgetEntryAttachmentCollectionId { get; set; }
+
+        /// <summary>
         /// Requisition field information potentially collected when adding / modifying requisition
         /// </summary>
         public IEnumerable<ProcurementDocumentField> RequisitionFieldRequirements { get; set; }

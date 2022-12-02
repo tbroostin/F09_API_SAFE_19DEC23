@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -29,6 +29,11 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         /// Flag to identify the Advising by office configuration.
         /// </summary>
         public bool AdviseByOfficeFlag { get; set; }
+
+        /// <summary>
+        /// Flag to identify the Advising by Assignment configuration.
+        /// </summary>
+        public bool AdviseByAssignmentFlag { get; set; }
 
         /// <summary>
 		/// List of open office advisors

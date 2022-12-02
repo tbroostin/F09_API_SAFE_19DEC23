@@ -9,6 +9,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.AnonymousGrading
     public class PreliminaryAnonymousGradeTests
     {
         string anonymousGradingId;
+        string anonymousMidtermGradingId;
         string finalGradeId;
         string courseSectionId;
         string studentCourseSectionId;
@@ -22,6 +23,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.AnonymousGrading
             courseSectionId = "123";
             studentCourseSectionId = "24680";
             finalGradeExpirationDate = DateTime.Today.AddDays(30);
+            anonymousMidtermGradingId = "24567";
         }
 
         [TestMethod]
@@ -43,6 +45,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.AnonymousGrading
         {
             var entity = new PreliminaryAnonymousGrade(anonymousGradingId, finalGradeId, courseSectionId, studentCourseSectionId, finalGradeExpirationDate);
             Assert.AreEqual(anonymousGradingId, entity.AnonymousGradingId);
+            Assert.AreEqual(finalGradeId, entity.FinalGradeId);
+            Assert.AreEqual(courseSectionId, entity.CourseSectionId);
+            Assert.AreEqual(studentCourseSectionId, entity.StudentCourseSectionId);
+            Assert.AreEqual(finalGradeExpirationDate, entity.FinalGradeExpirationDate);
+        }
+
+        [TestMethod]
+        public void PreliminaryAnonymousGradeWithMidTermGrade_valid()
+        {
+            var entity = new PreliminaryAnonymousGrade(anonymousGradingId, anonymousMidtermGradingId, finalGradeId, courseSectionId, studentCourseSectionId, finalGradeExpirationDate);
+            Assert.AreEqual(anonymousGradingId, entity.AnonymousGradingId);
+            Assert.AreEqual(anonymousMidtermGradingId, entity.AnonymousMidTermGradingId);
             Assert.AreEqual(finalGradeId, entity.FinalGradeId);
             Assert.AreEqual(courseSectionId, entity.CourseSectionId);
             Assert.AreEqual(studentCourseSectionId, entity.StudentCourseSectionId);

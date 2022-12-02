@@ -1,20 +1,21 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.ComponentModel;
-using System.Threading.Tasks;
-using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using System.Net;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Net;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -116,6 +117,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the GL account.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
@@ -151,6 +157,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> generalLedgerAccountService.ValidateGlAccountAsync session expired <==");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

@@ -121,7 +121,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 var test = await actualRepository.GetStudentChecklistsAsync(studentId, awardYears);
                 //assert
                 Assert.IsNull(test.FirstOrDefault(c => c.AwardYear == year));
-                loggerMock.Verify(l => l.Warn(It.IsAny<Exception>(), string.Format("Unable to get student checklist for studentId {0}, awardYear {1}", studentId, year)));
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(), string.Format("Unable to get student checklist for studentId {0}, awardYear {1}", studentId, year)));
             }
 
             [TestMethod]

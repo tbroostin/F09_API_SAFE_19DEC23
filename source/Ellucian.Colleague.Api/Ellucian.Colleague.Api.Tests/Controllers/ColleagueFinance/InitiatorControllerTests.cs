@@ -1,7 +1,9 @@
-﻿//Copyright 2020 Ellucian Company L.P.and its affiliates.
+﻿//Copyright 2021 Ellucian Company L.P.and its affiliates.
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -78,7 +80,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         #region TEST METHODS
 
-            #region GET
+        #region GET
 
         [TestMethod]
         public async Task InitiatorController_GetInitiatorByKeywordAsync()
@@ -127,11 +129,87 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_GetInitiatorByKeywordAsync_ColleagueSessionExpiredException()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+            var initiators = await initiatorController.GetInitiatorByKeywordAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task InitiatorController_GetInitiatorByKeywordAsync_Exception()
         {
             var expected = initiatorCollection.AsEnumerable();
             initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
             var initiators = await initiatorController.GetInitiatorByKeywordAsync(personId);
+        }
+
+        #endregion
+
+        #region QAPI
+
+        [TestMethod]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+            Assert.AreEqual(initiatorCollection.ToList().Count, expected.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_Keyword_AsNull()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_ArgumentNullException()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_PermissionException()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_KeyNotFoundException()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_ColleagueSessionExpiredException()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task InitiatorController_QueryInitiatorByKeywordAsync_Exception()
+        {
+            var expected = initiatorCollection.AsEnumerable();
+            initiatorServiceMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            var initiators = await initiatorController.QueryInitiatorByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
         }
 
         #endregion

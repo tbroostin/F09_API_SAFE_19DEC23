@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -26,8 +26,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class MappingSettingsRepository : BaseColleagueRepository, IMappingSettingsRepository
     {
-        public RepositoryException exception = new RepositoryException();
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private RepositoryException exception = new RepositoryException();
+        //public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
         const int AllIntgMappingSettingsCacheTimeout = 20; // Clear from cache every 20 minutes
         const string AllIntgMappingSettingsCache = "AllIntgMappingSettings";

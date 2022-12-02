@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using slf4net;
 using System.Net;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -84,6 +85,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Info(re.ToString());
                 throw CreateHttpResponseException(re.Message, HttpStatusCode.Conflict);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while adding office hours";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Info(e.ToString());
@@ -133,6 +140,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Info(re.ToString());
                 throw CreateHttpResponseException(re.Message, HttpStatusCode.Conflict);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while updating office hours";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -184,6 +197,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Info(re.ToString());
                 throw CreateHttpResponseException(re.Message, HttpStatusCode.Conflict);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while deleting office hours";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

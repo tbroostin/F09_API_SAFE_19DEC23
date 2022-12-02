@@ -72,7 +72,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 allBookOptionsDtos = new TestBookOptionRepository().Get();
                 var BookOptionsList = new List<BookOption>();
 
-                bookOptionsController = new BookOptionsController(adapterRegistry, studentReferenceDataRepository);
+                bookOptionsController = new BookOptionsController(adapterRegistry, studentReferenceDataRepository, logger);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.BookOption, BookOption>();
                 foreach (var BookOption in allBookOptionsDtos)
                 {

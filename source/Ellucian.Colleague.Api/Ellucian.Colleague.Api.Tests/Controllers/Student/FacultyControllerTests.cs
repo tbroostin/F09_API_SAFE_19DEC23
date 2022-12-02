@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -147,7 +148,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         }
 
         [TestClass]
-        public class FacultyController_GetFacultyAsync: FacultyControllerTestSetup
+        public class FacultyController_GetFacultyAsync : FacultyControllerTestSetup
         {
             string facultyId;
             private Faculty facultyDto;
@@ -161,7 +162,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 facultyId = "0000036";
-                var facultyEntity = allFaculty.Where(f => f.Id == facultyId ).First();
+                var facultyEntity = allFaculty.Where(f => f.Id == facultyId).First();
 
                 facultyController = new FacultyController(facultyService, facultyRestrictionService, loggerMock.Object);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Faculty, Faculty>();
@@ -199,6 +200,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // act
                 var response = await facultyController.GetFacultyAsync(facultyId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task FacultyController_GetFacultyAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    facultyServiceMock.Setup(x => x.GetAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await facultyController.GetFacultyAsync(facultyId);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
 
@@ -875,15 +892,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
 
-
                 // Act
                 var sections = await facultyController.GetFacultySections5Async(facultyId, getDate, getDate, false);
             }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task FacultyController_GetFacultySections5Async_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                // Arrange
+                DateTime? getDate = DateTime.Now;
+                PrivacyWrapper<IEnumerable<Section4>> privacyWrapper = new Coordination.Base.PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>()
+                    {
+                        new Section4() {Id = "1", CourseId = "12" },
+                        new Section4() {Id = "2", CourseId = "22" }
+                    }, false);
+
+                facultyServiceMock.Setup(svc => svc.GetFacultySections5Async(facultyId, getDate, getDate, false, It.IsAny<bool>()))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+
+                // Set up an Http Context
+                HttpResponse response = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+                facultyController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+
+                try
+                {
+                    await facultyController.GetFacultySections5Async(facultyId, getDate, getDate, false);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
         }
 
-
         [TestClass]
-        public class FacultyController_QueryFacultyByPost: FacultyControllerTestSetup
+        public class FacultyController_QueryFacultyByPost : FacultyControllerTestSetup
         {
             private List<string> facultyIds;
             private List<Faculty> facultyList;
@@ -942,7 +992,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 facultyServiceMock.Setup(x => x.QueryFacultyAsync(criteria)).Throws(new ArgumentNullException());
 
                 // act
-                var response =await facultyController.QueryFacultyByPostAsync(criteria);
+                var response = await facultyController.QueryFacultyByPostAsync(criteria);
             }
         }
 
@@ -1099,7 +1149,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [TestClass]
         public class FacultyController_GetFacultyPermissions2Async_Tests : FacultyControllerTestSetup
         {
-            
+
 
             private FacultyPermissions dto;
 
@@ -1154,28 +1204,43 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 facultyServiceMock.Setup(x => x.GetFacultyPermissions2Async()).ThrowsAsync(thrownEx);
                 var response = await facultyController.GetFacultyPermissions2Async();
                 loggerMock.Verify(l => l.Error(thrownEx.ToString()));
-
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetFacultyPermissions2Async_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    facultyServiceMock.Setup(x => x.GetFacultyPermissions2Async())
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await facultyController.GetFacultyPermissions2Async();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
         }
-
 
         [TestClass]
         public class FacultyController_GetFacultyOfficeHoursAsync : FacultyControllerTestSetup
         {
             private List<string> facultyIds;
             private List<FacultyOfficeHours> facultyList;
-            
+
 
             [TestInitialize]
             public async void Initialize()
             {
                 await InitializeFacultyController();
-                
+
                 facultyIds = new List<string>() { "0000036", "0000045", "0000046", "0000048", "9999999" };
                 facultyList = new List<FacultyOfficeHours>();
 
-                FacultyOfficeHours facOffHours1 = new FacultyOfficeHours() {
+                FacultyOfficeHours facOffHours1 = new FacultyOfficeHours()
+                {
                     facultyId = "0000036",
                     OfficeHours = new List<OfficeHours>()
                     {
@@ -1204,7 +1269,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                         }
                     },
                 };
-                facultyList.Add(facOffHours1);              
+                facultyList.Add(facOffHours1);
                 facultyServiceMock.Setup(x => x.GetFacultyOfficeHoursAsync(facultyIds)).Returns(Task.FromResult<IEnumerable<FacultyOfficeHours>>(facultyList));
             }
 
@@ -1237,7 +1302,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // act
                 var response = await facultyController.GetFacultyOfficeHoursAsync(facultyIds);
-            }         
+            }
         }
     }
 }

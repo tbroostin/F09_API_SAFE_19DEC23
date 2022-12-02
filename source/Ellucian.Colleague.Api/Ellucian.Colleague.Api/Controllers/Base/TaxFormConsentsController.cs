@@ -1,9 +1,10 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
         private readonly ITaxFormConsentService taxFormConsentService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// This constructor initializes the Tax Form Consent controller.
@@ -65,6 +67,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 var taxFormConsents = await taxFormConsentService.Get2Async(personId, taxFormId);
                 return taxFormConsents;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
@@ -99,6 +106,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 var taxFormConsent2 = await taxFormConsentService.Post2Async(newTaxFormConsent2);
                 return taxFormConsent2;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

@@ -472,6 +472,21 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                     dc.DparchvCrsStcStatusAssocMember = course.RegistrationStatus;
                     ac.DparchvCoursesEntityAssociation.Add(dc);
                 }
+                foreach (var csph in pa.ArchivedCoursePlaceholders)
+                {
+                    var dcp = new DegreePlanArchiveDparchvCrsPlaceholders();
+                    dcp.DparchvCphIdAssocMember = csph.Id;
+                    dcp.DparchvCphCreditsAssocMember = csph.CreditInformation;
+                    dcp.DparchvCphTitleAssocMember = csph.Title;
+                    dcp.DparchvCphTermAssocMember = csph.TermCode;
+                    dcp.DparchvCphSreqAcadReqmtAssocMember = csph.AcademicRequirement != null ? csph.AcademicRequirement.AcademicRequirementCode : null;
+                    dcp.DparchvCphGroupAcadReqmtAssocMember = csph.AcademicRequirement != null ? csph.AcademicRequirement.GroupId : null;
+                    dcp.DparchvCphSreqAcadReqmtAssocMember = csph.AcademicRequirement != null ? csph.AcademicRequirement.SubrequirementId : null;
+                    dcp.DparchvCphAddedByAssocMember = csph.AddedBy;
+                    dcp.DparchvCphAddedOnDateAssocMember = csph.AddedOn.HasValue ? csph.AddedOn.Value.DateTime : (DateTime?)null;
+                    dcp.DparchvCphAddedOnTimeAssocMember = csph.AddedOn.HasValue ? csph.AddedOn.Value.DateTime : (DateTime?)null;
+                    ac.DparchvCrsPlaceholdersEntityAssociation.Add(dcp);
+                }
                 archives.Add(ac);
             }
             return archives;

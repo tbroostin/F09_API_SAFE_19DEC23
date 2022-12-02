@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.FinancialAid.Services;
@@ -102,7 +103,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             }
             catch (Exception e)
             {
-                logger.Info(e, string.Format("Student {0} has no checklist for {1}. In create method so this is good!", studentId, year));
+                logger.Debug(e, string.Format("Student {0} has no checklist for {1}. In create method so this is good!", studentId, year));
             }
             if (existingChecklist != null)
             {
@@ -119,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             }
             catch (Exception e)
             {
-                logger.Info(e.Message);
+                logger.Debug(e.Message);
             }
             var studentAwardYearEntity = studentAwardYearEntities != null ? studentAwardYearEntities.FirstOrDefault(y => y.Code == year) : null;
 
@@ -226,7 +227,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (studentAwardYearEntities == null || !studentAwardYearEntities.Any())
             {
                 var message = string.Format("Student {0} has no award years for which to get StudentChecklist objects", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<StudentFinancialAidChecklist>();
             }
             
@@ -235,7 +236,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 //  empty list instead of an error
                 var message = string.Format("Student {0} has no checklist items for any award years", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<StudentFinancialAidChecklist>();
             }
 
@@ -316,14 +317,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (!await FAUserCanViewProfileForPerson(studentId, parentId))
             {
                 string message = CurrentUser.PersonId + " cannot view profile for person " + parentId + " check PREL and proxy access. If this is an admin user, check for the VIEW.FINANCIAL.AID.INFORMATION permission code.";
-                logger.Info(message);
+                logger.Debug(message);
                 throw new PermissionsException(message);
             }
 
             Profile profileEntity = await _profileRepository.GetProfileAsync(parentId, useCache);
             if (profileEntity == null)
             {
-                throw new Exception("Profile information could not be retrieved for person " + parentId);
+                throw new ColleagueWebApiException("Profile information could not be retrieved for person " + parentId);
             }
 
             var profileDtoAdapter = _adapterRegistry.GetAdapter<Profile, Dtos.Base.Profile>();

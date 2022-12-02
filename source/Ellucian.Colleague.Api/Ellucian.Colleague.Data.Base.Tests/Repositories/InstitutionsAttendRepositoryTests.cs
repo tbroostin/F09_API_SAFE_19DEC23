@@ -17,6 +17,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -105,7 +106,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         #endregion
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionsAttendRepository_GetInstitutionTypesAsync_Exception()
         {
             dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INST.TYPES", true)).ReturnsAsync(() => null);

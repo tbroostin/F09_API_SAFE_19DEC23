@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Student.Exceptions;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {

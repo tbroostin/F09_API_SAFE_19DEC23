@@ -1431,7 +1431,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
                 string guid = registration.Id;
-                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>())).ReturnsAsync(registration);
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>(), It.IsAny<bool>())).ReturnsAsync(registration);
                 sectionRegistrationServiceMock.Setup(x => x.GetSectionRegistrationByGuid3Async(guid, false)).ReturnsAsync(registration);
                 var result = await sectionRegistrationsController.PutSectionRegistrations3Async(guid, registration);
                 Assert.AreEqual(result.Id, registration.Id);
@@ -1446,7 +1446,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_PermissionsException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new PermissionsException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1456,7 +1456,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_KeyNotFoundException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new KeyNotFoundException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1466,7 +1466,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentNullException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new ArgumentNullException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1476,7 +1476,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentOutOfRangeException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new ArgumentOutOfRangeException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1486,7 +1486,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_IntegrationApiException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new IntegrationApiException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1496,7 +1496,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_InvalidOperationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new InvalidOperationException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1506,7 +1506,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ConfigurationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new ConfigurationException());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1516,7 +1516,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_Exception()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>()))
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
@@ -1552,7 +1552,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
                 
                 sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
-                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>())).ReturnsAsync(registration);
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>(), It.IsAny<bool>())).ReturnsAsync(registration);
                 var result = await sectionRegistrationsController.PutSectionRegistrations3Async(guid, registration);
 
                 Object filterObject;
@@ -1596,7 +1596,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
 
-                    sectionRegistrationServiceMock.Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
                     sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
                         .Throws(new PermissionsException("User 'npuser' does not have permission to update section-registrations."));
                     await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Api.Client.Exceptions;
@@ -167,7 +167,11 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _facultyPath = "faculty";
         private static readonly string _officeHoursPath = "office-hours";
         private static readonly string _officeHoursDeletePath = "office-hours-delete";
+        private static readonly string _studentRecordsReleasePath = "student-records-release-info";
+        private static readonly string _studentRecordsReleaseDenyAccessPath = "student-records-release-deny-access";
+        private static readonly string _denyStudentRecordsReleaseAccessPath = "deny-student-records-release-access";
         private static readonly string _facultyGradingPath = "faculty-grading";
+        private static readonly string _facultyAttendancePath = "faculty-attendance";
         private static readonly string _facultyIdsPath = "query-faculty-ids";
         private static readonly string _studentProfilePath = "student-profile";
         private static readonly string _fafsaPath = "fafsa";
@@ -179,6 +183,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _financialAidChecklistItemsPath = "financial-aid-checklist-items";
         private static readonly string _financialAidChecklistPath = "financial-aid-checklists";
         private static readonly string _financialAidCounselorsPath = "financial-aid-counselors";
+        private static readonly string _financialAidCreditsPath = "financial-aid-credits";
         private static readonly string _financialAidExplanationsPath = "financial-aid-explanations";
         private static readonly string _financialAidOfficesPath = "financial-aid-offices";
         private static readonly string _financialAidPersonsPath = "financial-aid-persons";
@@ -203,6 +208,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _institutionsPath = "institutions";
         private static readonly string _institutionTypesPath = "institution-types";
         private static readonly string _instructionalMethodsPath = "instructional-methods";
+        private static readonly string _intentToWithdrawCodesPath = "intent-to-withdraw-codes";
         private static readonly string _studentEnrollmentKeysPath = "invalid-student-enrollments";
         private static readonly string _ipedsInstitutionsPath = "ipeds-institutions";
         private static readonly string _localCourseClassificationsPath = "local-course-classifications";
@@ -279,6 +285,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _relationshipTypesPath = "relationship-types";
         private static readonly string _requirementsPath = "requirements";
         private static readonly string _resetPasswordPath = "reset-password";
+        private static readonly string _restrictedPaymentsPath = "restricted-payments";
         private static readonly string _restrictionTypesPath = "restriction-types";
         private static readonly string _restrictionConfigurationPath = "restriction";
         private static readonly string _rolesPath = "roles";
@@ -291,6 +298,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _requiredDocument = "required-document";
         private static readonly string _schoolsPath = "schools";
         private static readonly string _sectionAttendancesPath = "section-attendances";
+        private static readonly string _sectionAvailabilityInformationPath = "section-availability-information";
         private static readonly string _sectionsPath = "sections";
         private static readonly string _sectionWaitlistPath = "section-waitlist";
         private static readonly string _sectionMeetingInstancesPath = "section-meeting-instances";
@@ -338,6 +346,8 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _studentTermsGpaPath = "student-terms-gpa";
         private static readonly string _studentTypesPath = "student-types";
         private static readonly string _studentWaiverReasonsPath = "student-waiver-reasons";
+        private static readonly string _studentReleaseAccessCodesPath = "student-release-access-code";
+        private static readonly string _studentRecordsReleaseConfigPath = "configuration/student-records-release";
         private static readonly string _studentTransferWorkPath = "transfer-work";
         private static readonly string _subjectsPath = "subjects";
         private static readonly string _suffixesPath = "suffixes";
@@ -362,6 +372,8 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _qapiPath = "qapi";
         private static readonly string _projectsPath = "projects";
         private static readonly string _adviseesPath = "advisees";
+        private static readonly string _departmentalOversightPath = "departmental-oversight";
+        private static readonly string _departmentalOversightDetailsPath = "departmental-oversight-details";
         private static readonly string _projectTypesPath = "project-types";
         private static readonly string _projectItemCodesPath = "project-item-codes";
         private static readonly string _accountsPayableTaxCodesPath = "accounts-payable-taxes";
@@ -427,6 +439,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _taxForm1099NecPdfPath = "form1099Nec";
         private static readonly string _taxFormCodesPath = "tax-form-codes";
         private static readonly string _financeQueryPath = "finance-query";
+        private static readonly string _financeQueryDetailPath = "finance-query-detail";
         private static readonly string _glFiscalYearConfigurationPath = "configuration/gl-fiscal-year-configuration";
         private static readonly string _budgetDevelopmentConfigurationPath = "configuration/budget-development";
         private static readonly string _budgetDevelopmentWorkingBudgetPath = "budget-development/working-budget";
@@ -1043,9 +1056,10 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 ExecutePostRequestWithResponse<string>("", UrlUtility.CombineUrlPath(_sessionPath, "logout"), headers: headers);
             }
-            catch
+            catch (Exception ex)
             {
                 // Ignore
+                logger.Error(ex.Message, "Error posting logout");
             }
             finally
             {
@@ -1070,9 +1084,10 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 await ExecutePostRequestWithResponseAsync<string>("", UrlUtility.CombineUrlPath(_sessionPath, "logout"), headers: headers);
             }
-            catch
+            catch (Exception ex)
             {
                 // Ignore
+                logger.Error(ex.Message, "Error posting async logout");
             }
             finally
             {
@@ -1244,6 +1259,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get IEnumerable<Role>");
@@ -1333,6 +1353,42 @@ namespace Ellucian.Colleague.Api.Client
                 return permissions;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set proxy permissions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Post changes to a user's proxy permissions
+        /// </summary>
+        /// <param name="assignment">The proxy permissions being changed</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
+        /// <returns>A collection of proxy access permissions</returns>
+        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsV2Async(ProxyPermissionAssignment assignment, bool useEmployeeGroups = false)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_usersPath, assignment.ProxySubjectId, "proxy-permissions");
+                urlPath += "?" + UrlUtility.BuildEncodedQueryString("useEmployeeGroups", useEmployeeGroups.ToString());
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecutePostRequestWithResponseAsync(assignment, urlPath, headers: headers);
+                var permissions = JsonConvert.DeserializeObject<IEnumerable<ProxyAccessPermission>>(await response.Content.ReadAsStringAsync());
+                return permissions;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to set proxy permissions");
@@ -1359,6 +1415,11 @@ namespace Ellucian.Colleague.Api.Client
                 return permissions;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve proxy permissions for user " + userId);
@@ -1412,6 +1473,11 @@ namespace Ellucian.Colleague.Api.Client
                 var proxySubjects = JsonConvert.DeserializeObject<IEnumerable<ProxySubject>>(await response.Content.ReadAsStringAsync());
                 return proxySubjects;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve proxy subjects for user " + proxyPersonId);
@@ -1454,6 +1520,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<Dtos.Base.ProxyCandidate>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to create a proxy candidate.");
@@ -1478,6 +1549,11 @@ namespace Ellucian.Colleague.Api.Client
                 var proxyCandidates = JsonConvert.DeserializeObject<IEnumerable<ProxyCandidate>>(await response.Content.ReadAsStringAsync());
                 return proxyCandidates;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve proxy candidates for user " + grantorId);
@@ -1501,6 +1577,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<Dtos.Base.PersonProxyUser>(user, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Dtos.Base.PersonProxyUser>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {

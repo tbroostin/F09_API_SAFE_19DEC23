@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
@@ -3897,6 +3897,8 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 };
                 facultyGradingConfiguration.ShowPassAudit = true;
                 facultyGradingConfiguration.ShowRepeated = true;
+                facultyGradingConfiguration.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Editable;
+                facultyGradingConfiguration.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Hidden;
 
                 var serializedResponse = JsonConvert.SerializeObject(facultyGradingConfiguration);
 
@@ -3919,7 +3921,75 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsTrue(clientResponse.IncludeDroppedWithdrawnStudents);
                 Assert.IsTrue(clientResponse.ShowPassAudit);
                 Assert.IsTrue(clientResponse.ShowRepeated);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: clientResponse.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Hidden, actual: clientResponse.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior);
                 Assert.AreEqual(facultyGradingConfiguration.AllowedGradingTerms.Count(), clientResponse.AllowedGradingTerms.Count());
+            }
+        }
+
+        [TestClass]
+        public class GetFacultyGradingConfiguration2Async
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetFacultyGradingConfiguration2Async_ReturnsSerializedFacultyGradingConfiguration()
+            {
+                // Arrange
+                var facultyGradingConfiguration2 = new FacultyGradingConfiguration2();
+                facultyGradingConfiguration2.IncludeCrosslistedStudents = true;
+                facultyGradingConfiguration2.IncludeDroppedWithdrawnStudents = true;
+                facultyGradingConfiguration2.AllowedGradingTerms = new List<string>()
+                {
+                    "2016/SP",
+                     "2016/FA"
+                };
+                facultyGradingConfiguration2.ShowPassAudit = true;
+                facultyGradingConfiguration2.ShowRepeated = true;
+                facultyGradingConfiguration2.FinalGradesLastDateAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Editable;
+                facultyGradingConfiguration2.MidtermGradesLastDateAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Hidden;
+                facultyGradingConfiguration2.FinalGradesNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly;
+                facultyGradingConfiguration2.MidtermGradesNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Editable;
+
+                var serializedResponse = JsonConvert.SerializeObject(facultyGradingConfiguration2);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetFacultyGradingConfiguration2Async();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsTrue(clientResponse.IncludeCrosslistedStudents);
+                Assert.IsTrue(clientResponse.IncludeDroppedWithdrawnStudents);
+                Assert.IsTrue(clientResponse.ShowPassAudit);
+                Assert.IsTrue(clientResponse.ShowRepeated);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: clientResponse.FinalGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Hidden, actual: clientResponse.MidtermGradesLastDateAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, actual: clientResponse.FinalGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(expected: LastDateAttendedNeverAttendedFieldDisplayType.Editable, actual: clientResponse.MidtermGradesNeverAttendedDisplayBehavior);
+                Assert.AreEqual(facultyGradingConfiguration2.AllowedGradingTerms.Count(), clientResponse.AllowedGradingTerms.Count());
             }
         }
 
@@ -6982,8 +7052,8 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ApplicationException))]
-            public async Task ServiceClient_QueryStudentsSearchAsync_unauthorized_request_throws_ApplicationException()
+            [ExpectedException(typeof(LoginException))]
+            public async Task ServiceClient_QueryStudentsSearchAsync_unauthorized_request_throws_LoginException()
             {
                 // Arrange
                 var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
@@ -8942,7 +9012,9 @@ namespace Ellucian.Colleague.Api.Client.Tests
                     PaymentDistributionCode = "BANK",
                     CitizenshipHomeCountryCode = "US",
                     WebPaymentsImplemented = true,
-                    RegistrationUserRole = "CEUSER"
+                    RegistrationUserRole = "CEUSER",
+                    ShowInstantEnrollmentBookstoreLink = true,
+                    AllowNonCitizenRegistration = true
                 };
                 var serializedResponse = JsonConvert.SerializeObject(configuration);
 
@@ -8971,10 +9043,11 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(configuration.CitizenshipHomeCountryCode, clientResponse.CitizenshipHomeCountryCode);
                 Assert.AreEqual(configuration.WebPaymentsImplemented, clientResponse.WebPaymentsImplemented);
                 Assert.AreEqual(configuration.RegistrationUserRole, clientResponse.RegistrationUserRole);
+                Assert.AreEqual(configuration.ShowInstantEnrollmentBookstoreLink, clientResponse.ShowInstantEnrollmentBookstoreLink);
+                Assert.AreEqual(configuration.AllowNonCitizenRegistration, clientResponse.AllowNonCitizenRegistration);
             }
         }
 
-        //
         [TestClass]
         public class ZeroCostRegistrationForClassesAsync
         {
@@ -9059,7 +9132,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(dtoResponse.RegistrationMessages[1].MessageSection, clientResponse.RegistrationMessages[1].MessageSection);
             }
         }
-        //
 
         [TestClass]
         public class EcheckRegistrationForClassesAsync
@@ -10516,11 +10588,86 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 // Assert that the expected number of items is returned and each of the expected items is found in the response
                 Assert.IsNotNull(clientResponse);
-                Assert.AreEqual(configuration.LastDateAttendedNeverAttendedCensusRoster, clientResponse.LastDateAttendedNeverAttendedCensusRoster);
+                Assert.AreEqual(expected: configuration.LastDateAttendedNeverAttendedCensusRoster, actual: clientResponse.LastDateAttendedNeverAttendedCensusRoster);
 
                 for (int i = 0; i < configuration.CensusDatePositionSubmissionRange.Count(); i++)
                 {
                     var expectedSubmission = configuration.CensusDatePositionSubmissionRange.ElementAt(i);
+                    var actualSubmission = clientResponse.CensusDatePositionSubmissionRange.ElementAt(i);
+
+                    Assert.AreEqual(expectedSubmission.Position, actualSubmission.Position);
+                    Assert.AreEqual(expectedSubmission.Label, actualSubmission.Label);
+                    Assert.AreEqual(expectedSubmission.CertifyDaysBeforeOffset, actualSubmission.CertifyDaysBeforeOffset);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetSectionCensusConfiguration2Async
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetSectionCensusConfiguration2Async_ReturnsSerializedSectionCensusConfiguration()
+            {
+                // Arrange
+                var configuration2 = new SectionCensusConfiguration2()
+                {
+                    LastDateAttendedCensusRoster = LastDateAttendedNeverAttendedFieldDisplayType.Editable,
+                    NeverAttendedCensusRoster = LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly,
+                    CensusDatePositionSubmissionRange = new List<CensusDatePositionSubmission>()
+                        {
+                            new CensusDatePositionSubmission()
+                            {
+                                Position = 1,
+                                Label = "1st Census",
+                                CertifyDaysBeforeOffset = null
+                            },
+                            new CensusDatePositionSubmission()
+                            {
+                                Position = 3,
+                                Label = "3st Census",
+                                CertifyDaysBeforeOffset = 10
+                            }
+                        }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(configuration2);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetSectionCensusConfiguration2Async();
+
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(expected: configuration2.LastDateAttendedCensusRoster, actual: clientResponse.LastDateAttendedCensusRoster);
+                Assert.AreEqual(expected: configuration2.NeverAttendedCensusRoster, actual: clientResponse.NeverAttendedCensusRoster);
+
+                for (int i = 0; i < configuration2.CensusDatePositionSubmissionRange.Count(); i++)
+                {
+                    var expectedSubmission = configuration2.CensusDatePositionSubmissionRange.ElementAt(i);
                     var actualSubmission = clientResponse.CensusDatePositionSubmissionRange.ElementAt(i);
 
                     Assert.AreEqual(expectedSubmission.Position, actualSubmission.Position);
@@ -10607,6 +10754,168 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
         }
 
+        [TestClass]
+        public class GetIntentToWithdrawCodesAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetIntentToWithdrawCodesAsync_ReturnsSerializedIntentToWithdrawCodes()
+            {
+                // Arrange
+                var IntentToWithdrawCodes = new List<IntentToWithdrawCode>()
+                    {
+                        new IntentToWithdrawCode(){Id = "1", Code="C",Description="Changed Mind"},
+                        new IntentToWithdrawCode(){Id = "2", Code="D",Description="Difficult"},
+                        new IntentToWithdrawCode(){Id = "3", Code="W",Description="My own wish" }
+                };
+                var serializedResponse = JsonConvert.SerializeObject(IntentToWithdrawCodes);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetIntentToWithdrawCodesAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(IntentToWithdrawCodes.Count(), clientResponse.Count());
+                foreach (var IntentToWithdrawCode in clientResponse)
+                {
+                    Assert.IsNotNull(IntentToWithdrawCode.Id);
+                    Assert.IsNotNull(IntentToWithdrawCode.Code);
+                    Assert.IsNotNull(IntentToWithdrawCode.Description);
+                    var reason = IntentToWithdrawCodes.Where(c => c.Code == IntentToWithdrawCode.Code).FirstOrDefault();
+                    Assert.AreEqual(reason.Id, IntentToWithdrawCode.Id);
+                    Assert.AreEqual(reason.Code, IntentToWithdrawCode.Code);
+                    Assert.AreEqual(reason.Description, IntentToWithdrawCode.Description);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetSectionAvailabilityInformationConfigurationAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetSectionAvailabilityInformationConfigurationAsync_ReturnsSerializedSectionAvailabilityInformationConfiguration()
+            {
+                // Arrange
+                var configuration = new SectionAvailabilityInformationConfiguration();
+                configuration.IncludeSeatsTakenInAvailabilityInformation = true;
+                configuration.ShowNegativeSeatCounts = true;
+                var serializedResponse = JsonConvert.SerializeObject(configuration);
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetSectionAvailabilityInformationConfigurationAsync();
+
+                Assert.IsNotNull(clientResponse);
+                Assert.IsTrue(clientResponse.IncludeSeatsTakenInAvailabilityInformation);
+                Assert.IsTrue(clientResponse.ShowNegativeSeatCounts);
+            }
+        }
+
+        [TestClass]
+        public class GetStudentReleaseAccessCodesAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetStudentReleaseAccessCodesAsync_ReturnsStudentReleaseAccess()
+            {
+                // Arrange
+                var studentReleaseAccess = new List<StudentReleaseAccess>()
+                    {
+                        new StudentReleaseAccess(){Code="Grade",Description="Grade Details",Comments="Graduation grade details"},
+                        new StudentReleaseAccess(){Code="ADR",Description="Address Details",Comments="Present and Permanent Address details"}                       
+                    };
+                var serializedResponse = JsonConvert.SerializeObject(studentReleaseAccess);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentReleaseAccessCodesAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(studentReleaseAccess.Count(), clientResponse.Count());
+                foreach (var sr in clientResponse)
+                {
+                    Assert.IsNotNull(sr.Code);
+                    Assert.IsNotNull(sr.Description);
+                    Assert.IsNotNull(sr.Comments);
+                    var studentsReleaseAccess = studentReleaseAccess.Where(c => c.Code == sr.Code).FirstOrDefault();
+                    Assert.AreEqual(studentsReleaseAccess.Code, sr.Code);
+                    Assert.AreEqual(studentsReleaseAccess.Description, sr.Description);
+                    Assert.AreEqual(studentsReleaseAccess.Comments, sr.Comments);
+                }
+            }
+
+        }
     }
 }
 

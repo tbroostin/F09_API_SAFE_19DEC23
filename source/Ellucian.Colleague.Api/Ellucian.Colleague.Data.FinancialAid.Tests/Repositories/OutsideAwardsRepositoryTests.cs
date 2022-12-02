@@ -13,6 +13,7 @@ using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using Moq;
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 using System.Collections.ObjectModel;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -183,7 +184,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NullReturnedRecordId_ThrowsExceptionTest()
             {
                 createOutsideAwardResponse.OutOutsideAwardId = null;

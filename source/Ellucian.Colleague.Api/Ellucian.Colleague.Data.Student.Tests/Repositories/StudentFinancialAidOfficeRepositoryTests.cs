@@ -15,6 +15,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -110,7 +111,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task StudentFinancialAidOfficeRepository_GetFinancialAidOfficesAsync_Exception()
         {
             dataAccessorMock.Setup(repo => repo.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", It.IsAny<bool>())).ThrowsAsync(new Exception());

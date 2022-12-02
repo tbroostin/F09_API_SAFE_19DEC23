@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -57,6 +58,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var staffDto = staffAdapter.MapToType(staff);
 
                 return staffDto;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while retrieving staff.";
+                logger.Error(ce, message);
+                throw;
             }
             catch (Exception)
             {

@@ -183,7 +183,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 Assert.IsNotNull(actualStudentLoanLimitations);
                 Assert.IsTrue(actualStudentLoanLimitations.Count() == 0);
 
-                loggerMock.Verify(l => l.Info(string.Format("No LoanLimitations exist for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No LoanLimitations exist for student {0}", studentId)));
             }
 
             [TestMethod]

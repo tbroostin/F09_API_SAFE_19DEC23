@@ -33,7 +33,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 MockInitialize();
 
-                studentProgramRepo =await BuildValidStudentProgramRepository();
+                studentProgramRepo = await BuildValidStudentProgramRepository();
             }
 
             [TestMethod]
@@ -189,15 +189,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 TestStudentProgramRepository tsp = new TestStudentProgramRepository();
                 var progdata1 = BuildStudentProgramsResponse(await tsp.GetAsync("0000894", "ECON.BA"));
-                var progdata2 = BuildStudentProgramsResponse(await tsp.GetAsync("0000894")); 
+                var progdata2 = BuildStudentProgramsResponse(await tsp.GetAsync("0000894"));
 
                 string[] twoprogram = { "ECON.BA", "PROG1" };
-                string[] threeprogram = { "ECON.BA", "MATH.BS", "PROG1"};
+                string[] threeprogram = { "ECON.BA", "MATH.BS", "PROG1" };
 
                 string[] twoprogramkey = { "0000894*ECON.BA", "0000894*PROG1" };
                 string[] threeprogramkey = { "0000894*ECON.BA", "0000894*MATH.BS", "0000894*PROG1" };
 
-                Students studata1 = new Students() { Recordkey = "0000894", StuAcadPrograms = new List<string>() { twoprogram[0], twoprogram[1] } }; 
+                Students studata1 = new Students() { Recordkey = "0000894", StuAcadPrograms = new List<string>() { twoprogram[0], twoprogram[1] } };
                 Students studata2 = new Students() { Recordkey = "0000894", StuAcadPrograms = new List<string>() { threeprogram[0], threeprogram[1], threeprogram[2] } };
 
                 string cacheKey0 = studentProgramRepo.BuildFullCacheKey("StudentPrograms0000894");                          //  before this change they looked like this
@@ -248,7 +248,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
 
                 // Set up response for student 
-                Students strec = new Students() { Recordkey = "0000894", StuAcadPrograms = new List<string>() { "MATH.BS", "ECON.BA", "PROG1", "PROG2","PROG3","PROG4"} };
+                Students strec = new Students() { Recordkey = "0000894", StuAcadPrograms = new List<string>() { "MATH.BS", "ECON.BA", "PROG1", "PROG2", "PROG3", "PROG4" } };
                 dataReaderMock.Setup<Task<Students>>(acc => acc.ReadRecordAsync<Students>("STUDENTS", "0000894", true)).ReturnsAsync(strec);
 
                 // Set up response for student programs
@@ -272,36 +272,36 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     a.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", true))
                     .ReturnsAsync(new ApplValcodes()
                     {
-                        ValInternalCode = new List<string>() { "P","A","G","C","W" },
-                        ValExternalRepresentation = new List<string>() { "Potential","Active","Graduated", "Changed" ,"Withdrawn"},
-                        ValActionCode1 = new List<string>() { "1","2","3","4","5" },
+                        ValInternalCode = new List<string>() { "P", "A", "G", "C", "W" },
+                        ValExternalRepresentation = new List<string>() { "Potential", "Active", "Graduated", "Changed", "Withdrawn" },
+                        ValActionCode1 = new List<string>() { "1", "2", "3", "4", "5" },
                         ValsEntityAssociation = new List<ApplValcodesVals>()
                         {
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "P",
                                 ValExternalRepresentationAssocMember = "Potential",
                                 ValActionCode1AssocMember = "1"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "A",
                                 ValExternalRepresentationAssocMember = "Active",
                                 ValActionCode1AssocMember = "2"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "G",
                                 ValExternalRepresentationAssocMember = "Graduated",
                                 ValActionCode1AssocMember = "3"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "C",
                                 ValExternalRepresentationAssocMember = "Changed",
                                 ValActionCode1AssocMember = "4"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "W",
                                 ValExternalRepresentationAssocMember = "Withdrawn",
@@ -327,12 +327,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             private Collection<StudentPrograms> BuildStudentProgramsResponse(IEnumerable<StudentProgram> studentPrograms)
             {
-                string[] programStatus = new string[] {"A","P","G","C","W" };
+                string[] programStatus = new string[] { "A", "P", "G", "C", "W" };
                 int programStatusOffset = 0;
                 Collection<StudentPrograms> repoStudentPrograms = new Collection<StudentPrograms>();
                 foreach (var studentProgram in studentPrograms)
                 {
-                    if(programStatusOffset > 4)
+                    if (programStatusOffset > 4)
                     {
                         programStatusOffset = 0;
                     }
@@ -363,7 +363,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     studentProgramData.StprDaOverrides = new List<string>();
                     studentProgramData.StprDaExcpts = new List<string>();
 
-                    studentProgramData.StprStatus = new List<string> {programStatus[programStatusOffset++], "A" };
+                    studentProgramData.StprStatus = new List<string> { programStatus[programStatusOffset++], "A" };
                     studentProgramData.StprStartDate = new List<DateTime?>() { new DateTime() };
 
                     if (studentProgram.Overrides.Count() > 0)
@@ -381,7 +381,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     {
                         studentProgramData.StprDaExcpts = new List<string>();
                     }
-                        
+
 
 
                     repoStudentPrograms.Add(studentProgramData);
@@ -395,7 +395,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 stuProgData.StprEndDate = new List<DateTime?>() { DateTime.Today.AddDays(-30) };
                 stuProgData.StprDaOverrides = new List<string>();
                 stuProgData.StprDaExcpts = new List<string>();
-                stuProgData.StprStatus = new List<string>() {"G" };
+                stuProgData.StprStatus = new List<string>() { "G" };
                 stuProgData.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
                 stuProgData.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
                 stuProgData.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
@@ -545,7 +545,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 Collection<StudentDaExcpts> exceptions = new Collection<StudentDaExcpts>();
                 // First is Additional Courses
-                var exception1 = new StudentDaExcpts() { Recordkey = "E1", StexStudentProgram = "0000894*MATH.BS",  StexAcadReqmtBlock = "10000", StexType = "E", StexElement = "ADEL", StexAddnlCourses = new List<string>() { "100", "200" }, StexPrintedSpec = "Exception: Allowing Courses 100 and 200"};
+                var exception1 = new StudentDaExcpts() { Recordkey = "E1", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "10000", StexType = "E", StexElement = "ADEL", StexAddnlCourses = new List<string>() { "100", "200" }, StexPrintedSpec = "Exception: Allowing Courses 100 and 200" };
                 exceptions.Add(exception1);
 
                 // Second is a Replacement Block - without min grades 
@@ -556,7 +556,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 courseAssociation.Add(ca2);
                 var ca3 = new StudentDaExcptsBlockRepl();
                 courseAssociation.Add(ca3);
-                var exception2 = new StudentDaExcpts() { Recordkey = "E2", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "20000", StexType = "R", StexElement = "BLK", StexPrintedSpec = "BlockReplacement: Take Courses 87 - min B and 139 no min grade", BlockReplEntityAssociation = courseAssociation};
+                var exception2 = new StudentDaExcpts() { Recordkey = "E2", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "20000", StexType = "R", StexElement = "BLK", StexPrintedSpec = "BlockReplacement: Take Courses 87 - min B and 139 no min grade", BlockReplEntityAssociation = courseAssociation };
                 exceptions.Add(exception2);
 
                 // Third is a Block Waiver
@@ -591,7 +591,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 return exceptions;
             }
-        
+
             private Collection<AcadPrograms> BuildProgramsResponse(IEnumerable<Domain.Student.Entities.Requirements.Program> Programs)
             {
                 Collection<AcadPrograms> repoPrograms = new Collection<AcadPrograms>();
@@ -655,9 +655,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             StudentProgramRepository studentProgramRepo;
             string studentId;
             string programId;
-            
+
             [TestInitialize]
-            public void  Initialize()
+            public void Initialize()
             {
                 MockInitialize();
 
@@ -676,7 +676,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // act 
                 var studentProgramNotices = await studentProgramRepo.GetStudentProgramEvaluationNoticesAsync(studentId, programId);
-                
+
                 // assert
                 Assert.AreEqual(0, studentProgramNotices.Count());
             }
@@ -686,12 +686,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // arrange
                 BuildDegreeAuditCustomTextResponse noticeResponse = new BuildDegreeAuditCustomTextResponse()
-                    {
-                        AlAcademicProgramText = new List<string>() { "AcademicProgramText Line1", "AcademicProgramText Line2" },
-                        AlStudentProgramText = new List<string>() { "StudentProgramText Line1", "StudentProgramText Line2" },
-                        AlStartText = new List<string>() { "StartText Line1", "StartText Line2" },
-                        AlEndText = new List<string>() { "EndText Line1", "EndText Line2" }
-                    };
+                {
+                    AlAcademicProgramText = new List<string>() { "AcademicProgramText Line1", "AcademicProgramText Line2" },
+                    AlStudentProgramText = new List<string>() { "StudentProgramText Line1", "StudentProgramText Line2" },
+                    AlStartText = new List<string>() { "StartText Line1", "StartText Line2" },
+                    AlEndText = new List<string>() { "EndText Line1", "EndText Line2" }
+                };
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<BuildDegreeAuditCustomTextRequest, BuildDegreeAuditCustomTextResponse>(It.IsAny<BuildDegreeAuditCustomTextRequest>())).ReturnsAsync(noticeResponse);
 
                 // act 
@@ -753,7 +753,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // act 
                 var studentProgramNotices = await studentProgramRepo.GetStudentProgramEvaluationNoticesAsync(studentId, programId);
-                
+
                 // assert
                 Assert.AreEqual(0, studentProgramNotices.Count());
             }
@@ -771,6 +771,462 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         }
 
+        [TestClass]
+        public class StudentProgramRepository_GetApplicantProgramsAsync: BaseRepositorySetup
+        {
+            StudentProgramRepository studentProgramRepo;
+            string applicantId;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                MockInitialize();
+                applicantId = "0000894";
+
+                studentProgramRepo = await  BuildValidStudentProgramRepository();
+            }
+
+            [TestMethod]
+            public async Task GetApplicantProgramsAsync_IncludeInActiveCurrentOnly()
+            {
+                //include inactive programs that are current only - G, W with end date as null or > today ; therefore PROG1 should not appear in collection
+                List<StudentProgram> studentPrograms= (await studentProgramRepo.GetApplicantProgramsAsync(applicantId, includeInactivePrograms: true, currentOnly: true)).ToList();
+                Assert.AreEqual(5, studentPrograms.Count());
+                Assert.AreEqual("MATH.BS", studentPrograms[0].ProgramCode);
+                Assert.AreEqual("ECON.BA", studentPrograms[1].ProgramCode);
+                Assert.AreEqual("PROG2", studentPrograms[2].ProgramCode);
+                Assert.AreEqual("PROG3", studentPrograms[3].ProgramCode);
+                Assert.AreEqual("PROG4", studentPrograms[4].ProgramCode);
+               
+                //VALIDATE OVERRIDES
+                Assert.AreEqual(2, studentPrograms[1].Overrides.Count());
+                //validate exceptions or requirement modifications
+                Assert.AreEqual(4, studentPrograms[0].RequirementModifications.Count());
+            }
+
+            [TestMethod]
+            public async Task GetApplicantProgramsAsync_IncludeInActivePastOnly()
+            {
+                //include inactive programs that are also from past; basially include all inactive programs ; therefore PROG1 should also appear in collection
+                List<StudentProgram> studentPrograms = (await studentProgramRepo.GetApplicantProgramsAsync(applicantId, includeInactivePrograms: true, currentOnly: false)).ToList();
+                Assert.AreEqual(6, studentPrograms.Count());
+                Assert.AreEqual("MATH.BS", studentPrograms[0].ProgramCode);
+                Assert.AreEqual("ECON.BA", studentPrograms[1].ProgramCode);
+                Assert.AreEqual("PROG1", studentPrograms[2].ProgramCode);
+                Assert.AreEqual("PROG2", studentPrograms[3].ProgramCode);
+                Assert.AreEqual("PROG3", studentPrograms[4].ProgramCode);
+                Assert.AreEqual("PROG4", studentPrograms[5].ProgramCode);
+                //VALIDATE OVERRIDES
+                Assert.AreEqual(2, studentPrograms[1].Overrides.Count());
+                //validate exceptions or requirement modifications
+                Assert.AreEqual(4, studentPrograms[0].RequirementModifications.Count());
+            }
+
+            [TestMethod]
+            public async Task GetApplicantProgramsAsync_DoNotIncludeInActiveFromCurrentOnly()
+            {
+                //do not include inactive programs that are current; inactive programs from past will be included; therefore PROG1 should also appear in collection and PROG2 and PROG3 will not be included
+                List<StudentProgram> studentPrograms = (await studentProgramRepo.GetApplicantProgramsAsync(applicantId, includeInactivePrograms: false, currentOnly: true)).ToList();
+                Assert.AreEqual(4, studentPrograms.Count());
+                Assert.AreEqual("MATH.BS", studentPrograms[0].ProgramCode);
+                Assert.AreEqual("ECON.BA", studentPrograms[1].ProgramCode);
+                Assert.AreEqual("PROG1", studentPrograms[2].ProgramCode);
+                Assert.AreEqual("PROG4", studentPrograms[3].ProgramCode);
+                //VALIDATE OVERRIDES
+                Assert.AreEqual(2, studentPrograms[1].Overrides.Count());
+                //validate exceptions or requirement modifications
+                Assert.AreEqual(4, studentPrograms[0].RequirementModifications.Count());
+            }
+
+            [TestMethod]
+            public async Task GetApplicantProgramsAsync_DoNotIncludeInActiveAtAll()
+            {
+                //do not include inactive programs at all
+                List<StudentProgram> studentPrograms = (await studentProgramRepo.GetApplicantProgramsAsync(applicantId, includeInactivePrograms: false, currentOnly: false)).ToList();
+                Assert.AreEqual(3, studentPrograms.Count());
+                Assert.AreEqual("MATH.BS", studentPrograms[0].ProgramCode);
+                Assert.AreEqual("ECON.BA", studentPrograms[1].ProgramCode);
+                Assert.AreEqual("PROG4", studentPrograms[2].ProgramCode);
+                //VALIDATE OVERRIDES
+                Assert.AreEqual(2, studentPrograms[1].Overrides.Count());
+                //validate exceptions or requirement modifications
+                Assert.AreEqual(4, studentPrograms[0].RequirementModifications.Count());
+            }
+            private async Task<StudentProgramRepository> BuildValidStudentProgramRepository()
+            {
+                // Set up data accessor for mocking 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
+
+                //set a response for applicant
+
+                // Set up response for APPLICANT 
+                Applicants strec = new Applicants() { Recordkey = "0000894", AppApplications = new List<string>() { "1", "2","3","4","5","6","7" } };
+                dataReaderMock.Setup<Task<Applicants>>(acc => acc.ReadRecordAsync<Applicants>("0000894", true)).ReturnsAsync(strec);
+
+                //setup a response for applicant applications
+                Dictionary<string, string> applications = new Dictionary<string, string>();
+                applications.Add("1", "MATH.BS");//have 5 exceptions - status is A
+                applications.Add("2", "ECON.BA");//have 2 overrides - status is P
+                applications.Add("3", "PROG1");//start and end date in past; status is G
+                applications.Add("4", "PROG2");//status ic C; start in past; end date is null
+                applications.Add("5", "PROG3");//status is W; start is pst; end date in future
+                applications.Add("6", "PROG4");//status is None; start in past; end date is null
+                applications.Add("7", "PROG4");
+                Collection<Applications> applicationsResponseData= BuildApplicationsResponse(applicantId, applications);
+                dataReaderMock.Setup<Task<Collection<Applications>>>(acc => acc.BulkReadRecordAsync<Applications>("APPLICATIONS", new string[] { "1", "2","3", "4", "5", "6", "7" }, true)).ReturnsAsync(applicationsResponseData);
+
+
+                // Set up response for student programs
+                IEnumerable<StudentProgram> studentPrograms = await new TestStudentProgramRepository().GetAsync("0000894");
+                var StudentProgramResponseData = BuildStudentProgramsResponse(studentPrograms);
+                // Student has four programs total which include 2 current programs from TestStudentProgramRepository (MATH.BS, ECON.BA)
+                // and two more noncurrent programs tacked on by BuildStudentProgramsResponse (PROG1, PROG2)
+                string[] prog = { "0000894*MATH.BS", "0000894*ECON.BA", "0000894*PROG1", "0000894*PROG2" , "0000894*PROG3" , "0000894*PROG4" };
+                dataReaderMock.Setup<Task<Collection<StudentPrograms>>>(acc => acc.BulkReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", prog, true)).ReturnsAsync(StudentProgramResponseData);
+
+                // Mock AcadPrograms response
+                var testPrograms = (await new TestProgramRepository().GetAsync()).Where(x => x.Code == "ECON.BA");
+                var acadProgramsResponse = BuildProgramsResponse(testPrograms);
+                dataReaderMock.Setup<Task<Collection<AcadPrograms>>>(acc => acc.BulkReadRecordAsync<AcadPrograms>(It.IsAny<string[]>(), true)).ReturnsAsync(acadProgramsResponse);
+
+
+                // Set up response for the overrides request
+                var StudentDaOverridesResponseData = BuildStudentDaOverridesResponse(studentPrograms);
+                dataReaderMock.Setup<Task<Collection<StudentDaOverrides>>>(acc => acc.BulkReadRecordAsync<StudentDaOverrides>("STUDENT.DA.OVERRIDES", new string[] { "99991", "99992" }, true)).ReturnsAsync(StudentDaOverridesResponseData);
+
+                // Set up response for the exceptions request
+                var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse();
+                dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", It.IsAny<string[]>(), true)).ReturnsAsync(StudentDaExcptsResponseData);
+
+                // mock data accessor STUDENT.PROGRAM.STATUSES
+                dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                    a.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", true))
+                    .ReturnsAsync(new ApplValcodes()
+                    {
+                        ValInternalCode = new List<string>() { "P", "A", "G", "C", "W" },
+                        ValExternalRepresentation = new List<string>() { "Potential", "Active", "Graduated", "Changed", "Withdrawn" },
+                        ValActionCode1 = new List<string>() { "1", "2", "3", "4", "5" },
+                        ValsEntityAssociation = new List<ApplValcodesVals>()
+                        {
+                            new ApplValcodesVals()
+                            {
+                                ValInternalCodeAssocMember = "P",
+                                ValExternalRepresentationAssocMember = "Potential",
+                                ValActionCode1AssocMember = "1"
+                            },
+                            new ApplValcodesVals()
+                            {
+                                ValInternalCodeAssocMember = "A",
+                                ValExternalRepresentationAssocMember = "Active",
+                                ValActionCode1AssocMember = "2"
+                            },
+                            new ApplValcodesVals()
+                            {
+                                ValInternalCodeAssocMember = "G",
+                                ValExternalRepresentationAssocMember = "Graduated",
+                                ValActionCode1AssocMember = "3"
+                            },
+                            new ApplValcodesVals()
+                            {
+                                ValInternalCodeAssocMember = "C",
+                                ValExternalRepresentationAssocMember = "Changed",
+                                ValActionCode1AssocMember = "4"
+                            },
+                            new ApplValcodesVals()
+                            {
+                                ValInternalCodeAssocMember = "W",
+                                ValExternalRepresentationAssocMember = "Withdrawn",
+                                ValActionCode1AssocMember = "5"
+                            }
+                        }
+                    });
+
+
+                // Construct repository
+                studentProgramRepo = new StudentProgramRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return studentProgramRepo;
+            }
+
+
+            private Collection<StudentPrograms> BuildStudentProgramsResponse(IEnumerable<StudentProgram> studentPrograms)
+            {
+                string[] programStatus = new string[] { "A", "P", "G", "C", "W" };
+                int programStatusOffset = 0;
+                Collection<StudentPrograms> repoStudentPrograms = new Collection<StudentPrograms>();
+                foreach (var studentProgram in studentPrograms)
+                {
+                    if (programStatusOffset > 4)
+                    {
+                        programStatusOffset = 0;
+                    }
+                    var studentProgramData = new StudentPrograms();
+
+                    studentProgramData.Recordkey = studentProgram.StudentId + "*" + studentProgram.ProgramCode;
+                    studentProgramData.StprAntCmplDate = studentProgram.AnticipatedCompletionDate;
+                    studentProgramData.StprCatalog = studentProgram.CatalogCode;
+
+                    studentProgramData.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
+                    studentProgramData.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
+                    studentProgramData.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
+                    studentProgramData.StprSpecialtiesEntityAssociation = new List<StudentProgramsStprSpecialties>();
+                    // Removed this logic because the Majors, Minors, ccds, specializations cannot be mocked
+                    // Set up start and end dates for additional majors/minors/ccd/specializations setup
+                    //   set 1: start before current date, no end date (included)
+                    //   set 2: start before current date, future end date (included)
+                    //   set 3: start after current date, no end date (excluded)
+                    //   set 4: start before current date, ends today (excluded)
+                    //var startDates = new List<DateTime?>() { DateTime.Now.Subtract(new TimeSpan(72, 00, 00)), DateTime.Now.Subtract(new TimeSpan(72, 00, 00)), DateTime.Now.AddDays(2), new DateTime(2013, 12, 31) };
+                    //var endDates = new List<DateTime?>() {null, DateTime.Now.AddDays(3), null, DateTime.Now};
+                    //// Build additional majors, minors, ccds, specializations responses, each one has four items with each of the above dates to verify proper date checking and inclusion
+                    //studentProgramData.StprMajorListEntityAssociation = BuildAdditionalMajorsResponse(startDates, endDates).ToList();
+                    //studentProgramData.StprMinorListEntityAssociation = BuildAdditionalMinorsResponse(startDates, endDates).ToList();
+                    //studentProgramData.StprCcdListEntityAssociation = BuildAdditionalCcdsResponse(startDates, endDates).ToList();
+                    //studentProgramData.StprSpecialtiesEntityAssociation = BuildAdditionalSpecialtiesResponse(startDates, endDates).ToList();
+
+                    studentProgramData.StprDaOverrides = new List<string>();
+                    studentProgramData.StprDaExcpts = new List<string>();
+
+                    studentProgramData.StprStatus = new List<string> { programStatus[programStatusOffset++], "A" };
+                    studentProgramData.StprStartDate = new List<DateTime?>() { new DateTime() };
+
+                    if (studentProgram.Overrides.Count() > 0)
+                    {
+                        // the record keys to this file are not actually in the Override
+                        // domain object and aren't used in the domain.  They are only read
+                        // here and used to select the data.  These are set to match the mocked data.
+                        studentProgramData.StprDaOverrides = new List<string>() { "99991", "99992" };
+                    }
+                    // Used for testing Program exceptions
+                    if (studentProgramData.Recordkey == "0000894*MATH.BS")
+                    {
+                        studentProgramData.StprDaExcpts = new List<string>() { "E1", "E2", "E3", "E4" };
+                    }
+                    else
+                    {
+                        studentProgramData.StprDaExcpts = new List<string>();
+                    }
+
+
+                    studentProgramData.buildAssociations();
+                    repoStudentPrograms.Add(studentProgramData);
+                }
+
+                // Add another repo response item with a previous end date
+                var stuProgData = new StudentPrograms();
+                stuProgData.Recordkey = "0000894*PROG1";
+                stuProgData.StprCatalog = "2012";
+                stuProgData.StprStartDate = new List<DateTime?>() { DateTime.Today.AddDays(-100) };
+                stuProgData.StprEndDate = new List<DateTime?>() { DateTime.Today.AddDays(-30) };
+                stuProgData.StprDaOverrides = new List<string>();
+                stuProgData.StprDaExcpts = new List<string>();
+                stuProgData.StprStatus = new List<string>() { "G" };
+                stuProgData.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
+                stuProgData.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
+                stuProgData.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
+                stuProgData.StprSpecialtiesEntityAssociation = new List<StudentProgramsStprSpecialties>();
+                stuProgData.buildAssociations();
+                repoStudentPrograms.Add(stuProgData);
+                // Add another repo response item with a noncurrent status
+                var stuProgData1 = new StudentPrograms();
+                stuProgData1.Recordkey = "0000894*PROG2";
+                stuProgData1.StprCatalog = "2012";
+                stuProgData1.StprStartDate = new List<DateTime?>() { DateTime.Today.AddDays(-100) };
+                stuProgData1.StprStatus = new List<string>() { "C" };
+                stuProgData1.StprDaOverrides = new List<string>();
+                stuProgData1.StprDaExcpts = new List<string>();
+                stuProgData1.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
+                stuProgData1.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
+                stuProgData1.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
+                stuProgData1.StprSpecialtiesEntityAssociation = new List<StudentProgramsStprSpecialties>();
+                stuProgData1.buildAssociations();
+                repoStudentPrograms.Add(stuProgData1);
+
+                // Add another repo response item with a withdrawn status
+                var stuProgData2 = new StudentPrograms();
+                stuProgData2.Recordkey = "0000894*PROG3";
+                stuProgData2.StprCatalog = "2012";
+                stuProgData2.StprStartDate = new List<DateTime?>() { DateTime.Today.AddDays(-100) };
+                stuProgData2.StprEndDate = new List<DateTime?>() { DateTime.Today.AddDays(30) };
+                stuProgData2.StprStatus = new List<string>() { "W" };
+                stuProgData2.StprDaOverrides = new List<string>();
+                stuProgData2.StprDaExcpts = new List<string>();
+                stuProgData2.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
+                stuProgData2.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
+                stuProgData2.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
+                stuProgData2.StprSpecialtiesEntityAssociation = new List<StudentProgramsStprSpecialties>();
+                stuProgData2.buildAssociations();
+                repoStudentPrograms.Add(stuProgData2);
+
+                // Add another repo response item with a no status
+                var stuProgData3 = new StudentPrograms();
+                stuProgData3.Recordkey = "0000894*PROG4";
+                stuProgData3.StprCatalog = "2012";
+                stuProgData3.StprStartDate = new List<DateTime?>() { DateTime.Today.AddDays(-100) };
+                stuProgData3.StprStatus = new List<string>();
+                stuProgData3.StprDaOverrides = new List<string>();
+                stuProgData3.StprDaExcpts = new List<string>();
+                stuProgData3.StprMajorListEntityAssociation = new List<StudentProgramsStprMajorList>();
+                stuProgData3.StprMinorListEntityAssociation = new List<StudentProgramsStprMinorList>();
+                stuProgData3.StprCcdListEntityAssociation = new List<StudentProgramsStprCcdList>();
+                stuProgData3.StprSpecialtiesEntityAssociation = new List<StudentProgramsStprSpecialties>();
+                stuProgData3.buildAssociations();
+                repoStudentPrograms.Add(stuProgData3);
+
+                return repoStudentPrograms;
+            }
+
+            private Collection<StudentDaOverrides> BuildStudentDaOverridesResponse(IEnumerable<StudentProgram> studentPrograms)
+            {
+                Collection<StudentDaOverrides> overrides = new Collection<StudentDaOverrides>();
+
+                foreach (var sp in studentPrograms)
+                {
+                    foreach (var o in sp.Overrides)
+                    {
+                        StudentDaOverrides over = new StudentDaOverrides();
+
+                        over.StovStudentProgram = sp.ProgramCode;
+                        over.StovAcadReqmtBlock = o.GroupId;
+                        over.StovInclStudentAcadCred = o.CreditsAllowed.ToList();
+                        over.StovExclStudentAcadCred = o.CreditsDenied.ToList();
+
+                        overrides.Add(over);
+                    }
+
+                }
+
+                return overrides;
+            }
+
+
+            private Collection<Applications> BuildApplicationsResponse(string applicantId, Dictionary<string, string> applicationIdWithProgram)
+            {
+                Collection<Applications> applications = new Collection<Applications>();
+
+                foreach (var sp in applicationIdWithProgram)
+                {
+
+                    Applications app = new Applications();
+
+                    app.ApplApplicant = applicantId;
+                    app.Recordkey = sp.Key;
+                    app.ApplAcadProgram = sp.Value;
+
+                        applications.Add(app);
+                   
+
+                }
+
+                return applications;
+            }
+
+            private Collection<StudentDaExcpts> BuildStudentDaExcptsResponse()
+            {
+                Collection<StudentDaExcpts> exceptions = new Collection<StudentDaExcpts>();
+                // First is Additional Courses
+                var exception1 = new StudentDaExcpts() { Recordkey = "E1", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "10000", StexType = "E", StexElement = "ADEL", StexAddnlCourses = new List<string>() { "100", "200" }, StexPrintedSpec = "Exception: Allowing Courses 100 and 200" };
+                exceptions.Add(exception1);
+
+                // Second is a Replacement Block - without min grades 
+                var courseAssociation = new List<StudentDaExcptsBlockRepl>();
+                var ca1 = new StudentDaExcptsBlockRepl() { StexBlockReplCoursesAssocMember = "87" };
+                courseAssociation.Add(ca1);
+                var ca2 = new StudentDaExcptsBlockRepl() { StexBlockReplCoursesAssocMember = "139" };
+                courseAssociation.Add(ca2);
+                var ca3 = new StudentDaExcptsBlockRepl();
+                courseAssociation.Add(ca3);
+                var exception2 = new StudentDaExcpts() { Recordkey = "E2", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "20000", StexType = "R", StexElement = "BLK", StexPrintedSpec = "BlockReplacement: Take Courses 87 - min B and 139 no min grade", BlockReplEntityAssociation = courseAssociation };
+                exceptions.Add(exception2);
+
+                // Third is a Block Waiver
+                var exception3 = new StudentDaExcpts() { Recordkey = "E3", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "30000", StexType = "W", StexElement = "BLK", StexPrintedSpec = "BlockReplacement Waiver: Waiving this requirement" };
+                exceptions.Add(exception3);
+
+                // Fourth is invalid because it does not have StexElement so it will be skipped.
+                var exception4 = new StudentDaExcpts() { Recordkey = "E99", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "99000", StexType = "W", StexPrintedSpec = "Invalid Waiver: StexElement is null" };
+                exceptions.Add(exception4);
+
+                // Fifth is a GPA 
+                var exception5 = new StudentDaExcpts() { Recordkey = "E4", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "40000", StexType = "W", StexElement = "GPA", StexPrintedSpec = "GPA Waiver: Waiving GPA for this requirement" };
+                exceptions.Add(exception5);
+
+                // Sixth is an invalid element type
+                var exception6 = new StudentDaExcpts() { Recordkey = "E98", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "98000", StexType = "R", StexElement = "XXX", StexPrintedSpec = "Invalid element type" };
+                exceptions.Add(exception6);
+
+                // Seventh is an invalid block replacement because it has no block Id
+                var exception7 = new StudentDaExcpts() { Recordkey = "E97", StexStudentProgram = "0000894*MATH.BS", StexType = "R", StexElement = "BLK", StexPrintedSpec = "Invalid block: No block Id.", BlockReplEntityAssociation = courseAssociation };
+                exceptions.Add(exception7);
+
+
+                //453               group change take 4 courses to 3
+                //449               pr    change overall program inst cred requirement from 90 to 89
+                //454               group take 12 credits change to 11
+                //450               pr    chg from min cred from 120 to 119
+                //451               req   replace subrequirement count - two to 1
+
+
+
+
+                return exceptions;
+            }
+
+            private Collection<AcadPrograms> BuildProgramsResponse(IEnumerable<Domain.Student.Entities.Requirements.Program> Programs)
+            {
+                Collection<AcadPrograms> repoPrograms = new Collection<AcadPrograms>();
+                foreach (var program in Programs)
+                {
+                    var ProgramData = new AcadPrograms();
+                    ProgramData.Recordkey = program.Code;
+                    ProgramData.AcpgDesc = program.Description;
+                    ProgramData.AcpgTitle = program.Title;
+                    ProgramData.AcpgDepts = program.Departments.ToList();
+                    ProgramData.AcpgAcadLevel = program.AcademicLevelCode;
+                    var status = (program.IsActive == true) ? "A" : "X";
+                    var statusDate = DateTime.Today.AddDays(-30);
+                    ProgramData.AcpgStatus = new List<string>() { status };
+                    ProgramData.AcpgStatusDate = new List<DateTime?>() { statusDate };
+                    if (program.Code == "ALMOSTEXP.Ccd")
+                    {
+                        // contrive a test of an acad program that has an expired status, but end date has not occurred yet
+                        ProgramData.AcpgEndDate = DateTime.Today.AddDays(30);
+                    }
+                    else
+                    {
+                        ProgramData.AcpgEndDate = statusDate;
+                    }
+                    ProgramData.ProgramStatusEntityAssociation = new List<AcadProgramsProgramStatus>();
+                    ProgramData.AcpgMajors = new List<string>();
+                    ProgramData.AcpgMinors = new List<string>();
+                    ProgramData.AcpgSpecializations = new List<string>();
+                    ProgramData.AcpgCcds = new List<string>();
+                    ProgramData.ProgramStatusEntityAssociation.Add(new AcadProgramsProgramStatus()
+                    {
+                        // If IsActive is true, set code to A. If false, set to X (for obsolete)
+                        AcpgStatusAssocMember = status,
+                        AcpgApprovalDatesAssocMember = statusDate
+                    }
+                        );
+                    ProgramData.AcpgCatalogs = program.Catalogs.ToList();
+                    ProgramData.AcpgRelatedPrograms = program.RelatedPrograms.ToList();
+                    if (program.Code == "ENGL.CERT")
+                    {
+                        ProgramData.AcpgTranscriptGrouping = "DA";
+                    }
+                    else
+                    {
+                        ProgramData.AcpgTranscriptGrouping = "UG";
+                    }
+
+
+                    ProgramData.AcpgDegree = "BS";
+                    ProgramData.AcpgStudentSelectFlag = program.IsSelectable == true ? "Y" : "N";
+                    repoPrograms.Add(ProgramData);
+                }
+                return repoPrograms;
+            }
+        }
         //#region HEDMGet
 
         //[TestClass]
@@ -819,8 +1275,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         //        stuProgRepo = BuildValidStudentProgramRepository();
         //        stuRefData = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
 
-                
-                              
+
+
         //    }
 
 
@@ -847,7 +1303,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         //            repoStuProg.StprStatus = new List<string>() { prog.Status };
         //            repoStuProg.StprStartDate = new List<DateTime?>() { prog.StartDate };
         //            repoStuProg.StprEndDate = new List<DateTime?>() { prog.EndDate };
-                    
+
         //            // Build additional majors, minors, ccds, specializations responses, each one has four items with each of the above dates to verify proper date checking and inclusion
         //            repoStuProg.StprMajorListEntityAssociation = majors.ToList();
         //            repoStuProg.StprMinorListEntityAssociation = minors.ToList();
@@ -857,7 +1313,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         //            repoStuProgs.Add(repoStuProg);
         //            //repoStuProg.StprAddnlMajors = prog.StudentProgramMajors;
         //        }
-                    
+
         //        return repoStuProgs ;
         //    }
 
@@ -992,7 +1448,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         //            (id, repl) => Task.FromResult(stuProgResponseData.FirstOrDefault(c => c.Recordkey == id)));
         //        dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", It.IsAny<string>(), true)).Returns<string>(
         //            id => Task.FromResult(stuProgResponseData.FirstOrDefault(c => c.Recordkey == id)));
-                
+
         //        // mock data accessor STUDENT.PROGRAM.STATUSES
         //        dataReaderMock.Setup<Task<ApplValcodes>>(a =>
         //            a.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", true))
@@ -1053,8 +1509,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         //        // Construct student program repository
         //        stuProgRepo = new StudentProgramRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
-      
-                
+
+
         //        return stuProgRepo;
         //    }
 

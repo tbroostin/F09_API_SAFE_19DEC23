@@ -217,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualProfileApplications = await profileApplicationService.GetProfileApplicationsAsync(studentId);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years", studentId)));
             }
 
             [TestMethod]
@@ -228,7 +228,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualProfileApplications = await profileApplicationService.GetProfileApplicationsAsync(studentId);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years", studentId)));
             }
 
             [TestMethod]
@@ -240,7 +240,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualProfileApplications = await profileApplicationService.GetProfileApplicationsAsync(studentId);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no profile applications", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no profile applications", studentId)));
             }
 
             [TestMethod]
@@ -252,7 +252,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualProfileApplications = await profileApplicationService.GetProfileApplicationsAsync(studentId);
 
                 Assert.AreEqual(0, actualProfileApplications.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no profile applications", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no profile applications", studentId)));
             }
         }
     }

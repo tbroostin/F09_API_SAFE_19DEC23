@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
+using System;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
     /// <summary>
-    /// 
+    /// Time Card Type
     /// </summary>
     [Serializable]
     public enum TimecardType
@@ -23,6 +20,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <summary>
         /// Detailed time
         /// </summary>
-        Detail
+        Detail,
+        /// <summary>
+        /// Clock In/Clock Out
+        /// </summary>
+        Clock
     }
 }

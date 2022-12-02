@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -178,7 +178,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception)
             {
                 IntegrationApiExceptionAddError("No Student Academic Standings was found for guid " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
-                //throw new Exception("No Student Academic Standings was found for guid  " + guid, ex);
+                //throw new ColleagueWebApiException("No Student Academic Standings was found for guid  " + guid, ex);
             }
 
             if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())

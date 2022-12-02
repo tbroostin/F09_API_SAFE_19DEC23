@@ -1,10 +1,12 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -12,6 +14,7 @@ using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -189,6 +192,479 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             #endregion
 
             return filteredFinanceQueryGlAccountLineItems;
+        }
+
+        /// <summary>
+        /// Get a list of GL accounts assigned to the user logged in.
+        /// finance query filter criteria is used to filter the GL accounts.
+        /// </summary>
+        /// <param name="generalLedgerUser">General Ledger User domain entity.</param>
+        /// <param name="glAccountStructure">GL Account structure domain entity.</param>
+        /// <param name="glClassConfiguration">GL class configuration structure domain entity.</param>
+        /// <param name="criteria">Finance query filter criteria.</param>
+        /// <param name="personId">ID of the user.</param>
+        /// <returns>List of finance query account activity entities.</returns>
+        public async Task<IEnumerable<FinanceQueryActivityDetail>> GetFinanceQueryActivityDetailAsync(GeneralLedgerUser generalLedgerUser, GeneralLedgerAccountStructure glAccountStructure, GeneralLedgerClassConfiguration glClassConfiguration, FinanceQueryCriteria criteria, string personId)
+        {
+            // Note: This method is similar to the QueryGlActivityDetailAsync method in GeneralLedgerActivityDetailRepository
+            // but does not all of the same details.
+            List<FinanceQueryActivityDetail> financeQueryActivityTransactions = new List<FinanceQueryActivityDetail>();
+
+            // Get the fiscal year from the filter criteria.
+            var fiscalYear = criteria.FiscalYear;
+
+            if (string.IsNullOrEmpty(fiscalYear))
+            {
+                LogDataError("fiscalYear", "", fiscalYear);
+                return financeQueryActivityTransactions;
+            }
+
+            // Read the GEN.LDGR record for the fiscal year
+            var genLdgrDataContract = await DataReader.ReadRecordAsync<GenLdgr>(fiscalYear);
+
+            #region Error checking
+            if (generalLedgerUser == null)
+            {
+                logger.Error("General Ledger User is null. No Finance Query line items to return.");
+                return financeQueryActivityTransactions;
+            }
+
+            // If the user does not have any GL accounts assigned, return an empty list of GL object codes.
+            if ((generalLedgerUser.AllAccounts == null || !generalLedgerUser.AllAccounts.Any()))
+            {
+                LogDataError("AllAccounts", "", generalLedgerUser.AllAccounts);
+                return financeQueryActivityTransactions;
+            }
+
+            if (glAccountStructure == null)
+            {
+                LogDataError("glAccountStructure", "", glAccountStructure);
+                return financeQueryActivityTransactions;
+            }
+
+            if (glClassConfiguration == null)
+            {
+                LogDataError("glClassConfiguration", "", glClassConfiguration);
+                return financeQueryActivityTransactions;
+            }
+
+
+            if (genLdgrDataContract == null)
+            {
+                logger.Warn("Missing GEN.LDGR record for ID: " + fiscalYear);
+                return financeQueryActivityTransactions;
+            }
+
+            if (string.IsNullOrEmpty(genLdgrDataContract.GenLdgrStatus))
+            {
+                logger.Warn("GEN.LDGR status is null.");
+                return financeQueryActivityTransactions;
+            }
+            #endregion
+
+            // all GL accounts for a user has access to.
+            string[] allGlAccountsForUser = generalLedgerUser.AllAccounts.ToArray();
+
+            // Limit the list of accounts using the filter component criteria. If the data is not filtered,
+            // return the finance query object for all the GL accounts assigned to the user.
+            string[] filteredUserGlAccounts = await ApplyFilterCriteria(criteria, allGlAccountsForUser);
+
+            // Get GL activity transactions for the set of filtered GL accounts.
+            var filteredUserGlAccountsList = filteredUserGlAccounts.ToList();
+            financeQueryActivityTransactions = await QueryGlActivitiesDetailAsync(filteredUserGlAccountsList, fiscalYear);
+            return financeQueryActivityTransactions;
+        }
+
+        /// <summary>
+        /// This method gets the list of activity detail for actuals and encumbrances for a set of GL accounts for a fiscal year.
+        /// </summary>
+        /// <param name="glAccounts">The GL account numbers.</param>
+        /// <param name="fiscalYear">The GL fiscal year.</param>
+        /// <returns>Returns the list of activity detail posted to the GL account for the fiscal year.</returns>
+        private async Task<List<FinanceQueryActivityDetail>> QueryGlActivitiesDetailAsync(List<string> glAccounts, string fiscalYear)
+        {
+            List<FinanceQueryActivityDetail> glActivities = new List<FinanceQueryActivityDetail>();
+
+            if (glAccounts == null || !glAccounts.Any())
+            {
+                throw new ArgumentNullException("glAccounts", "A GL account must be specified.");
+            }
+
+            if (string.IsNullOrEmpty(fiscalYear))
+            {
+                throw new ArgumentNullException("fiscalYear", "A fiscal year must be specified.");
+            }
+
+            var glAccountDomains = new List<FinanceQueryActivityDetail>();
+
+            // Create variable for containing a list of GL transactions
+            var glTransactionEntities = new List<GlTransaction>();
+
+            try
+            {
+                // Get the GL.SOURCE.CODES valcode table
+                var GlSourceCodesValidationTable = await GetGlSourceCodesAsync();
+
+                // Create variable for determining the type of transaction (e.g. Actual, Encumbrance, or Requisition)
+                ApplValcodesVals GLSourceCode = new ApplValcodesVals();
+
+                #region Process transactions from GLA.FYR
+
+                // Initialize the file name and criteria.
+                var glaFyrFileName = "GLA." + fiscalYear;
+
+                // Get the GL activity detail for the list of glAccounts
+                var glaCriteria = "WITH @ID LIKE ";
+                var numberAccounts = glAccounts.Count();
+                List<string> glaList = new List<string>();
+                string selectDuration = "";
+                logger.Debug("Number of filtered accounts: " + numberAccounts);
+
+                var watch = new Stopwatch();
+                string[] glaFyrIds = null;
+
+                // Select GLA records based on the number of filtered GL accounts.
+                if (numberAccounts <= 100)
+                {
+                    foreach (var glstring in glAccounts)
+                    {
+                        if (!string.IsNullOrEmpty(glstring))
+                        {
+                            // For alpha GL accounts, avoid the problem with Unidata using A, N and X as wildcards.
+                            // The criteria has to be like "'11_01_01_00_10005_54N70'..." for it to work.
+                            glaCriteria = glaCriteria + "\"'" + glstring + "'...\"";
+                        }
+                    }
+                    watch.Start();
+                    // Select and bulk read the GLA records for the GL account.
+                    glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, glaCriteria);
+                    watch.Stop();
+                    glaList.AddRange(glaFyrIds);
+                    selectDuration = watch.ElapsedMilliseconds.ToString();
+                    logger.Debug("GLA selection duration: " + selectDuration);
+                    logger.Debug("GLA records selected: " + glaList.Count());
+                }
+                else
+                {
+                    int stringCounter = 0;
+                    int runningGlaCount = 0;
+                    int selectAsyncCount = 0;
+                    watch.Start();
+
+                    foreach (var glstring in glAccounts)
+                    {
+                        if (!string.IsNullOrEmpty(glstring))
+                        {
+                            // For alpha GL accounts, avoid the problem with Unidata using A, N and X as wildcards.
+                            // The criteria has to be like "'11_01_01_00_10005_54N70'..." for it to work.
+                            glaCriteria = glaCriteria + "\"'" + glstring + "'...\"";
+                            stringCounter += 1;
+                            if (stringCounter == 100)
+                            {
+                                // Select and bulk read the GLA records for the GL account.
+                                glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, glaCriteria);
+                                glaList.AddRange(glaFyrIds);
+                                glaFyrIds = null;
+                                runningGlaCount = glaList.Count();
+                                stringCounter = 0;
+                                glaCriteria = "WITH @ID LIKE ";
+                                selectAsyncCount += 1;
+                            }
+                        }
+                    }
+                    watch.Stop();
+                    selectDuration = watch.ElapsedMilliseconds.ToString();
+                    logger.Debug("Number of selection statements: " + selectAsyncCount);
+                    logger.Debug("GLA selection duration: " + selectDuration);
+                    logger.Debug("GLA records selected: " + runningGlaCount);
+                    glaFyrIds = glaList.ToArray();
+                }
+
+                // Bulk read the GLA records for the GL account.
+                var glaDataContracts = await DataReader.BulkReadRecordAsync<GlaFyr>(glaFyrFileName, glaFyrIds, true);
+
+                foreach (var transaction in glaDataContracts)
+                {
+                    try
+                    {
+                        if (transaction != null)
+                        {
+                            // Check transaction properties for missing data.
+                            // Throw an exception if any of the transaction properties are null.
+                            string errorPrefix = "GLA." + fiscalYear + " " + transaction.Recordkey + " data contract ";
+                            if (string.IsNullOrEmpty(transaction.Recordkey))
+                                throw new ApplicationException(errorPrefix + "has no record key.");
+
+                            // Extract the GL account number from the record key.
+                            var glNumber = transaction.Recordkey.Split('*').FirstOrDefault();
+
+                            if (string.IsNullOrEmpty(glNumber))
+                                throw new ApplicationException(errorPrefix + "has no GL account number.");
+
+                            if (string.IsNullOrEmpty(transaction.GlaSource))
+                                throw new ApplicationException(errorPrefix + "has no source code.");
+
+                            if (string.IsNullOrEmpty(transaction.GlaRefNo))
+                                throw new ApplicationException(errorPrefix + "has no reference number.");
+
+                            if (!transaction.GlaTrDate.HasValue)
+                                throw new ApplicationException(errorPrefix + "has no transaction date.");
+
+                            // Determine the transaction type, create the transaction and add it to the list.
+                            GlTransactionType type = GlTransactionType.Actual;
+                            GLSourceCode = GlSourceCodesValidationTable.ValsEntityAssociation.Where(x =>
+                                x.ValInternalCodeAssocMember == transaction.GlaSource).FirstOrDefault();
+
+                            // GLA.FYR only contains transactions for types budget, actual and encumbrances. 
+                            // Requisitions only exist in ENC.FYR.
+                            // 1: Actuals
+                            // 2: Budget
+                            // 3: Encumbrances
+                            // 4: Requisitions
+                            // handle 1 and 2 only to create a GL transaction if the type if Actual or Budget.
+                            // Use ENC to get outstanding encumbrances and requisitions.
+                            switch (GLSourceCode.ValActionCode2AssocMember)
+                            {
+                                case "1":
+                                    type = GlTransactionType.Actual;
+                                    break;
+                                case "2":
+                                    type = GlTransactionType.Budget;
+                                    break;
+                                case "3":
+                                    type = GlTransactionType.Encumbrance;
+                                    break;
+                                case "4":
+                                    // Requisitions are not posted to GLA.FYR.
+                                    type = GlTransactionType.Requisition;
+                                    LogDataError("Requisition activity should not be present in GLA." + fiscalYear, transaction.Recordkey, transaction);
+                                    break;
+                                default:
+                                    // Log an error for bad data
+                                    // There should not be any budget or wrong source codes
+                                    throw new ApplicationException("Unrecognizable GL Source Code: " + transaction.GlaSource);
+                            }
+
+                            // Exclude actuals created in the GL year end process. These have a source code of YE.
+                            if (transaction.GlaSource != "YE")
+                            {
+                                // Only add budget and actuals transactions to the domain entity.
+                                if (type == GlTransactionType.Budget || type == GlTransactionType.Actual)
+                                {
+                                    var glTransactionEntity = new GlTransaction(transaction.Recordkey, type, transaction.GlaSource, glNumber,
+                                        (transaction.GlaDebit ?? 0) - (transaction.GlaCredit ?? 0), transaction.GlaRefNo, transaction.GlaTrDate.Value, transaction.GlaDescription);
+
+                                    // Add the transaction to the list.
+                                    glTransactionEntities.Add(glTransactionEntity);
+                                }
+                            }
+                        }
+                    }
+
+                    catch (ApplicationException ae)
+                    {
+                        LogDataError("", "", transaction, ae);
+                    }
+                }
+
+                #endregion
+
+                #region Process transactions from ENC.FYR
+
+                // Initialize the file name and criteria.
+                var encFyrFileName = "ENC." + fiscalYear;
+
+                // Bulk read the ENC records for the GL accounts.
+                string[] encFyrIds = glAccounts.ToArray();
+                var encDataContracts = await DataReader.BulkReadRecordAsync<EncFyr>(encFyrFileName, encFyrIds, true);
+
+                foreach (var encDataContract in encDataContracts)
+                {
+                    // There may be no outstanding encumbrances for this GL account and so the data contract would be null.
+                    if (encDataContract != null)
+                    {
+                        // Use a counter to create the sequential part of the transaction id to mimic the ids in GLA.
+                        int encCounter = 0;
+
+                        // First get all the outstanding encumbrances.
+                        foreach (var transaction in encDataContract.EncPoEntityAssociation)
+                        {
+                            try
+                            {
+                                if (transaction != null)
+                                {
+                                    // Check transaction properties for missing data.
+                                    // Some documents like recurring vouchers do not have a sequential ID, so do not check for missing ID.
+                                    // Throw an exception if any of the transaction properties are null.
+                                    string errorPrefix = "ENC." + fiscalYear + " " + encDataContract.Recordkey + " data contract ";
+
+                                    if (string.IsNullOrEmpty(transaction.EncPoNoAssocMember))
+                                        throw new ApplicationException(errorPrefix + "for transaction " + transaction.EncPoNoAssocMember + " has no document number.");
+
+                                    if (!transaction.EncPoDateAssocMember.HasValue)
+                                        throw new ApplicationException(errorPrefix + "for transaction " + transaction.EncPoNoAssocMember + " has no transaction date.");
+
+                                    // While GLA records have a sequential ID in the key, the ENC record does not.
+                                    // Assign an id similar to the GLA records using the counter.
+                                    encCounter += 1;
+                                    string transactionId = encDataContract.Recordkey + "*ENC*" + encCounter;
+
+                                    var glTransactionEntity = new GlTransaction(transactionId, GlTransactionType.Encumbrance, "EP",
+                                        encDataContract.Recordkey, transaction.EncPoAmtAssocMember ?? 0, transaction.EncPoNoAssocMember,
+                                        transaction.EncPoDateAssocMember.Value, transaction.EncPoVendorAssocMember);
+
+                                    // If the encumbrance entry has an ID, assign it as the document ID.
+                                    if (!string.IsNullOrEmpty(transaction.EncPoIdAssocMember))
+                                    {
+                                        glTransactionEntity.DocumentId = transaction.EncPoIdAssocMember;
+                                    }
+
+                                    // Add the transaction to the list.
+                                    glTransactionEntities.Add(glTransactionEntity);
+                                }
+                            }
+                            catch (ApplicationException aex)
+                            {
+                                LogDataError("", "", transaction, aex);
+                            }
+                        }
+
+                        // Then get all the outstanding requisitions.
+                        foreach (var transaction in encDataContract.EncReqEntityAssociation)
+                        {
+                            try
+                            {
+                                if (transaction != null)
+                                {
+                                    // Check transaction properties for missing data.
+                                    // Throw an exception if any of the transaction properties are null.
+                                    string errorPrefix = "ENC." + fiscalYear + " " + encDataContract.Recordkey + " data contract ";
+
+                                    if (string.IsNullOrEmpty(transaction.EncReqNoAssocMember))
+                                        throw new ApplicationException(errorPrefix + "for transaction " + transaction.EncReqNoAssocMember + " has no requisition number.");
+
+                                    if (!transaction.EncReqDateAssocMember.HasValue)
+                                        throw new ApplicationException(errorPrefix + "for transaction " + transaction.EncReqNoAssocMember + " has no transaction date.");
+
+                                    // While GLA records have a sequential ID in the key, the ENC record does not.
+                                    // Assign an id similar to the GLA records using the counter.
+                                    encCounter += 1;
+                                    string transactionId = encDataContract.Recordkey + "*ENC*" + encCounter;
+
+                                    var glTransactionEntity = new GlTransaction(transactionId, GlTransactionType.Requisition, "ER",
+                                        encDataContract.Recordkey, transaction.EncReqAmtAssocMember ?? 0, transaction.EncReqNoAssocMember,
+                                        transaction.EncReqDateAssocMember.Value, transaction.EncReqVendorAssocMember);
+
+                                    // If the requisition entry has an ID, assign it as the document ID.
+                                    if (!string.IsNullOrEmpty(transaction.EncReqIdAssocMember))
+                                    {
+                                        glTransactionEntity.DocumentId = transaction.EncReqIdAssocMember;
+                                    }
+
+                                    // Add the transaction to the list.
+                                    glTransactionEntities.Add(glTransactionEntity);
+                                }
+                            }
+                            catch (ApplicationException aex)
+                            {
+                                LogDataError("", "", transaction, aex);
+                            }
+                        }
+                    }
+                }
+                #endregion
+
+                // Get the budget pools for the fiscal year
+                List<GlpFyr> glpFyrDataContracts = new List<GlpFyr>();
+                List<string> umbrellaAccts = new List<string>();
+                List<string> pooleeAccts = new List<string>();
+
+                string glpFyrFilename = "GLP." + fiscalYear;
+                var glpFyrIds = await DataReader.SelectAsync(glpFyrFilename, null);
+
+                if (glpFyrIds != null && glpFyrIds.Any())
+                    glpFyrDataContracts = await BulkReadRecordAsync<GlpFyr>(glpFyrFilename, glpFyrIds);
+                if (glpFyrDataContracts != null)
+                {
+                    umbrellaAccts = glpFyrDataContracts.Select(x => x.Recordkey).ToList();
+                    pooleeAccts = glpFyrDataContracts.SelectMany(x => x.GlpPooleeAcctsList).ToList();
+                }
+
+                foreach (var glString in glAccounts)
+                {
+                    var glAccountDomain = new FinanceQueryActivityDetail(glString);
+
+                    if (umbrellaAccts.Contains(glString))
+                    {
+                        glAccountDomain.BudgetPoolIndicator = "Umbrella";
+                    }
+                    else if (pooleeAccts.Contains(glString))
+                    {
+                        glAccountDomain.BudgetPoolIndicator = "Poolee";
+                    }
+
+                    // Assign the transactions to the GL account.
+                    foreach (var transaction in glTransactionEntities)
+                    {
+                        if (transaction.GlAccount == glString)
+                        {
+                            glAccountDomain.AddGlTransaction(transaction);
+                        }
+                    }
+
+                    // Remove those encumbrance or Requisition transactions that have a $0.00 amount. 
+                    // There shouldn't be any but just in case, we do not want to display $0.00.
+                    glAccountDomain.RemoveZeroDollarEncumbranceTransactions();
+
+                    // Add the finance query activity detail entity to the list of finance query activity 
+                    // domain entities, if the entity has any transactions.
+                    if (glAccountDomain.Transactions.Any())
+                    {
+                        glActivities.Add(glAccountDomain);
+                    }
+
+                }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Log the message and throw the exception
+                logger.Error(ex.Message);
+            }
+
+            return glActivities;
+        }
+
+        /// <summary>
+        /// Get the GL Source Codes from Colleague.
+        /// </summary>
+        /// <returns>ApplValcodes association of GL Source Codes data.</returns>
+        private async Task<ApplValcodes> GetGlSourceCodesAsync()
+        {
+            var GlSourceCodesValidationTable = new ApplValcodes();
+            try
+            {
+                // Verify that it is populated. If not, throw an error.
+                GlSourceCodesValidationTable = await GetOrAddToCacheAsync<ApplValcodes>("GlSourceCodes",
+                    async () =>
+                    {
+                        ApplValcodes GlSourceCodesValTable = await DataReader.ReadRecordAsync<ApplValcodes>("CF.VALCODES", "GL.SOURCE.CODES");
+                        if (GlSourceCodesValTable == null)
+                            throw new Exception("GL.SOURCE.CODES validation table data is null.");
+
+                        return GlSourceCodesValTable;
+                    }, Level1CacheTimeoutValue);
+
+                return GlSourceCodesValidationTable;
+            }
+            catch (Exception ex)
+            {
+                LogDataError("CF.VALCODES", "GL.SOURCE.CODES", GlSourceCodesValidationTable, ex);
+                throw new Exception("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
+            }
         }
 
         #region section for filtering data

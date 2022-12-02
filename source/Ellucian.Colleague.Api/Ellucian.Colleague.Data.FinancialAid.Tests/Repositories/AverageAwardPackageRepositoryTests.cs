@@ -297,7 +297,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             dataReaderMock.Setup(dr => dr.ReadRecordAsync<CsAcyr>(csAcyrFile, studentId, true)).ReturnsAsync(acyrFile);
             actualAverageAwardPackages = await actualRepository.GetAverageAwardPackagesAsync(studentId, activeStudentAwardYears);
 
-            loggerMock.Verify(l => l.Info(string.Format("Student {0} has no {1} record", studentId, csAcyrFile)));
+            loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no {1} record", studentId, csAcyrFile)));
         }
 
         /// <summary>
@@ -314,7 +314,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
             foreach (var studentAwardYear in activeStudentAwardYears)
             {
-                loggerMock.Verify(l => l.Info(string.Format("StudentAwardYear has no configuration for student id {0}, awardYear {1}. Cannot retrieve average award package.", studentId, studentAwardYear.Code)));
+                loggerMock.Verify(l => l.Debug(string.Format("StudentAwardYear has no configuration for student id {0}, awardYear {1}. Cannot retrieve average award package.", studentId, studentAwardYear.Code)));
             }
         }
 

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Data.Finance.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -40,27 +41,34 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<FinancialAidAward>> GetFinancialAidAwardsAsync()
         {
-            return await GetOrAddToCacheAsync<IEnumerable<FinancialAidAward>>("AllAwards",
-                    async() =>
-                    {
-                        var awardList = new List<FinancialAidAward>();
-                        var awardRecords = DataReader.BulkReadRecord<Awards>("", false);
-                        var awardCategories = await GetFinancialAidAwardCategoriesAsync();
-                        foreach (var awardRecord in awardRecords)
-                        {                            
-                            var awardCategory = awardCategories
-                                .Where(c => c.Code == awardRecord.AwCategory).FirstOrDefault();
-                            try
+            try
+            {
+                return await GetOrAddToCacheAsync<IEnumerable<FinancialAidAward>>("AllAwards",
+                        async () =>
+                        {
+                            var awardList = new List<FinancialAidAward>();
+                            var awardRecords = DataReader.BulkReadRecord<Awards>("", false);
+                            var awardCategories = await GetFinancialAidAwardCategoriesAsync();
+                            foreach (var awardRecord in awardRecords)
                             {
-                              awardList.Add(new FinancialAidAward(awardRecord.Recordkey, awardRecord.AwDescription, awardCategory));
+                                var awardCategory = awardCategories
+                                    .Where(c => c.Code == awardRecord.AwCategory).FirstOrDefault();
+                                try
+                                {
+                                    awardList.Add(new FinancialAidAward(awardRecord.Recordkey, awardRecord.AwDescription, awardCategory));
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("AWARDS", awardRecord.Recordkey, awardRecord, e, string.Format("Failed to add award {0}", awardRecord.Recordkey));
+                                }
                             }
-                            catch (Exception e)
-                            {
-                                LogDataError("AWARDS", awardRecord.Recordkey, awardRecord, e, string.Format("Failed to add award {0}", awardRecord.Recordkey));
-                            }
-                        }
-                        return awardList;
-                    });
+                            return awardList;
+                        });
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// The description of the section description type, such as "Section short title," as opposed to the
         /// description which can be much longer and suggest usage.
         /// </summary>
-        public string Title;
+        public string Title { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SectionDescriptionType"/> class.

@@ -138,7 +138,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualStudentDocuments = await actualStudentDocumentRepository.GetDocumentsAsync(studentId);
 
                 Assert.AreEqual(expectedStudentDocuments.Count() - 1, actualStudentDocuments.Count());
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(), It.IsAny<string>()));
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(), It.IsAny<string>()));
             }
 
             [TestMethod]
@@ -160,7 +160,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualStudentDocuments = await actualStudentDocumentRepository.GetDocumentsAsync(studentId);
 
                 Assert.AreEqual(expectedStudentDocuments.Count() - 1, actualStudentDocuments.Count());
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(), It.IsAny<string>()));
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(), It.IsAny<string>()));
             }
 
             [TestMethod]

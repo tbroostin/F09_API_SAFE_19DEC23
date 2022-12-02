@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -2450,9 +2450,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         locationCode = ConvertGuidToCode((await this.GetLocationsAsync(bypassCache)), stuAcadProgramsDto.NewProgram.Site.Id);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         //we will catch this in next statement.
+                        logger.Error(ex, "Unable to get location code.");
                     }
                     if (string.IsNullOrEmpty(locationCode) && stuAcadProgramsDto.NewProgram.Site.Id != null)
                     {
@@ -2480,9 +2481,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         academicLevel = await ConvertAcademicLevelGuidToCode(stuAcadProgramsDto.NewProgram.AcademicLevel.Id, bypassCache);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         //we will issue exception in the next statement.
+                        logger.Error(ex, "Unable to get academic level.");
                     }
                     if (string.IsNullOrEmpty(academicLevel) && stuAcadProgramsDto.NewProgram.AcademicLevel.Id != null)
                     {
@@ -2512,9 +2514,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting.Id);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //we will throw exception below.
+                            logger.Error(ex, "Unable to get term code.");
                         }
                         if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting.Id != null)
                         {
@@ -2540,9 +2543,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //we will catch it in next statement
+                            logger.Error(ex, "Unable to get term code.");
                         }
                         if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id != null)
                         {
@@ -2696,9 +2700,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             admitStatus = await ConvertAdmissionClassificationGuidToCode(stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory.Id, bypassCache);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            //we will throw the exception in tne next statement
+                            //we will throw the exception in the next statement
+                            logger.Error(ex, "Unable to get admit status.");
                         }
                         if (string.IsNullOrEmpty(admitStatus) && stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory.Id != null)
                         {
@@ -2776,9 +2781,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     stprKey = await _studentAcademicProgramRepository.GetStudentAcademicProgramIdFromGuidAsync(guid);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Fall through with a null stcKey in case we are doing PUT with a new GUID.
+                    logger.Error(ex, "Unable to get academic program for stprKey.");
                 }
             }
 
@@ -3897,9 +3903,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         locationCode = ConvertGuidToCode((await this.GetLocationsAsync(bypassCache)), stuAcadProgramsDto.Site.Id);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         //we will catch this in next statement.
+                        logger.Error(ex, "Unable to get location code.");
                     }
                     if (string.IsNullOrEmpty(locationCode) && stuAcadProgramsDto.Site.Id != null)
                     {
@@ -3927,9 +3934,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         academicLevel = await ConvertAcademicLevelGuidToCode(stuAcadProgramsDto.AcademicLevel.Id, bypassCache);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         //we will issue exception in the next statement.
+                        logger.Error(ex, "Unable to get academic level.");
                     }
                     if (string.IsNullOrEmpty(academicLevel) && stuAcadProgramsDto.AcademicLevel.Id != null)
                     {
@@ -3959,9 +3967,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.AcademicPeriods.Starting.Id);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //we will throw exception below.
+                            logger.Error(ex, "Unable to get term code.");
                         }
                         if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.AcademicPeriods.Starting.Id != null)
                         {
@@ -3987,9 +3996,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.AcademicPeriods.ExpectedGraduation.Id);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //we will catch it in next statement
+                            logger.Error(ex, "Unable to get term code.");
                         }
                         if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.AcademicPeriods.ExpectedGraduation.Id != null)
                         {
@@ -4140,9 +4150,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             admitStatus = await ConvertAdmissionClassificationGuidToCode(stuAcadProgramsDto.AdmissionClassification.AdmissionCategory.Id, bypassCache);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //we will throw the exception in tne next statement
+                            logger.Error(ex, "Unable to get admit status.");
                         }
                         if (string.IsNullOrEmpty(admitStatus) && stuAcadProgramsDto.AdmissionClassification.AdmissionCategory.Id != null)
                         {
@@ -4527,7 +4538,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                throw new ColleagueWebApiException(e.Message);
             }
 
         }
@@ -4694,7 +4705,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                throw new ColleagueWebApiException(e.Message);
             }
 
         }

@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -62,6 +63,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 // Map the book entity to the book DTO
                 return bookDtoAdapter.MapToType(book);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (System.Exception e)
             {
                 this._logger.Error(e, "Unable to retrieve the book information");
@@ -75,7 +82,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="criteria"><see cref="BookQueryCriteria">Query Criteria</see> including the list of Book Ids to use to retrieve books.</param>
         /// <returns>List of <see cref="Book">Book</see> objects. </returns>
         [HttpPost]
-        public async Task<IEnumerable<Book>> QueryBooksByPostAsync([FromBody]BookQueryCriteria criteria)
+        public async Task<IEnumerable<Book>> QueryBooksByPostAsync([FromBody] BookQueryCriteria criteria)
         {
             try
             {
@@ -127,15 +134,23 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return bookDtos;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException ex)
             {
-                _logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                string errorMessage = "Arguments were not properly provided to retrieve books details";
+                _logger.Error(ex, errorMessage);
+                throw CreateHttpResponseException(errorMessage, HttpStatusCode.BadRequest);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.InternalServerError);
+                string errorMessage = "Exception occurred while retrieving books details";
+                _logger.Error(ex, errorMessage);
+                throw CreateHttpResponseException(errorMessage, HttpStatusCode.BadRequest);
             }
         }
     }

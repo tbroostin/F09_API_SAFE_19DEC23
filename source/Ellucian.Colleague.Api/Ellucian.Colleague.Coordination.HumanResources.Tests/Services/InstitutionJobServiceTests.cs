@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -1004,7 +1005,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_Invalid_HostCountry()
         {
             personRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync(() => null);
@@ -1012,7 +1013,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_Person_Null()
         {
             institutionJobs.Person = null;
@@ -1020,7 +1021,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_PersonId_Null()
         {
             institutionJobs.Person.Id = null;
@@ -1028,7 +1029,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_Invalid_StartOn()
         {
             institutionJobs.StartOn = default(DateTime);
@@ -1036,7 +1037,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Empty_PersonId_From_Repository()
         {
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
@@ -1044,7 +1045,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_Position_Null()
         {
             institutionJobs.Position = null;
@@ -1052,7 +1053,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_PositionId_Null()
         {
             institutionJobs.Position.Id = null;
@@ -1060,7 +1061,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Position_Null_From_Repository()
         {
             positionRepositoryMock.Setup(p => p.GetPositionByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
@@ -1068,7 +1069,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_Employer_Null()
         {
             institutionJobs.Employer = null;
@@ -1076,7 +1077,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_EmployerId_Null()
         {
             institutionJobs.Employer.Id = null;
@@ -1084,7 +1085,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Employer_Null_From_Repository()
         {
             personRepositoryMock.SetupSequence(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).Returns(Task.FromResult<string>("1")).Returns(Task.FromResult<string>(null));
@@ -1092,7 +1093,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_DtoToEntity_Department_Null()
         {
             institutionJobs.Department = null;
@@ -1100,7 +1101,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Department_NotSameAs_Position_Department()
         {
             institutionJobs.Department = new Dtos.GuidObject2("2");
@@ -1108,7 +1109,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Invalid_PayPeriod()
         {
             institutionJobs.HoursPerPeriod.FirstOrDefault().Period = Dtos.EnumProperties.PayPeriods.Day;
@@ -1116,7 +1117,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Invalid_Classification()
         {
             institutionJobs.EndOn = null;
@@ -1126,7 +1127,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Invalid_Status()
         {
             institutionJobs.EndOn = null;
@@ -1135,7 +1136,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_SuperVisor_Null_From_Repository()
         {
             institutionJobs.HoursPerPeriod.FirstOrDefault().Period = Dtos.EnumProperties.PayPeriods.Year;
@@ -1147,7 +1148,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_More_Than_One_Primary_Supervisor()
         {
             institutionJobs.Supervisors.LastOrDefault().Type = Dtos.EnumProperties.PositionReportsToType.Primary;
@@ -1155,7 +1156,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_More_Than_One_Alternative_Supervisor()
         {
             institutionJobs.Supervisors.FirstOrDefault().Type = Dtos.EnumProperties.PositionReportsToType.Alternative;
@@ -1163,7 +1164,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Invalid_Supervisor_Type()
         {
             institutionJobs.Supervisors.FirstOrDefault().Type = Dtos.EnumProperties.PositionReportsToType.NotSet;
@@ -1171,7 +1172,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Duplicate_Salaries()
         {
             institutionJobs.Salaries.LastOrDefault().StartOn = DateTime.Today;
@@ -1180,7 +1181,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_SalaryStartDate_Not_Associated_With_AccountAllocationDate()
         {
             institutionJobs.Salaries.LastOrDefault().StartOn = DateTime.Today.AddDays(-10);
@@ -1188,7 +1189,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Negative_SalaryAmount_Rate()
         {
             institutionJobs.Salaries.FirstOrDefault().SalaryAmount.Rate.Value = -1;
@@ -1196,7 +1197,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Invalid_SalaryAmount_Period()
         {
             institutionJobs.Salaries.FirstOrDefault().SalaryAmount.Period = Dtos.EnumProperties.SalaryPeriod.Contract;
@@ -1204,7 +1205,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_SalaryAmount_Currency_Null()
         {
             institutionJobs.Salaries.FirstOrDefault().SalaryAmount.Rate.Currency = null;
@@ -1212,7 +1213,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_SalaryAmount_Invalid_Currency()
         {
             institutionJobs.Salaries.LastOrDefault().SalaryAmount.Rate.Currency = Dtos.EnumProperties.CurrencyIsoCode.GBP;
@@ -1236,7 +1237,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task PostInstitutionJobsAsync_EntityToDto_Repository_Returns_InstitutionJob_As_Null()
         {
             institutionJobsRepositoryMock.Setup(i => i.CreateInstitutionJobsAsync(It.IsAny<Domain.HumanResources.Entities.InstitutionJobs>())).ReturnsAsync(() => null);
@@ -1297,7 +1298,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PutInstitutionJobsAsync_Invalid_HostCountry()
         {
             domainInstitutionJobs.HostCountry = "UK";
@@ -1315,7 +1316,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task InstitutionJobsService_PutInstitutionJobsAsync_Empty_HostCountry()
         {
             domainInstitutionJobs.HostCountry = null;

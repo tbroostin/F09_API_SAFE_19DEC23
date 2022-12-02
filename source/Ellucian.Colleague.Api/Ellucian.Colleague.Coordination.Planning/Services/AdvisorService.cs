@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using slf4net;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Coordination.Base;
@@ -72,6 +73,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
                 advisorDto = await BuildAdvisorDtoAsync(advisorEntity);
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception)
             {
                 logger.Error("Advisor Id " + advisorId + " is neither a Faculty nor a Staff");
@@ -117,7 +122,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 logger.Error("Error retrieving data for specified advisors. " + ex.Message);
                 var message = "Cannot retrieve information for specified advisors";
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             return advisorDtos;
@@ -147,6 +152,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 advisorDtos = await BuildAdvisorDtosAsync(advisorEntities);
                 return advisorDtos;
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Error retrieving data for specified advisors. " + ex.Message);
@@ -169,7 +178,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             // Make sure current user is the specified advisor
             if (CurrentUser.PersonId != advisorId)
             {
-                throw new Exception("Requested advisor " + advisorId + " is not the current user.");
+                throw new ColleagueWebApiException("Requested advisor " + advisorId + " is not the current user.");
             }
 
             // Either Faculty Advisor or Staff, cannot proceed without at least "view" permissions

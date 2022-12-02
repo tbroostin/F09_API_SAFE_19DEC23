@@ -7,6 +7,7 @@ using Ellucian.Colleague.Data.Finance.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -33,6 +34,10 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
         Collection<SfssLinks> sfssLinks = new Collection<SfssLinks>() { new SfssLinks() { Recordkey = "1", SfssLinkTitle = "Ellucian University", SfssLinkUrl = "http://www.ellucian.edu" } };
         DateTime startDate = DateTime.Today.AddDays(-10);
         DateTime endDate = DateTime.Today.AddDays(10);
+        ApiSettings settings = new ApiSettings
+        {
+            ColleagueTimeZone = TimeZoneInfo.Local.Id
+        };
 
         [TestInitialize()]
         public void Initialize() 
@@ -95,7 +100,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
             dataReaderMock.Setup(r => r.BulkReadRecord<SfppRequirements>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(sfppRequirements);
 
-            this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
         }
 
         #region GetFinanceConfiguration tests
@@ -810,7 +815,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     SfArTypesEntityAssociation = null
                 };
                 dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.IsFalse(result.DisplayedReceivableTypes.Any());
             }
@@ -826,7 +831,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     SfArTypesEntityAssociation = new List<SfDefaultsSfArTypes>()
                 };
                 dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.IsFalse(result.DisplayedReceivableTypes.Any());
             }
@@ -846,7 +851,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     }
                 };
                 dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(sfDefaults.SfArTypesEntityAssociation.Count, result.DisplayedReceivableTypes.Count);
                 for(int i = 0; i < sfDefaults.SfArTypesEntityAssociation.Count; i++)
@@ -862,7 +867,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfPayPlanParameters = null;
                 dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.IsFalse(result.UserPaymentPlanCreationEnabled);
             }
@@ -872,7 +877,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfPayPlanParameters = null;
                 dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(0, result.PaymentPlanEligibilityRuleIds.Count);
             }
@@ -889,7 +894,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfPayPlanParameters.SfplnEnabled = "N";
                 dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.IsFalse(result.UserPaymentPlanCreationEnabled);
             }
@@ -899,7 +904,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfPayPlanParameters.SfplnEnabled = string.Empty;
                 dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.IsFalse(result.UserPaymentPlanCreationEnabled);
             }
@@ -909,7 +914,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfPayPlanParameters.SfplnEligibilityRules = null;
                 dataReaderMock.Setup<SfPayPlanParameters>(reader => reader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS", true)).Returns(sfPayPlanParameters);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(0, result.PaymentPlanEligibilityRuleIds.Count);
             }
@@ -926,7 +931,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 sfppRequirements = null;
                 dataReaderMock.Setup(r => r.BulkReadRecord<SfppRequirements>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(sfppRequirements);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(0, result.TermPaymentPlanRequirements.Count);
             }
@@ -971,7 +976,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     }
                 }; 
                 dataReaderMock.Setup(r => r.BulkReadRecord<SfppRequirements>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(sfppRequirements);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
             }
 
@@ -991,7 +996,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     }
                 };
                 dataReaderMock.Setup(r => r.BulkReadRecord<SfppRequirements>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(sfppRequirements);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(sfppRequirements.Count, result.TermPaymentPlanRequirements.Count);
                 Assert.AreEqual(0, result.TermPaymentPlanRequirements[0].PaymentPlanOptions.Count);
@@ -1030,7 +1035,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     }
                 };
                 dataReaderMock.Setup(r => r.BulkReadRecord<SfppRequirements>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Returns(sfppRequirements);
-                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                this.repository = new FinanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, settings);
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(sfppRequirements.Count, result.TermPaymentPlanRequirements.Count);
                 Assert.AreEqual(sfppRequirements[0].SfpprPlanRequirementsEntityAssociation.Count - 1, result.TermPaymentPlanRequirements[0].PaymentPlanOptions.Count);

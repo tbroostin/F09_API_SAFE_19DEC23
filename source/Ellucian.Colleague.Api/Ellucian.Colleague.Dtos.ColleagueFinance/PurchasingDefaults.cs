@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -27,6 +27,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Is PO Approval Needed (true if PO Approval Needed Flag in PUWP is (Y)es or (A)uto-Populate)
         /// </summary>
         public bool IsPOApprovalNeeded { get; set; }
+
+        /// <summary>
+        /// Is Approval Allow Returns is enabled for Procurement documents (true if Is Approval Returns Flag in APPD is (Y)es)
+        /// </summary>
+        public bool IsApprovalReturnsEnabled { get; set; }
 
     }
 }

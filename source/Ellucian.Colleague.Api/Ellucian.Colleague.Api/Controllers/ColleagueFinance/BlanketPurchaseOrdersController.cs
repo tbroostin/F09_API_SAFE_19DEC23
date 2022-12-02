@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -26,6 +26,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using System.Linq;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -76,27 +77,32 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             catch (PermissionsException peex)
             {
-                logger.Error(peex.Message);
+                logger.Error(peex, "Insufficient permissions to get the blanket purchase order.");
                 throw CreateHttpResponseException("Insufficient permissions to get the blanket purchase order.", HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException anex)
             {
-                logger.Error(anex, anex.Message);
+                logger.Error(anex, "Invalid argument.");
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
             catch (KeyNotFoundException knfex)
             {
-                logger.Error(knfex, knfex.Message);
+                logger.Error(knfex, "Record not found.");
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
             }
             catch (ApplicationException aex)
             {
-                logger.Error(aex, aex.Message);
+                logger.Error(aex, "Invalid data in record.");
                 throw CreateHttpResponseException("Invalid data in record.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Session expired: unable to get the blanket purchase order.");
+                throw CreateHttpResponseException("Session expired: unable to get the blanket purchase order.", HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
-                logger.Error(ex.Message);
+                logger.Error(ex, "Unable to get the blanket purchase order.");
                 throw CreateHttpResponseException("Unable to get the blanket purchase order.", HttpStatusCode.BadRequest);
             }
         }
@@ -584,11 +590,29 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                             "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
                             message: "The additional amount value and currency are required properties when submitting additional amount information on a blanket purchase order."));
                     }
+                    if (detail.DiscountAmount != null && (!detail.DiscountAmount.Value.HasValue || detail.DiscountAmount.Currency == null))
+                    {                        
+                        integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.DiscountAmount",
+                            "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
+                            message: "The discount amount value and currency are required properties when submitting discount amount information on a blanket purchase order."));
+                    }
                     if (detail.AdditionalAmount != null)
                     {
                         try
                         {
                             defaultCurrency = checkCurrency(defaultCurrency, detail.AdditionalAmount.Currency);
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.invalid.currency",
+                                "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId, message: ex.Message));
+                        }
+                    }
+                    if (detail.DiscountAmount != null && detail.DiscountAmount.Currency != null)
+                    {
+                        try
+                        {
+                            defaultCurrency = checkCurrency(defaultCurrency, detail.DiscountAmount.Currency);
                         }
                         catch (ArgumentException ex)
                         {

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +16,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -23,6 +24,7 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Colleague.Domain.Exceptions;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -45,9 +47,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         protected const int AllOrganizationsCacheTimeout = 20; 
         protected const string AllOrganizationsCache = "AllOrganizations";
         private readonly string colleagueTimeZone;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
         private int bulkReadSize;
         private RepositoryException exception = new RepositoryException();
+        private static char subValueMark = Convert.ToChar(DynamicArray.SM);
+
+        public static char SubValueMark
+        {
+            get { return subValueMark; }
+            set { subValueMark = value; }
+        }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PersonRepository"/> class.
@@ -78,7 +87,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access PERSON.ETHNICS valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return ethnicsTable;
                 }, Level1CacheTimeoutValue);
@@ -99,7 +108,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access MARITAL.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -120,7 +129,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access PERSON.RACES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return racesTable;
                 }, Level1CacheTimeoutValue);
@@ -142,7 +151,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access LANGUAGES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return languagesTable;
                 }, Level1CacheTimeoutValue);
@@ -164,7 +173,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access PERSONAL.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -177,44 +186,44 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<NameAddressHierarchy> GetCachedNameAddressHierarchyAsync(string nameAddressHierarchyCode = _preferredHierarchyCode)
         {
-            NameAddressHierarchy requestedNameAddressHierarchy = await GetOrAddToCacheAsync<NameAddressHierarchy>(nameAddressHierarchyCode + "_NameAddressHierarchy",
-               async () =>
-               {
-                   NameAddrHierarchy nameAddrHierarchy = await DataReader.ReadRecordAsync<NameAddrHierarchy>("NAME.ADDR.HIERARCHY", nameAddressHierarchyCode);
-                   if (nameAddrHierarchy == null)
+                NameAddressHierarchy requestedNameAddressHierarchy = await GetOrAddToCacheAsync<NameAddressHierarchy>(nameAddressHierarchyCode + "_NameAddressHierarchy",
+                   async () =>
                    {
-                       if (nameAddressHierarchyCode != _preferredHierarchyCode)
+                       NameAddrHierarchy nameAddrHierarchy = await DataReader.ReadRecordAsync<NameAddrHierarchy>("NAME.ADDR.HIERARCHY", nameAddressHierarchyCode);
+                       if (nameAddrHierarchy == null)
                        {
+                           if (nameAddressHierarchyCode != _preferredHierarchyCode)
+                           {
                            // for all hierarchies except PREFERRED throw an error - this means nothing will be cached 
                            var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Cache not built.";
-                           logger.Info(errorMessage);
-                           throw new KeyNotFoundException(errorMessage);
-                       }
-                       else
-                       {
+                               logger.Info(errorMessage);
+                               throw new KeyNotFoundException(errorMessage);
+                           }
+                           else
+                           {
                            // All clients are expected to have a PREFERRED name address hierarchy. If they don't, report it but also default one so that it is cached.
                            var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Creating a basic preferred hierarchy with PF name type.";
-                           logger.Info(errorMessage);
+                               logger.Info(errorMessage);
                            // Construct a default one with the desired name type values.
                            nameAddrHierarchy = new NameAddrHierarchy();
-                           nameAddrHierarchy.Recordkey = _preferredHierarchyCode;
-                           nameAddrHierarchy.NahNameHierarchy = new List<string>() { "PF" };
-                       }
+                               nameAddrHierarchy.Recordkey = _preferredHierarchyCode;
+                               nameAddrHierarchy.NahNameHierarchy = new List<string>() { "PF" };
+                           }
 
-                   }
+                       }
                    // Build the NameAddressHierarchy Entity and cache that.
                    NameAddressHierarchy newHierarchy = new NameAddressHierarchy(nameAddrHierarchy.Recordkey);
-                   if (nameAddrHierarchy.NahNameHierarchy != null && nameAddrHierarchy.NahNameHierarchy.Any())
-                   {
-                       foreach (var nameType in nameAddrHierarchy.NahNameHierarchy)
+                       if (nameAddrHierarchy.NahNameHierarchy != null && nameAddrHierarchy.NahNameHierarchy.Any())
                        {
-                           newHierarchy.AddNameTypeHierarchy(nameType);
+                           foreach (var nameType in nameAddrHierarchy.NahNameHierarchy)
+                           {
+                               newHierarchy.AddNameTypeHierarchy(nameType);
+                           }
                        }
-                   }
 
-                   return newHierarchy;
-               }, Level1CacheTimeoutValue);
-            return requestedNameAddressHierarchy;
+                       return newHierarchy;
+                   }, Level1CacheTimeoutValue);
+                return requestedNameAddressHierarchy;           
         }
         #endregion
 
@@ -276,6 +285,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var message = "One or more IDs did not return any data. Person records may be corrupt.";
                 logger.Info(message);
                 throw new ApplicationException(message, aoore);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (ArgumentNullException ane)
             {
@@ -366,26 +379,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         public async Task<IEnumerable<Data.Base.DataContracts.Person>> GetPersonContractsAsync(IEnumerable<string> personIds)
         {
-            var personData = new List<Data.Base.DataContracts.Person>();
+                var personData = new List<Data.Base.DataContracts.Person>();
 
-            for (int i = 0; i < personIds.Count(); i += bulkReadSize)
-            {
-                var subList = personIds.Skip(i).Take(bulkReadSize);
-                var records = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", subList.ToArray());
-                if (records != null)
+                for (int i = 0; i < personIds.Count(); i += bulkReadSize)
                 {
-                    personData.AddRange(records);
-                    var message = string.Format("{0} records added in PersonBaseRepository", records.Count());
-                    logger.Info(message);
+                    var subList = personIds.Skip(i).Take(bulkReadSize);
+                    var records = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", subList.ToArray());
+                    if (records != null)
+                    {
+                        personData.AddRange(records);
+                        var message = string.Format("{0} records added in PersonBaseRepository", records.Count());
+                        logger.Info(message);
+                    }
                 }
-            }
 
-            //personData = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
-            if (personData == null)
-            {
-                throw new ArgumentOutOfRangeException("Person Ids " + string.Join(",", personIds) + " are not returning any data. Person records may be corrupted.");
-            }
-            return personData;
+                //personData = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
+                if (personData == null)
+                {
+                    throw new ArgumentOutOfRangeException("Person Ids " + string.Join(",", personIds) + " are not returning any data. Person records may be corrupted.");
+                }
+                return personData;            
         }
 
         public async Task<Data.Base.DataContracts.Address> GetPersonAddressContractAsync(string addressId, bool useCache = true)
@@ -657,10 +670,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var codeAssoc = (await GetLanguagesAsync()).ValsEntityAssociation.Where(v => v != null && v.ValInternalCodeAssocMember == record.PersonPrimaryLanguage).FirstOrDefault();
                     if (codeAssoc != null)
                     {
-                        personBasedObject.PrimaryLanguage = codeAssoc.ValInternalCodeAssocMember;                        
+                        personBasedObject.PrimaryLanguage = codeAssoc.ValInternalCodeAssocMember;
                     }
                 }
-                
+
                 if (record.PersonSecondaryLanguage != null && record.PersonSecondaryLanguage.Count > 0)
                 {
                     var secondaryLanguages = new List<string>();
@@ -1074,7 +1087,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("Error occured while getting person guids.", ex); ;
+                    throw new ColleagueWebApiException("Error occured while getting person guids.", ex); ;
                 }
             }
 
@@ -1109,8 +1122,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         personGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex.Message, "Cannot add person ID to guid collection.");
                 }
             }
 
@@ -1151,7 +1166,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error occured while getting person guids.", ex); ;
+                throw new ColleagueWebApiException("Error occured while getting person guids.", ex); ;
             }
 
             return personGuidCollection;
@@ -1270,7 +1285,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("Error occured while getting person guids.", ex); ;
+                    throw new ColleagueWebApiException("Error occured while getting person guids.", ex); ;
                 }
             }
 
@@ -3583,47 +3598,47 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>list of Ids</returns>
         public async Task<IEnumerable<string>> SearchByNameAsync(string lastName, string firstName = null, string middleName = null)
         {
-            var watch = new Stopwatch();
-            watch.Start();
+                var watch = new Stopwatch();
+                watch.Start();
 
-            if (lastName == null || lastName.Trim().Count() < 2)
-            {
-                throw new ArgumentNullException("lastName", "Supplied last name must be at least two characters");
-            }
+                if (lastName == null || lastName.Trim().Count() < 2)
+                {
+                    throw new ArgumentNullException("lastName", "Supplied last name must be at least two characters");
+                }
 
-            // Trim spaces from each name part
-            lastName = lastName.Trim();
-            firstName = (firstName != null) ? firstName = firstName.Trim() : null;
-            middleName = (middleName != null) ? middleName = middleName.Trim() : null;
+                // Trim spaces from each name part
+                lastName = lastName.Trim();
+                firstName = (firstName != null) ? firstName = firstName.Trim() : null;
+                middleName = (middleName != null) ? middleName = middleName.Trim() : null;
 
-            // Call transaction that returns search string
-            var lookupStringRequest = new GetPersonLookupStringRequest();
-            lookupStringRequest.SearchString = lastName + "," + firstName + " " + middleName;
-            var response = await transactionInvoker.ExecuteAsync<GetPersonLookupStringRequest, GetPersonLookupStringResponse>(lookupStringRequest);
+                // Call transaction that returns search string
+                var lookupStringRequest = new GetPersonLookupStringRequest();
+                lookupStringRequest.SearchString = lastName + "," + firstName + " " + middleName;
+                var response = await transactionInvoker.ExecuteAsync<GetPersonLookupStringRequest, GetPersonLookupStringResponse>(lookupStringRequest);
 
-            var persons = new string[] { };
-            string searchString = string.Empty;
+                var persons = new string[] { };
+                string searchString = string.Empty;
 
-            if (string.IsNullOrEmpty(response.ErrorMessage))
-            {
-                logger.Debug("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
-                // Transaction returns something like ;PARTIAL.NAME.INDEX SMITH_BL. Parse out into valid query clause: WITH PARTIAL.NAME.INDEX EQ SMITH_BL
-                var searchArray = (response.IndexString.Replace(";", string.Empty)).Split(' ');
-                searchString = "WITH " + searchArray.ElementAt(0) + " EQ " + "\"" + searchArray.ElementAt(1) + "\"";
-                logger.Debug("String passed for PERSON select :" + searchString);
+                if (string.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    logger.Debug("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
+                    // Transaction returns something like ;PARTIAL.NAME.INDEX SMITH_BL. Parse out into valid query clause: WITH PARTIAL.NAME.INDEX EQ SMITH_BL
+                    var searchArray = (response.IndexString.Replace(";", string.Empty)).Split(' ');
+                    searchString = "WITH " + searchArray.ElementAt(0) + " EQ " + "\"" + searchArray.ElementAt(1) + "\"";
+                    logger.Debug("String passed for PERSON select :" + searchString);
 
-                // Select on person
-                persons = await DataReader.SelectAsync("PERSON", searchString);
-            }
+                    // Select on person
+                    persons = await DataReader.SelectAsync("PERSON", searchString);
+                }
 
-            watch.Stop();
-            logger.Debug("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
-            if (persons != null)
-            {
-                logger.Debug("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
-            }
+                watch.Stop();
+                logger.Debug("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
+                if (persons != null)
+                {
+                    logger.Debug("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
+                }
 
-            return persons;
+                return persons;           
         }
 
 
@@ -4039,10 +4054,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                             emailAddresses.Add(emailToAdd);
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
                             // do not log error
                             //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                            logger.Error(ex.Message, "Could not load email address .");
                         }
                     }
                 }
@@ -4078,8 +4094,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
                                 {
                                     // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                    string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
-                                    string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                    string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(SubValueMark);
+                                    string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(SubValueMark);
                                     for (int i = 0; i < startDate.Length; i++)
                                     {
                                         try

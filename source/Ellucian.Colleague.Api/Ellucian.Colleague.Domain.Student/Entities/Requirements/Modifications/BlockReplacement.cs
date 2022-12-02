@@ -8,7 +8,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements.Modifications
     [Serializable]
     public class BlockReplacement : RequirementModification
     {
-        public Requirement NewRequirement;
+        public Requirement NewRequirement { get; set; }
 
 
         public BlockReplacement(string blockid, Requirement newRequirement, string message)

@@ -60,6 +60,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         /// <returns></returns>
         Task<IEnumerable<string>> GetCFPVersionAsync(string studentId, string awardYear);
 
+        ///<summary>
+        /// Returns the total amount of Vet Benefits for a student/year for the College Financing Plan
+        /// </summary>
+        /// <param name="studentId">Student ID being evaluated</param>
+        /// <param name="awardYear">Award year being processed</param>
+        /// <param name="cfpVersion">UG or GR CFP Version for the given year</param>
+        int? GetVetBenAmount(string studentId, string awardYear, IEnumerable<string> cfpVersion);
+
         /// <summary>
         /// Updates student awards with received data
         /// </summary>

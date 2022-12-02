@@ -57,14 +57,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             //if the student has no year-specific financial aid data, return an empty list
             if (studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
+                logger.Debug(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
                 return new List<AwardLetter>();
             }
 
             //if the student has no fed flagged fafsa records, log a message
             if (fafsaRecords.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no federally flagged fafsa records", studentId));
+                logger.Debug(string.Format("Student {0} has no federally flagged FAFSA records", studentId));
             }
 
             //instantiate the return list
@@ -192,7 +192,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var csDataRecord = DataReader.ReadRecord<CsAcyr>(csAcyrFile, studentId);
             if (csDataRecord == null)
             {
-                logger.Info(string.Format("Student {0} has no {1} record", studentId, csAcyrFile));
+                logger.Debug(string.Format("Student {0} has no {1} record", studentId, csAcyrFile));
             }
 
             //also need the student's YS.ACYR record
@@ -200,7 +200,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var ysDataRecord = DataReader.ReadRecord<YsAcyr>(ysAcyrFile, studentId);
             if (ysDataRecord == null)
             {
-                logger.Info(string.Format("Student {0} has no {1} record", studentId, ysAcyrFile));
+                logger.Debug(string.Format("Student {0} has no {1} record", studentId, ysAcyrFile));
             }
 
             var awardLetterEntity = new AwardLetter(studentId, studentAwardYear);
@@ -445,7 +445,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 if (!IsParsed)
                 {
                     efc = 0;
-                    logger.Info(string.Format("CsFc has invalid value {0}. CS.{1} with key {2} may be corrupt", csDataRecord.CsFc, awardLetterEntity.AwardYear, awardLetterEntity.StudentId));
+                    logger.Debug(string.Format("CsFc has invalid value {0}. CS.{1} with key {2} may be corrupt", csDataRecord.CsFc, awardLetterEntity.AwardYear, awardLetterEntity.StudentId));
                 }
             }
             else

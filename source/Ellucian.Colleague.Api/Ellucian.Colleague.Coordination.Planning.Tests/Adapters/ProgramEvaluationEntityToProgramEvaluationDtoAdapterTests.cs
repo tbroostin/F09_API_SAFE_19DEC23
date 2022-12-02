@@ -29,6 +29,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Adapters
         private IStudentRepository studentRepo;
         private IPlanningStudentRepository planningStudentRepo;
         private Mock<IPlanningStudentRepository> planningStudentRepoMock;
+        private IApplicantRepository applicantRepo;
+        private Mock<IApplicantRepository> applicantRepoMock;
         private IStudentProgramRepository studentProgramRepo;
         private IRequirementRepository requirementRepo;
         private Mock<IAcademicCreditRepository> academicCreditRepoMock;
@@ -65,6 +67,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Adapters
             studentRepo = new TestStudentRepository();
             planningStudentRepoMock = new Mock<IPlanningStudentRepository>();
             planningStudentRepo = planningStudentRepoMock.Object;
+            applicantRepoMock = new Mock<IApplicantRepository>();
+            applicantRepo = applicantRepoMock.Object;
             studentProgramRepo = new TestStudentProgramRepository();
             programRequirementsRepo = new TestProgramRequirementsRepository();
             referenceDataRepo = new Mock<IReferenceDataRepository>().Object;
@@ -102,7 +106,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Adapters
 
             // This won't work for additional requirements right now - TestRequirementRepo data doesn't match other data
             programEvaluationService = new ProgramEvaluationService(
-                adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, applicantRepo, studentProgramRepo,
                 requirementRepo, academicCreditRepo, degreePlanRepo, courseRepo, termRepo, ruleRepo, programRepo, catalogRepo, 
                 planningConfigRepo,referenceDataRepo, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
         }

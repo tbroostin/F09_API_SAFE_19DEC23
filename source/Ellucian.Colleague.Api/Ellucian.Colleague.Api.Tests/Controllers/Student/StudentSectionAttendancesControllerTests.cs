@@ -4,6 +4,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -85,7 +86,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task QueryStudentSectionsAttendancesAsync_ReturnsStudentAttendanceDtos()
+            public async Task QueryStudentSectionAttendancesAsync_ReturnsStudentAttendanceDtos()
             {
                 var criteria = new StudentSectionAttendancesQueryCriteria() { StudentId = "1111111", SectionIds = new List<string>() { "SEC1" ,"SEC2","SEC3"} };
                 studentAttendanceServiceMock.Setup(x => x.QueryStudentSectionAttendancesAsync(criteria)).Returns(Task.FromResult(studentSectionsAttendances));
@@ -95,7 +96,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task QueryStudentAttendances2Async_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            public async Task QueryStudentSectionAttendancesAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
             {
                 try
                 {
@@ -112,7 +113,25 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task QueryStudentAttendances2Async_Exception_ReturnsHttpResponseException_BadRequest()
+            public async Task QueryStudentSectionAttendancesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    var criteria = new StudentSectionAttendancesQueryCriteria() { StudentId = "1111112", SectionIds = new List<string>() { "SectionId" } };
+                    studentAttendanceServiceMock.Setup(x => x.QueryStudentSectionAttendancesAsync(criteria))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await studentAttendanceController.QueryStudentSectionAttendancesAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentSectionAttendancesAsync_Exception_ReturnsHttpResponseException_BadRequest()
             {
                 try
                 {
@@ -130,7 +149,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task QueryStudentAttendances2Async_NullCriteria_ReturnsHttpResponseException_BadRequest()
+            public async Task QueryStudentSectionAttendancesAsync_NullCriteria_ReturnsHttpResponseException_BadRequest()
             {
                 try
                 {
@@ -146,7 +165,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task QueryStudentAttendances2Async_CriteriaNoStudentId_ReturnsHttpResponseException_BadRequest()
+            public async Task QueryStudentSectionAttendancesAsync_CriteriaNoStudentId_ReturnsHttpResponseException_BadRequest()
             {
                 try
                 {
@@ -162,7 +181,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task QueryStudentAttendances2Async_CriteriaEmptySectionId_ReturnsOK()
+            public async Task QueryStudentSectionAttendancesAsync_CriteriaEmptySectionId_ReturnsOK()
             {
                 try
                 {
@@ -182,7 +201,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task QueryStudentAttendances2Async_CriteriaEmptyStudentId_ReturnsHttpResponseException_BadRequest()
+            public async Task QueryStudentSectionAttendancesAsync_CriteriaEmptyStudentId_ReturnsHttpResponseException_BadRequest()
             {
                 try
                 {
@@ -196,10 +215,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
-           
         }
-        
     }
 }
 

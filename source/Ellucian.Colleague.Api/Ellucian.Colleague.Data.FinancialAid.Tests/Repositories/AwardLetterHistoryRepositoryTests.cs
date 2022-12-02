@@ -445,8 +445,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             [TestMethod]
             public async Task EmptyStudentAwardYearsList_LogsMessageTest()
             {
-                await actualRepository.GetAwardLettersAsync(studentId, new List<StudentAwardYear>(), allAwards);
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId)));
+                await actualRepository.GetAwardLetters2Async(studentId, new List<StudentAwardYear>(), allAwards);
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId)));
             }
 
             [TestMethod]
@@ -1132,7 +1132,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task EmptyStudentAwardYearsList_LogsMessageTest()
             {
                 await actualRepository.GetAwardLetters2Async(studentId, new List<StudentAwardYear>(), allAwards);
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId)));
             }
 
             [TestMethod]

@@ -1,8 +1,10 @@
-﻿using Ellucian.Colleague.Api.Licensing;
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -28,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILoadPeriodService _loadPeriodService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the LoadPeriodsController class.
@@ -60,7 +63,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 var loadPeriods = await _loadPeriodService.GetLoadPeriodsByIdsAsync(loadPeriodQueryCriteria.Ids);
                 return loadPeriods;
             }
-            catch(Exception e)
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
             {
                 _logger.Error(e, "Failed to retrieve load periods");
                 throw CreateHttpResponseException("Failed to retrieve load periods");

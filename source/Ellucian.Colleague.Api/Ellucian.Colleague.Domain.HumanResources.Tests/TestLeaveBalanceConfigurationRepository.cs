@@ -1,4 +1,4 @@
-﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,7 +13,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             LeaveBalanceConfiguration leaveBalanceConfiguration = new LeaveBalanceConfiguration()
             {
                 ExcludedLeavePlanIds = new List<string>(),// { "INAC", "CMPS" }
-                LeaveRequestLookbackDays = 60  //default value
+                LeaveRequestLookbackDays = 60,  //default value
+                LeaveRequestActionType = LeaveRequestActionType.R, //default value
+                AllowSupervisorToEditLeaveRequests = false //default value
             };
             return leaveBalanceConfiguration;
         }

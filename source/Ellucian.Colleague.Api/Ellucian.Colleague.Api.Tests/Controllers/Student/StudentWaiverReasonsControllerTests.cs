@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -112,6 +113,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
                 throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task WaiverReasonsController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(x => x.GetStudentWaiverReasonsAsync())
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await waiverReasonsController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
             }
         }
 

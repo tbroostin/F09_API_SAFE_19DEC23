@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.Base;
 using System;
 
@@ -36,6 +36,11 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// Enables a user to view their own T4 information
         /// </summary>
         public const string ViewT4 = BasePermissionCodes.ViewT4;
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to search for an employee and add a proxy record on behalf of the searched employee.
+        /// </summary>
+        public const string AddAllEmployeeProxy = BasePermissionCodes.AddAllEmployeeProxy;
 
         // Enables an employee to create, update, or delete payroll banking information 
         public const string EditPayrollBankingInformation = "EDIT.PAYROLL.BANKING.INFORMATION";

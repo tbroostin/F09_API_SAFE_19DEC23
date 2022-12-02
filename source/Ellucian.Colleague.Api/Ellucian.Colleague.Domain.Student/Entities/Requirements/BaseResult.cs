@@ -14,8 +14,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         public abstract decimal GetPlannedAppliedCredits();
         public abstract bool IsSatisfied();
         public abstract bool IsPlannedSatisfied();
-        public CompletionStatus CompletionStatus;
-        public PlanningStatus PlanningStatus;
+        public CompletionStatus CompletionStatus { get; set; }
+        public PlanningStatus PlanningStatus { get; set; }
         public abstract IEnumerable<AcadResult> GetCreditsToIncludeInGpa();
 
         protected BaseResult()

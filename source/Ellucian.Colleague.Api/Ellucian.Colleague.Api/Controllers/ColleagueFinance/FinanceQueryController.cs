@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -69,6 +69,40 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get finance query results", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the filtered GL Account detail data.
+        /// </summary>
+        /// <param name="criteria">Finance query filter criteria.</param>
+        /// <returns>GL account data that match the filter criteria.</returns>
+        /// <accessComments>
+        /// The user can only access those GL accounts for which they have
+        /// GL account security access granted.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<FinanceQueryActivityDetail>> QueryFinanceQueryDetailSelectionByPostAsync([FromBody] FinanceQueryCriteria criteria)
+        {
+            try
+            {
+                if (criteria == null)
+                {
+                    throw new ArgumentNullException("criteria", "The query criteria must be specified.");
+                }
+
+                return await financeQueryService.QueryFinanceQueryDetailSelectionByPostAsync(criteria);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get finance query detail results.", HttpStatusCode.BadRequest);
             }
         }
     }

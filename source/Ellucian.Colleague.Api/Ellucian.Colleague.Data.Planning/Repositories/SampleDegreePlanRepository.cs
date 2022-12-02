@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,7 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using slf4net;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
+using Ellucian.Web.Http.Exceptions;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Planning.Repositories
@@ -165,7 +165,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             {
                 var error = "Unable to build Sample Degree Plan from curriculum track data";
                 LogDataError("Sample Degree Plan", currTrackRepoData.Recordkey, currTrackRepoData, ex, error);
-                throw new Exception("Error constructing SampleDegreePlan");
+                throw new ColleagueWebApiException("Error constructing SampleDegreePlan");
             }
             return sampleDegreePlan;
         }

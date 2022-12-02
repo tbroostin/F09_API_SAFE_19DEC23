@@ -307,7 +307,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     .Returns<string, CurrentOfficeService, bool>((id, currentOfficeService, b) => Task.FromResult((new List<Domain.FinancialAid.Entities.StudentAwardYear>()).AsEnumerable()));
 
                 Assert.AreEqual(0, (await actualShoppingSheetsAsync()).Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years for which to get shopping sheets", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years for which to get shopping sheets", studentId)));
             }
 
             [TestMethod]
@@ -317,7 +317,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     .Returns<string, CurrentOfficeService, bool>((id, currentOfficeService, b) => Task.FromResult((new List<Domain.FinancialAid.Entities.StudentAwardYear>()).AsEnumerable()));
 
                 Assert.AreEqual(0, (await actualShoppingSheetsAsync()).Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years for which to get shopping sheets", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years for which to get shopping sheets", studentId)));
             }
 
             /// <summary>
@@ -366,7 +366,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.AreEqual(0, (await actualShoppingSheetsAsync()).Count());
 
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(), "Unable to create shopping sheet for studentId {0} and awardYear {1}", It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(), "Unable to create shopping sheet for studentId {0} and awardYear {1}", It.IsAny<object[]>()));
             }
 
         }

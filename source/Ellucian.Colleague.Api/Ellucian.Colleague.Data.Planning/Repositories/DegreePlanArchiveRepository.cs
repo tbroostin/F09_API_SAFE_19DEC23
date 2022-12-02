@@ -14,6 +14,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 
 namespace Ellucian.Colleague.Data.Planning.Repositories
 {
@@ -47,6 +48,8 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             request.ADpLastReviewedBy = degreePlanArchive.ReviewedBy;
             request.ADpLastReviewedDate = degreePlanArchive.ReviewedDate.ToLocalDateTime(colleagueTimeZone);
             request.ADpVersionNumber = degreePlanArchive.Version.ToString();
+
+            // Courses
             request.AlCourses = new List<AlCourses>();
             foreach (var archiveCourse in degreePlanArchive.ArchivedCourses)
             {
@@ -73,6 +76,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                 request.AlCourses.Add(ac);
             }
 
+            // Student Programs
             request.AlAcadPrograms = new List<AlAcadPrograms>();
             foreach (var sp in degreePlanArchive.StudentPrograms)
             {
@@ -82,6 +86,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                 request.AlAcadPrograms.Add(prog);
             }
 
+            // Notes
             request.AlComments = new List<AlComments>();
             foreach (var note in degreePlanArchive.Notes)
             {
@@ -95,7 +100,40 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                 request.AlComments.Add(comment);
             }
 
-            Transactions.CreateDegreePlanArchiveResponse updateResponse = await transactionInvoker.ExecuteAsync<Transactions.CreateDegreePlanArchiveRequest, Transactions.CreateDegreePlanArchiveResponse>(request);
+            // Course placeholders
+            request.CoursePlaceholders = new List<CoursePlaceholders>();
+            if (degreePlanArchive.ArchivedCoursePlaceholders != null)
+            {
+                foreach (var csph in degreePlanArchive.ArchivedCoursePlaceholders)
+                {
+                    var placeholder = new CoursePlaceholders()
+                    {
+                        CoursePlaceholderId = csph.Id,
+                        PlaceholderAcadReqmt = csph.AcademicRequirement != null ? csph.AcademicRequirement.AcademicRequirementCode : string.Empty,
+                        PlaceholderGroupAcadReqmt = csph.AcademicRequirement != null ? csph.AcademicRequirement.GroupId : string.Empty,
+                        PlaceholderCredits = csph.CreditInformation,
+                        PlaceholderSubrequirement = csph.AcademicRequirement != null ? csph.AcademicRequirement.SubrequirementId : string.Empty,
+                        PlaceholderTerm = csph.TermCode,
+                        PlaceholderTitle = csph.Title,
+                        PlaceholderAddedBy = csph.AddedBy,
+                        PlaceholderAddedDate = csph.AddedOn.HasValue ? csph.AddedOn.ToLocalDateTime(colleagueTimeZone) : null,
+                        PlaceholderAddedTime = csph.AddedOn.HasValue ? csph.AddedOn.ToLocalDateTime(colleagueTimeZone) : null,
+                    };
+                    request.CoursePlaceholders.Add(placeholder);
+                }
+            }
+
+            // Invoke CTX to create degree plan archive
+            CreateDegreePlanArchiveResponse updateResponse = null;
+            try
+            {
+                updateResponse = await transactionInvoker.ExecuteAsync<Transactions.CreateDegreePlanArchiveRequest, Transactions.CreateDegreePlanArchiveResponse>(request);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "An error occurred executing the Colleague transaction to archive the degree plan.");
+                throw;
+            }
 
             if (string.IsNullOrEmpty(updateResponse.AErrorMessage) && !string.IsNullOrEmpty(updateResponse.ADegreePlanArchiveId))
             {
@@ -105,7 +143,11 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             }
             else
             {
-                // Got an error back and or no archive Id. Something went wrong so throw an error.
+                // Got an error back and/or no archive Id. Something went wrong so throw an error.
+                if (string.IsNullOrEmpty(updateResponse.AErrorMessage))
+                {
+                    logger.Error(updateResponse.AErrorMessage);
+                }
                 throw new ArgumentException("Unresolved errors trying to archive Degree Plan Id " + degreePlanArchive.Id);
             }
         }
@@ -226,9 +268,38 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                     }
                     planArchiveEntity.ArchivedCourses = courses;
 
-                    var notes = new List<DegreePlanNote>();
+                    // Add course placeholders
+                    var coursePlaceholders = new List<ArchivedCoursePlaceholder>();
+                    if (planArchiveDC.DparchvCrsPlaceholdersEntityAssociation != null && planArchiveDC.DparchvCrsPlaceholdersEntityAssociation.Count() > 0)
+                    {
+                        foreach (var csph in planArchiveDC.DparchvCrsPlaceholdersEntityAssociation)
+                        {
+                            try
+                            {
+                                var acadReqmt = new AcademicRequirementGroup(csph.DparchvCphAcadReqmtAssocMember, csph.DparchvCphSreqAcadReqmtAssocMember, csph.DparchvCphGroupAcadReqmtAssocMember);
+                                var archivedPlaceholder = new ArchivedCoursePlaceholder(csph.DparchvCphIdAssocMember,
+                                    csph.DparchvCphTitleAssocMember, csph.DparchvCphCreditsAssocMember, acadReqmt, csph.DparchvCphTermAssocMember);
+                                archivedPlaceholder.AddedBy = csph.DparchvCphAddedByAssocMember;
+                                if (csph.DparchvCphAddedOnDateAssocMember.HasValue && csph.DparchvCphAddedOnTimeAssocMember.HasValue)
+                                {
+                                    archivedPlaceholder.AddedOn = csph.DparchvCphAddedOnTimeAssocMember.ToPointInTimeDateTimeOffset(
+                                        csph.DparchvCphAddedOnDateAssocMember, colleagueTimeZone);
+                                }
+                                coursePlaceholders.Add(archivedPlaceholder);
+                            }
+                            catch (Exception ex)
+                            {
+                                // For just a bad course placeholder on the archive - skip it and keep building the degree plan archive. But log it.
+                                var archiveError = "DegreePlanArchive course placeholder corrupt for DegreePlanArchive " + planArchiveDC.Recordkey;
+                                logger.Error(ex, archiveError);
+                            }
+
+                        }
+                    }
+                    planArchiveEntity.ArchivedCoursePlaceholders = coursePlaceholders;
 
                     // Now retrieve and add any comments that exist for this degree plan archive.
+                    var notes = new List<DegreePlanNote>();
                     var comments = planArchiveCommentsDataContracts.Where(dc => dc.DpcarchvDegreePlanArchive == planArchiveEntity.Id.ToString()).ToList();
                     foreach (var comment in comments)
                     {

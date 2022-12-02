@@ -1,18 +1,16 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 
-using System.Web.Http.Controllers;
-using System.Net.Http;
-using System.Linq;
-using System;
+using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Exceptions;
 using Newtonsoft.Json;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using slf4net;
-using System.Collections.Generic;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Http.Controllers;
-using System.Net.Http.Headers;
-using System.Text;
+using System.Web.Http.Controllers;
 
 namespace Ellucian.Web.Http.Filters
 {
@@ -29,13 +27,24 @@ namespace Ellucian.Web.Http.Filters
         /// <summary>
         /// List of valid query parameters
         /// </summary>
-        public string[] ValidQueryParameters = new string[] { "offset", "limit", "sort" };
+        public string[] ValidQueryParameters
+        {
+            get { return validQueryParameters; }
+            set { validQueryParameters = value; }
+        }
+
+        private string[] validQueryParameters = new string[] { "offset", "limit", "sort" };
 
         /// <summary>
         /// List of valid named query parameters (legacy)
         /// </summary>
-        public string[] NamedQueries = null;
+        public string[] NamedQueries
+        {
+            get { return namedQueries; }
+            set { namedQueries = value; }
+        }
 
+        private string[] namedQueries = null;
 
         /// <summary>
         /// Prevent query string validation from occuring
@@ -161,7 +170,7 @@ namespace Ellucian.Web.Http.Filters
 
                 return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
             }
-            throw new Exception(errorMessage);
+            throw new ColleagueWebApiException(errorMessage);
         }
     }
 }

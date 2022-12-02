@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -14,6 +14,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -22,16 +23,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
     {
         Mock<IAdapterRegistry> adapterRegistryMock;
         Mock<ICurrentUserFactory> curUserFactoryMock;
+        ICurrentUserFactory employeeProxyAdminUserMock;
         Mock<IRoleRepository> roleRepoMock;
         Mock<ILogger> loggerMock;
         Mock<IReferenceDataRepository> refDataRepoMock;
         Mock<IRelationshipRepository> relDataRepoMock;
         Mock<IPersonBaseRepository> personBaseRepoMock;
         Mock<ICurrentUser> thisUser;
+        
+        public Domain.Entities.Role proxyAdminRole;
+        public Domain.Entities.Permission addAllEmployeeProxyPermission;
 
         private const string _primaryId = "PrimaryId";
         private const string _parentId = "ParentId";
         private const string _childId = "ChildId";
+        private const string _employeeProxyAdminId = "EmployeeProxyAdminId";
         // other entities
         private const string _firstId = "FirstId";
         private const string _secondId = "SecondId";
@@ -58,20 +64,28 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             loggerMock = new Mock<ILogger>();
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             curUserFactoryMock = new Mock<ICurrentUserFactory>();
+            employeeProxyAdminUserMock = new Person002UserFactory();
             roleRepoMock = new Mock<IRoleRepository>();
             refDataRepoMock = new Mock<IReferenceDataRepository>();
             relDataRepoMock = new Mock<IRelationshipRepository>();
             personBaseRepoMock = new Mock<IPersonBaseRepository>();
 
+            // permissions mock
+            proxyAdminRole = new Domain.Entities.Role(20, "EMPLOYEE PROXY ADMIN");
+            addAllEmployeeProxyPermission = new Domain.Entities.Permission(BasePermissionCodes.AddAllEmployeeProxy);
+            proxyAdminRole.AddPermission(addAllEmployeeProxyPermission);
+            roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { proxyAdminRole });
+
             // Mock a user to  test permissions
             thisUser = new Mock<ICurrentUser>();
-            thisUser.Setup<bool>(x => x.IsPerson(_primaryId)).Returns(true); // _primaryId is OK
             thisUser.Setup<bool>(x => x.IsPerson(It.IsAny<string>())).Returns(true); // all other ids are ok
+            thisUser.Setup<bool>(x => x.IsPerson(_employeeProxyAdminId)).Returns(false);
+            thisUser.Setup<bool>(x => x.IsPerson(_primaryId)).Returns(true); // _primaryId is OK
             thisUser.Setup<bool>(x => x.IsPerson(_parentId)).Returns(false); // _parentId is not OK
 
             // mock the CurrentUserFactory to return the above CurrentUser
             curUserFactoryMock.SetupGet<ICurrentUser>(y => y.CurrentUser).Returns(thisUser.Object);
-
+            
             // mock data from the reference and relationship repositories
             refDataRepoMock.Setup<Task<IEnumerable<RelationshipType>>>(x => x.GetRelationshipTypesAsync()).Returns(Task.FromResult(RelationTypesFromRefRepo()));
             relDataRepoMock.Setup<Task<IEnumerable<Relationship>>>(x => x.GetPersonRelationshipsAsync(_primaryId)).Returns(Task.FromResult(RelationshipsFromRelRepo()));
@@ -124,6 +138,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var relData = await relService.GetPersonPrimaryRelationshipsAsync(string.Empty);
         }
         #endregion
+
         #region Business logic
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
@@ -146,6 +161,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var relData = await relService.GetPersonPrimaryRelationshipsAsync(_onlyPrimaryRelationships);
             Assert.IsNotNull(relData);
             Assert.AreEqual(RelationshipsAreOnlyPrimary().Where(x => x.RelationshipType.Equals("CR")).Count(), relData.Count());
+        }
+
+        [TestMethod]
+        public async Task RelationshipService_GetPersonPrimaryRelationshipsAsync_EmployeeProxyAdmin()
+        {
+            relService = new RelationshipService(adapterRegistryMock.Object, employeeProxyAdminUserMock, roleRepoMock.Object, loggerMock.Object,
+             refDataRepoMock.Object, relDataRepoMock.Object, personBaseRepoMock.Object);
+            var relData = await relService.GetPersonPrimaryRelationshipsAsync(_employeeProxyAdminId);
+            Assert.IsNotNull(relData);            
         }
 
         [TestMethod]
@@ -287,6 +311,30 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
         #endregion
         #endregion
+
+        /// <summary>
+        /// ICurrentUserFactory implementation for employee proxy admins
+        /// </summary>
+        public class Person002UserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "125",
+                        Name = "John",
+                        PersonId = "0001200",
+                        SecurityToken = "320",
+                        SessionTimeout = 30,
+                        UserName = "Admin",
+                        Roles = new List<string>() { "EMPLOYEE PROXY ADMIN" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
 
         #region private methods
         private IEnumerable<RelationshipType> RelationTypesFromRefRepo()

@@ -1,4 +1,4 @@
-﻿/*Copyright 2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,8 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -82,17 +84,23 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);
             }
             var outsideAwardDtoToEntityAdapter = _adapterRegistry.GetAdapter<OutsideAward, Colleague.Domain.FinancialAid.Entities.OutsideAward>();
-            
-            var createdOutsideAward = await outsideAwardsRepository.CreateOutsideAwardAsync(outsideAwardDtoToEntityAdapter.MapToType(outsideAward));
-            if (createdOutsideAward == null)
+            try
             {
-                string message = string.Format("Could not create an outside award record for student {0} award year {1}", outsideAward.StudentId, outsideAward.AwardYearCode);
-                logger.Error(message);
-                throw new Exception(message);
-            }
-            var outsideAwardEntityToDtoAdapter = _adapterRegistry.GetAdapter<Colleague.Domain.FinancialAid.Entities.OutsideAward, OutsideAward>();
+                var createdOutsideAward = await outsideAwardsRepository.CreateOutsideAwardAsync(outsideAwardDtoToEntityAdapter.MapToType(outsideAward));
+                if (createdOutsideAward == null)
+                {
+                    string message = string.Format("Could not create an outside award record for student {0} award year {1}", outsideAward.StudentId, outsideAward.AwardYearCode);
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
+                var outsideAwardEntityToDtoAdapter = _adapterRegistry.GetAdapter<Colleague.Domain.FinancialAid.Entities.OutsideAward, OutsideAward>();
 
-            return outsideAwardEntityToDtoAdapter.MapToType(createdOutsideAward);
+                return outsideAwardEntityToDtoAdapter.MapToType(createdOutsideAward);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -121,14 +129,21 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             AutoMapperAdapter<Colleague.Domain.FinancialAid.Entities.OutsideAward, OutsideAward> outsideAwardEntityToDtoAdapter =
                 new AutoMapperAdapter<Domain.FinancialAid.Entities.OutsideAward, OutsideAward>(_adapterRegistry, logger);
 
-            IEnumerable<Colleague.Domain.FinancialAid.Entities.OutsideAward> outsideAwardEntities = await outsideAwardsRepository.GetOutsideAwardsAsync(studentId, awardYearCode);
-
-            foreach (var entity in outsideAwardEntities)
+            try
             {
-                outsideAwardDtos.Add(outsideAwardEntityToDtoAdapter.MapToType(entity));
-            }
+                IEnumerable<Colleague.Domain.FinancialAid.Entities.OutsideAward> outsideAwardEntities = await outsideAwardsRepository.GetOutsideAwardsAsync(studentId, awardYearCode);
 
-            return outsideAwardDtos;
+                foreach (var entity in outsideAwardEntities)
+                {
+                    outsideAwardDtos.Add(outsideAwardEntityToDtoAdapter.MapToType(entity));
+                }
+
+                return outsideAwardDtos;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -151,7 +166,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 var message = string.Format("{0} does not have permission to delete outside award resource for {1}", CurrentUser.PersonId, studentId);
                 logger.Error(message);
-                throw new PermissionsException(message);            
+                throw new PermissionsException(message);
             }
 
             var outsideAward = await outsideAwardsRepository.GetOutsideAwardsByAwardIdAsync(outsideAwardId);
@@ -162,9 +177,16 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
-            await outsideAwardsRepository.DeleteOutsideAwardAsync(outsideAwardId);
+            try
+            {
+                await outsideAwardsRepository.DeleteOutsideAwardAsync(outsideAwardId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
+
 
         /// <summary>
         /// Updates an outside award record with the specified information.
@@ -229,20 +251,26 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
-            var outsideAwardDtoToEntityAdapter = _adapterRegistry.GetAdapter<OutsideAward, Colleague.Domain.FinancialAid.Entities.OutsideAward>();
-
-            var updatedOutsideAward = await outsideAwardsRepository.UpdateOutsideAwardAsync(outsideAwardDtoToEntityAdapter.MapToType(outsideAward));
-
-            if (updatedOutsideAward == null)
+            try
             {
-                string message = string.Format("Could not update an outside award record for student {0} award year {1}", outsideAward.StudentId, outsideAward.AwardYearCode);
-                logger.Error(message);
-                throw new Exception(message);
-            }
-            var outsideAwardEntityToDtoAdapter = _adapterRegistry.GetAdapter<Colleague.Domain.FinancialAid.Entities.OutsideAward, OutsideAward>();
+                var outsideAwardDtoToEntityAdapter = _adapterRegistry.GetAdapter<OutsideAward, Colleague.Domain.FinancialAid.Entities.OutsideAward>();
 
-            return outsideAwardEntityToDtoAdapter.MapToType(updatedOutsideAward);
+                var updatedOutsideAward = await outsideAwardsRepository.UpdateOutsideAwardAsync(outsideAwardDtoToEntityAdapter.MapToType(outsideAward));
+
+                if (updatedOutsideAward == null)
+                {
+                    string message = string.Format("Could not update an outside award record for student {0} award year {1}", outsideAward.StudentId, outsideAward.AwardYearCode);
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
+                var outsideAwardEntityToDtoAdapter = _adapterRegistry.GetAdapter<Colleague.Domain.FinancialAid.Entities.OutsideAward, OutsideAward>();
+
+                return outsideAwardEntityToDtoAdapter.MapToType(updatedOutsideAward);
+            }
+            catch(ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
     }
 }

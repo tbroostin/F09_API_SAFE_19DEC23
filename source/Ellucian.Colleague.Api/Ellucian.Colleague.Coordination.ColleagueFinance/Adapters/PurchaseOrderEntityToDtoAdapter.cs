@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -178,6 +178,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 // Add the purchase order approver DTO to the purchaseOrder DTO
                 purchaseOrderDto.Approvers.Add(approverDto);
             }
+
+            purchaseOrderDto.ApprovalReturnedIndicator = Source.ApprovalReturnedIndicator;
 
             return purchaseOrderDto;
         }

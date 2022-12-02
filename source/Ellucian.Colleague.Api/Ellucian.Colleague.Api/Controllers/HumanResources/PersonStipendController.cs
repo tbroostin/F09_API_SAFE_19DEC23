@@ -1,4 +1,4 @@
-﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -16,6 +16,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly IPersonStipendService personStipendService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Constructor
@@ -63,6 +65,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

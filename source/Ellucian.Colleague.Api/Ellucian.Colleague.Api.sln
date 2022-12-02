@@ -1,9 +1,7 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{539F9CD3-1CE1-48F5-B0F5-4B2F10F1B219}"
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{539F9CD3-1CE1-48F5-B0F5-4B2F10F1B219}" 
 	ProjectSection(SolutionItems) = preProject
 		ColleagueWebApi.snk = ColleagueWebApi.snk
 		EllucianColleagueApi.runsettings = EllucianColleagueApi.runsettings
@@ -11,95 +9,94 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TraceAndTestImpact.runsettings = TraceAndTestImpact.runsettings
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Base", "Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj", "{2D4513B8-2722-4C91-9A64-BDBBC3F03516}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Base", "Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj", "{2D4513B8-2722-4C91-9A64-BDBBC3F03516}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Base.Tests", "Ellucian.Colleague.Coordination.Base.Tests\Ellucian.Colleague.Coordination.Base.Tests.csproj", "{67DD30A0-1255-41CF-8FD4-A8503661249D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Base.Tests", "Ellucian.Colleague.Coordination.Base.Tests\Ellucian.Colleague.Coordination.Base.Tests.csproj", "{67DD30A0-1255-41CF-8FD4-A8503661249D}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Finance", "Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj", "{E58B8C16-5BF9-45E5-934B-1C4804B157E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Finance", "Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj", "{E58B8C16-5BF9-45E5-934B-1C4804B157E4}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Finance.Tests", "Ellucian.Colleague.Coordination.Finance.Tests\Ellucian.Colleague.Coordination.Finance.Tests.csproj", "{2E046CE4-A9BB-4FBD-82D8-62F4B23A7D23}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Finance.Tests", "Ellucian.Colleague.Coordination.Finance.Tests\Ellucian.Colleague.Coordination.Finance.Tests.csproj", "{2E046CE4-A9BB-4FBD-82D8-62F4B23A7D23}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Planning", "Ellucian.Colleague.Coordination.Planning\Ellucian.Colleague.Coordination.Planning.csproj", "{A56D8D9B-94B9-408A-8468-C535845FDA6F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Planning", "Ellucian.Colleague.Coordination.Planning\Ellucian.Colleague.Coordination.Planning.csproj", "{A56D8D9B-94B9-408A-8468-C535845FDA6F}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Planning.Tests", "Ellucian.Colleague.Coordination.Planning.Tests\Ellucian.Colleague.Coordination.Planning.Tests.csproj", "{0EA8C4A4-CFCB-4D50-B20A-25E5DEA10B1A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Planning.Tests", "Ellucian.Colleague.Coordination.Planning.Tests\Ellucian.Colleague.Coordination.Planning.Tests.csproj", "{0EA8C4A4-CFCB-4D50-B20A-25E5DEA10B1A}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Student", "Ellucian.Colleague.Coordination.Student\Ellucian.Colleague.Coordination.Student.csproj", "{9A271A72-5D63-41D3-9E8F-D50255DD51D1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Student", "Ellucian.Colleague.Coordination.Student\Ellucian.Colleague.Coordination.Student.csproj", "{9A271A72-5D63-41D3-9E8F-D50255DD51D1}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Student.Tests", "Ellucian.Colleague.Coordination.Student.Tests\Ellucian.Colleague.Coordination.Student.Tests.csproj", "{1B39AC8B-8DB2-4D9E-9F55-BC087D36BBE2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.Student.Tests", "Ellucian.Colleague.Coordination.Student.Tests\Ellucian.Colleague.Coordination.Student.Tests.csproj", "{1B39AC8B-8DB2-4D9E-9F55-BC087D36BBE2}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Base", "Ellucian.Colleague.Data.Base\Ellucian.Colleague.Data.Base.csproj", "{C3B126A1-5FFA-40A5-9826-FC22E1CCB2EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Base", "Ellucian.Colleague.Data.Base\Ellucian.Colleague.Data.Base.csproj", "{C3B126A1-5FFA-40A5-9826-FC22E1CCB2EC}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Base.Tests", "Ellucian.Colleague.Data.Base.Tests\Ellucian.Colleague.Data.Base.Tests.csproj", "{7B851B69-E855-4D5C-A76D-1D2BF1212E20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Base.Tests", "Ellucian.Colleague.Data.Base.Tests\Ellucian.Colleague.Data.Base.Tests.csproj", "{7B851B69-E855-4D5C-A76D-1D2BF1212E20}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Finance", "Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj", "{51453AB3-7CD4-4319-863E-24C08E205C9E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Finance", "Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj", "{51453AB3-7CD4-4319-863E-24C08E205C9E}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Finance.Tests", "Ellucian.Colleague.Data.Finance.Tests\Ellucian.Colleague.Data.Finance.Tests.csproj", "{45D1F924-6CCC-48FC-B130-DD917A798566}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Finance.Tests", "Ellucian.Colleague.Data.Finance.Tests\Ellucian.Colleague.Data.Finance.Tests.csproj", "{45D1F924-6CCC-48FC-B130-DD917A798566}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Planning", "Ellucian.Colleague.Data.Planning\Ellucian.Colleague.Data.Planning.csproj", "{D09FA3C9-88EE-4D8D-94AC-22DDD336F57E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Planning", "Ellucian.Colleague.Data.Planning\Ellucian.Colleague.Data.Planning.csproj", "{D09FA3C9-88EE-4D8D-94AC-22DDD336F57E}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Planning.Tests", "Ellucian.Colleague.Data.Planning.Tests\Ellucian.Colleague.Data.Planning.Tests.csproj", "{2C0F7537-2B11-4C50-AAFD-5BF5DEF7369A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Planning.Tests", "Ellucian.Colleague.Data.Planning.Tests\Ellucian.Colleague.Data.Planning.Tests.csproj", "{2C0F7537-2B11-4C50-AAFD-5BF5DEF7369A}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Student", "Ellucian.Colleague.Data.Student\Ellucian.Colleague.Data.Student.csproj", "{3B07EA69-83F6-4AB5-BC87-223E411A6ACC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Student", "Ellucian.Colleague.Data.Student\Ellucian.Colleague.Data.Student.csproj", "{3B07EA69-83F6-4AB5-BC87-223E411A6ACC}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Student.Tests", "Ellucian.Colleague.Data.Student.Tests\Ellucian.Colleague.Data.Student.Tests.csproj", "{09B62F41-6306-4454-89B1-ADBFD637608D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.Student.Tests", "Ellucian.Colleague.Data.Student.Tests\Ellucian.Colleague.Data.Student.Tests.csproj", "{09B62F41-6306-4454-89B1-ADBFD637608D}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Base", "Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj", "{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Base", "Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj", "{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Base.Tests", "Ellucian.Colleague.Domain.Base.Tests\Ellucian.Colleague.Domain.Base.Tests.csproj", "{BFA6C5FE-AC69-40ED-AE9E-600D9E65B9F0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Base.Tests", "Ellucian.Colleague.Domain.Base.Tests\Ellucian.Colleague.Domain.Base.Tests.csproj", "{BFA6C5FE-AC69-40ED-AE9E-600D9E65B9F0}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Finance", "Ellucian.Colleague.Domain.Finance\Ellucian.Colleague.Domain.Finance.csproj", "{CFB4F61C-87B9-46DB-9F9A-70ED022C40B0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Finance", "Ellucian.Colleague.Domain.Finance\Ellucian.Colleague.Domain.Finance.csproj", "{CFB4F61C-87B9-46DB-9F9A-70ED022C40B0}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Finance.Tests", "Ellucian.Colleague.Domain.Finance.Tests\Ellucian.Colleague.Domain.Finance.Tests.csproj", "{CE196B67-EB22-4817-BA88-96F0BC34532B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Finance.Tests", "Ellucian.Colleague.Domain.Finance.Tests\Ellucian.Colleague.Domain.Finance.Tests.csproj", "{CE196B67-EB22-4817-BA88-96F0BC34532B}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Planning", "Ellucian.Colleague.Domain.Planning\Ellucian.Colleague.Domain.Planning.csproj", "{16CCE4AD-F002-460A-9B96-0D577D99860F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Planning", "Ellucian.Colleague.Domain.Planning\Ellucian.Colleague.Domain.Planning.csproj", "{16CCE4AD-F002-460A-9B96-0D577D99860F}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Planning.Tests", "Ellucian.Colleague.Domain.Planning.Tests\Ellucian.Colleague.Domain.Planning.Tests.csproj", "{70C662DA-5E2D-45A6-A222-17E1188D2C6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Planning.Tests", "Ellucian.Colleague.Domain.Planning.Tests\Ellucian.Colleague.Domain.Planning.Tests.csproj", "{70C662DA-5E2D-45A6-A222-17E1188D2C6D}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Student", "Ellucian.Colleague.Domain.Student\Ellucian.Colleague.Domain.Student.csproj", "{B47DA241-50B7-420A-BB25-C24B20807609}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Student", "Ellucian.Colleague.Domain.Student\Ellucian.Colleague.Domain.Student.csproj", "{B47DA241-50B7-420A-BB25-C24B20807609}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Student.Tests", "Ellucian.Colleague.Domain.Student.Tests\Ellucian.Colleague.Domain.Student.Tests.csproj", "{CDCEBC86-F9C6-4A64-9FC4-50471665A027}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.Student.Tests", "Ellucian.Colleague.Domain.Student.Tests\Ellucian.Colleague.Domain.Student.Tests.csproj", "{CDCEBC86-F9C6-4A64-9FC4-50471665A027}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Base", "Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj", "{A147BD58-ECC6-409B-A633-128946AAA456}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Base", "Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj", "{A147BD58-ECC6-409B-A633-128946AAA456}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Finance", "Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj", "{F2409F02-791E-43B3-85E3-B577226FCF55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Finance", "Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj", "{F2409F02-791E-43B3-85E3-B577226FCF55}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Planning", "Ellucian.Colleague.Dtos.Planning\Ellucian.Colleague.Dtos.Planning.csproj", "{BA6CC859-0852-4027-AABF-8536C495D239}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Planning", "Ellucian.Colleague.Dtos.Planning\Ellucian.Colleague.Dtos.Planning.csproj", "{BA6CC859-0852-4027-AABF-8536C495D239}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Student", "Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj", "{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Student", "Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj", "{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Finance", "Finance", "{B970E782-4115-4D89-B27D-0AF4433C1B7C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Finance", "Finance", "{B970E782-4115-4D89-B27D-0AF4433C1B7C}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{424BF922-C91B-4221-93A7-F20DD56E155A}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{424BF922-C91B-4221-93A7-F20DD56E155A}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Student", "Student", "{3FA343F5-A55E-45EB-9288-AD383413C551}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Student", "Student", "{3FA343F5-A55E-45EB-9288-AD383413C551}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Web Service", "Web Service", "{6322337C-E7C6-410C-82BD-2575151C2A43}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Web Service", "Web Service", "{6322337C-E7C6-410C-82BD-2575151C2A43}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Planning", "Planning", "{4BFD9DB2-85C1-44FD-B1B7-96BC07049B38}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Planning", "Planning", "{4BFD9DB2-85C1-44FD-B1B7-96BC07049B38}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Service Client", "Service Client", "{417422AD-4575-4D11-87A7-9ACEA5752482}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Service Client", "Service Client", "{417422AD-4575-4D11-87A7-9ACEA5752482}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api", "Ellucian.Colleague.Api\Ellucian.Colleague.Api.csproj", "{8CCF6CCA-EAEE-4B8F-959B-488C40F180E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api", "Ellucian.Colleague.Api\Ellucian.Colleague.Api.csproj", "{8CCF6CCA-EAEE-4B8F-959B-488C40F180E8}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Tests", "Ellucian.Colleague.Api.Tests\Ellucian.Colleague.Api.Tests.csproj", "{6149D54C-5B93-4A02-984D-B6DCE4B6D2CB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Tests", "Ellucian.Colleague.Api.Tests\Ellucian.Colleague.Api.Tests.csproj", "{6149D54C-5B93-4A02-984D-B6DCE4B6D2CB}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{D6C4735B-17BA-4FC0-874F-2323B177EF72}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{D6C4735B-17BA-4FC0-874F-2323B177EF72}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{939F53DF-72F4-4632-B078-6D57233F9989}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{939F53DF-72F4-4632-B078-6D57233F9989}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http", "Ellucian.Web.Http\Ellucian.Web.Http.csproj", "{F0560816-DFBA-441C-A23E-139566C2F18A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http", "Ellucian.Web.Http\Ellucian.Web.Http.csproj", "{F0560816-DFBA-441C-A23E-139566C2F18A}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Tests", "Ellucian.Web.Http.Tests\Ellucian.Web.Http.Tests.csproj", "{ED391D93-A6BE-4811-BFB3-2D7B3E48BBA4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Tests", "Ellucian.Web.Http.Tests\Ellucian.Web.Http.Tests.csproj", "{ED391D93-A6BE-4811-BFB3-2D7B3E48BBA4}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.TestUtil", "Ellucian.Web.Http.TestUtil\Ellucian.Web.Http.TestUtil.csproj", "{068FAEDD-EB14-465E-9594-1450EC26B042}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.TestUtil", "Ellucian.Web.Http.TestUtil\Ellucian.Web.Http.TestUtil.csproj", "{068FAEDD-EB14-465E-9594-1450EC26B042}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Client", "Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj", "{851D8DA4-372F-4483-B6F8-DE08F22817C1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Client", "Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj", "{851D8DA4-372F-4483-B6F8-DE08F22817C1}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Client.Tests", "Ellucian.Colleague.Api.Client.Tests\Ellucian.Colleague.Api.Client.Tests.csproj", "{63052398-1D20-448C-AC97-4A124992DEBF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Client.Tests", "Ellucian.Colleague.Api.Client.Tests\Ellucian.Colleague.Api.Client.Tests.csproj", "{63052398-1D20-448C-AC97-4A124992DEBF}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{DFF62AFC-7BFC-4F7C-820C-27B7EBD16118}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{DFF62AFC-7BFC-4F7C-820C-27B7EBD16118}" 
 	ProjectSection(SolutionItems) = preProject
-		Dependencies\Ellucian.App.Config.Storage.Service.Client.dll = Dependencies\Ellucian.App.Config.Storage.Service.Client.dll
 		Dependencies\Ellucian.Web.Mvc.Data.dll = Dependencies\Ellucian.Web.Mvc.Data.dll
 		Dependencies\Ellucian.Web.Mvc.Data.pdb = Dependencies\Ellucian.Web.Mvc.Data.pdb
 		Dependencies\Ellucian.Web.Mvc.Data.XML = Dependencies\Ellucian.Web.Mvc.Data.XML
@@ -117,9 +114,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencie
 		Dependencies\SlowCheetah.Transforms.targets = Dependencies\SlowCheetah.Transforms.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Configuration", "Ellucian.Web.Http.Configuration\Ellucian.Web.Http.Configuration.csproj", "{7B91D852-251C-4260-913E-FFACABCE5463}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Configuration", "Ellucian.Web.Http.Configuration\Ellucian.Web.Http.Configuration.csproj", "{7B91D852-251C-4260-913E-FFACABCE5463}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeAnalysis", "CodeAnalysis", "{330AAFD2-995A-4EF1-96D4-D4D017113474}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeAnalysis", "CodeAnalysis", "{330AAFD2-995A-4EF1-96D4-D4D017113474}" 
 	ProjectSection(SolutionItems) = preProject
 		CodeAnalysis\CodeAnalysisConfiguration.xml = CodeAnalysis\CodeAnalysisConfiguration.xml
 		CodeAnalysis\CodeScan.proj = CodeAnalysis\CodeScan.proj
@@ -131,7 +128,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeAnalysis", "CodeAnalysi
 		CodeAnalysis\Microsoft.Build.Framework.dll = CodeAnalysis\Microsoft.Build.Framework.dll
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Licenses", "Licenses", "{26B71C64-897A-4452-B3BB-BD239C15BE9D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Licenses", "Licenses", "{26B71C64-897A-4452-B3BB-BD239C15BE9D}" 
 	ProjectSection(SolutionItems) = preProject
 		Dependencies\Licenses\Antlr3.Runtime.License.txt = Dependencies\Licenses\Antlr3.Runtime.License.txt
 		Dependencies\Licenses\AutoMapperLicense.txt = Dependencies\Licenses\AutoMapperLicense.txt
@@ -148,97 +145,97 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Licenses", "Licenses", "{26
 		Dependencies\Licenses\WIF SDK supplemental EULA.docx = Dependencies\Licenses\WIF SDK supplemental EULA.docx
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Configuration.Tests", "Ellucian.Web.Http.Configuration.Tests\Ellucian.Web.Http.Configuration.Tests.csproj", "{4DBAB257-BBDE-4050-8F7F-851457C18A85}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Web.Http.Configuration.Tests", "Ellucian.Web.Http.Configuration.Tests\Ellucian.Web.Http.Configuration.Tests.csproj", "{4DBAB257-BBDE-4050-8F7F-851457C18A85}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{A8C0537D-1A8A-418D-B2B0-E4BFA589CF19}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{A8C0537D-1A8A-418D-B2B0-E4BFA589CF19}" 
 	ProjectSection(SolutionItems) = preProject
 		NuGet.config = NuGet.config
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FinancialAid", "FinancialAid", "{64FA3837-14FF-4E28-A9BB-7B395507E929}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FinancialAid", "FinancialAid", "{64FA3837-14FF-4E28-A9BB-7B395507E929}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.FinancialAid", "Ellucian.Colleague.Dtos.FinancialAid\Ellucian.Colleague.Dtos.FinancialAid.csproj", "{52434ED9-FAF3-41CA-BDA7-EC87128EA0D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.FinancialAid", "Ellucian.Colleague.Dtos.FinancialAid\Ellucian.Colleague.Dtos.FinancialAid.csproj", "{52434ED9-FAF3-41CA-BDA7-EC87128EA0D3}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.FinancialAid", "Ellucian.Colleague.Domain.FinancialAid\Ellucian.Colleague.Domain.FinancialAid.csproj", "{0ECC52BC-BFAA-4E44-9AAB-7781BAF39F30}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.FinancialAid", "Ellucian.Colleague.Domain.FinancialAid\Ellucian.Colleague.Domain.FinancialAid.csproj", "{0ECC52BC-BFAA-4E44-9AAB-7781BAF39F30}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.FinancialAid.Tests", "Ellucian.Colleague.Domain.FinancialAid.Tests\Ellucian.Colleague.Domain.FinancialAid.Tests.csproj", "{F763B6B9-C7F9-4837-BAAA-37EA0613C13C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.FinancialAid.Tests", "Ellucian.Colleague.Domain.FinancialAid.Tests\Ellucian.Colleague.Domain.FinancialAid.Tests.csproj", "{F763B6B9-C7F9-4837-BAAA-37EA0613C13C}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.FinancialAid", "Ellucian.Colleague.Data.FinancialAid\Ellucian.Colleague.Data.FinancialAid.csproj", "{A82741BC-A38C-46CF-B903-C14D5188C7AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.FinancialAid", "Ellucian.Colleague.Data.FinancialAid\Ellucian.Colleague.Data.FinancialAid.csproj", "{A82741BC-A38C-46CF-B903-C14D5188C7AA}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.FinancialAid.Tests", "Ellucian.Colleague.Data.FinancialAid.Tests\Ellucian.Colleague.Data.FinancialAid.Tests.csproj", "{4490678E-1A9B-4BB8-AECC-6815ED1AD649}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.FinancialAid.Tests", "Ellucian.Colleague.Data.FinancialAid.Tests\Ellucian.Colleague.Data.FinancialAid.Tests.csproj", "{4490678E-1A9B-4BB8-AECC-6815ED1AD649}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.FinancialAid", "Ellucian.Colleague.Coordination.FinancialAid\Ellucian.Colleague.Coordination.FinancialAid.csproj", "{7B88C66C-AD9E-4419-8936-90F60DEB32B9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.FinancialAid", "Ellucian.Colleague.Coordination.FinancialAid\Ellucian.Colleague.Coordination.FinancialAid.csproj", "{7B88C66C-AD9E-4419-8936-90F60DEB32B9}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ColleagueFinance", "ColleagueFinance", "{687D2058-4526-4CA8-91B0-0EBF766316F2}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ColleagueFinance", "ColleagueFinance", "{687D2058-4526-4CA8-91B0-0EBF766316F2}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.ColleagueFinance", "Ellucian.Colleague.Domain.ColleagueFinance\Ellucian.Colleague.Domain.ColleagueFinance.csproj", "{520A4B81-CFA0-4BAA-88FF-5C3D8B4A225C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.ColleagueFinance", "Ellucian.Colleague.Domain.ColleagueFinance\Ellucian.Colleague.Domain.ColleagueFinance.csproj", "{520A4B81-CFA0-4BAA-88FF-5C3D8B4A225C}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.ColleagueFinance.Tests", "Ellucian.Colleague.Domain.ColleagueFinance.Tests\Ellucian.Colleague.Domain.ColleagueFinance.Tests.csproj", "{27B8A203-892C-49AC-9F6C-9BE1E3FAB177}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.ColleagueFinance.Tests", "Ellucian.Colleague.Domain.ColleagueFinance.Tests\Ellucian.Colleague.Domain.ColleagueFinance.Tests.csproj", "{27B8A203-892C-49AC-9F6C-9BE1E3FAB177}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.ColleagueFinance", "Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj", "{8DD19909-A3B4-486F-959F-AC0A9CFD963C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.ColleagueFinance", "Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj", "{8DD19909-A3B4-486F-959F-AC0A9CFD963C}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.ColleagueFinance.Tests", "Ellucian.Colleague.Data.ColleagueFinance.Tests\Ellucian.Colleague.Data.ColleagueFinance.Tests.csproj", "{FF93B7BC-A589-4757-BF65-4430131A0F56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.ColleagueFinance.Tests", "Ellucian.Colleague.Data.ColleagueFinance.Tests\Ellucian.Colleague.Data.ColleagueFinance.Tests.csproj", "{FF93B7BC-A589-4757-BF65-4430131A0F56}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.ColleagueFinance", "Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj", "{CA034D7A-0963-4463-B974-BEF18BE515AE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.ColleagueFinance", "Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj", "{CA034D7A-0963-4463-B974-BEF18BE515AE}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.ColleagueFinance", "Ellucian.Colleague.Coordination.ColleagueFinance\Ellucian.Colleague.Coordination.ColleagueFinance.csproj", "{7461AFA8-F600-4DF5-9B43-6FED35402279}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.ColleagueFinance", "Ellucian.Colleague.Coordination.ColleagueFinance\Ellucian.Colleague.Coordination.ColleagueFinance.csproj", "{7461AFA8-F600-4DF5-9B43-6FED35402279}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.ColleagueFinance.Tests", "Ellucian.Colleague.Coordination.ColleagueFinance.Tests\Ellucian.Colleague.Coordination.ColleagueFinance.Tests.csproj", "{83238262-7B67-495F-B1C1-F8A417312B28}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.ColleagueFinance.Tests", "Ellucian.Colleague.Coordination.ColleagueFinance.Tests\Ellucian.Colleague.Coordination.ColleagueFinance.Tests.csproj", "{83238262-7B67-495F-B1C1-F8A417312B28}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.FinancialAid.Tests", "Ellucian.Colleague.Coordination.FinancialAid.Tests\Ellucian.Colleague.Coordination.FinancialAid.Tests.csproj", "{37F23521-4A67-4EF9-82A9-392656A4DA5F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.FinancialAid.Tests", "Ellucian.Colleague.Coordination.FinancialAid.Tests\Ellucian.Colleague.Coordination.FinancialAid.Tests.csproj", "{37F23521-4A67-4EF9-82A9-392656A4DA5F}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResidenceLife", "ResidenceLife", "{E2ABED42-18B0-4D0F-91B8-FBBBA642F42A}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResidenceLife", "ResidenceLife", "{E2ABED42-18B0-4D0F-91B8-FBBBA642F42A}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos", "Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj", "{0CA929CA-2370-4763-BE71-C91C244E0743}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos", "Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj", "{0CA929CA-2370-4763-BE71-C91C244E0743}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HumanResources", "HumanResources", "{BE5FDA4A-71F5-45CB-9F92-2807E41E3381}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HumanResources", "HumanResources", "{BE5FDA4A-71F5-45CB-9F92-2807E41E3381}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.HumanResources", "Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj", "{0CDA322D-5DB6-466C-86C4-49A808B02284}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.HumanResources", "Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj", "{0CDA322D-5DB6-466C-86C4-49A808B02284}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.HumanResources", "Ellucian.Colleague.Data.HumanResources\Ellucian.Colleague.Data.HumanResources.csproj", "{97609563-E836-4796-A26A-424FDD733BA7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.HumanResources", "Ellucian.Colleague.Data.HumanResources\Ellucian.Colleague.Data.HumanResources.csproj", "{97609563-E836-4796-A26A-424FDD733BA7}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.HumanResources", "Ellucian.Colleague.Coordination.HumanResources\Ellucian.Colleague.Coordination.HumanResources.csproj", "{EDBDC538-579D-473F-87F3-FC18AF3C8E97}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.HumanResources", "Ellucian.Colleague.Coordination.HumanResources\Ellucian.Colleague.Coordination.HumanResources.csproj", "{EDBDC538-579D-473F-87F3-FC18AF3C8E97}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.HumanResources", "Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj", "{1A7B9D0E-1665-492C-B287-0D89710408E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.HumanResources", "Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj", "{1A7B9D0E-1665-492C-B287-0D89710408E5}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.HumanResources.Tests", "Ellucian.Colleague.Domain.HumanResources.Tests\Ellucian.Colleague.Domain.HumanResources.Tests.csproj", "{91BB6718-EA82-43E6-96DB-A34756CFD3F2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.HumanResources.Tests", "Ellucian.Colleague.Domain.HumanResources.Tests\Ellucian.Colleague.Domain.HumanResources.Tests.csproj", "{91BB6718-EA82-43E6-96DB-A34756CFD3F2}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.HumanResources.Tests", "Ellucian.Colleague.Data.HumanResources.Tests\Ellucian.Colleague.Data.HumanResources.Tests.csproj", "{557E3E85-4FBE-409D-AAE9-1BAFB13D91F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.HumanResources.Tests", "Ellucian.Colleague.Data.HumanResources.Tests\Ellucian.Colleague.Data.HumanResources.Tests.csproj", "{557E3E85-4FBE-409D-AAE9-1BAFB13D91F4}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.HumanResources.Tests", "Ellucian.Colleague.Coordination.HumanResources.Tests\Ellucian.Colleague.Coordination.HumanResources.Tests.csproj", "{2EE03A79-620F-46B1-98AF-F551DC285509}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.HumanResources.Tests", "Ellucian.Colleague.Coordination.HumanResources.Tests\Ellucian.Colleague.Coordination.HumanResources.Tests.csproj", "{2EE03A79-620F-46B1-98AF-F551DC285509}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Tests", "Ellucian.Colleague.Dtos.Tests\Ellucian.Colleague.Dtos.Tests.csproj", "{4F7685C5-4A44-49F2-9BB5-26A0864D3911}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.Tests", "Ellucian.Colleague.Dtos.Tests\Ellucian.Colleague.Dtos.Tests.csproj", "{4F7685C5-4A44-49F2-9BB5-26A0864D3911}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TimeManagement", "TimeManagement", "{6384E329-2A64-4F98-990B-9B122938C432}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TimeManagement", "TimeManagement", "{6384E329-2A64-4F98-990B-9B122938C432}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProjectsAccounting", "ProjectsAccounting", "{CA83E7EF-01F9-4BAA-8EE0-118FA1E3814A}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProjectsAccounting", "ProjectsAccounting", "{CA83E7EF-01F9-4BAA-8EE0-118FA1E3814A}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FALink", "FALink", "{A36B04F9-176C-4436-B6F2-AE06500FB2BA}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FALink", "FALink", "{A36B04F9-176C-4436-B6F2-AE06500FB2BA}" 
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BudgetManagement", "BudgetManagement", "{7C99D8C3-294F-4551-B4FA-1679FE75A142}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BudgetManagement", "BudgetManagement", "{7C99D8C3-294F-4551-B4FA-1679FE75A142}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.BudgetManagement", "Ellucian.Colleague.Coordination.BudgetManagement\Ellucian.Colleague.Coordination.BudgetManagement.csproj", "{AF4B9E60-891F-4B1F-84B0-F5AE40A39419}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.BudgetManagement", "Ellucian.Colleague.Coordination.BudgetManagement\Ellucian.Colleague.Coordination.BudgetManagement.csproj", "{AF4B9E60-891F-4B1F-84B0-F5AE40A39419}" 
 	ProjectSection(ProjectDependencies) = postProject
 		{44E7004A-038F-44D3-97F3-0EBAFFDCBC20} = {44E7004A-038F-44D3-97F3-0EBAFFDCBC20}
 		{82427DA2-270A-44B4-B03F-272EAD68765A} = {82427DA2-270A-44B4-B03F-272EAD68765A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.BudgetManagement.Tests", "Ellucian.Colleague.Coordination.BudgetManagement.Tests\Ellucian.Colleague.Coordination.BudgetManagement.Tests.csproj", "{08EE8139-5980-4974-85DA-9EF2C52AA07E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Coordination.BudgetManagement.Tests", "Ellucian.Colleague.Coordination.BudgetManagement.Tests\Ellucian.Colleague.Coordination.BudgetManagement.Tests.csproj", "{08EE8139-5980-4974-85DA-9EF2C52AA07E}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.BudgetManagement", "Ellucian.Colleague.Data.BudgetManagement\Ellucian.Colleague.Data.BudgetManagement.csproj", "{2F4BB4D9-2008-4344-913D-D935B0C9C639}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.BudgetManagement", "Ellucian.Colleague.Data.BudgetManagement\Ellucian.Colleague.Data.BudgetManagement.csproj", "{2F4BB4D9-2008-4344-913D-D935B0C9C639}" 
 	ProjectSection(ProjectDependencies) = postProject
 		{82427DA2-270A-44B4-B03F-272EAD68765A} = {82427DA2-270A-44B4-B03F-272EAD68765A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.BudgetManagement.Tests", "Ellucian.Colleague.Data.BudgetManagement.Tests\Ellucian.Colleague.Data.BudgetManagement.Tests.csproj", "{EAC39435-BA18-43CE-9A86-272FFF72A710}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Data.BudgetManagement.Tests", "Ellucian.Colleague.Data.BudgetManagement.Tests\Ellucian.Colleague.Data.BudgetManagement.Tests.csproj", "{EAC39435-BA18-43CE-9A86-272FFF72A710}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.BudgetManagement", "Ellucian.Colleague.Domain.BudgetManagement\Ellucian.Colleague.Domain.BudgetManagement.csproj", "{82427DA2-270A-44B4-B03F-272EAD68765A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.BudgetManagement", "Ellucian.Colleague.Domain.BudgetManagement\Ellucian.Colleague.Domain.BudgetManagement.csproj", "{82427DA2-270A-44B4-B03F-272EAD68765A}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.BudgetManagement.Tests", "Ellucian.Colleague.Domain.BudgetManagement.Tests\Ellucian.Colleague.Domain.BudgetManagement.Tests.csproj", "{B47228B0-AA69-4C91-81BE-EE46469AE029}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Domain.BudgetManagement.Tests", "Ellucian.Colleague.Domain.BudgetManagement.Tests\Ellucian.Colleague.Domain.BudgetManagement.Tests.csproj", "{B47228B0-AA69-4C91-81BE-EE46469AE029}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.BudgetManagement", "Ellucian.Colleague.Dtos.BudgetManagement\Ellucian.Colleague.Dtos.BudgetManagement.csproj", "{44E7004A-038F-44D3-97F3-0EBAFFDCBC20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Dtos.BudgetManagement", "Ellucian.Colleague.Dtos.BudgetManagement\Ellucian.Colleague.Dtos.BudgetManagement.csproj", "{44E7004A-038F-44D3-97F3-0EBAFFDCBC20}" 
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Routing.Tests", "Ellucian.Colleague.Api.Routing.Tests\Ellucian.Colleague.Api.Routing.Tests.csproj", "{5CF89E9C-80AC-48EA-A8D7-B3604F2A8F91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ellucian.Colleague.Api.Routing.Tests", "Ellucian.Colleague.Api.Routing.Tests\Ellucian.Colleague.Api.Routing.Tests.csproj", "{5CF89E9C-80AC-48EA-A8D7-B3604F2A8F91}" 
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1035,8 +1032,8 @@ Global
 		{5CF89E9C-80AC-48EA-A8D7-B3604F2A8F91} = {6322337C-E7C6-410C-82BD-2575151C2A43}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		EnterpriseLibraryConfigurationToolBinariesPath = packages\Unity.2.1.505.2\lib\NET35;packages\Unity.Interception.2.1.505.2\lib\NET35;packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35;packages\Unity.2.1.505.0\lib\NET35;packages\Unity.Interception.2.1.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Security.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.0\lib\NET35;packages\EntLibContrib.Logging.5.0.505.0\lib\NET35
-		EnterpriseLibraryConfigurationToolBinariesPathV6 = packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45;packages\EnterpriseLibrary.Logging.6.0.1304.0\lib\NET45
 		SolutionGuid = {3B44D7D7-F594-414F-9809-405F53521127}
+		EnterpriseLibraryConfigurationToolBinariesPathV6 = packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45;packages\EnterpriseLibrary.Logging.6.0.1304.0\lib\NET45
+		EnterpriseLibraryConfigurationToolBinariesPath = packages\Unity.2.1.505.2\lib\NET35;packages\Unity.Interception.2.1.505.2\lib\NET35;packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35;packages\Unity.2.1.505.0\lib\NET35;packages\Unity.Interception.2.1.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Security.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.0\lib\NET35;packages\EntLibContrib.Logging.5.0.505.0\lib\NET35
 	EndGlobalSection
 EndGlobal

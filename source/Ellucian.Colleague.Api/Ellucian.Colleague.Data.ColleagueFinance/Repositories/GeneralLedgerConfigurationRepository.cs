@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType]
     public class GeneralLedgerConfigurationRepository : BaseColleagueRepository, IGeneralLedgerConfigurationRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private List<GeneralLedgerComponentDescription> componentDescriptions;
 
         public GeneralLedgerConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)

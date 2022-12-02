@@ -10,9 +10,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
     public interface IContributionPayrollDeductionsRepository
     {
         Task<string> GetKeyFromGuidAsync(string guid);
+        Task<string> GetArrangementKeyFromGuidAsync(string guid);
         Task<Dictionary<string, string>> GetPerbenGuidsCollectionAsync(IEnumerable<string> perbenIds);
         Task<PayrollDeduction> GetContributionPayrollDeductionByGuidAsync(string guid);
         Task<Tuple<IEnumerable<PayrollDeduction>, int>> GetContributionPayrollDeductionsAsync(int offset, 
-            int limit, string arrangement = "", bool bypassCache = false);
+            int limit, string arrangement = "", string deductedOn = "", Dictionary<string, string> filterQualifiers = null, bool bypassCache = false);
     }
 }

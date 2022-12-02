@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -60,7 +61,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetFormT4aPdfDataAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetForm1099MiPdfDataAsync(personId, "1")).Returns<string, string>((personId, recordId) =>
@@ -76,7 +77,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetForm1099MiPdfDataAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             BuildTaxFormPdfService();
@@ -136,7 +137,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task GetFormT4aPdfDataAsync_RepositoryThrowsException()
         {
             var pdfData = await service.GetFormT4aPdfDataAsync(personId, exceptionString);
@@ -189,7 +190,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task Get1099MiscPdfDataAsync_RepositoryThrowsException()
         {
             var pdfData = await service.Get1099MiscPdfDataAsync(personId, exceptionString);

@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -12,6 +12,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -473,7 +474,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var stwebDefaults = await GetStwebDefaultsAsync();
             if (stwebDefaults == null)
             {
-                throw new Exception("Unable to access STWEB.DEFAULTS values");
+                throw new ColleagueWebApiException("Unable to access STWEB.DEFAULTS values");
             }
 
             var flag = stwebDefaults.StwebTranAltcumFlag;

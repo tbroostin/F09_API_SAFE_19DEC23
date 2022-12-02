@@ -1,5 +1,6 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -8,6 +9,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,6 +32,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private TestTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
         private ICurrentUserFactory currentUserFactory;
+        private Mock<ILocalReportService> reportRenderServiceMock;
 
         private string personId = "000001";
         private string fakeRdlcPath = "fakePath";
@@ -40,6 +43,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         {
             this.TestPdfDataRepository = new TestTaxFormPdfDataRepository();
 
+            reportRenderServiceMock = new Mock<ILocalReportService>();
             mockTaxFormPdfDataRepository = new Mock<IHumanResourcesTaxFormPdfDataRepository>();
             mockTaxFormPdfDataRepository.Setup<Task<FormW2PdfData>>(rep => rep.GetW2PdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
             {
@@ -54,7 +58,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<FormW2PdfData>>(rep => rep.GetW2PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             mockTaxFormPdfDataRepository.Setup<Task<Form1095cPdfData>>(rep => rep.Get1095cPdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
@@ -70,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<Form1095cPdfData>>(rep => rep.Get1095cPdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             BuildTaxFormPdfService();
@@ -131,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task GetW2TaxFormDataAsync_RepositoryThrowsException()
         {
             var pdfData = await service.GetW2TaxFormDataAsync(personId, exceptionString);
@@ -272,7 +276,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task Get1095cTaxFormDataAsync_RepositoryThrowsException()
         {
             var pdfData = await service.Get1095cTaxFormDataAsync(personId, exceptionString);
@@ -384,7 +388,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Domain.HumanResources.Entities.TaxFormStatement, Dtos.HumanResources.TaxFormStatement>()).Returns(taxFormStatementDtoAdapter);
 
             // Set up the current user with a subset of tax form statements and set up the service.
-            service = new HumanResourcesTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
+            service = new HumanResourcesTaxFormPdfService(reportRenderServiceMock.Object, this.mockTaxFormPdfDataRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,
                 roleRepositoryMock.Object,

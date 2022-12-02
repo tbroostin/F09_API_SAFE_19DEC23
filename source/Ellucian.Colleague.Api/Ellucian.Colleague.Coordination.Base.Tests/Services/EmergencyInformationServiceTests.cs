@@ -876,7 +876,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task EmergencyInformationService_GetPersonEmergencyContacts2Async_Exception()
         {
             emerInfoRepoMock.Setup(repo => repo.GetPersonContacts2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(),
@@ -1315,7 +1315,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task EmergencyInformationService_DeletePersonEmergencyContactsAsync_Exception_Exceptipn()
         {
             _viewContactRole.AddPermission(new Domain.Entities.Permission(Domain.Base.BasePermissionCodes.DeletePersonContact));
@@ -2371,7 +2371,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task CreatePersonEmergencyContactsAsync_Exception()
         {
             _updateContactRole.AddPermission(new Domain.Entities.Permission(Domain.Base.BasePermissionCodes.UpdatePersonContact));
@@ -2755,7 +2755,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task UpdatePersonEmergencyContactsAsync_Exception()
         {
             _updateContactRole.AddPermission(new Domain.Entities.Permission(Domain.Base.BasePermissionCodes.UpdatePersonContact));

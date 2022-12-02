@@ -1,7 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -26,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CountiesController"/> class.
@@ -70,6 +73,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     }
                 }
                 return countyDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving county data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

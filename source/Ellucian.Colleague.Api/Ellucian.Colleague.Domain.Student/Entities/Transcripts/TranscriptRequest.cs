@@ -13,19 +13,25 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Transcripts
     public class TranscriptRequest
     {
         [XmlNamespaceDeclarations]
-        public XmlSerializerNamespaces xmlns = new XmlSerializerNamespaces();
+        private XmlSerializerNamespaces _xmlns = new XmlSerializerNamespaces();
+        public XmlSerializerNamespaces xmlns
+        {
+            get { return _xmlns; }
+            set { if (value != null) { _xmlns = value; } }
+        }
 
         public TransmissionData TransmissionData { get; set; }
         public string DocumentID { get; set; }
         public Request Request { get; set; }
         public string NoteMessage { get; set; }
         public UserDefinedExtensions UserDefinedExtensions { get; set; }
+        
 
         public TranscriptRequest()
         {
-            xmlns.Add("core", "urn:org:pesc:core:CoreMain:v1.0.0");
-            xmlns.Add("AcRec", "urn:org:pesc:sector:AcademicRecord:v1.0.0");
-            xmlns.Add("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+            _xmlns.Add("core", "urn:org:pesc:core:CoreMain:v1.0.0");
+            _xmlns.Add("AcRec", "urn:org:pesc:sector:AcademicRecord:v1.0.0");
+            _xmlns.Add("xsi", "http://www.w3.org/2001/XMLSchema-instance");
         }
 
     }

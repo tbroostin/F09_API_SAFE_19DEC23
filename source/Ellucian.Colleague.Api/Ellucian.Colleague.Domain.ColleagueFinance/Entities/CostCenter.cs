@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -51,7 +51,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// List of cost center subtotals that make up the cost center.
         /// </summary>
-        public List<CostCenterSubtotal> CostCenterSubtotals = new List<CostCenterSubtotal>();
+        private List<CostCenterSubtotal> costCenterSubtotals = new List<CostCenterSubtotal>();
+        public List<CostCenterSubtotal> CostCenterSubtotals { get { return costCenterSubtotals; } set { costCenterSubtotals = value; } }
 
         /// <summary>
         /// Returns the total budget amount for all of the expense GL accounts included in this cost center.
@@ -82,6 +83,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Returns the total actual amount for all of the revenue GL accounts included in this cost center.
         /// </summary>
         public decimal TotalActualsRevenue { get { return CostCenterSubtotals.Where(y => y.GlClass == GlClass.Revenue).Sum(x => x.TotalActuals); } }
+
 
         /// <summary>
         /// Constructor that initializes a Cost Center domain entity.

@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -281,8 +281,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
             }
-            catch
-            { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get PERSTAT IDs.");
+            }
             return perstatActRecords;
         }
     }

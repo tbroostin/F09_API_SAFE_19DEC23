@@ -406,8 +406,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var termGradingIdsEntity = new List<StudentAnonymousGrading>() 
                 { 
                     new StudentAnonymousGrading(string.Empty, null, null, "Student 0000004 does not have a anonymous grading ID for term: 2019/FA"),
-                    new StudentAnonymousGrading("2", "2021/FA", null, ""),
-                    new StudentAnonymousGrading("3", "2021/SP", null, ""),
+                    new StudentAnonymousGrading("2","m2", "2021/FA", null, ""),
+                    new StudentAnonymousGrading("3","m3", "2021/SP", null, ""),
                 };
 
                 var configurationEntity = new AcademicRecordConfiguration(anonymousGradingType: AnonymousGradingType.Term);
@@ -426,6 +426,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     Assert.IsInstanceOfType(studentGradingIds[i], typeof(Dtos.Student.StudentAnonymousGrading));
                     Assert.AreEqual(studentGradingIds[i].AnonymousGradingId, termGradingIdsEntity[i].AnonymousGradingId);
+                    Assert.AreEqual(studentGradingIds[i].MidTermGradingId, termGradingIdsEntity[i].MidTermGradingId);
                     Assert.AreEqual(studentGradingIds[i].SectionId, termGradingIdsEntity[i].SectionId);
                     Assert.AreEqual(studentGradingIds[i].TermId, termGradingIdsEntity[i].TermId);
                     Assert.AreEqual(studentGradingIds[i].Message, termGradingIdsEntity[i].Message);
@@ -440,8 +441,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var sectionGradingIdsEntity = new List<StudentAnonymousGrading>()
                 {
                     new StudentAnonymousGrading(string.Empty, null, "123", "Student 0000004 does not have a anonymous grading ID for course section: 123"),
-                    new StudentAnonymousGrading("2", "2021/FA", "1", ""),
-                    new StudentAnonymousGrading("3", "2021/SP", "2", ""),
+                    new StudentAnonymousGrading("2","m2", "2021/FA", "1", ""),
+                    new StudentAnonymousGrading("3","m3", "2021/SP", "2", ""),
                 };
 
                 var configurationEntity = new AcademicRecordConfiguration(anonymousGradingType: AnonymousGradingType.Section);
@@ -460,6 +461,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     Assert.IsInstanceOfType(studentGradingIds[i], typeof(Dtos.Student.StudentAnonymousGrading));
                     Assert.AreEqual(studentGradingIds[i].AnonymousGradingId, sectionGradingIdsEntity[i].AnonymousGradingId);
+                    Assert.AreEqual(studentGradingIds[i].MidTermGradingId, sectionGradingIdsEntity[i].MidTermGradingId);
                     Assert.AreEqual(studentGradingIds[i].SectionId, sectionGradingIdsEntity[i].SectionId);
                     Assert.AreEqual(studentGradingIds[i].TermId, sectionGradingIdsEntity[i].TermId);
                     Assert.AreEqual(studentGradingIds[i].Message, sectionGradingIdsEntity[i].Message);

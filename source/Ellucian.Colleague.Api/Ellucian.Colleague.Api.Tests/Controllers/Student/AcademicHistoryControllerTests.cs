@@ -1,10 +1,11 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -103,7 +104,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     sectionAcademicCreditEntities.AddRange(academicCredits.Where(ac => ac.SectionId == sectionId).ToList());
                 }
-                
+
                 academicHistoryController = new AcademicHistoryController(academicHistoryService, loggerMock.Object);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Faculty, Faculty>();
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Corequisite, Corequisite>();
@@ -113,7 +114,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     AcademicCredit2 target = Mapper.Map<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, AcademicCredit2>(credit);
                     academicCreditDtos.Add(target);
                 }
-                
+
                 criteria = new AcademicCreditQueryCriteria() { SectionIds = sectionIds };
                 academicHistoryServiceMock.Setup(x => x.QueryAcademicCreditsAsync(criteria)).Returns(Task.FromResult<IEnumerable<AcademicCredit2>>(academicCreditDtos));
             }
@@ -339,6 +340,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // act
                 var response = await academicHistoryController.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    academicHistoryServiceMock.Setup(x => x.QueryAcademicCreditsWithInvalidKeysAsync(criteria, true)).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await academicHistoryController.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
     }

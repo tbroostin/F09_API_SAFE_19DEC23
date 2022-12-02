@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -158,19 +158,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 attachmentService.Setup(x => x.GetAttachmentContentAsync(It.IsAny<string>()))
                     .ReturnsAsync(new Tuple<Attachment, string, AttachmentEncryption>(attachments.First(), "test", null));
                 var actual = (FileContentActionResult)await attachmentsController.GetAttachmentContentAsync("test");
-                Assert.AreEqual(attachments.First().ContentType, actual.contentType);
-                Assert.AreEqual(attachments.First().Name, actual.fileName);
-                Assert.AreEqual("test", actual.filePath);
+                Assert.AreEqual(attachments.First().ContentType, actual.ContentType);
+                Assert.AreEqual(attachments.First().Name, actual.FileName);
+                Assert.AreEqual("test", actual.FilePath);
 
                 // encryption header must not be set
                 string headerValue;
-                var result = actual.customHeaders.TryGetValue(encrKeyIdHeader, out headerValue);
+                var result = actual.CustomHeaders.TryGetValue(encrKeyIdHeader, out headerValue);
                 Assert.AreEqual(false, result);
-                result = actual.customHeaders.TryGetValue(encrIVHeader, out headerValue);
+                result = actual.CustomHeaders.TryGetValue(encrIVHeader, out headerValue);
                 Assert.AreEqual(false, result);
-                result = actual.customHeaders.TryGetValue(encrContentKeyHeader, out headerValue);
+                result = actual.CustomHeaders.TryGetValue(encrContentKeyHeader, out headerValue);
                 Assert.AreEqual(false, result);
-                result = actual.customHeaders.TryGetValue(encrTypeHeader, out headerValue);
+                result = actual.CustomHeaders.TryGetValue(encrTypeHeader, out headerValue);
                 Assert.AreEqual(false, result);
             }
 
@@ -188,19 +188,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 attachmentService.Setup(x => x.GetAttachmentContentAsync(It.IsAny<string>()))
                     .ReturnsAsync(new Tuple<Attachment, string, AttachmentEncryption>(attachments.First(), "test", encryptionMetadata));
                 var actual = (FileContentActionResult) await attachmentsController.GetAttachmentContentAsync("test");
-                Assert.AreEqual(attachments.First().ContentType, actual.contentType);
-                Assert.AreEqual(attachments.First().Name, actual.fileName);
-                Assert.AreEqual("test", actual.filePath);
+                Assert.AreEqual(attachments.First().ContentType, actual.ContentType);
+                Assert.AreEqual(attachments.First().Name, actual.FileName);
+                Assert.AreEqual("test", actual.FilePath);
 
                 // encryption metadata
                 string headerValue;
-                actual.customHeaders.TryGetValue(encrKeyIdHeader, out headerValue);
+                actual.CustomHeaders.TryGetValue(encrKeyIdHeader, out headerValue);
                 Assert.AreEqual(encryptionMetadata.EncrKeyId, headerValue);
-                actual.customHeaders.TryGetValue(encrIVHeader, out headerValue);
+                actual.CustomHeaders.TryGetValue(encrIVHeader, out headerValue);
                 Assert.AreEqual(Convert.ToBase64String(encryptionMetadata.EncrIV), headerValue);
-                actual.customHeaders.TryGetValue(encrContentKeyHeader, out headerValue);
+                actual.CustomHeaders.TryGetValue(encrContentKeyHeader, out headerValue);
                 Assert.AreEqual(Convert.ToBase64String(encryptionMetadata.EncrContentKey), headerValue);
-                actual.customHeaders.TryGetValue(encrTypeHeader, out headerValue);
+                actual.CustomHeaders.TryGetValue(encrTypeHeader, out headerValue);
                 Assert.AreEqual(encryptionMetadata.EncrType, headerValue);
             }
 

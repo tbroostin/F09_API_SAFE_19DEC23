@@ -18,6 +18,8 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
+using System.Net;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -55,19 +57,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="CourseLevel">Course Level</see> codes and descriptions.</returns>
         public async Task<IEnumerable<CourseLevel>> GetAsync()
         {
-            var courseLevelCollection = await _referenceDataRepository.GetCourseLevelsAsync();
-
-            // Get the right adapter for the type mapping
-            var courseLevelDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseLevel, CourseLevel>();
-
-            // Map the courselevel entity to the program DTO
-            var courseLevelDtoCollection = new List<CourseLevel>();
-            foreach (var courseLevel in courseLevelCollection)
+            try
             {
-                courseLevelDtoCollection.Add(courseLevelDtoAdapter.MapToType(courseLevel));
-            }
+                var courseLevelCollection = await _referenceDataRepository.GetCourseLevelsAsync();
 
-            return courseLevelDtoCollection;
+                // Get the right adapter for the type mapping
+                var courseLevelDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseLevel, CourseLevel>();
+
+                // Map the courselevel entity to the program DTO
+                var courseLevelDtoCollection = new List<CourseLevel>();
+                foreach (var courseLevel in courseLevelCollection)
+                {
+                    courseLevelDtoCollection.Add(courseLevelDtoAdapter.MapToType(courseLevel));
+                }
+
+                return courseLevelDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, "Timeout exception has occurred while retrieving course levels");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>

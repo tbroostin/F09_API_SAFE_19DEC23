@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -26,30 +26,30 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// Used to calculate tax amounts
         /// </summary>
-        public Decimal? ApTaxPercent;
+        public Decimal? ApTaxPercent { get; set; }
 
         /// <summary>
         /// used in determining how much to expense to cost centers, and consequently, how much the institution
         /// is due back from the government.
         /// </summary>
-        public Decimal? ApTaxRebatePercent;
+        public Decimal? ApTaxRebatePercent { get; set; }
 
         /// <summary>
         /// Some places charge value added taxes excluding sales tax, others charge value added taxes including sales tax, or
         /// other combinations.Taxes at the same compounding sequence are calculated based on the total so far without
         ///any other taxes.
         /// </summary>
-        public int? ApTaxCompoundingSequence;
+        public int? ApTaxCompoundingSequence { get; set; }
 
         /// <summary>
         /// When tax amounts are calculated, the rates that are effective for the transaction date are used.
         /// </summary>
-        public DateTime? ApTaxEffectiveDate;
+        public DateTime? ApTaxEffectiveDate { get; set; }
 
         /// <summary>
         /// This exemption is used in determining the refund or investment tax credit(ITC).
         /// </summary>
-        public Decimal? ApTaxExemptPercent;
+        public Decimal? ApTaxExemptPercent { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommerceTaxCodeRate"/> class.

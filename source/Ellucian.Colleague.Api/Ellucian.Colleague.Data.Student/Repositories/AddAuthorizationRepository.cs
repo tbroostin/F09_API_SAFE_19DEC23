@@ -1,10 +1,11 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -68,16 +69,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 updateResponse = await transactionInvoker.ExecuteAsync<UpdateAddAuthorizationRequest, UpdateAddAuthorizationResponse>(updateRequest);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch
             {
                 logger.Error("Error occurred during UpdateAddAuthorization transaction execution.");
                 throw new ApplicationException("Error occurred during Add Authorization Update.");
             }
+
             if (updateResponse == null)
             {
                 logger.Error("Null response returned by update add authorization transaction.");
                 throw new ApplicationException("Null response returned by Add Authorization Update.");
             }
+
             if (updateResponse.ErrorOccurred)
             {
                 // Send different error depending on whether it was locked, not found, or had another problem.
@@ -98,6 +105,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new ApplicationException(otherError);
                 }
             }
+
             if (!updateResponse.ErrorOccurred)
             {
                 try
@@ -105,7 +113,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Update successful and we have a returned ID - Get the newly updated authorization from Colleague. 
                     // If we don't have an id or can't get the item it throw an error.
                     updatedAddAuthorization = await GetAsync(updateResponse.UpdatedAddAuthorizationId);
-
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (KeyNotFoundException)
                 {
@@ -117,7 +128,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Error("Error occurred while retrieving newly added request using id " + updateResponse.UpdatedAddAuthorizationId);
                     throw;
                 }
-
             }
             return updatedAddAuthorization;
         }
@@ -130,7 +140,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>The <see cref="Domain.Student.Entities.AddAuthorization">Add Authorization</see>> is returned</returns>
         public async Task<AddAuthorization> GetAsync(string addAuthorizationId)
         {
-
             if (string.IsNullOrEmpty(addAuthorizationId))
             {
                 throw new ArgumentNullException("addAuthorizationId", "Add Authorization Id must be provided.");
@@ -144,11 +153,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException();
             }
 
-
             List<AddAuthorization> addAuthorizationEntities = BuildAddAuthorizations(new List<AddAuthorizations>() { authorizationRecord });
             return addAuthorizationEntities.FirstOrDefault();
-
-
         }
 
         /// <summary>
@@ -170,6 +176,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 string addCriteria = "WITH AAU.COURSE.SECTION = '" + sectionId + "' AND WITH AAU.AUTHORIZATION.CODE = '" + addAuthorizationCode + "'";
                 logger.Info("Retrieving add authorizations by add code using criteria '" + addCriteria + "'");
                 addAuthorizations = await DataReader.BulkReadRecordAsync<AddAuthorizations>(addCriteria);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -210,12 +220,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Info("Retrieving section add authorizations using criteria '" + addCriteria + "'");
                 addAuthorizations = await DataReader.BulkReadRecordAsync<AddAuthorizations>(addCriteria);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex,"Bulk read failed for section Id " + sectionId);
                 throw new ApplicationException("Add Authorization read failed for section Id " + sectionId);
 
             }
+
             if (addAuthorizations == null)
             {
                 return new List<AddAuthorization>();
@@ -246,6 +261,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Info("Retrieving student add authorizations using criteria '" + addCriteria + "'");
                 addAuthorizations = await DataReader.BulkReadRecordAsync<AddAuthorizations>(addCriteria);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Bulk read failed for student {0} ", studentId));
@@ -256,7 +275,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(string.Format("No add authorizations retrieved for student {0}", studentId));
                 return new List<AddAuthorization>();
             }
-            logger.Error(string.Format("Retrieved {0} add authorizations for student {1}", addAuthorizations.Count(), studentId));
+            logger.Debug(string.Format("Retrieved {0} add authorizations for student {1}", addAuthorizations.Count(), studentId));
             List<AddAuthorization> result = BuildAddAuthorizations(addAuthorizations.ToList());
             return result;
         }
@@ -294,16 +313,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 createResponse = await transactionInvoker.ExecuteAsync<CreateAddAuthorizationRequest, CreateAddAuthorizationResponse>(newRequest);
             }
-            catch
+            catch (ColleagueSessionExpiredException)
             {
-                logger.Error("Error occurred during CreateAddAuthorization transaction execution.");
+                throw;
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Error occurred during CreateAddAuthorization transaction execution.");
                 throw new ApplicationException("Error occurred during Add Authorization creation.");
             }
+
             if (createResponse == null)
             {
                 logger.Error("Null response returned by create add authorization transaction.");
                 throw new ApplicationException("Null response returned by Add Authorization creation.");
             }
+
             if (createResponse.ErrorOccurred)
             {
                 if (createResponse.ErrorMessage.Contains("Conflict"))
@@ -316,8 +341,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Error(createResponse.ErrorMessage);
                     throw new ApplicationException(createResponse.ErrorMessage);
                 }
-              
             }
+
             if (!createResponse.ErrorOccurred)
             {
                 try
@@ -325,7 +350,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Create successful and we have a returned ID - Get the new authorization from Colleague. 
                     // If we don't have an id or can't get the item it throw an error.
                     newAddAuthorization = await GetAsync(createResponse.NewAddAuthorizationId);
-
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (KeyNotFoundException)
                 {
@@ -337,8 +365,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Error("Error occurred while retrieving new add authorization with id " + createResponse.NewAddAuthorizationId);
                     throw;
                 }
-
             }
+
             return newAddAuthorization;
         }
 

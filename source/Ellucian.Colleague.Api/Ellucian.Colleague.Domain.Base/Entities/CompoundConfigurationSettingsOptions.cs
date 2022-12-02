@@ -1,4 +1,4 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -40,17 +40,32 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// The primary source data (titles and values) 
         /// </summary>
-        public List<CompoundConfigurationSettingsOptionsSource> PrimarySourceData;
+        public List<CompoundConfigurationSettingsOptionsSource> PrimarySourceData
+        {
+            get { return primarySourceData; }
+            set { if (value != null) { primarySourceData = value; } }
+        }
+        private List<CompoundConfigurationSettingsOptionsSource> primarySourceData;
 
         /// <summary>
         /// The secondary source data (titles and values) 
         /// </summary>
-        public List<CompoundConfigurationSettingsOptionsSource> SecondarySourceData;
+        public List<CompoundConfigurationSettingsOptionsSource> SecondarySourceData
+        {
+            get { return secondarySourceData; }
+            set { if (value != null) { secondarySourceData = value; } }
+        }
+        private List<CompoundConfigurationSettingsOptionsSource> secondarySourceData;
 
         /// <summary>
         /// The tertiary source data (titles and values) 
         /// </summary>
-        public List<CompoundConfigurationSettingsOptionsSource> TertiarySourceData;               
+        public List<CompoundConfigurationSettingsOptionsSource> TertiarySourceData
+        {
+            get { return tertiarySourceData; }
+            set { if (value != null) { tertiarySourceData = value; } }
+        }
+        private List<CompoundConfigurationSettingsOptionsSource> tertiarySourceData;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompoundConfigurationSettingsOptions"/> class.

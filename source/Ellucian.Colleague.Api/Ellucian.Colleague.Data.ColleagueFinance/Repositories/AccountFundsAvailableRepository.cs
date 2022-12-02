@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Dependency;
 using System;
@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Dmi.Runtime;
@@ -29,7 +30,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     public class AccountFundsAvailableRepository : BaseColleagueRepository, IAccountFundsAvailableRepository
     {
         private readonly string _colleagueTimeZone;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         /// <summary>
         /// Constructor
         /// </summary>
@@ -430,7 +431,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             glStruct = await DataReader.ReadRecordAsync<Glstruct>("ACCOUNT.PARAMETERS", "ACCT.STRUCTURE");
             if (glStruct == null)
                 // GLSTRUCT must exist for Colleague Financials to function properly
-                throw new Exception("GL account structure is not defined.");
+                throw new ColleagueWebApiException("GL account structure is not defined.");
 
             return glStruct;
         }

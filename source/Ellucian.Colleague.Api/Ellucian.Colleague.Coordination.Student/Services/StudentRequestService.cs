@@ -1,10 +1,12 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -99,7 +101,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var requestDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentRequest, Dtos.Student.StudentRequest>();
             return  requestDtoAdapter.MapToType(newRequest);
             }
-             
+
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while creating student transcript request.";
+                logger.Error(tex, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, ex.ToString());
@@ -134,11 +142,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error("StudentRequest not found in repository for given request Id " + requestId);
                 throw;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving the student transcript request.";
+                logger.Error(tex, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read request from repository using student request id " + requestId + " Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             // Throw exception if item is being requested by someone other than the student.
@@ -200,11 +214,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 studentRequests = await studentRequestRepository.GetStudentRequestsAsync(studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving student transcript requests for student {0}", studentId);
+                logger.Error(tex, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read the student requests from repository using student id " + studentId + " Exception message: " + ex.Message;
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             // Filter the retrieved requests by request type
             List<Domain.Student.Entities.StudentRequest> filteredStudentRequests = null;
@@ -264,6 +284,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 studentRequestEntity = await studentRequestRepository.GetAsync(requestId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving the student request fee for this program.";
+                logger.Error(tex, message);
+                throw;
+            }
             catch (Exception)
             {
                 // if get of the request isn't successful (not found or error), don't get fees.
@@ -279,6 +305,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 studentRequestFeeEntity = await studentRequestRepository.GetStudentRequestFeeAsync(studentId, requestId);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Colleague session has expired while retrieving student request fee from repository using  student Id {0} and request Id {1}: ", studentId, requestId);
+                logger.Error(tex, message);
+                throw;
             }
             catch (Exception ex)
             {

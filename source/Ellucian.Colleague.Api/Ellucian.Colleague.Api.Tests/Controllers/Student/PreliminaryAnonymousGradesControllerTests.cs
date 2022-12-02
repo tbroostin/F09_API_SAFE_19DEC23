@@ -1,9 +1,10 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student.AnonymousGrading;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -161,6 +162,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 correctException = ex.Response.StatusCode == System.Net.HttpStatusCode.BadRequest;
             }
             Assert.IsTrue(correctException);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GetPreliminaryAnonymousGradesBySectionIdAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                preliminaryAnonymousGradeServiceMock.Setup(svc => svc.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await controller.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -358,6 +376,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 correctException = ex.Response.StatusCode == System.Net.HttpStatusCode.BadRequest;
             }
             Assert.IsTrue(correctException);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task UpdatePreliminaryAnonymousGradesBySectionIdAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                preliminaryAnonymousGradeServiceMock.Setup(svc => svc.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await controller.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades);
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
         }
 
         [TestMethod]

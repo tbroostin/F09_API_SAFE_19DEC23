@@ -10,6 +10,7 @@ using Ellucian.Rest.Client.Exceptions;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Api.Client.Core;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -76,6 +77,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _academicProgressEvaluationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AcademicProgressEvaluation>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -104,6 +107,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _academicProgressEvaluationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AcademicProgressEvaluation>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -131,6 +136,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _academicProgressEvaluationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AcademicProgressEvaluation2>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -365,6 +372,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -408,6 +417,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -451,6 +462,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter2>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -494,11 +507,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter3>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to find award letter resource");
@@ -539,6 +558,8 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, "application/pdf");
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
                 headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 fileName = response.Content.Headers.ContentDisposition.FileName;
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
@@ -580,6 +601,8 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, "application/pdf");
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v2+pdf");
                 headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v2+pdf");
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 fileName = response.Content.Headers.ContentDisposition.FileName;
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
@@ -614,6 +637,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardLetter>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -654,6 +679,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardLetter>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -694,6 +721,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardLetter2>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -733,6 +762,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardLetter3>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -773,7 +804,9 @@ namespace Ellucian.Colleague.Api.Client
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
                 headers.Add(AcceptHeaderKey, "application/pdf");
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v3+pdf");                
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v3+pdf");
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return new AwardLetterReport()
                 {
@@ -809,12 +842,18 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, recordId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v4+pdf");
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return new AwardLetterReport()
                 {
                     FileName = response.Content.Headers.ContentDisposition.FileName,
                     FileContent = await response.Content.ReadAsByteArrayAsync()
                 };
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -854,6 +893,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<AwardLetter>(awardLetter, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -902,6 +943,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<AwardLetter2>(awardLetter, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter2>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -949,11 +992,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<AwardLetter3>(awardLetter, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter3>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to find award letter resource");
@@ -1000,6 +1049,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardPackageChangeRequest>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1024,6 +1075,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AwardPackageChangeRequest>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1052,6 +1105,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath, changeRequestId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardPackageChangeRequest>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1080,6 +1135,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath, changeRequestId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardPackageChangeRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1114,11 +1171,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(changeRequest, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardPackageChangeRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to create award package change request");
@@ -1148,6 +1211,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardPackageChangeRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(changeRequest, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardPackageChangeRequest>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1184,6 +1249,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidChecklistPath, year);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(string.Empty, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentFinancialAidChecklist>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1223,6 +1290,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(string.Empty, combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentFinancialAidChecklist>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1253,6 +1322,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidChecklistPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentFinancialAidChecklist>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1286,6 +1357,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentFinancialAidChecklist>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1322,6 +1395,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidChecklistPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentFinancialAidChecklist>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1362,6 +1437,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentFinancialAidChecklist>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1388,11 +1465,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentDefaultAwardPeriodsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentDefaultAwardPeriod>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get student checklist");
@@ -1600,6 +1683,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _fafsasPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Fafsa>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1637,6 +1722,8 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Fafsa>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1685,6 +1772,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Fafsa>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -1732,6 +1821,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Fafsa>>(await response.Content.ReadAsStringAsync());
             }
@@ -1765,6 +1856,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidApplicationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<FinancialAidApplication>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1798,6 +1891,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_financialAidCounselorsPath, counselorId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<FinancialAidCounselor>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1831,6 +1926,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _financialAidCounselorsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<FinancialAidCounselor>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1913,6 +2010,10 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to find financial aid offices resource");
@@ -1997,6 +2098,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_loanRequestsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<LoanRequest>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2030,11 +2133,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_loanRequestsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<LoanRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to find the LoanRequest resource");
@@ -2064,6 +2173,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_loanRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(newLoanRequest, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<LoanRequest>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2093,11 +2204,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_loanRequestsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(newLoanRequest, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<LoanRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to create the LoanRequest");
@@ -2122,6 +2239,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _profileApplicationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ProfileApplication>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2153,6 +2272,8 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ProfileApplication>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2181,6 +2302,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentShoppingSheetsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2213,6 +2336,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2245,6 +2370,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet2>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2277,11 +2404,17 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet3>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get student shopping sheets");
@@ -2307,6 +2440,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAward>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2345,6 +2480,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAward>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2384,6 +2521,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAward>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2423,6 +2562,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAward>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2465,6 +2606,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentAwardSummary>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -2513,6 +2656,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<StudentAwardPackage>(studentAwardPackage, combinedUrl);
                 var resource = JsonConvert.DeserializeObject<StudentAwardPackage>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2556,15 +2701,22 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<StudentAwardPackage>(studentAwardPackage, combinedUrl);
                 var resource = JsonConvert.DeserializeObject<StudentAwardPackage>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to update StudentAwardPackage for Year {0}, and Student {1}", awardYear, studentId));
                 throw;
             }
+            
         }
 
         /// <summary>
@@ -2599,6 +2751,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear, awardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<StudentAward>(studentAward, urlPath);
                 var resource = JsonConvert.DeserializeObject<StudentAward>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2642,6 +2796,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear, awardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<StudentAward>(studentAward, urlPath);
                 var resource = JsonConvert.DeserializeObject<StudentAward>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2685,6 +2841,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse<IEnumerable<StudentAward>>(studentAwards, urlPath);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAward>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2724,6 +2882,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear, awardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAward>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2764,6 +2924,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardsPath, awardYear, awardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAward>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2794,6 +2956,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentAward.StudentId, _awardsPath, studentAward.AwardYearId, studentAward.AwardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse<StudentAward>(studentAward, urlPath);
                 var resource = JsonConvert.DeserializeObject<StudentAward>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2823,6 +2987,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAwardYear>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2851,6 +3017,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAwardYear2>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2884,6 +3052,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAwardYear2>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2917,6 +3087,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2949,6 +3121,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear2>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -2978,6 +3152,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<StudentAwardYear>(studentAwardYear, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -3006,6 +3182,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<StudentAwardYear2>(studentAwardYear, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear2>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -3034,9 +3212,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentAwardYearsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<StudentAwardYear2>(studentAwardYear, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear2>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -3063,6 +3247,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _documentsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentDocument>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -3091,6 +3277,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _documentsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentDocument>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3119,6 +3307,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidBudgetComponentsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -3151,6 +3341,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3184,6 +3376,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidBudgetComponentsPath, awardYear);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3212,6 +3406,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _loanLimitsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentLoanLimitation>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3241,6 +3437,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _loanSummaryPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentLoanSummary>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -3269,6 +3467,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _loanSummaryPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentLoanSummary>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3296,9 +3496,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentOutsideAwardsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(outsideAward, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<OutsideAward>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -3328,9 +3534,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentOutsideAwardsPath, awardYearCode);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<OutsideAward>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -3360,7 +3572,13 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentOutsideAwardsPath, outsideAwardId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);                
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -3385,9 +3603,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentOutsideAwardsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(outsideAward, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<OutsideAward>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -3412,6 +3636,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentNsldsInformationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentNsldsInformation>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -3440,11 +3666,17 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _financialAidPersonsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Person>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.            
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get financial aid persons");
@@ -3494,6 +3726,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, parentId, studentId, _financialAidChecklistPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
@@ -3501,6 +3735,36 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Profile for this person");
+                throw;
+            }
+        }
+
+        
+        public async Task<List<AwardYearCredits>> GetFinancialAidCreditsAsync(string studentId, bool getActiveYearsOnly = true)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "You must provide the student ID to return Financial Aid Credits");
+            }
+            try
+            {
+                // Build url path
+                string queryString = UrlUtility.BuildEncodedQueryString("getActiveYearsOnly", getActiveYearsOnly.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, _financialAidCreditsPath, studentId);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
+
+                return JsonConvert.DeserializeObject<List<AwardYearCredits>>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Financial Aid Credits for student {0}",studentId);
                 throw;
             }
         }

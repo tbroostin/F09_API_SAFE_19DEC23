@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliatesusing System
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliatesusing System
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -12,6 +12,7 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class EmergencyInformationRepository : BaseColleagueRepository, IEmergencyInformationRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private RepositoryException repoException = new RepositoryException();
 
         public EmergencyInformationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
@@ -156,7 +157,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access HEALTH.CONDITIONS valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return healthConditionsValcode;
                 }
@@ -774,7 +775,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;

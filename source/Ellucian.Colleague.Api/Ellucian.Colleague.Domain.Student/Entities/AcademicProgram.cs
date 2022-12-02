@@ -15,67 +15,67 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Majors associated to the program
         /// </summary>
-        public List<string> MajorCodes;
+        public List<string> MajorCodes { get; set; }
         /// <summary>
         /// Minors associated to the program
         /// </summary>
-        public List<string> MinorCodes;
+        public List<string> MinorCodes { get; set; }
         /// <summary>
         /// Certificate (CCDs) associated to the program
         /// </summary>
-        public List<string> CertificateCodes;
+        public List<string> CertificateCodes { get; set; }
         /// <summary>
         /// Specializations associated to the program
         /// </summary>
-        public List<string> SpecializationCodes;
+        public List<string> SpecializationCodes { get; set; }
         /// <summary>
         /// Degree associated to the academic program
         /// </summary>
-        public string DegreeCode;
+        public string DegreeCode { get; set; }
         /// <summary>
         /// Honor Code associated to academic program
         /// </summary>
-        public string HonorCode;
+        public string HonorCode { get; set; }
         /// <summary>
         /// Academic Level Code for academic program
         /// </summary>
-        public string AcadLevelCode;
+        public string AcadLevelCode { get; set; }
         /// <summary>
         /// Start date of academic program
         /// </summary>
-        public DateTime? StartDate;
+        public DateTime? StartDate { get; set; }
         /// <summary>
         /// End date of academic program
         /// </summary>
-        public DateTime? EndDate;
+        public DateTime? EndDate { get; set; }
         /// <summary>
         /// Description of Academic Program
         /// </summary>
-        public string LongDescription;
+        public string LongDescription { get; set; }
         /// <summary>
         /// Location of Academic Program
         /// </summary>
-        public List<string> Location;
+        public List<string> Location { get; set; }
         /// <summary>
         /// Institution that authorizes Academic Program
         /// </summary>
-        public List<string> AuthorizingInstitute;
+        public List<string> AuthorizingInstitute { get; set; }
         /// <summary>
         /// List of departments associated to the Academic Program
         /// </summary>
-        public List<string> DeptartmentCodes;
+        public List<string> DeptartmentCodes { get; set; }
         // <summary>
         /// List of approval agencies associated to the Academic Program
         /// </summary>
-        public List<string> ApprovalAgencies;
+        public List<string> ApprovalAgencies { get; set; }
         /// <summary>
         /// FederalCourseClassification (CIP from Colleague)
         /// </summary>
-        public string FederalCourseClassification;
+        public string FederalCourseClassification { get; set; }
         /// <summary>
         /// LocalCourseClassification (LOCAL.GOVT.CODES from Colleague)
         /// </summary>
-        public List<string> LocalCourseClassifications;
+        public List<string> LocalCourseClassifications { get; set; }
         /// <summary>
         /// Academic Program constructor
         /// </summary>

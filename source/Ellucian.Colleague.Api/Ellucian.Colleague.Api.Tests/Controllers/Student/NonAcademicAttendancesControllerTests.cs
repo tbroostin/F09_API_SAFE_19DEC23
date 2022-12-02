@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         private string personId;
         private List<NonAcademicAttendance> dtos;
 
-        private NonAcademicAttendancesController _nonAcademicAttendanceRequirementsController;
+        private NonAcademicAttendancesController _nonAcademicAttendancesController;
 
 
         [TestInitialize]
@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(personId)).ReturnsAsync(dtos);
 
-            _nonAcademicAttendanceRequirementsController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
+            _nonAcademicAttendancesController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
                 _loggerMock.Object);
         }
 
@@ -72,43 +72,62 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             _nonAcademicAttendanceServiceMock = null;
             personId = null;
             dtos = null;
-            _nonAcademicAttendanceRequirementsController = null;
+            _nonAcademicAttendancesController = null;
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task NonAcademicAttendanceRequirementsController_GetNonAcademicAttendancesAsync_Permissions_Exception()
+        public async Task NonAcademicAttendancesController_GetNonAcademicAttendancesAsync_Permissions_Exception()
         {
             _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(personId)).ThrowsAsync(new PermissionsException());
-            _nonAcademicAttendanceRequirementsController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
+            _nonAcademicAttendancesController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
                 _loggerMock.Object);
-            var expectedDtos = await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendancesAsync(personId);
+            var expectedDtos = await _nonAcademicAttendancesController.GetNonAcademicAttendancesAsync(personId);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task NonAcademicAttendanceRequirementsController_GetNonAcademicAttendancesAsync_ColleagueDataReader_Exception()
+        public async Task NonAcademicAttendancesController_GetNonAcademicAttendancesAsync_ColleagueDataReader_Exception()
         {
             _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(personId)).ThrowsAsync(new ColleagueDataReaderException("Could not read file."));
-            _nonAcademicAttendanceRequirementsController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
+            _nonAcademicAttendancesController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
                 _loggerMock.Object);
-            var expectedDtos = await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendancesAsync(personId);
+            var expectedDtos = await _nonAcademicAttendancesController.GetNonAcademicAttendancesAsync(personId);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task NonAcademicAttendanceRequirementsController_GetNonAcademicAttendancesAsync_Generic_Exception()
+        public async Task NonAcademicAttendancesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
         {
-            _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
-            _nonAcademicAttendanceRequirementsController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
-                _loggerMock.Object);
-            var expectedDtos = await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendancesAsync(null);
+            try
+            {
+                _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(personId))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                _nonAcademicAttendancesController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
+                    _loggerMock.Object);
+                await _nonAcademicAttendancesController.GetNonAcademicAttendancesAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
         }
 
         [TestMethod]
-        public async Task NonAcademicAttendanceRequirementsController_GetNonAcademicAttendancesAsync_returns_DTOs()
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task NonAcademicAttendancesController_GetNonAcademicAttendancesAsync_Generic_Exception()
         {
-            var expectedDtos = await _nonAcademicAttendanceRequirementsController.GetNonAcademicAttendancesAsync(personId);
+            _nonAcademicAttendanceServiceMock.Setup(svc => svc.GetNonAcademicAttendancesAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            _nonAcademicAttendancesController = new NonAcademicAttendancesController(_nonAcademicAttendanceServiceMock.Object,
+                _loggerMock.Object);
+            var expectedDtos = await _nonAcademicAttendancesController.GetNonAcademicAttendancesAsync(null);
+        }
+
+        [TestMethod]
+        public async Task NonAcademicAttendancesController_GetNonAcademicAttendancesAsync_returns_DTOs()
+        {
+            var expectedDtos = await _nonAcademicAttendancesController.GetNonAcademicAttendancesAsync(personId);
             CollectionAssert.AreEqual(dtos, expectedDtos.ToList());
         }
     }

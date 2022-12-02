@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -188,6 +189,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
                 var notices = await _programEvaluationService.GetEvaluationNoticesAsync(studentId, programCode);
                 return notices;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving evaluation notices for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 _logger.Error(pex.Message);
@@ -217,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 3. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
+        /// 3. A user with permissions of VIEW.PERSON.INFORMATION and VIEW.STUDENT.INFORMATION is accessing the student's data.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
@@ -242,6 +249,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
                 _logger.Info("QueryPlanningStudentsAsync... completed in " + watch.ElapsedMilliseconds.ToString());
 
                 return (IEnumerable<PlanningStudent>)planningStudents;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving planning student";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception exception)
             {
@@ -452,6 +465,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
                 // use adapter to map data to DTO
                 var evaluation = programEvaluation4DtoAdapter.MapToType(programEvaluationEntity);
                 return evaluation;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving program evaluation for the student {0}", id);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

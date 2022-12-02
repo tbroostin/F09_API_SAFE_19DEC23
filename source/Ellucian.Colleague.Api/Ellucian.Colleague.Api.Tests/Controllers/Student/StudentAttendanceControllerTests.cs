@@ -1,9 +1,10 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -96,7 +97,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var criteria = new StudentAttendanceQueryCriteria() { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
                 studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true)).Returns(Task.FromResult(studentAttendances));
                 var results = await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
-                Assert.AreEqual(studentAttendances.Count(), results.Count() );
+                Assert.AreEqual(studentAttendances.Count(), results.Count());
             }
 
             [TestMethod]
@@ -202,8 +203,26 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
-        }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentAttendancesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    var criteria = new StudentAttendanceQueryCriteria()
+                    { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
+                    studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
 
         [TestClass]
         public class StudentAttendanceControllerTests_PutStudentAttendanceAsync
@@ -352,9 +371,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PutStudentAttendancesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
 
+                try
+                {
+                    studentAttendanceServiceMock.Setup(x => x.UpdateStudentAttendanceAsync(studentAttendanceToUpdate))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await studentAttendanceController.PutStudentAttendanceAsync(studentAttendanceToUpdate);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
         }
-
-
     }
 }

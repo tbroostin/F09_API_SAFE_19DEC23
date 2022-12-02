@@ -105,7 +105,8 @@
                         var message = "HTTP Error " + jqXHR.status + ": " + jqXHR.statusText;
                         alert(message);
                     }
-                }
+                },
+                complete: function () { }
 
             })
         };
@@ -136,6 +137,8 @@
                         self.RelativeFilePath(relativePathOfFile);//Display only relative path of selected file
                         $("table").makeTableResponsive();
                     })
+                    .fail(function () { })
+                    .always(function () { })
 
             }
             else //Clear the table binding to hide the table

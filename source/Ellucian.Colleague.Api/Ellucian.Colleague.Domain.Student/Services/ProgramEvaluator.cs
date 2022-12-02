@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
@@ -27,12 +27,20 @@ namespace Ellucian.Colleague.Domain.Student.Services
         private IDictionary<AcadResult, Dictionary<string, List<string>>> UseTracker;
         private List<string> SubRequirementsToSkip;
         private List<string> GroupsToSkip;
-        public List<string> debuglist;
-        public List<string> constructorDebug;
+        private List<string> debuglist;
+        private List<string> constructorDebug;
         private ILogger logger;
         private IEnumerable<Course> Courses;
-        public Dictionary<string, RequirementExclusionTable> RequirementExclusionTable;
+        private Dictionary<string, RequirementExclusionTable> RequirementExclusionTable;
         private bool ShowRelatedCourses { get; set; }
+        /// <summary>
+        /// The purpose is to disable lookahead optimization feature in Self-Service MyProgress. 
+          // In MyProgress if a group statement with MinCourses and MinCredits also have MinGPA defined then while applying the course that satisfy MinCourses or MinCredits but lowers the MinGPA or does not reach to MinGPA threshold
+          //then that course is skipped but instead  the next course is picked from the list and applies it only if it would cross or reach to MinGPA.
+          // If the value is true then it will work as EVAL does where it will apply the current course and will not see if applying current course will lower the
+          //group level GPA to put it under MinGPA or not reach threshold of MinGPA instead it will just apply the course in a list as long as it doesn't go beyond MinCredits or MinCourses. 
+        /// </summary>
+        private bool DisableLookAheadOptimization { get; set; }
         private List<AcademicCredit> CreditsExcludedFromTranscriptGrouping { get;  set; }
 
         // Not sure this belongs here, but it has to get set in the constructor
@@ -150,10 +158,18 @@ namespace Ellucian.Colleague.Domain.Student.Services
             this( studentprogram,  programrequirements,  additionalrequirements,credits, plannedCourses,  ruleResults,  overrides,courses, logger)
         {
             CreditsExcludedFromTranscriptGrouping = creditsExcludedFromTranscriptGrouping;
-            if(degreeAuditParameters!=null && degreeAuditParameters.ShowRelatedCourses==true )
+            if(degreeAuditParameters!=null) 
             {
-                ShowRelatedCourses = true;
+                if (degreeAuditParameters.ShowRelatedCourses == true)
+                {
+                    ShowRelatedCourses = true;
+                }
+                if (degreeAuditParameters.DisableLookAheadOptimization == true)
+                {
+                    DisableLookAheadOptimization = true;
+                }
             }
+            
         }
 
         /// <summary>
@@ -395,7 +411,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 }
 
                 GroupResult GroupResult;
-                GroupResult = g.Evaluate(AGCsToEvalThisGroup, OverridesThisGroup, Courses, CreditsExcludedFromTranscriptGrouping, ShowRelatedCourses, skipgroup);
+                GroupResult = g.Evaluate(AGCsToEvalThisGroup, OverridesThisGroup, Courses, CreditsExcludedFromTranscriptGrouping, ShowRelatedCourses,DisableLookAheadOptimization, skipgroup);
 
                 // Summarize the group's completion in CompletionStatus and PlanningStatus fields
 

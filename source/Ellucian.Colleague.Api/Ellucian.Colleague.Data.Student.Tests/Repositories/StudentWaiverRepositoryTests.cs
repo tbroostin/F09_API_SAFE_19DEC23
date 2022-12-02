@@ -18,6 +18,7 @@ using Moq;
 using slf4net;
 using System.Threading.Tasks;
 using System.Threading;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -130,7 +131,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionIfAccessReturnsException()
             {
                 StudentWaiverRepository waiverRepo = BuildInvalidWaiverRepository();
@@ -684,7 +685,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenGetDoesNotReturnWaiverForGivenStudent()
             {
                 waiverToAdd = new StudentWaiver(null, "9999123", null, sectionId, "OTHER", multiLineComment);
@@ -692,7 +693,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenGetDoesNotReturnWaiverForGivenSection()
             {
                 waiverToAdd = new StudentWaiver(null, studentId, null, "SEC123", "OTHER", multiLineComment);
@@ -700,7 +701,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsKeyNotFoundExceptionWhenGetReadRecordReturnsNull()
             {
                 // Set up repo response for null Get request
@@ -722,7 +723,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsSimpleExceptionForAllOtherErrors()
             {
                 CreateStudentReqWaiverResponse createResponse = new CreateStudentReqWaiverResponse();
@@ -734,7 +735,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenSuccessfulFlagWithNoIdReturned()
             {
                 CreateStudentReqWaiverResponse createResponse = new CreateStudentReqWaiverResponse();
@@ -743,7 +744,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenTransactionRequestThrowsException()
             {
                 CreateStudentReqWaiverResponse createResponse = new CreateStudentReqWaiverResponse();
@@ -752,7 +753,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenTransactionResponseIsNull()
             {
                 CreateStudentReqWaiverResponse createResponse = null;

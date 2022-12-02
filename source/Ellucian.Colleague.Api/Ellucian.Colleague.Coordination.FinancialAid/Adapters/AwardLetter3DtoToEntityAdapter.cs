@@ -54,6 +54,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
             awardLetterEntity.AcceptedDate = awardLetterDto.AcceptedDate;
             //awardLetterEntity.AwardLetterYear = awardLetterDto.AwardLetterYear;
             awardLetterEntity.Id = awardLetterDto.Id;
+            awardLetterEntity.AlhZeroAwardFlg = awardLetterDto.AlhZeroAwardFlg;
 
             return awardLetterEntity;
         }

@@ -1,9 +1,10 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -74,7 +75,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Other Honor not found for GUID " + guid, ex);
+                throw new ColleagueWebApiException("Other Honor not found for GUID " + guid, ex);
             }
         }
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>

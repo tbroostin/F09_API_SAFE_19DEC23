@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -44,14 +44,14 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// The organization Id
         /// </summary>
-        public string OrganizationId;
-       
+        public string OrganizationId { get; set; }
+
 
         /// <summary>
         /// The PositionId. <see cref="Position"/>
         /// </summary>
-        public string PositionId;
-       
+        public string PositionId { get; set; }
+
 
         /// <summary>
         ///The start of employment at the organization.

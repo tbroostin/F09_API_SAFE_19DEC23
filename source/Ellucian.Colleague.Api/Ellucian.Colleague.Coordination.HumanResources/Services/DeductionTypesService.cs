@@ -1,4 +1,4 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -86,7 +87,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception)
             {
-                throw new Exception("Unknown error getting deduction type.");
+                throw new ColleagueWebApiException("Unknown error getting deduction type.");
             }
         }
 
@@ -134,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception)
             {
-                throw new Exception("Unknown error getting deduction type.");
+                throw new ColleagueWebApiException("Unknown error getting deduction type.");
             }
         }
 

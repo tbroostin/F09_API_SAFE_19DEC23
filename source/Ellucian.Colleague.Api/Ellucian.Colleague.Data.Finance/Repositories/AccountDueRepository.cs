@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.Finance.Entities.AccountDue;
 using Ellucian.Colleague.Domain.Finance.Entities.Payments;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -34,7 +35,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         public AccountDueRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
-            _configurationRepository = new FinanceConfigurationRepository(cacheProvider, transactionFactory, logger);
+            _configurationRepository = new FinanceConfigurationRepository(cacheProvider, transactionFactory, logger, settings);
             if (settings != null)
             {
                 _colleagueTimeZone = settings.ColleagueTimeZone;
@@ -43,22 +44,50 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
 
         public AccountDue Get(string studentId)
         {
-            return ExecutePaymentsDueByTermAdminCTX(studentId);
+            try
+            {
+                return ExecutePaymentsDueByTermAdminCTX(studentId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         public AccountDuePeriod GetPeriods(string studentId)
         {
-            return ExecutePaymentsDueByPeriodAdminCTX(studentId);
+            try
+            {
+                return ExecutePaymentsDueByPeriodAdminCTX(studentId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         public ElectronicCheckPayer GetCheckPayerInformation(string personId)
         {
-            return ExecuteCheckPayerInformationCTX(personId);
+            try
+            {
+                return ExecuteCheckPayerInformationCTX(personId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         public ElectronicCheckProcessingResult ProcessCheck(Payment paymentDetails)
         {
-            return ExecuteProcessCheckCTX(paymentDetails);
+            try
+            {
+                return ExecuteProcessCheckCTX(paymentDetails);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         #region Colleague Transactions
@@ -68,27 +97,34 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             StudentFinPaymentsDueAdminRequest colleagueTxRequest = new StudentFinPaymentsDueAdminRequest();
             colleagueTxRequest.PersonId = studentId;
 
-            StudentFinPaymentsDueAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinPaymentsDueAdminRequest, StudentFinPaymentsDueAdminResponse>(colleagueTxRequest);
-
-            List<PaymentsDue> paymentsDue = colleagueTxResponse.PaymentsDue.ToList<PaymentsDue>();
-            List<PaymentPlansDue> paymentPlansDue = colleagueTxResponse.PaymentPlansDue.ToList<PaymentPlansDue>();
-
-            if (_masterTermList == null)
+            try
             {
-                _masterTermList = (colleagueTxResponse.TermList != null) ? colleagueTxResponse.TermList : new List<string>();
+                StudentFinPaymentsDueAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinPaymentsDueAdminRequest, StudentFinPaymentsDueAdminResponse>(colleagueTxRequest);
 
-                // Reverse the list so terms appear in chronological order
-                _masterTermList.Reverse();
+                List<PaymentsDue> paymentsDue = colleagueTxResponse.PaymentsDue.ToList<PaymentsDue>();
+                List<PaymentPlansDue> paymentPlansDue = colleagueTxResponse.PaymentPlansDue.ToList<PaymentPlansDue>();
+
+                if (_masterTermList == null)
+                {
+                    _masterTermList = (colleagueTxResponse.TermList != null) ? colleagueTxResponse.TermList : new List<string>();
+
+                    // Reverse the list so terms appear in chronological order
+                    _masterTermList.Reverse();
+                }
+
+                var accountDuePeriod = new AccountDuePeriod();
+
+                BuildPaymentsDueByPeriod(studentId, accountDuePeriod, paymentsDue, paymentPlansDue);
+
+                // Return name
+                accountDuePeriod.PersonName = colleagueTxResponse.PersonName;
+
+                return accountDuePeriod;
             }
-
-            var accountDuePeriod = new AccountDuePeriod();
-
-            BuildPaymentsDueByPeriod(studentId, accountDuePeriod, paymentsDue, paymentPlansDue);
-
-            // Return name
-            accountDuePeriod.PersonName = colleagueTxResponse.PersonName;
-
-            return accountDuePeriod;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         private AccountDue ExecutePaymentsDueByTermAdminCTX(string studentId)
@@ -96,27 +132,34 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             StudentFinPaymentsDueAdminRequest colleagueTxRequest = new StudentFinPaymentsDueAdminRequest();
             colleagueTxRequest.PersonId = studentId;
 
-            StudentFinPaymentsDueAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinPaymentsDueAdminRequest, StudentFinPaymentsDueAdminResponse>(colleagueTxRequest);
-
-            List<PaymentsDue> paymentsDue = colleagueTxResponse.PaymentsDue.ToList<PaymentsDue>();
-            List<PaymentPlansDue> paymentPlansDue = colleagueTxResponse.PaymentPlansDue.ToList<PaymentPlansDue>();
-
-            if (_masterTermList == null)
+            try
             {
-                _masterTermList = (colleagueTxResponse.TermList != null) ? colleagueTxResponse.TermList : new List<string>();
+                StudentFinPaymentsDueAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinPaymentsDueAdminRequest, StudentFinPaymentsDueAdminResponse>(colleagueTxRequest);
 
-                // Reverse the list so terms appear in chronological order
-                _masterTermList.Reverse();
+                List<PaymentsDue> paymentsDue = colleagueTxResponse.PaymentsDue.ToList<PaymentsDue>();
+                List<PaymentPlansDue> paymentPlansDue = colleagueTxResponse.PaymentPlansDue.ToList<PaymentPlansDue>();
+
+                if (_masterTermList == null)
+                {
+                    _masterTermList = (colleagueTxResponse.TermList != null) ? colleagueTxResponse.TermList : new List<string>();
+
+                    // Reverse the list so terms appear in chronological order
+                    _masterTermList.Reverse();
+                }
+
+                var accountDue = new AccountDue();
+
+                BuildPaymentsDueByTerm(studentId, accountDue, paymentsDue, paymentPlansDue);
+
+                // Return name
+                accountDue.PersonName = colleagueTxResponse.PersonName;
+
+                return accountDue;
             }
-
-            var accountDue = new AccountDue();
-
-            BuildPaymentsDueByTerm(studentId, accountDue, paymentsDue, paymentPlansDue);
-
-            // Return name
-            accountDue.PersonName = colleagueTxResponse.PersonName;
-
-            return accountDue;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         private ElectronicCheckPayer ExecuteCheckPayerInformationCTX(string personId = "")
@@ -124,24 +167,31 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             GetEcheckPayerRequest colleagueTxRequest = new GetEcheckPayerRequest();
             colleagueTxRequest.InPersonId = personId;
 
-            GetEcheckPayerResponse colleagueTxResponse = transactionInvoker.Execute<GetEcheckPayerRequest, GetEcheckPayerResponse>(colleagueTxRequest);
+            try
+            {
+                GetEcheckPayerResponse colleagueTxResponse = transactionInvoker.Execute<GetEcheckPayerRequest, GetEcheckPayerResponse>(colleagueTxRequest);
 
-            // Create the data model
-            ElectronicCheckPayer payerInfo = new ElectronicCheckPayer();
+                // Create the data model
+                ElectronicCheckPayer payerInfo = new ElectronicCheckPayer();
 
-            // Populate the check payer information
-            payerInfo.City = colleagueTxResponse.OutCity;
-            payerInfo.Country = colleagueTxResponse.OutCountry;
-            payerInfo.Email = colleagueTxResponse.OutEmail;
-            payerInfo.FirstName = colleagueTxResponse.OutFirstName;
-            payerInfo.LastName = colleagueTxResponse.OutLastName;
-            payerInfo.MiddleName = colleagueTxResponse.OutMiddleName;
-            payerInfo.PostalCode = colleagueTxResponse.OutPostalCode;
-            payerInfo.State = colleagueTxResponse.OutState;
-            payerInfo.Street = colleagueTxResponse.OutStreet;
-            payerInfo.Telephone = colleagueTxResponse.OutTelephone;
+                // Populate the check payer information
+                payerInfo.City = colleagueTxResponse.OutCity;
+                payerInfo.Country = colleagueTxResponse.OutCountry;
+                payerInfo.Email = colleagueTxResponse.OutEmail;
+                payerInfo.FirstName = colleagueTxResponse.OutFirstName;
+                payerInfo.LastName = colleagueTxResponse.OutLastName;
+                payerInfo.MiddleName = colleagueTxResponse.OutMiddleName;
+                payerInfo.PostalCode = colleagueTxResponse.OutPostalCode;
+                payerInfo.State = colleagueTxResponse.OutState;
+                payerInfo.Street = colleagueTxResponse.OutStreet;
+                payerInfo.Telephone = colleagueTxResponse.OutTelephone;
 
-            return payerInfo;
+                return payerInfo;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         private ElectronicCheckProcessingResult ExecuteProcessCheckCTX(Payment paymentDetails)
@@ -196,18 +246,25 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 );
             }
 
-            ProcessECheckResponse colleagueTxResponse = transactionInvoker.Execute<ProcessECheckRequest, ProcessECheckResponse>(colleagueTxRequest);
+            try
+            {
+                ProcessECheckResponse colleagueTxResponse = transactionInvoker.Execute<ProcessECheckRequest, ProcessECheckResponse>(colleagueTxRequest);
 
-            // Create the data model
-            ElectronicCheckProcessingResult result = new ElectronicCheckProcessingResult();
+                // Create the data model
+                ElectronicCheckProcessingResult result = new ElectronicCheckProcessingResult();
 
-            // Cash receipt is available with successful payment
-            result.CashReceiptsId = colleagueTxResponse.OutCashRcptsId;
+                // Cash receipt is available with successful payment
+                result.CashReceiptsId = colleagueTxResponse.OutCashRcptsId;
 
-            // Capture processing error message
-            result.ErrorMessage = colleagueTxResponse.OutErrorMsg;
+                // Capture processing error message
+                result.ErrorMessage = colleagueTxResponse.OutErrorMsg;
 
-            return result;
+                return result;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         #endregion

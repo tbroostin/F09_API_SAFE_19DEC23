@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Base
@@ -108,5 +108,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// An example is the Graduation Application option "Request this be my new address going forward"
         /// </summary>
         public List<string> ChangeRequestAddressTypes { get; set; }
+
+
+        /// <summary>
+        /// Indicates whether institution wishes to allow the self-service user to authorize a personal phone number for text
+        /// </summary>
+        public bool? AuthorizePhonesForText { get; set; }
     }
 }

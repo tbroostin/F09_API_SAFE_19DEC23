@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,8 @@ using Newtonsoft.Json.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Dtos.Converters
 {
@@ -646,7 +648,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                     return Enum.TryParse(enumName, true, out result) ? result : defaultValue;
                 }
             }
-            throw new Exception(string.Format("Invalid Enumeration value: {0}", value));
+            throw new ColleagueWebApiDtoException(string.Format("Invalid Enumeration value: {0}", value));
         }
 
         /// <summary>
@@ -928,7 +930,7 @@ namespace Ellucian.Colleague.Dtos.Converters
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message, e.InnerException);
+                throw new ColleagueWebApiDtoException(e.Message, e.InnerException);
             }
             return filterMemberInfo;
         }

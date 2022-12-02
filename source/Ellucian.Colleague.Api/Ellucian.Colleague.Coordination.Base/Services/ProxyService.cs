@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -8,8 +8,10 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -57,7 +59,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             else
             {
-                if (!CurrentUser.IsPerson(assignment.ProxySubjectId))
+                if (!CurrentUser.IsPerson(assignment.ProxySubjectId) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
                 {
                     string message = "User " + assignment.ProxySubjectId + " does not have sufficient privileges to update proxy subjects.";
                     logger.Error(message);
@@ -70,10 +72,35 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     if (useEmployeeGroups)
                     {
+                        var proxyConfiguration = await _proxyRepository.GetProxyConfigurationAsync();
+                        if (proxyConfiguration == null || !proxyConfiguration.WorkflowGroups.Any())
+                        {
+                            string message = "proxyConfiguration is null";
+                            logger.Error(message);
+                            throw new Exception(message);
+                        }
+
+                        IEnumerable<string> grantableProxyPermissionCodes = new List<string>();
+                        var employeeWorkFlowGroups = proxyConfiguration.WorkflowGroups.Where(wfg => wfg.Code == "EM");
+                        if (employeeWorkFlowGroups != null && employeeWorkFlowGroups.Any())
+                        {
+                            grantableProxyPermissionCodes = employeeWorkFlowGroups.SelectMany(x => x.Workflows).Select(y => y.Code);
+                        }
+
                         // Set the IsAssigned from the input ProxyPermissionAssignment dto.
                         for (int i= 0; i < assignment.Permissions.Count; i++)
                         {
-                            assignmentEntity.Permissions[i].IsGranted = assignment.Permissions[i].IsGranted;
+                            // Only the employee group proxy permissions can be granted.
+                            if (grantableProxyPermissionCodes.Contains(assignmentEntity.Permissions[i].ProxyWorkflowCode))
+                            {
+                                assignmentEntity.Permissions[i].IsGranted = assignment.Permissions[i].IsGranted;
+                            }
+                            else
+                            {
+                                string message = "Only the employee group proxy permissions can be granted.";
+                                logger.Error(message);
+                                throw new PermissionsException(message);
+                            }
                         }
                     }
 
@@ -127,7 +154,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("id");
             }
-            if (!CurrentUser.IsPerson(id))
+            if (!CurrentUser.IsPerson(id) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 throw new PermissionsException("User does not have sufficient privileges to retrieve proxy access permissions for person " + id);
             }
@@ -211,7 +238,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("proxyPersonId");
             }
-            if (!CurrentUser.IsPerson(grantorId))
+            if (!CurrentUser.IsPerson(grantorId) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 throw new PermissionsException(
                     string.Format("User {0} does not have sufficient privileges to retrieve proxy candidates.", grantorId));
@@ -243,11 +270,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var proxyConfig = await _proxyRepository.GetProxyConfigurationAsync();
             if (proxyConfig == null)
             {
-                throw new Exception("Unable to create proxy user due to missing proxy configuration.");
+                throw new ColleagueWebApiException("Unable to create proxy user due to missing proxy configuration.");
             }
             if (!proxyConfig.CanAddOtherUsers)
             {
-                throw new Exception("Unable to create proxy user. Feature disabled in proxy configuration settings.");
+                throw new ColleagueWebApiException("Unable to create proxy user. Feature disabled in proxy configuration settings.");
             }
             var entAdapter = _adapterRegistry.GetAdapter<Dtos.Base.PersonProxyUser, Domain.Base.Entities.PersonProxyUser>();
             var dtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonProxyUser, Dtos.Base.PersonProxyUser>();

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -20,6 +20,7 @@ using System.Linq;
 using Ellucian.Web.Security;
 using System.Net;
 using System.Net.Http;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -60,18 +61,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <accessComments>Any authenticated user may retrieve grade code information.</accessComments>
         public async Task<IEnumerable<Grade>> GetAsync()
         {
-            var gradeDtoCollection = new List<Grade>();
-            var gradeCollection = await _gradeRepository.GetAsync();
-            // Get the right adapter for the type mapping
-            var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Grade>();
-            // Map the grade entity to the grade DTO
-            foreach (var grade in gradeCollection)
+            try
             {
-                gradeDtoCollection.Add(gradeDtoAdapter.MapToType(grade));
+                var gradeDtoCollection = new List<Grade>();
+                var gradeCollection = await _gradeRepository.GetAsync();
+                // Get the right adapter for the type mapping
+                var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Grade>();
+                // Map the grade entity to the grade DTO
+                foreach (var grade in gradeCollection)
+                {
+                    gradeDtoCollection.Add(gradeDtoAdapter.MapToType(grade));
+                }
+
+                return gradeDtoCollection;
             }
-
-            return gradeDtoCollection;
-
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving grades";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception tex)
+            {
+                string message = "Exception occurred while retrieving grades";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <summary>
@@ -403,10 +418,17 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return await _gradeService.QueryAnonymousGradingIdsAsync(criteria);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while querying anonymous grading Ids";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (ArgumentNullException anex)
             {
                 // student id was not provided.
-                var exceptionMsg = "a student id was not provided.";
+                var exceptionMsg = "A student id was not provided.";
                 _logger.Error(anex, exceptionMsg);
                 throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.BadRequest);
             }
@@ -426,8 +448,9 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (Exception ex)
             {
                 // Any other error, described in returned message
-                _logger.Error(ex, ex.Message);
-                throw CreateHttpResponseException("Could not retrieve anonymous grading ids for this student.", HttpStatusCode.BadRequest);
+                string exceptionMsg = "Could not retrieve anonymous grading ids for this student.";
+                _logger.Error(ex, exceptionMsg);
+                throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.BadRequest);
             }
         }
 

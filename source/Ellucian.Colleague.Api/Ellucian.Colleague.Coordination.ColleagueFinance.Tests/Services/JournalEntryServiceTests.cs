@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private JournalEntryService service = null;
         private JournalEntryService service2 = null;
         private JournalEntryService serviceForNoPermission;
+        private JournalEntryService serviceForApprovalRoles;
 
         private TestJournalEntryRepository testJournalEntryRepository;
         private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
@@ -38,6 +39,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -47,8 +50,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
+        private GeneralLedgerCurrentUser.ApprovalRoleUser approvalRoleUser = new GeneralLedgerCurrentUser.ApprovalRoleUser();
+        private GeneralLedgerUser glUser;
 
-
+        private JournalEntry journalEntryDomain;
 
         [TestInitialize]
         public void Inititalize()
@@ -58,15 +63,43 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             mockJournalEntryRepository = new Mock<IJournalEntryRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetAccountStructureAsync()).Returns(Task.FromResult(new GeneralLedgerAccountStructure()));
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(new GeneralLedgerClassConfiguration("ClassName", new List<string>(), new List<string>(), new List<string>(), new List<string>(), new List<string>())));
+
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
+
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                JournalEntriesUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                JournalEntriesUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
 
             // Create permission domain entities for viewing the journal entry.
             permissionViewJournalEntry = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewJournalEntry);
             // Assign view permission to the role that has view permissions.
             glUserRoleViewPermissions.AddPermission(permissionViewJournalEntry);
 
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
+
             // build all service objects to use in testing
             BuildValidJournalEntryService();
+
+            //journalEntryDomain = new JournalEntry("J333333", DateTime.Now, JournalEntryStatus.NotApproved, JournalEntryType.General, DateTime.Now, "Initiator");
+
+            //journalEntryDomain.AddItem(new JournalEntryItem("First line item", "11_00_02_01_33333_51111"));
+            //journalEntryDomain.AddItem(new JournalEntryItem("Second line item", "11_00_02_01_33333_52222"));
+            //journalEntryDomain.AddItem(new JournalEntryItem("Third line item", "11_00_02_01_33333_53333"));
+            //journalEntryDomain.AddItem(new JournalEntryItem("Fourth line item", "11_00_02_01_33333_54444"));
+            //journalEntryDomain.AddItem(new JournalEntryItem("Fifth line item", "11_00_02_01_33333_55555"));
+
         }
 
         [TestCleanup]
@@ -75,6 +108,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             service = null;
             service2 = null;
             serviceForNoPermission = null;
+            serviceForApprovalRoles = null;
 
             testJournalEntryRepository = null;
             testGeneralLedgerConfigurationRepository = null;
@@ -83,15 +117,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockJournalEntryRepository = null;
             mockGlConfigurationRepository = null;
             mockGeneralLedgerUserRepository = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
 
             roleRepositoryMock = null;
             roleRepository = null;
             glUserRoleViewPermissions = null;
+
+            journalEntryDomain = null;
         }
 
         #endregion
 
         #region Tests for GetJournalEntryAsync with a view permission
+
         [TestMethod]
         public async Task GetJournalEntryAsync()
         {
@@ -185,7 +224,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Assert.AreEqual(journalEntryItemDto.ProjectNumber, journalEntryItemDomain.ProjectNumber);
             }
         }
-        
+
         [TestMethod]
         public async Task GetJournalEntryAsync_StatusUnfinished_TypeOpeningBalance()
         {
@@ -292,7 +331,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             // Mock the general ledger user repository method to return a null object with the service method
             GeneralLedgerUser glUser = null;
-            mockGeneralLedgerUserRepository.Setup(repo => repo.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(Task.FromResult(glUser));
+            mockGeneralLedgerUserRepository.Setup(repo => repo.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(Task.FromResult(glUser));
+
             await service2.GetJournalEntryAsync("1");
         }
 
@@ -313,17 +354,104 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             GeneralLedgerUser glUser = await testGeneralLedgerUserRepository.GetGeneralLedgerUserAsync("0000028", null, null, null);
             this.mockGeneralLedgerUserRepository.Setup(repo => repo.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(Task.FromResult(glUser));
 
+            this.mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(new ApprovalConfiguration()));
+
             var requisitionDto = await service2.GetJournalEntryAsync("1");
         }
+
         #endregion
 
+
+        #region Tests for GetJournalEntryAsync with GL approval roles functionality
+
+        [TestMethod]
+        public async Task GetJournalEntryAccessToAllItemsAsync()
+        {
+            var personId = "3333333";
+            // Build the journal entry object
+            var journalEntryDomainEntity = await testJournalEntryRepository.GetJournalEntryAsync("J333333", personId, GlAccessLevel.Full_Access, null);
+
+            List<string> userGlAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+
+            IEnumerable<string> userGlAccessApprovalAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_52222",
+                "11_00_02_01_33333_53333", "11_00_02_01_33333_54444", "11_00_02_01_33333_55555" };
+
+            mockGeneralLedgerUserRepository.Setup(repo => repo.GetGlUserApprovalAndGlAccessAccountsAsync(personId, userGlAccessAccounts)).
+                Returns(Task.FromResult(userGlAccessApprovalAccounts));
+
+            var journalEntryDto = await serviceForApprovalRoles.GetJournalEntryAsync("J333333");
+
+            Assert.AreEqual(journalEntryDto.Items.Count(), 5);
+
+            foreach (var item in journalEntryDto.Items)
+            {
+                var repoGlAccount = userGlAccessApprovalAccounts.FirstOrDefault(x => x == item.GlAccount);
+                Assert.IsNotNull(item.GlAccount, repoGlAccount);
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetJournalEntryAsync_ApprovalConfigurationNull()
+        {
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+
+            await service2.GetJournalEntryAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetJournalEntryAsync_ApprovalConfigurationEmpty()
+        {
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(new ApprovalConfiguration()));
+
+            await service2.GetJournalEntryAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetJournalEntryAsync_ApprovalConfigurationException()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Throws(new Exception());
+
+            await service2.GetJournalEntryAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetJournalEntryAsync_ApprovalConfigurationJournalEntriesUseApprovalRoles()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(new ApprovalConfiguration() { JournalEntriesUseApprovalRoles = true }));
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(() =>
+            {
+                IEnumerable<string> approvalAccess = new List<string>() { "11_11_11_11_00000_11111", "11_11_11_11_00000_11112" };
+                return Task.FromResult(approvalAccess);
+            });
+
+            await service2.GetJournalEntryAsync("1");
+        }
+
+        #endregion
+
+
         #region Tests for GetJournalEntryAsync without a view permission
+
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
         public async Task GetJournalEntryAsync_PermissionException()
         {
             await serviceForNoPermission.GetJournalEntryAsync("J000001");
         }
+
         #endregion
 
         #region Build service method
@@ -349,11 +477,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.JournalEntry, Dtos.ColleagueFinance.JournalEntry>()).Returns(journalEntryDtoAdapter);
 
             // Set up the service
-            service = new JournalEntryService(testJournalEntryRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
-            service2 = new JournalEntryService(mockJournalEntryRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
+            service = new JournalEntryService(testJournalEntryRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
+                mockApprovalConfigurationRepositoryFalse.Object, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
+            service2 = new JournalEntryService(mockJournalEntryRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
+                mockApprovalConfigurationRepositoryFalse.Object, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
 
             // Build a service for a user that has no permissions.
-            serviceForNoPermission = new JournalEntryService(testJournalEntryRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, adapterRegistry.Object, noPermissionsUser, roleRepository, loggerObject);
+            serviceForNoPermission = new JournalEntryService(testJournalEntryRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
+                mockApprovalConfigurationRepositoryFalse.Object, adapterRegistry.Object, noPermissionsUser, roleRepository, loggerObject);
+
+            // Build a service where GL approval roles are turned on.
+            serviceForApprovalRoles = new JournalEntryService(testJournalEntryRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
+                mockApprovalConfigurationRepositoryTrue.Object, adapterRegistry.Object, approvalRoleUser, roleRepository, loggerObject);
         }
 
         #endregion

@@ -469,7 +469,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 Assert.IsNull(actualFafsas.FirstOrDefault(f => f.Id == expectedFafsa.id));
 
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(),
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(),
                     string.Format("Unable to build Fafsa object with record id {0}, studentId {1}, awardYear {2}.", expectedFafsa.id, It.IsAny<string>(), expectedFafsa.awardYear)));
             }
         }

@@ -1,5 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
-
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -12,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using System.Linq;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonBeneficiariesRepository : BaseColleagueRepository, IPersonBeneficiariesRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// ..ctor
@@ -205,7 +205,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     catch (Exception e)
                     {
-                        throw new Exception(e.Message);
+                        throw new ColleagueWebApiException(e.Message);
                     }
                 }
             }
@@ -357,7 +357,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     catch (Exception e)
                     {
-                        throw new Exception(e.Message);
+                        throw new ColleagueWebApiException(e.Message);
                     }
                 }
             }

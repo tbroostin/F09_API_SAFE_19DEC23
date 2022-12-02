@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 
@@ -69,7 +70,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     status = LoanRequestStatus.Rejected;
                     break;
                 default:
-                    logger.Info(string.Format("LoanRequestStatus does not exist for NewLoanRequest record id {0}, status {1}. Setting to Pending.", id, loanRequestRecord.NlrCurrentStatus));
+                    logger.Error(string.Format("LoanRequestStatus does not exist for NewLoanRequest record id {0}, status {1}. Setting to Pending.", id, loanRequestRecord.NlrCurrentStatus));
                     status = LoanRequestStatus.Pending;
                     break;
             }
@@ -189,7 +190,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
                 else
                 {
-                    throw new Exception("Unknown error: " + createResponse.ErrorMessage);
+                    throw new ColleagueWebApiException("Unknown error: " + createResponse.ErrorMessage);
                 }
             }
 

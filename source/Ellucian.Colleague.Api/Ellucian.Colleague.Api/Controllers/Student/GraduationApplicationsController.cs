@@ -1,9 +1,10 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly IGraduationApplicationService _graduationApplicationService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the GraduationApplicationController class.
@@ -61,6 +63,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _graduationApplicationService.GetGraduationApplicationAsync(studentId, programCode);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 _logger.Error(pe, pe.Message);
@@ -74,7 +81,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving the requested graduation application." + System.Net.HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Error occurred retrieving the requested graduation application.", System.Net.HttpStatusCode.BadRequest);
             }
         }
 
@@ -113,6 +120,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var response = Request.CreateResponse<Dtos.Student.GraduationApplication>(HttpStatusCode.Created, createdApplicationDto);
                 SetResourceLocationHeader("GetGraduationApplication", new { studentId = createdApplicationDto.StudentId, programCode = createdApplicationDto.ProgramCode });
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -170,6 +182,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return graduationApplication;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 _logger.Error(pe, pe.Message);
@@ -183,9 +200,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving the graduation applications." + System.Net.HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Error occurred retrieving the graduation applications.", System.Net.HttpStatusCode.BadRequest);
             }
-
         }
 
         /// <summary>
@@ -216,11 +232,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 throw new ArgumentException("Graduation Application is missing a required property.");
             }
+
             try
             {
                 Dtos.Student.GraduationApplication updatedApplicationDto = await _graduationApplicationService.UpdateGraduationApplicationAsync(graduationApplication);
                 var response = Request.CreateResponse<Dtos.Student.GraduationApplication>(HttpStatusCode.OK, updatedApplicationDto);
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -234,7 +256,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString());
+                _logger.Error(ex, ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -257,10 +279,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _graduationApplicationService.GetGraduationApplicationFeeAsync(studentId, programCode);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving the graduation application fee for this program." + System.Net.HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Error occurred retrieving the graduation application fee for this program.", HttpStatusCode.BadRequest);
             }
         }
 
@@ -295,6 +322,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await _graduationApplicationService.GetGraduationApplicationEligibilityAsync(criteria.StudentId, criteria.ProgramCodes);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

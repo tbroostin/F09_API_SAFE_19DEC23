@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -159,7 +160,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AttachmentCollectionService_GetAttachmentCollectionByIdAsyncNoRoleMatch()
             {
                 var collection = await testCollectionRepository.GetAttachmentCollectionByIdAsync("COLLECTION1");
@@ -318,7 +319,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AttachmentCollectionService_PostAttachmentCollectionAsyncNoRoles()
             {
                 var collection = await testCollectionRepository.GetAttachmentCollectionByIdAsync("COLLECTION1");
@@ -345,7 +346,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AttachmentCollectionService_PostAttachmentCollectionAsyncNoRoleMatch()
             {
                 var collection = await testCollectionRepository.GetAttachmentCollectionByIdAsync("COLLECTION1");
@@ -486,7 +487,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AttachmentCollectionService_PutAttachmentCollectionAsyncNoRoles()
             {
                 var collection = await testCollectionRepository.GetAttachmentCollectionByIdAsync("COLLECTION1");
@@ -513,7 +514,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AttachmentCollectionService_PutAttachmentCollectionAsyncNoRoleMatch()
             {
                 var collection = await testCollectionRepository.GetAttachmentCollectionByIdAsync("COLLECTION1");

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,10 +14,12 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -68,6 +70,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var termList = BuildTerms(termData, termLocationData, locationData, sessionData);
                         return termList;
                     }
+                    catch (ColleagueSessionExpiredException ce)
+                    {
+                        string message = string.Format("Colleague session got expired  while retrieving all the terms from repository");
+                        logger.Error(ce, message);
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         string errorMessage = "Unable to read all Terms from the database.";
@@ -89,6 +97,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 return (await GetAsync()).Where(t => t.Code == id).First();
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving term");
+                throw;
             }
             catch
             {
@@ -504,7 +517,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch( Exception ex )
             {
-                throw new Exception( string.Format( "Error occured while getting guids for {0}.", "TERMS" ), ex ); ;
+                throw new ColleagueWebApiException( string.Format( "Error occured while getting guids for {0}.", "TERMS" ), ex ); ;
             }
             return guidCollection;
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 {
@@ -162,7 +163,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         status = BlanketPurchaseOrderStatus.Voided;
                         break;
                     default:
-                        throw new Exception("Invalid status specified in TestPurchaseOrderRepository.");
+                        throw new ColleagueWebApiException("Invalid status specified in TestPurchaseOrderRepository.");
                 }
 
                 statusDate = Convert.ToDateTime(blanketPurchaseOrdersArray[i, 5]);

@@ -11,6 +11,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -123,6 +124,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get cost centers.");
+                throw CreateHttpResponseException("Session expired - unable to get cost centers.", HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

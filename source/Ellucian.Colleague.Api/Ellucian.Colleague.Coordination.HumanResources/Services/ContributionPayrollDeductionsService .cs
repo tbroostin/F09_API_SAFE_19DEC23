@@ -104,14 +104,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// </summary>
         /// <returns>Collection of ContributionPayrollDeductions DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>> GetContributionPayrollDeductionsAsync(int offset, int limit,
-            string arrangement = "", bool bypassCache = false)
+            string arrangement = "", string deductedOn = "", Dictionary<string, string> filterQualifiers = null, bool bypassCache = false)
         {
             string arrangementCode = "";
             if (!string.IsNullOrEmpty(arrangement))
             {
                 try
                 {
-                    arrangementCode = await _contributionPayrollDeductionsRepository.GetKeyFromGuidAsync(arrangement);
+                    arrangementCode = await _contributionPayrollDeductionsRepository.GetArrangementKeyFromGuidAsync(arrangement);
                     if (string.IsNullOrEmpty(arrangementCode))
                     {
                         return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), 0);
@@ -126,7 +126,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             Tuple<IEnumerable<PayrollDeduction>, int> contributionPayrollDeductionsEntitiesTuple = null;
             try
             {
-                contributionPayrollDeductionsEntitiesTuple = await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionsAsync(offset, limit, arrangementCode, bypassCache);
+                contributionPayrollDeductionsEntitiesTuple = await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionsAsync(offset, limit, arrangementCode, deductedOn, filterQualifiers, bypassCache);
             }
 
             catch (RepositoryException ex)

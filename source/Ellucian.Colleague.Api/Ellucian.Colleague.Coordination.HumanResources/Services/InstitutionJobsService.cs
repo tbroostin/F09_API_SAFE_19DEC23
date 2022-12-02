@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -688,7 +688,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -739,7 +739,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -1006,12 +1006,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         var personPositionWageItem = response.PerposwgItems.Where(x => x.StartDate == accountingString.StartOn).FirstOrDefault();
                         if (personPositionWageItem == null)
                         {
-                            throw new Exception("accountingStringAllocations startOn must be associated with a corresponding salary startOn date.");
+                            throw new ColleagueWebApiException("accountingStringAllocations startOn must be associated with a corresponding salary startOn date.");
                         }
 
                         if(accountingString.EndOn != personPositionWageItem.EndDate)
                         {
-                            throw new Exception("accountingStringAllocations endOn does not match the salary endOn.");
+                            throw new ColleagueWebApiException("accountingStringAllocations endOn does not match the salary endOn.");
                         }
 
                         if (personPositionWageItem.AccountingStringAllocation == null)
@@ -1027,7 +1027,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         }
                         else
                         {
-                            throw new Exception("The accountingString associated with start on " + accountingString.StartOn + " is required but was missing in the payload");
+                            throw new ColleagueWebApiException("The accountingString associated with start on " + accountingString.StartOn + " is required but was missing in the payload");
                         }
                         if (accountingString.AllocatedPercentage != null)
                         {
@@ -1035,7 +1035,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         }
                         else
                         {
-                            throw new Exception("The allocatedPercentage associated with start on " + accountingString.StartOn + " is required but was missing in the payload");
+                            throw new ColleagueWebApiException("The allocatedPercentage associated with start on " + accountingString.StartOn + " is required but was missing in the payload");
                         }
 
                         personPositionWageItem.AccountingStringAllocation.Add(ppwgGlAssoc);
@@ -1169,7 +1169,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred processing InstitutionJob Id: ", institutionJobsId, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred processing InstitutionJob Id: ", institutionJobsId, " ", ex.Message));
             }
 
             return response;
@@ -1270,7 +1270,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 else
                 {
-                    throw new Exception("Unable to determine institution job status.  Id" + source.Id);
+                    throw new ColleagueWebApiException("Unable to determine institution job status.  Id" + source.Id);
                 }
 
                 // Pay Status
@@ -1465,7 +1465,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
             }
             return institutionJobs;
         }
@@ -1546,7 +1546,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 else
                 {
-                    throw new Exception("Unable to determine institution job status.  Id" + source.Id);
+                    throw new ColleagueWebApiException("Unable to determine institution job status.  Id" + source.Id);
                 }
 
                 var hoursPerPeriodDtoProperties = new List<HoursPerPeriodDtoProperty>();
@@ -1725,7 +1725,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
             }
             return institutionJobs;
         }
@@ -2092,7 +2092,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                //throw new Exception(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
+                //throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
                 IntegrationApiExceptionAddError(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message), "Bad.Data", source.Guid, source.Id);
                 throw IntegrationApiException;
             }

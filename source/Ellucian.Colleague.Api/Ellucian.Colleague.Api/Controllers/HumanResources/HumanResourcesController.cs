@@ -3,6 +3,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -28,7 +29,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly IAdapterRegistry adapterRegistry;
-        private readonly IHumanResourceDemographicsService humanResourceDemographicsService;
+        private readonly IHumanResourceDemographicsService humanResourceDemographicsService; 
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedErrorMessage = "Unexpected error occurred while getting leave request details";
 
         /// <summary>
         /// HumanResourcesController constructor
@@ -109,10 +112,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(pe, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
 
         }
@@ -143,6 +151,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(pe, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException ane)
             {
 
@@ -157,7 +170,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
 
         }

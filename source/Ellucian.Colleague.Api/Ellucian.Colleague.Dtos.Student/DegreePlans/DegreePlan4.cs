@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -80,5 +80,10 @@ namespace Ellucian.Colleague.Dtos.Student.DegreePlans
         /// The Datetime when notification is archived
         /// </summary>
         public DateTime? ArchiveNotificationDate { get; set; }
+
+        /// <summary>
+        /// The advising office email id
+        /// </summary>
+        public string AdvisingOfficeEmailId { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 if (!errorFound)
                 {
-                    throw ex;
+                    throw;
                 }
                 return null;
             }
@@ -470,7 +470,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Ellucian.Data.Colleague.DataContracts.IntlParams newIntlParams = new Ellucian.Data.Colleague.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";

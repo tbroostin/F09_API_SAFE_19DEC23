@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -738,7 +738,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, "For the Country: '", source.Country, "' .ISOCode Not found: ", country.IsoAlpha3Code));
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, "For the Country: '", source.Country, "' .ISOCode Not found: ", country.IsoAlpha3Code));
                     }
 
                     addressCountry.PostalTitle = country.Description.ToUpper();

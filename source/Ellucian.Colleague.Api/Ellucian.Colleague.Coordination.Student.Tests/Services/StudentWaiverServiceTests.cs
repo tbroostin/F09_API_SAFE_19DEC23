@@ -16,6 +16,7 @@ using Moq;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -67,6 +68,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentProgramRepository studentProgramRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
             private IStudentReferenceDataRepository referenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
             private Mock<ICourseRepository> courseRepositoryMock;
             private ICourseRepository courseRepository;
             private IStudentWaiverService waiverService;
@@ -96,6 +99,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentProgramRepository = studentProgramRepositoryMock.Object;
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
                 courseRepositoryMock = new Mock<ICourseRepository>();
                 courseRepository = courseRepositoryMock.Object;
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -107,7 +112,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = (await new TestSectionRepository().GetAsync()).First();
                 section.AddFaculty("1111100");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Mock Waivers response
                 waiversResponse = BuildWaiverRepoResponse();
@@ -122,7 +127,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
+                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, baseReferenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
             }
 
             [TestCleanup]
@@ -139,7 +144,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionStudentWaivers_ThrowsExceptionIfSectionStringNull()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync(null);
             }
 
@@ -147,15 +152,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionStudentWaivers_ThrowsExceptionIfSectionStringEmpty()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetSectionStudentWaivers_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new ApplicationException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync("SEC1");
             }
 
@@ -164,7 +169,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task GetSectionStudentWaivers_ThrowsKeyNotFoundExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Returns(Task.FromResult(nullSection));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync("SEC1");
             }
 
@@ -181,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Act
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync("SEC1");
@@ -195,16 +200,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetSectionStudentWaivers_ThrowsExceptionIfAdapterErrorOccurs()
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
                 // Null adapter registry to force adapter error
                 ITypeAdapter<Domain.Student.Entities.StudentWaiver, Dtos.Student.StudentWaiver> nullAdapter = null;
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.StudentWaiver, Dtos.Student.StudentWaiver>()).Returns(nullAdapter);
-                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
+                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, baseReferenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
                 // Act
                 var waiverDto = await waiverService.GetSectionStudentWaiversAsync("SEC1");
             }
@@ -214,7 +219,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
                 // Mock empty response from waiver repository
                 List<StudentWaiver> nullResponse = null;
                 waiverRepoMock.Setup(repo => repo.GetSectionWaiversAsync(It.IsAny<string>())).Returns(Task.FromResult(nullResponse));
@@ -264,6 +269,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentProgramRepository studentProgramRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
             private IStudentReferenceDataRepository referenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
             private Mock<ICourseRepository> courseRepositoryMock;
             private ICourseRepository courseRepository;
             private IStudentWaiverService waiverService;
@@ -292,6 +299,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentProgramRepository = studentProgramRepositoryMock.Object;
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
                 courseRepositoryMock = new Mock<ICourseRepository>();
                 courseRepository = courseRepositoryMock.Object;
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -304,7 +313,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = (await new TestSectionRepository().GetAsync()).First();
                 section.AddFaculty("1111100");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Mock Waivers response
                 waiverResponse = BuildWaiverRepoResponse();
@@ -319,7 +328,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
+                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, baseReferenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
             }
 
             [TestCleanup]
@@ -355,7 +364,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentWaiver_ThrowsExceptionIfOtherExceptionThrownByRepositoryGet()
             {
                 waiverRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Throws(new Exception());
@@ -363,19 +372,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentWaiver_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new ApplicationException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
                 var waiverDto = await waiverService.GetStudentWaiverAsync(waiverId);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentWaiver_ThrowsExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Returns(Task.FromResult(nullSection));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
                 var waiverDto = await waiverService.GetStudentWaiverAsync(waiverId);
             }
 
@@ -399,7 +408,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Act
                 var waiverDto = await waiverService.GetStudentWaiverAsync(waiverId);
@@ -438,6 +447,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentProgramRepository studentProgramRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
             private IStudentReferenceDataRepository referenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
             private Mock<ICourseRepository> courseRepositoryMock;
             private ICourseRepository courseRepository;
             private IStudentWaiverService waiverService;
@@ -469,6 +480,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentProgramRepository = studentProgramRepositoryMock.Object;
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
                 courseRepositoryMock = new Mock<ICourseRepository>();
                 courseRepository = courseRepositoryMock.Object;
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -493,7 +506,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 section.OverridesCourseRequisites = true;
                 // set up faculty for the section
                 section.AddFaculty(currentUserFactory.CurrentUser.PersonId);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
                 // Mock course response (for requisite checking)--get the course from the test course repository using the course identified in the section
                 course = await new TestCourseRepository().GetAsync(section.CourseId);
                 courseRepositoryMock.Setup(repo => repo.GetAsync(section.CourseId)).Returns(Task.FromResult(course));
@@ -529,7 +542,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentPrograms = new List<StudentProgram>() { new StudentProgram(studentId, "MATH.BA", "2012") };
                 studentProgramRepositoryMock.Setup(x => x.GetAsync(studentId)).ReturnsAsync(studentPrograms);
 
-                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
+                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, baseReferenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
             }
 
             [TestCleanup]
@@ -579,7 +592,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateStudentWaiver_ThrowsExceptionIfReasonCodeNotValid()
             {
                 waiverDto.ReasonCode = "blah";
@@ -598,13 +611,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task CreateStudentWaiver_ExceptionIfSectionThrowsKeyNotFoundException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new KeyNotFoundException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new KeyNotFoundException());
                 await waiverService.CreateStudentWaiverAsync(waiverDto);
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateStudentWaiver_ThrowsExceptionIfUnwaiverableRequisitesInWaiver()
             {
                 section.Requisites = new List<Requisite>();
@@ -662,6 +675,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentProgramRepository studentProgramRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
             private IStudentReferenceDataRepository referenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
             private Mock<ICourseRepository> courseRepositoryMock;
             private ICourseRepository courseRepository;
             private IStudentWaiverService waiverService;
@@ -688,6 +703,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentProgramRepository = studentProgramRepositoryMock.Object;
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
                 courseRepositoryMock = new Mock<ICourseRepository>();
                 courseRepository = courseRepositoryMock.Object;
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -708,7 +725,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
+                waiverService = new StudentWaiverService(adapterRegistry, waiverRepository, sectionRepository, studentProgramRepository, referenceDataRepository, baseReferenceDataRepository, courseRepository, currentUserFactory, roleRepo, logger, studentRepository, configurationRepository);
             }
 
             [TestCleanup]

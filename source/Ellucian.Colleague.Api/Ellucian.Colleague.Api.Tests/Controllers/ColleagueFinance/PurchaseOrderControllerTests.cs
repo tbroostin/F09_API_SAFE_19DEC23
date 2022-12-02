@@ -1,4 +1,5 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ using Ellucian.Web.Http.Filters;
 using System.Web.Http.Controllers;
 using System.Collections;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -478,6 +480,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_PermissionsException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_Exception()
         {
             _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -674,9 +684,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task PoController_PostPurchaseOrderAsync_ArgumentNullException()
+        public async Task PoController_PostPurchaseOrderAsync_PermissionsException()
         {
-            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new ArgumentNullException());
+            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new PermissionsException());
+
+            await _purchaseOrdersController.PostPurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_PostPurchaseOrderAsync_ColleagueSessionExpiredException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+
+            await _purchaseOrdersController.PostPurchaseOrderAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_PostPurchaseOrderAsync_Exception()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new Exception());
 
             await _purchaseOrdersController.PostPurchaseOrderAsync(null);
         }
@@ -1898,6 +1926,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task RequisitionsController_QueryRequisitionSummariessAsync_PermissionsException()
         {
             purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new PermissionsException());
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync_ColleagueSessionExpiredException()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
             await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
         }
 

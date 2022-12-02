@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<IFinanceQueryService> financeQueryServiceMock;
         private FinanceQueryCriteria criteria;
         private IEnumerable<FinanceQuery> financeQueryList;
+        private IEnumerable<FinanceQueryActivityDetail> financeQueryDetailList;
         private Mock<ILogger> loggerMock;
         private FinanceQueryController controller;
 
@@ -50,8 +51,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
 
             financeQueryList = new List<FinanceQuery>();
+            financeQueryDetailList = new List<FinanceQueryActivityDetail>();
             financeQueryServiceMock.Setup(m => m.QueryFinanceQuerySelectionByPostAsync(It.IsAny<Dtos.ColleagueFinance.FinanceQueryCriteria>())).ReturnsAsync(financeQueryList);
-
+            financeQueryServiceMock.Setup(m => m.QueryFinanceQueryDetailSelectionByPostAsync(It.IsAny<FinanceQueryCriteria>())).ReturnsAsync(financeQueryDetailList);
 
             controller = new FinanceQueryController(financeQueryServiceMock.Object, loggerMock.Object)
             {
@@ -68,6 +70,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             loggerMock = null;
         }
 
+        #region Finance Query Summary
+
+        [TestMethod]
+        public async Task FinanceQueryController_QueryFinanceQuerySelectionByPostAsync_Success()
+        {
+            var actual = await controller.QueryFinanceQuerySelectionByPostAsync(criteria);
+            Assert.AreEqual(financeQueryList, actual);
+        }
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task FinanceQueryController_QueryFinanceQuerySelectionByPostAsync_Exception()
@@ -79,10 +90,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task FinanceQueryController_QueryFinanceQuerySelectionByPostAsync_ApplicationException()
+        public async Task FinanceQueryController_QueryFinanceQuerySelectionByPostAsync_NullCriteriaException()
         {
             financeQueryServiceMock.Setup(m => m.QueryFinanceQuerySelectionByPostAsync(It.IsAny<Dtos.ColleagueFinance.FinanceQueryCriteria>())).Throws<ApplicationException>();
-            await controller.QueryFinanceQuerySelectionByPostAsync(criteria);
+            await controller.QueryFinanceQuerySelectionByPostAsync(null);
         }
 
         [TestMethod]
@@ -93,5 +104,42 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await controller.QueryFinanceQuerySelectionByPostAsync(criteria);
         }
 
+        #endregion
+
+        #region Finance Query Detail (CSV)
+
+        [TestMethod]
+        public async Task FinanceQueryController_QueryFinanceQueryDetailSelectionByPostAsync_Success()
+        {
+            var actual = await controller.QueryFinanceQueryDetailSelectionByPostAsync(criteria);
+            Assert.AreEqual(financeQueryDetailList, actual);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FinanceQueryController_QueryFinanceQueryDetailSelectionByPostAsync_Exception()
+        {
+            financeQueryServiceMock.Setup(m => m.QueryFinanceQueryDetailSelectionByPostAsync(It.IsAny<Dtos.ColleagueFinance.FinanceQueryCriteria>())).Throws<Exception>();
+            await controller.QueryFinanceQueryDetailSelectionByPostAsync(criteria);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FinanceQueryController_QueryFinanceQueryDetailSelectionByPostAsync_NullCriteriaException()
+        {
+            financeQueryServiceMock.Setup(m => m.QueryFinanceQueryDetailSelectionByPostAsync(It.IsAny<Dtos.ColleagueFinance.FinanceQueryCriteria>())).Throws<ApplicationException>();
+            await controller.QueryFinanceQueryDetailSelectionByPostAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task FinanceQueryController_QueryFinanceQueryDetailSelectionByPostAsync_ArgumentNullException()
+        {
+            financeQueryServiceMock.Setup(m => m.QueryFinanceQueryDetailSelectionByPostAsync(It.IsAny<Dtos.ColleagueFinance.FinanceQueryCriteria>())).Throws<ArgumentNullException>();
+            await controller.QueryFinanceQueryDetailSelectionByPostAsync(criteria);
+        }
+
+        #endregion
     }
 }

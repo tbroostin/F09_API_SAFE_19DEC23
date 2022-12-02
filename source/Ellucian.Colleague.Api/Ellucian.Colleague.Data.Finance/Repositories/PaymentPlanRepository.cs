@@ -15,6 +15,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -176,22 +177,30 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 PlanId = planId,
             };
 
-            // Execute the transaction
-            var response = transactionInvoker.Execute<GetPlanCustomScheduleDatesRequest, GetPlanCustomScheduleDatesResponse>(request);
-
-            // Check for errors from the response
-            if (!String.IsNullOrEmpty(response.ErrorMsg))
+            try
             {
-                throw new InvalidOperationException("Error getting plan custom schedule dates: " + response.ErrorMsg);
+                // Execute the transaction
+                var response = transactionInvoker.Execute<GetPlanCustomScheduleDatesRequest, GetPlanCustomScheduleDatesResponse>(request);
+
+                // Check for errors from the response
+                if (!String.IsNullOrEmpty(response.ErrorMsg))
+                {
+                    throw new InvalidOperationException("Error getting plan custom schedule dates: " + response.ErrorMsg);
+                }
+
+                // Build the list of plan custom schedule dates in order: (1) Down Payment Date, (2) First Payment Date, (3) any additional dates
+                List<DateTime?> scheduleDates = new List<DateTime?>();
+                scheduleDates.Add(response.DownPmtDate);
+                scheduleDates.Add(response.FirstPmtDate);
+                scheduleDates.AddRange(response.OutAddnlPmtDates);
+
+                return scheduleDates;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
 
-            // Build the list of plan custom schedule dates in order: (1) Down Payment Date, (2) First Payment Date, (3) any additional dates
-            List<DateTime?> scheduleDates = new List<DateTime?>();
-            scheduleDates.Add(response.DownPmtDate);
-            scheduleDates.Add(response.FirstPmtDate);
-            scheduleDates.AddRange(response.OutAddnlPmtDates);
-
-            return scheduleDates;
         }
 
         /// <summary>
@@ -261,17 +270,24 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 }
             }
 
-            var response = transactionInvoker.Execute<ApprovePaymentPlanTermsRequest, ApprovePaymentPlanTermsResponse>(request);
-
-            if (!String.IsNullOrEmpty(response.ErrorMsg))
+            try
             {
-                throw new InvalidOperationException(response.ErrorMsg);
+                var response = transactionInvoker.Execute<ApprovePaymentPlanTermsRequest, ApprovePaymentPlanTermsResponse>(request);
+
+                if (!String.IsNullOrEmpty(response.ErrorMsg))
+                {
+                    throw new InvalidOperationException(response.ErrorMsg);
+                }
+
+                // Create the new object so to be returned
+                var planApproval = GetPaymentPlanApproval(response.PayPlanApprovalsId);
+
+                return planApproval;
             }
-
-            // Create the new object so to be returned
-            var planApproval = GetPaymentPlanApproval(response.PayPlanApprovalsId);
-
-            return planApproval;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -286,50 +302,58 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("approvalId", "Approval response ID is required.");
             }
 
-            PayPlanApprovals planApproval = DataReader.ReadRecord<PayPlanApprovals>(approvalId);
-            if (planApproval == null)
+            try
             {
-                throw new KeyNotFoundException("Specified approval response ID is invalid: " + approvalId);
+                PayPlanApprovals planApproval = DataReader.ReadRecord<PayPlanApprovals>(approvalId);
+
+                if (planApproval == null)
+                {
+                    throw new KeyNotFoundException("Specified approval response ID is invalid: " + approvalId);
+                }
+                //var payPlan = GetPaymentPlan(planApproval.PpaPayPlan);
+
+                // We need the acknowledgement date and time as a DateTimeOffset
+                DateTimeOffset ackDateTime = planApproval.PpaAckTime.ToPointInTimeDateTimeOffset(planApproval.PpaAckDate, _colleagueTimeZone).GetValueOrDefault();
+
+                var planSchedule = new List<PlanSchedule>();
+                foreach (var item in planApproval.PpaSchedulesEntityAssociation)
+                {
+                    planSchedule.Add(new PlanSchedule(item.PpaDueDateAssocMember.GetValueOrDefault(), item.PpaDueAmountAssocMember.GetValueOrDefault()));
+                }
+                // TODO JTM - If this is where the failure is occurring for some reason, use the following code that should work the same
+                //for (int i = 0; i < planApproval.PpaDueDate.Count; i++)
+                //{
+                //    planSchedule.Add(new PlanSchedule(planApproval.PpaDueDate[i].GetValueOrDefault(), planApproval.PpaDueAmount[i].GetValueOrDefault());
+                //}
+
+
+                // TODO: JTM/JPM2 - Add the student/person ID to PAY.PLAN.APPROVALS, then it should go in the constructors 
+                // of both PaymentPlanTermsAcceptance and PaymentPlanApproval, if it isn't already there.
+
+
+                // Create the entity and return it
+                var payPlanApproval = new PaymentPlanApproval(planApproval.Recordkey, planApproval.PpaStudent, planApproval.PpaStudentName, ackDateTime, planApproval.PpaTemplateId,
+                    planApproval.PpaPayPlan, planApproval.PpaTermsApprDocResponse, planApproval.PpaTotalPlanAmt.GetValueOrDefault(),
+                    planSchedule)
+                {
+                    PaymentControlId = planApproval.PpaIpcRegistration,
+                    AcknowledgementDocumentId = planApproval.PpaAckApprovalDocument,
+                    DownPaymentAmount = planApproval.PpaDownPaymentAmt.GetValueOrDefault(),
+                    DownPaymentDate = planApproval.PpaDownPaymentDate.GetValueOrDefault(),
+                    SetupChargeAmount = planApproval.PpaSetupChargeAmt.GetValueOrDefault(),
+                    Frequency = ConvertToFrequencyEntity(planApproval.PpaFrequency),
+                    NumberOfPayments = planApproval.PpaNumberOfPayments.GetValueOrDefault(),
+                    GraceDays = planApproval.PpaGraceDays.GetValueOrDefault(),
+                    LateChargeAmount = planApproval.PpaLateChargeAmt.GetValueOrDefault(),
+                    LateChargePercentage = planApproval.PpaLateChargePct.GetValueOrDefault(),
+                };
+
+                return payPlanApproval;
             }
-            //var payPlan = GetPaymentPlan(planApproval.PpaPayPlan);
-
-            // We need the acknowledgement date and time as a DateTimeOffset
-            DateTimeOffset ackDateTime = planApproval.PpaAckTime.ToPointInTimeDateTimeOffset(planApproval.PpaAckDate, _colleagueTimeZone).GetValueOrDefault();
-
-            var planSchedule = new List<PlanSchedule>();
-            foreach (var item in planApproval.PpaSchedulesEntityAssociation)
+            catch (ColleagueSessionExpiredException)
             {
-                planSchedule.Add(new PlanSchedule(item.PpaDueDateAssocMember.GetValueOrDefault(), item.PpaDueAmountAssocMember.GetValueOrDefault()));
+                throw;
             }
-            // TODO JTM - If this is where the failure is occurring for some reason, use the following code that should work the same
-            //for (int i = 0; i < planApproval.PpaDueDate.Count; i++)
-            //{
-            //    planSchedule.Add(new PlanSchedule(planApproval.PpaDueDate[i].GetValueOrDefault(), planApproval.PpaDueAmount[i].GetValueOrDefault());
-            //}
-
-
-            // TODO: JTM/JPM2 - Add the student/person ID to PAY.PLAN.APPROVALS, then it should go in the constructors 
-            // of both PaymentPlanTermsAcceptance and PaymentPlanApproval, if it isn't already there.
-
-
-            // Create the entity and return it
-            var payPlanApproval = new PaymentPlanApproval(planApproval.Recordkey, planApproval.PpaStudent, planApproval.PpaStudentName, ackDateTime, planApproval.PpaTemplateId,
-                planApproval.PpaPayPlan, planApproval.PpaTermsApprDocResponse, planApproval.PpaTotalPlanAmt.GetValueOrDefault(),
-                planSchedule)
-            {
-                PaymentControlId = planApproval.PpaIpcRegistration,
-                AcknowledgementDocumentId = planApproval.PpaAckApprovalDocument,
-                DownPaymentAmount = planApproval.PpaDownPaymentAmt.GetValueOrDefault(),
-                DownPaymentDate = planApproval.PpaDownPaymentDate.GetValueOrDefault(),
-                SetupChargeAmount = planApproval.PpaSetupChargeAmt.GetValueOrDefault(),
-                Frequency = ConvertToFrequencyEntity(planApproval.PpaFrequency),
-                NumberOfPayments = planApproval.PpaNumberOfPayments.GetValueOrDefault(),
-                GraceDays = planApproval.PpaGraceDays.GetValueOrDefault(),
-                LateChargeAmount = planApproval.PpaLateChargeAmt.GetValueOrDefault(),
-                LateChargePercentage = planApproval.PpaLateChargePct.GetValueOrDefault(),
-            };
-
-            return payPlanApproval;
         }
 
         /// <summary>
@@ -447,6 +471,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 {
                     throw new ApplicationException("Transaction GET.PROPOSED.PAYMENT.PLAN.INFO did not return any data.");
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

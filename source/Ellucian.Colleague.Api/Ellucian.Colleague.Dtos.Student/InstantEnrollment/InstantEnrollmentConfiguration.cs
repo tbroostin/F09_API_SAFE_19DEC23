@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using System;
 using System.Collections.Generic;
@@ -51,6 +51,11 @@ namespace Ellucian.Colleague.Dtos.Student.InstantEnrollment
         /// Flag indicating whether or not any instant enrollment sections should show bookstore links
         /// </summary>
         public bool ShowInstantEnrollmentBookstoreLink { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not a non-citizen individual can enroll in an instant enrollment section
+        /// </summary>
+        public bool AllowNonCitizenRegistration { get; set; }
 
         /// <summary>
         /// List of subject codes used to restrict which course sections are available in the Colleague Self-Service instant enrollment workflows; only course sections with subjects in this list are available

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,6 +55,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private Collection<GlpFyr> glpFyrDataContracts;
         private GeneralLedgerComponent objectMajorComponent;
 
+        private string[] glaIds = new string[] { };
         private string[] glsIds = new string[] { };
         private string[] encIds = new string[] { };
         private string[] glAcctsIds = new string[] { };
@@ -142,6 +143,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.param3_glClassConfiguration = null;
             this.param4_FiscalYear = 0;
             this.param4_financeQueryCriteria = null;
+            glaIds = new string[] { };
             glsIds = new string[] { };
             encIds = new string[] { };
             glAcctsIds = new string[] { };
@@ -739,6 +741,590 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             //no gl account line items will be returned.
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count());
+        }
+
+        #endregion
+
+        #region GetFinanceQueryActivityDetailAsync
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_Success()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            PopulateEncFyrDataContracts(glAccounts);
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<EncFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<EncFyr>() { new EncFyr() { Recordkey = "10_00_01_01_EJK88_50000", EncPoEntityAssociation = new List<EncFyrEncPo>() { new EncFyrEncPo() { EncPoNoAssocMember = "1", EncPoDateAssocMember = new DateTime(), EncPoAmtAssocMember = 10m, EncPoVendorAssocMember = "1", EncPoIdAssocMember = "1" } }, EncReqEntityAssociation = new List<EncFyrEncReq>() { new EncFyrEncReq() { EncReqNoAssocMember = "2", EncReqDateAssocMember = new DateTime(), EncReqAmtAssocMember = 20m, EncReqVendorAssocMember = "2", EncReqIdAssocMember = "2" } } } }));
+            
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(1, financeQueryActivityDetailItems.Count);
+            Assert.AreEqual(3, financeQueryActivityDetailItems.First().Transactions.Count);
+            // Make sure the amounts of each GL account match the amounts in the data contracts.
+            foreach (var glAccountActivityDetail in financeQueryActivityDetailItems)
+            {
+                Assert.IsNotNull(glAccountActivityDetail);
+                Assert.AreEqual("10_00_01_01_EJK88_50000", glAccountActivityDetail.GlAccountNumber);
+
+            }
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_MissingFiscalYear()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = null;
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+            
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoGlUserAccounts()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            PopulateEncFyrDataContracts(glAccounts);
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<EncFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<EncFyr>() { new EncFyr() { Recordkey = "10_00_01_01_EJK88_50000", EncPoEntityAssociation = new List<EncFyrEncPo>() { new EncFyrEncPo() { EncPoNoAssocMember = "1", EncPoDateAssocMember = new DateTime(), EncPoAmtAssocMember = 10m, EncPoVendorAssocMember = "1", EncPoIdAssocMember = "1" } }, EncReqEntityAssociation = new List<EncFyrEncReq>() { new EncFyrEncReq() { EncReqNoAssocMember = "2", EncReqDateAssocMember = new DateTime(), EncReqAmtAssocMember = 20m, EncReqVendorAssocMember = "2", EncReqIdAssocMember = "2" } } } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoGlUser()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = null;
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            PopulateEncFyrDataContracts(glAccounts);
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<EncFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<EncFyr>() { new EncFyr() { Recordkey = "10_00_01_01_EJK88_50000", EncPoEntityAssociation = new List<EncFyrEncPo>() { new EncFyrEncPo() { EncPoNoAssocMember = "1", EncPoDateAssocMember = new DateTime(), EncPoAmtAssocMember = 10m, EncPoVendorAssocMember = "1", EncPoIdAssocMember = "1" } }, EncReqEntityAssociation = new List<EncFyrEncReq>() { new EncFyrEncReq() { EncReqNoAssocMember = "2", EncReqDateAssocMember = new DateTime(), EncReqAmtAssocMember = 20m, EncReqVendorAssocMember = "2", EncReqIdAssocMember = "2" } } } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoGlAccountStructure()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = null;
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+            
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoGlConfiguration()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                null,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+            
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_GenLdgrRecordIsNull()
+        {
+            // Get the GL User expense accounts from the test repository.
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_01_EJK88_20000",  // Object 20000
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            this.param1_GlUser = await testGlUserRepository.GetGeneralLedgerUserAsync("0000032", null, null, null);
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param4_FiscalYear = testGlConfigurationRepository.StartYear;
+            testGlConfigurationRepository.GenLdgrDataContracts[1] = null;
+
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count());
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_GenLdgrRecordStatusIsNull()
+        {
+            // Get the GL User expense accounts from the test repository.
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_01_EJK88_20000",  // Object 20000
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            this.param1_GlUser = await testGlUserRepository.GetGeneralLedgerUserAsync("0000032", null, null, null);
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param4_FiscalYear = testGlConfigurationRepository.StartYear;
+            testGlConfigurationRepository.GenLdgrDataContracts[1].GenLdgrStatus = null;
+
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count());
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoTransactionRecordKey()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoTransactionSourceCode()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoTransactionGlaRefNo()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = new DateTime() } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
+        }
+
+        [TestMethod]
+        public async Task GetFinanceQueryActivityDetailAsync_NoTransactionGlaTrDate()
+        {
+            var glAccounts = new List<string>()
+            {
+                "10_00_01_00_EJK88_10000",  // Object 10000 Asset
+                "10_00_01_00_EJK99_10000",  // Object 10000
+
+                "10_00_01_01_EJK88_20000",  // Object 20000 Liability
+                "10_00_01_01_EJK99_20000",  // Object 20000
+
+                "10_00_01_02_EJK88_30000",  // Object 30000 Fund Balance
+                "10_00_01_02_EJK99_30000",  // Object 30000
+
+                "10_00_01_00_EJK88_40000",  // Object 40000 Revenue
+                "10_00_01_00_EJK99_40000",  // Object 40000
+
+                "10_00_01_01_EJK88_50000",  // Object 50000 Expense
+                "10_00_01_01_EJK99_50000",  // Object 50000
+                "10_00_01_02_EJK88_70000",  // Object 70000 Expense
+                "10_00_01_02_EJK99_70000"   // Object 70000
+            };
+            glaIds = glAccounts.ToArray();
+            this.param1_GlUser = new GeneralLedgerUser("0000032", "Kleehammer");
+            this.param1_GlUser.AddAllAccounts(glAccounts);
+            this.param1_GlUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            this.param2_glAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            this.param4_financeQueryCriteria.FiscalYear = (await testGlConfigurationRepository.GetFiscalYearConfigurationAsync()).FiscalYearForToday.ToString();
+
+            dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string[]>(), true))
+                .Returns(Task.FromResult(new Collection<GlaFyr>() { new GlaFyr() { Recordkey = "10_00_01_01_EJK88_50000", GlaAcctId = "10_00_01_01_EJK88_50000", GlaCredit = 0m, GlaDebit = 0m, GlaDescription = "1", GlaProjectsIds = "1", GlaRefNo = "1", GlaSource = "JE", GlaSysDate = new DateTime(), GlaTrDate = null } }));
+
+            testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository(null, false, glAccounts);
+
+            // Populate the non-pooled accounts data contracts
+            PopulateGlAccountDataContracts(glAccounts, GlBudgetPoolType.None, null);
+
+            // Obtain the GL object codes domain entities from the GL accounts.
+            var result = await actualRepository.GetFinanceQueryActivityDetailAsync(this.param1_GlUser,
+                this.param2_glAccountStructure,
+                this.param3_glClassConfiguration,
+                this.param4_financeQueryCriteria,
+                "0000001");
+
+            Assert.IsNotNull(result);
+
+            var financeQueryActivityDetailItems = result.ToList();
+
+            Assert.AreEqual(0, financeQueryActivityDetailItems.Count);
         }
 
         #endregion
@@ -2526,6 +3112,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             transManagerMock.Setup(tio => tio.ExecuteAsync<GetGlAccountDescriptionRequest, GetGlAccountDescriptionResponse>(It.IsAny<GetGlAccountDescriptionRequest>())).Returns(() =>
             {
                 return Task.FromResult(glAccountsDescriptionResponse);
+            });
+
+            dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(glaIds);
             });
 
             var glsFyrFilename = "GLS." + this.param4_FiscalYear;

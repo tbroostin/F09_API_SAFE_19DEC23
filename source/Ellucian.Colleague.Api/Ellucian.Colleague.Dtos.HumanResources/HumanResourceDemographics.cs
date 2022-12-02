@@ -1,4 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
+
+using Ellucian.Colleague.Dtos.Base;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
 {
@@ -31,5 +33,10 @@ namespace Ellucian.Colleague.Dtos.HumanResources
           /// The person's preferred name
           /// </summary>
           public string PreferredName { get; set; }
-     }
+
+          /// <summary>
+          /// This property is based on a Name Address Hierarcy and will be null if none is provided.
+          /// </summary>
+          public PersonHierarchyName PersonDisplayName { get; set; }
+    }
 }

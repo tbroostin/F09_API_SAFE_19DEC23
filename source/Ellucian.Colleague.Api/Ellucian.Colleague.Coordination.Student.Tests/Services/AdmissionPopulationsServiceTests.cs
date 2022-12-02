@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using slf4net;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {

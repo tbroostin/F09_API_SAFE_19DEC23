@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +13,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Colleague.Coordination.Base;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -78,6 +80,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var graduationApplication = await graduationApplicationsController.GetGraduationApplicationAsync("0004032", "MATH.BA");
                 Assert.IsTrue(graduationApplication is Dtos.Student.GraduationApplication);
                 Assert.AreEqual("0004032*MATH.BA", graduationApplicationDto.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentGraduationApplication_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var graduationApplication = await graduationApplicationsController.GetGraduationApplicationAsync("0004032", "MATH.BA");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -233,6 +251,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentGraduationApplications_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationsAsync(It.IsAny<string>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var graduationApplications = await graduationApplicationsController.GetGraduationApplicationsAsync("0004032");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentGraduationApplications_PermissionsException_ReturnsHttpResponseException_Forbidden()
             {
                 try
@@ -286,8 +320,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var graduationApplications = await graduationApplicationsController.GetGraduationApplicationsAsync(null);
             }
         }
-        [TestClass]
-        public class GraduationApplicationsControllerTests_Put
+
+        public class GraduationApplicationsControllerTests_Post
         {
             private TestContext testContextInstance;
 
@@ -306,6 +340,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     testContextInstance = value;
                 }
             }
+
             private IGraduationApplicationService graduationApplicationService;
             private Mock<IGraduationApplicationService> graduationApplicationServiceMock;
             private GraduationApplicationsController graduationApplicationsController;
@@ -339,17 +374,123 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 graduationApplicationService = null;
             }
 
-
-            private Ellucian.Colleague.Dtos.Student.GraduationApplication getExpectedApplication()
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostGraduationApplicationAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
             {
-                var graduationApplicationDto = new Ellucian.Colleague.Dtos.Student.GraduationApplication();
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.CreateGraduationApplicationAsync(graduationApplicationDto)).Throws(new PermissionsException());
+                    var graduationApplication = await graduationApplicationsController.PostGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostGraduationApplicationAsync_KeyNotFoundException_ReturnsHttpResponseException_Conflict()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.CreateGraduationApplicationAsync(graduationApplicationDto)).Throws(new ExistingResourceException());
+                    var graduationApplication = await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Conflict, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostGraduationApplicationAsync_AnyOtherException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.CreateGraduationApplicationAsync(graduationApplicationDto)).Throws(new ApplicationException());
+                    var graduationApplication = await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+        }
+
+        [TestClass]
+        public class GraduationApplicationsControllerTests_Put
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IGraduationApplicationService graduationApplicationService;
+            private Mock<IGraduationApplicationService> graduationApplicationServiceMock;
+            private GraduationApplicationsController graduationApplicationsController;
+            private Ellucian.Colleague.Dtos.Student.GraduationApplication graduationApplicationDto;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                graduationApplicationServiceMock = new Mock<IGraduationApplicationService>();
+                graduationApplicationService = graduationApplicationServiceMock.Object;
+                adapterRegistry = new Mock<IAdapterRegistry>().Object;
+                logger = new Mock<ILogger>().Object;
+                graduationApplicationDto = new Ellucian.Colleague.Dtos.Student.GraduationApplication();
                 graduationApplicationDto.StudentId = "0004032";
                 graduationApplicationDto.ProgramCode = "MATH.BA";
                 graduationApplicationDto.Id = "0004032*MATH.BA";
                 graduationApplicationDto.GraduationTerm = "2015/FA";
-                graduationApplicationDto.DiplomaName = "New Diploma Name";
-                graduationApplicationDto.WillPickupDiploma = false;
-                return graduationApplicationDto;
+                graduationApplicationDto.DiplomaName = "Diploma Name";
+                graduationApplicationDto.WillPickupDiploma = true;
+                graduationApplicationsController = new GraduationApplicationsController(graduationApplicationService, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                graduationApplicationsController = null;
+                graduationApplicationService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PutStudentGraduationApplication_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.UpdateGraduationApplicationAsync(graduationApplicationDto)).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -359,7 +500,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     graduationApplicationServiceMock.Setup(x => x.UpdateGraduationApplicationAsync(graduationApplicationDto)).Throws(new PermissionsException());
-                    var graduationApplication = await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                    await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
                 }
                 catch (HttpResponseException ex)
                 {
@@ -375,7 +516,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     graduationApplicationServiceMock.Setup(x => x.UpdateGraduationApplicationAsync(graduationApplicationDto)).Throws(new KeyNotFoundException());
-                    var graduationApplication = await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                    await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
                 }
                 catch (HttpResponseException ex)
                 {
@@ -391,7 +532,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     graduationApplicationServiceMock.Setup(x => x.UpdateGraduationApplicationAsync(graduationApplicationDto)).Throws(new ApplicationException());
-                    var graduationApplication = await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
+                    await graduationApplicationsController.PutGraduationApplicationAsync("0004032", "MATH.BA", graduationApplicationDto);
                 }
                 catch (HttpResponseException ex)
                 {
@@ -399,7 +540,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
         }
 
         [TestClass]
@@ -467,6 +607,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentGraduationApplicationFeeAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var graduationApplication = await graduationApplicationsController.GetGraduationApplicationAsync("0004032", "MATH.BA");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentGraduationApplicationFeeAsync_AnyOtherException_ReturnsHttpResponseException_BadRequest()
             {
                 try
@@ -480,7 +636,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
         }
 
         [TestClass]
@@ -538,6 +693,54 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 graduationApplicationsController = null;
                 graduationApplicationService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryGraduationApplicationFEligibilityAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Throws(new PermissionsException());
+                    await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryGraduationApplicationFEligibilityAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryGraduationApplicationFEligibilityAsync_AnyOtherException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Throws(new ArgumentException());
+                    await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]

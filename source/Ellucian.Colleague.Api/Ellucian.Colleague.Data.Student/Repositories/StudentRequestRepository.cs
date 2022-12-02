@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,10 +14,12 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Ellucian.Colleague.Domain.Student.Entities.Transcripts;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -66,26 +68,32 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 createResponse = await transactionInvoker.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(studentRequest);
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired while creating student transcript request.";
+                logger.Error(ce, message);
+                throw;
+            }
             catch
             {
                 logger.Error("Error occurred during CreateStudentRequest transaction execution.");
-                throw new Exception("Error occurred during CreateStudentRequest transaction execution.");
+                throw new ColleagueWebApiException("Error occurred during CreateStudentRequest transaction execution.");
             }
             if (createResponse == null)
             {
                 logger.Error("Null response returned by create request transaction.");
-                throw new Exception("Null response returned by create request transaction.");
+                throw new ColleagueWebApiException("Null response returned by create request transaction.");
             }
             if (createResponse != null && createResponse.ErrorOccurred)
             {
                 string errorText = string.Format("Following error occured during CreateStudentRequest transaction execution {0}", createResponse.ErrorMessage);
                 logger.Error(errorText);
-                throw new Exception(errorText);
+                throw new ColleagueWebApiException(errorText);
             }
             if (string.IsNullOrEmpty(createResponse.StudentRequestLogsId))
             {
                 logger.Error("Null strudent request log id returned.");
-                throw new Exception("Null strudent request log id returned.");
+                throw new ColleagueWebApiException("Null strudent request log id returned.");
             }
             if (createResponse != null && !createResponse.ErrorOccurred && !string.IsNullOrEmpty(createResponse.StudentRequestLogsId))
             {
@@ -98,13 +106,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         string errorText = string.Format("studentId retrieved is not the same as was requested for Student request creation for RequestLogId: {0}", createResponse.StudentRequestLogsId);
                         logger.Error(errorText);
-                        throw new Exception(errorText);
+                        throw new ColleagueWebApiException(errorText);
                     }
                 }
                 catch (KeyNotFoundException)
                 {
                     logger.Error("Could not retrieve the newly created request specified by id " + createResponse.StudentRequestLogsId);
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 catch (Exception)
                 {
@@ -146,8 +154,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return studentrequest;
 
             }
-            catch
+            catch (ColleagueSessionExpiredException ce)
             {
+                string message = "Colleague session got expired while retrieving the student transcript request.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving the student transcript request.");
                 throw;
             }
         }
@@ -258,6 +273,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 return studentRequestEntityList;
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session got expired  while retrieving student transcript requests for student {0}", studentId);
+                logger.Error(ce, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to access student request log records for student Id {0}", studentId);
@@ -296,6 +317,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // Take results and create the student request fee entity.
                 StudentRequestFee studentRequestFee = new StudentRequestFee(studentId, requestId, getApplicationFeeResponse.Fee, getApplicationFeeResponse.DistributionCode);
                 return studentRequestFee;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                var message = string.Format("Colleague session expired while retrieving student request fee for student Id {0} and request Id {1} ", studentId, requestId);
+                logger.Error(csee, message);
+                throw;
             }
             catch (Exception ex)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -431,7 +431,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
 
         }
@@ -467,7 +467,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
         }
 
@@ -1364,9 +1364,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         foreignPerson = foreignPersonRecords.Where(fp => fp.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If Foreign Person is null, ignore
+                        logger.Error(ex.Message, "Foreign Person is null.");
                     }
                     // Integration Person Contract
                     DataContracts.PersonIntg integrationPerson = null;
@@ -1374,9 +1375,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         integrationPerson = integrationPersonRecords.Where(ip => ip.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If person integration does not exist, ignore
+                        logger.Error(ex.Message, "Person integration does not exist.");
                     }
                     // Social Media Handles Contracts
                     List<DataContracts.SocialMediaHandles> socialMediaHandles = null;
@@ -1384,9 +1386,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         socialMediaHandles = socialMediaHandlesRecords.Where(smh => smh.SmhPersonId == personId).ToList();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If social media handles do not exist, ignore
+                        logger.Error(ex.Message, "Social media handles do not exist.");
                     }
                     // Addresses Contracts
                     List<DataContracts.Address> addressDataContracts = null;
@@ -1403,9 +1406,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If addresses do not exist, ignore
+                        logger.Error(ex.Message, "Addresses do not exist.");
                     }
                     TDomain tDomainObject = personBasedObjects.Where(p => p.Id == personId).FirstOrDefault();
                     if (personDataContract != null && tDomainObject != null)
@@ -1604,8 +1608,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
                                     {
                                         // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
-                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(SubValueMark);
+                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(SubValueMark);
                                         for (int i = 0; i < startDate.Length; i++)
                                         {
                                             try
@@ -1701,10 +1705,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                     personBasedObject.AddEmailAddress(emailToAdd);
                                 }
-                                catch (Exception exception)
+                                catch (Exception ex)
                                 {
-                                   // do not log error
-                                   //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    // do not log error
+                                    //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    logger.Error(ex.Message, "Could not load email address.");
                                 }
                             }
                         }
@@ -1833,7 +1838,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 Exception ex = new Exception(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
                 logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
-                throw ex;
+                throw;
             }
             if (personIdsNotFound.Any())
             {
@@ -1877,9 +1882,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         foreignPerson = foreignPersonRecords.Where(fp => fp.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If Foreign Person is null, ignore
+                        logger.Error(ex.Message, "Foreign Person is null.");
                     }
                     // Integration Person Contract
                     DataContracts.PersonIntg integrationPerson = null;
@@ -1887,9 +1893,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         integrationPerson = integrationPersonRecords.Where(ip => ip.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // If person integration does not exist, ignore
+                        // If Foreign Person is null, ignore
+                        logger.Error(ex.Message, "Foreign Person is null.");
                     }
                     // Social Media Handles Contracts
                     List<DataContracts.SocialMediaHandles> socialMediaHandles = null;
@@ -1897,9 +1904,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         socialMediaHandles = socialMediaHandlesRecords.Where(smh => smh.SmhPersonId == personId).ToList();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If social media handles do not exist, ignore
+                        logger.Error(ex.Message, "Social media handles do not exist.");
                     }
                     // Addresses Contracts
                     List<DataContracts.Address> addressDataContracts = null;
@@ -1916,9 +1924,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // If addresses do not exist, ignore
+                        // If address do not exist, ignore
+                        logger.Error(ex.Message, "Addresses do not exist.");
                     }
 
                     //military records
@@ -2119,8 +2128,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
                                     {
                                         // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
-                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(SubValueMark);
+                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(SubValueMark);
                                         for (int i = 0; i < startDate.Length; i++)
                                         {
                                             try
@@ -2227,10 +2236,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                     personBasedObject.AddEmailAddress(emailToAdd);
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    //do not log error
+                                    // do not log error
                                     //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    logger.Error(ex.Message, "Could not load email address.");
                                 }
                             }
                         }
@@ -2347,13 +2357,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     Exception ex = new Exception(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
                     logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
-                    throw ex;
+                    throw;
                 }
                 catch (Exception e)
                 {
                     Exception ex = new Exception(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
                     logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", personId, "'"));
-                    throw ex;
+                    throw;
                 }
             }
 
@@ -2401,9 +2411,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         foreignPerson = foreignPersonRecords.Where(fp => fp.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If Foreign Person is null, ignore
+                        logger.Error(ex.Message, "Foreign Person is null.");
                     }
                     // Integration Person Contract
                     DataContracts.PersonIntg integrationPerson = null;
@@ -2411,9 +2422,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         integrationPerson = integrationPersonRecords.Where(ip => ip.Recordkey == personId).FirstOrDefault();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If person integration does not exist, ignore
+                        logger.Error(ex.Message, "Person integration does not exist.");
                     }
                     // Social Media Handles Contracts
                     List<DataContracts.SocialMediaHandles> socialMediaHandles = null;
@@ -2421,9 +2433,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         socialMediaHandles = socialMediaHandlesRecords.Where(smh => smh.SmhPersonId == personId).ToList();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If social media handles do not exist, ignore
+                        logger.Error(ex.Message, "Social media handles do not exist.");
                     }
                     // Addresses Contracts
                     List<DataContracts.Address> addressDataContracts = null;
@@ -2440,10 +2453,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // If addresses do not exist, ignore
+                        logger.Error(ex.Message, "Addresses do not exist.");
                     }
+
 
                     //military records
                     List<DataContracts.PerMilitary> militaryRecordsHandles = null;
@@ -2636,8 +2651,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
                                     {
                                         // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
-                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                        string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(SubValueMark);
+                                        string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(SubValueMark);
                                         for (int i = 0; i < startDate.Length; i++)
                                         {
                                             try
@@ -2747,7 +2762,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 catch (Exception ex)
                                 {
                                     // do not log error
-                                    //logger.Error(ex, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    logger.Error(ex.Message, "Could not load email address.");
                                 }
                             }
                         }
@@ -3185,7 +3201,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var newChapters = new StringBuilder();
                         foreach (var chapters in address.AddressChapter)
                         {
-                            if (newChapters.Length > 0) newChapters.Append(_SM);
+                            if (newChapters.Length > 0) newChapters.Append(SubValueMark);
                             newChapters.Append(chapters);
                         }
                         addressRequest.OrgAddrChapters = newChapters.ToString();
@@ -3206,7 +3222,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var newAddressLines = new StringBuilder();
                         foreach (var addressLine in address.AddressLines)
                         {
-                            if (newAddressLines.Length > 0) newAddressLines.Append(_SM);
+                            if (newAddressLines.Length > 0) newAddressLines.Append(SubValueMark);
                             newAddressLines.Append(addressLine);
                         }
                         addressRequest.OrgAddrLines = newAddressLines.ToString();
@@ -3529,7 +3545,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var newChapters = new StringBuilder();
                         foreach (var chapters in address.AddressChapter)
                         {
-                            if (newChapters.Length > 0) newChapters.Append(_SM);
+                            if (newChapters.Length > 0) newChapters.Append(SubValueMark);
                             newChapters.Append(chapters);
                         }
                         addressRequest.PersonAddrChapters = newChapters.ToString();
@@ -3541,8 +3557,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var newSeasonalEnd = new StringBuilder();
                         foreach (var seasonalDates in address.SeasonalDates)
                         {
-                            if (newSeasonalStart.Length > 0) newSeasonalStart.Append(_SM);
-                            if (newSeasonalEnd.Length > 0) newSeasonalEnd.Append(_SM);
+                            if (newSeasonalStart.Length > 0) newSeasonalStart.Append(SubValueMark);
+                            if (newSeasonalEnd.Length > 0) newSeasonalEnd.Append(SubValueMark);
                             newSeasonalStart.Append(seasonalDates.StartOn);
                             newSeasonalEnd.Append(seasonalDates.EndOn);
                         }
@@ -3554,7 +3570,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var newAddressLines = new StringBuilder();
                         foreach (var addressLine in address.AddressLines)
                         {
-                            if (newAddressLines.Length > 0) newAddressLines.Append(_SM);
+                            if (newAddressLines.Length > 0) newAddressLines.Append(SubValueMark);
                             newAddressLines.Append(addressLine);
                         }
                         addressRequest.PersonAddrLines = newAddressLines.ToString();
@@ -3697,8 +3713,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         addressGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex.Message, "Cannot add address guid to collection.");
                 }
             }
 
@@ -3804,7 +3822,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";

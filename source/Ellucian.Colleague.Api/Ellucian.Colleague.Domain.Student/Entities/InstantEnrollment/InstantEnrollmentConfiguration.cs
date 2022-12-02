@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
@@ -56,6 +56,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment
         public bool ShowInstantEnrollmentBookstoreLink { get; private set; }
 
         /// <summary>
+        /// Flag indicating whether or not a non-citizen individual can enroll in an instant enrollment section
+        /// </summary>
+        public bool AllowNonCitizenRegistration { get; private set; }
+
+        /// <summary>
         /// List of subject codes used to restrict which course sections are available in the Colleague Self-Service instant enrollment workflows; only course sections with subjects in this list are available
         /// </summary>
         public ReadOnlyCollection<string> SubjectCodesToDisplayInCatalog { get; private set; }
@@ -86,9 +91,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment
         /// <param name="registrationUserRole">Role assigned to users created through Colleague Self-Service instant enrollment</param>
         /// <param name="showInstantEnrollmentBookstoreLink">Flag indicating whether or not any instant enrollment sections should show bookstore links</param>
         /// <param name="demographicFields">Demographic information collected when adding persons to Colleague from the instant enrollment functionality</param>
+        /// <param name="allowNonCitizenRegistration">Flag indicating whether or not an individual who is not a citizen can register for an instant enrollment section</param>
         public InstantEnrollmentConfiguration(AddNewStudentProgramBehavior behavior, List<AcademicProgramOption> academicProgramOptions, 
             string paymentDistributionCode, string citizenshipHomeCountryCode, bool webPaymentsImplemented, string registrationUserRole, DateTime? searchEndDate, 
-            bool showInstantEnrollmentBookstoreLink, List<DemographicField> demographicFields)
+            bool showInstantEnrollmentBookstoreLink, List<DemographicField> demographicFields, bool allowNonCitizenRegistration)
         {
             if (string.IsNullOrEmpty(paymentDistributionCode))
             {
@@ -119,6 +125,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment
             WebPaymentsImplemented = webPaymentsImplemented;
             CatalogFilterOptions = _catalogFilterOptions.AsReadOnly();
             ShowInstantEnrollmentBookstoreLink = showInstantEnrollmentBookstoreLink;
+            AllowNonCitizenRegistration = allowNonCitizenRegistration;
 
             demographicFields = demographicFields != null ? demographicFields.Where(field => field != null).ToList() : new List<DemographicField>();
             foreach (var demographicField in demographicFields)

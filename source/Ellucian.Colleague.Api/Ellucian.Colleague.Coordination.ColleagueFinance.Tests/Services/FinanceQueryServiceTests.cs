@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -422,7 +422,221 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         #endregion
 
+        #region QueryFinanceQueryDetailSelectionByPostAsync (CSV)
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_Success()
+        {
+            //Act
+            var financeQueryList = await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+
+            // Get the necessary configuration settings and build the GL user object.
+            testGlAccountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            testGlClassConfiguration = await testGlConfigurationRepository.GetClassConfigurationAsync();
+
+            generalLedgerUser = await testGlUserRepository.GetGeneralLedgerUserAsync(glUserFactoryAll.CurrentUser.PersonId,
+                testGlAccountStructure.FullAccessRole, testGlClassConfiguration.ClassificationName,
+                testGlClassConfiguration.ExpenseClassValues);
+
+            // Get the list of gl accounts domain entities from the test repository.
+            var financeQueryEntityList = await testFinanceQueryRepository.GetFinanceQueryActivityDetailAsync(generalLedgerUser,
+                testGlAccountStructure, testGlClassConfiguration, filterCriteriaEntity, null);
+
+            // Assert that the correct number of gl accounts is return.
+            var financeQueryDtos = financeQueryList.ToList();
+            financeQueryEntityList = financeQueryEntityList.ToList();
+            Assert.AreEqual(financeQueryDtos.Count(), 1);
+            Assert.IsNotNull(financeQueryEntityList);
+
+
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_RepositoryReturnsNull()
+        {
+            //Arrange
+            Mock<IFinanceQueryRepository> financeQueryRepository = new Mock<IFinanceQueryRepository>();
+            financeQueryRepository.Setup(x => x.GetGLAccountsListAsync(It.IsAny<GeneralLedgerUser>(), It.IsAny<GeneralLedgerAccountStructure>(), It.IsAny<GeneralLedgerClassConfiguration>(), It.IsAny<FinanceQueryCriteria>(), It.IsAny<string>())).ReturnsAsync(() => null);
+
+            //Act
+            BuildService(financeQueryRepository.Object, testGlUserRepository, testGlConfigurationRepository, testGlAccountRepository);
+
+            var financeQueryList = await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+
+            //Assert            
+            var financeQueryDtos = financeQueryList.ToList();
+            Assert.IsNotNull(financeQueryDtos);
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_RepositoryReturnsEmptyList()
+        {
+            //Arrange
+            var glAccountLineItems = new List<FinanceQueryGlAccountLineItem>();
+            Mock<IFinanceQueryRepository> financeQueryRepository = new Mock<IFinanceQueryRepository>();
+            financeQueryRepository.Setup(x => x.GetGLAccountsListAsync(It.IsAny<GeneralLedgerUser>(), It.IsAny<GeneralLedgerAccountStructure>(), It.IsAny<GeneralLedgerClassConfiguration>(), It.IsAny<FinanceQueryCriteria>(), It.IsAny<string>())).ReturnsAsync(glAccountLineItems);
+
+            BuildService(financeQueryRepository.Object, testGlUserRepository, testGlConfigurationRepository, testGlAccountRepository);
+
+            //Act
+            var financeQueryList = await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+
+            //Assert            
+            var financeQueryDtos = financeQueryList.ToList();
+            Assert.IsNotNull(financeQueryDtos);
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_NoGlAccess()
+        {
+            GeneralLedgerUser glUser = await testGlUserRepository.GetGeneralLedgerUserAsync2("9999999", null, null);
+            var glUserRepositoryMock = new Mock<IGeneralLedgerUserRepository>();
+            glUserRepositoryMock.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+
+
+            BuildService(testFinanceQueryRepository, glUserRepositoryMock.Object, testGlConfigurationRepository, testGlAccountRepository);
+            var financeQueryList = await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+            Assert.AreEqual(0, financeQueryList.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof (ArgumentNullException))]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_NullCriteria()
+        {
+            await service.QueryFinanceQueryDetailSelectionByPostAsync(null);
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_NullAccountStructure()
+        {
+            GeneralLedgerAccountStructure accountStructure = null;
+            var glConfigurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
+            glConfigurationRepositoryMock.Setup(x => x.GetAccountStructureAsync()).Returns(() =>
+            {
+                return Task.FromResult(accountStructure);
+            });
+
+            var expectedMessage = "GL account structure is not set up.";
+            var actualMessage = "";
+            try
+            {
+                BuildService(testFinanceQueryRepository, testGlUserRepository, glConfigurationRepositoryMock.Object, testGlAccountRepository);
+                await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+            }
+            catch (ApplicationException aex)
+            {
+                actualMessage = aex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_NullGlClassConfiguration()
+        {
+            GeneralLedgerClassConfiguration glClassConfiguration = null;
+            var glConfigurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
+            var accountStructure = await testGlConfigurationRepository.GetAccountStructureAsync();
+            glConfigurationRepositoryMock.Setup(x => x.GetAccountStructureAsync()).Returns(() =>
+            {
+                return Task.FromResult(accountStructure);
+            });
+
+            glConfigurationRepositoryMock.Setup(x => x.GetClassConfigurationAsync()).Returns(() =>
+            {
+                return Task.FromResult(glClassConfiguration);
+            });
+
+            var expectedMessage = "GL class configuration is not set up.";
+            var actualMessage = "";
+            try
+            {
+                BuildService(testFinanceQueryRepository, testGlUserRepository, glConfigurationRepositoryMock.Object, testGlAccountRepository);
+                await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+            }
+            catch (ApplicationException aex)
+            {
+                actualMessage = aex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_NullGlUser()
+        {
+            GeneralLedgerUser glUser = null;
+            var glUserRepositoryMock = new Mock<IGeneralLedgerUserRepository>();
+            glUserRepositoryMock.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+
+            var expectedMessage = "No GL user definition available.";
+            var actualMessage = "";
+            try
+            {
+                BuildService(testFinanceQueryRepository, glUserRepositoryMock.Object, testGlConfigurationRepository, testGlAccountRepository);
+                await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+            }
+            catch (ApplicationException aex)
+            {
+                actualMessage = aex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [ExpectedException(typeof(InvalidOperationException))]
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_ValidateSortCriteria_InvalidSortCriteria()
+        {
+            var sortCriteria = new Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria();
+            sortCriteria.ComponentName = "Dummy";
+
+            var sortComponentCriteriaDto = new List<Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria>() { sortCriteria };
+
+            filterCriteriaDto = new Dtos.ColleagueFinance.FinanceQueryCriteria();
+            filterCriteriaDto.FiscalYear = testGlConfigurationRepository.StartYear.ToString();
+            filterCriteriaDto.IncludeActiveAccountsWithNoActivity = true;
+            filterCriteriaDto.ComponentCriteria = componentCriteriaDto;
+            filterCriteriaDto.ComponentSortCriteria = sortComponentCriteriaDto;
+
+            await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+
+        }
+
+        [ExpectedException(typeof(InvalidOperationException))]
+        [TestMethod]
+        public async Task QueryFinanceQueryDetailSelectionByPostAsync_ValidateSortCriteria_SortCriteria_Morethan3()
+        {
+            var sortCriteria1 = new Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria();
+            sortCriteria1.ComponentName = "FUND";
+            var sortCriteria2 = new Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria();
+            sortCriteria2.ComponentName = "OBJECT";
+            var sortCriteria3 = new Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria();
+            sortCriteria3.ComponentName = "LOCATION_SUBCLASS";
+            var sortCriteria4 = new Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria();
+            sortCriteria4.ComponentName = "PROGRAM";
+
+            var sortComponentCriteriaDto = new List<Dtos.ColleagueFinance.FinanceQueryComponentSortCriteria>() { sortCriteria1, sortCriteria2, sortCriteria3, sortCriteria4 };
+
+            filterCriteriaDto = new Dtos.ColleagueFinance.FinanceQueryCriteria()
+            {
+                FiscalYear = testGlConfigurationRepository.StartYear.ToString(),
+                IncludeActiveAccountsWithNoActivity = true,
+                ComponentCriteria = componentCriteriaDto,
+                ComponentSortCriteria = sortComponentCriteriaDto
+            };
+
+            await service.QueryFinanceQueryDetailSelectionByPostAsync(filterCriteriaDto);
+
+        }
+
+        #endregion
+
         #region GetGLAccountsListAsync error checking
+
         [TestMethod]
         public async Task GetGLAccountsListAsync_NullCriteria()
         {

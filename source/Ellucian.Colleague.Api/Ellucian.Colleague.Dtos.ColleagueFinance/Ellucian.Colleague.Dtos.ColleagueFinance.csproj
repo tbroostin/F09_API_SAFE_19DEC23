@@ -65,10 +65,13 @@
     <Compile Include="DocumentApproval.cs" />
     <Compile Include="DocumentApprovalRequest.cs" />
     <Compile Include="DocumentApprovalResponse.cs" />
+    <Compile Include="FinanceQueryActivityDetail.cs" />
+    <Compile Include="FinanceQueryGlTransaction.cs" />
     <Compile Include="GlAccountBalances.cs" />
     <Compile Include="GlAccountBalancesQueryCriteria.cs" />
     <Compile Include="Initiator.cs" />
     <Compile Include="NewLineItemDefaultAdditionalInformation.cs" />
+    <Compile Include="KeywordSearchCriteria.cs" />
     <Compile Include="ProcurementAcceptReturnItemInformationRequest.cs" />
     <Compile Include="ProcurementAcceptReturnItemInformationResponse.cs" />
     <Compile Include="ProcurementDocumentField.cs" />

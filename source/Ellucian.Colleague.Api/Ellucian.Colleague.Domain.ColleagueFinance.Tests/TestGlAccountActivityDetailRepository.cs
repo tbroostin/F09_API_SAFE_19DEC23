@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests.Builders;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 {
@@ -100,7 +101,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         type = GlTransactionType.Encumbrance;
                         break;
                     default:
-                        throw new Exception("Invalid type specified in TestGlAccountActivityDetailRepository.");
+                        throw new ColleagueWebApiException("Invalid type specified in TestGlAccountActivityDetailRepository.");
                 }
 
                 glNumber = glaId.Split('*').FirstOrDefault();

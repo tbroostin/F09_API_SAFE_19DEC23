@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -37,6 +37,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -46,6 +48,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
+        private GeneralLedgerUser glUser;
 
         [TestInitialize]
         public void Initialize()
@@ -55,12 +58,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Initialize the mock recurring voucher repository
             mockRecurringVoucherRepository = new Mock<IRecurringVoucherRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetAccountStructureAsync()).Returns(Task.FromResult(new GeneralLedgerAccountStructure()));
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(new GeneralLedgerClassConfiguration("ClassName", new List<string>(), new List<string>(), new List<string>(), new List<string>(), new List<string>())));
+
+
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                RecurringVouchersUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                RecurringVouchersUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
 
             // Create permission domain entities for viewing the blanket purchase order.
             permissionViewRecurringVoucher = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRecurringVoucher);
             // Assign view permission to the role that has view permissions.
             glUserRoleViewPermissions.AddPermission(permissionViewRecurringVoucher);
+
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
+
 
             // Build all service objects to use each of the user factories built above
             BuildValidRecurringVoucherService();
@@ -81,6 +104,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockRecurringVoucherRepository = null;
             mockGlConfigurationRepository = null;
             mockGeneralLedgerUserRepository = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
 
             roleRepositoryMock = null;
             roleRepository = null;
@@ -124,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Assert.AreEqual(approverDto.ApprovalDate, approverDomain.ApprovalDate);
             }
         }
-        
+
         [TestMethod]
         public async Task GetRecurringVoucherAsync_StatusNotApproved()
         {
@@ -140,7 +165,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Confirm that the data in the vouchers DTO matches the domain entity
             Assert.AreEqual(recurringVoucherDto.Status.ToString(), recurringVoucherDomainEntity.Status.ToString());
         }
-        
+
         [TestMethod]
         public async Task GetRecurringVoucherAsync_StatusVoided()
         {
@@ -156,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Confirm that the data in the vouchers DTO matches the domain entity
             Assert.AreEqual(recurringVoucherDto.Status.ToString(), recurringVoucherDomainEntity.Status.ToString());
         }
-        
+
         [TestMethod]
         public async Task GetRecurringVoucherAsync_StatusCancelled()
         {
@@ -172,7 +197,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Confirm that the data in the vouchers DTO matches the domain entity
             Assert.AreEqual(recurringVoucherDto.Status.ToString(), recurringVoucherDomainEntity.Status.ToString());
         }
-        
+
         [TestMethod]
         public async Task GetRecurringVoucherAsync_StatusClosed()
         {
@@ -196,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetRecurringVoucherAsync(null);
+                var recurringVoucherDto = await service.GetRecurringVoucherAsync(null);
             }
             catch (ArgumentNullException aex)
             {
@@ -213,7 +238,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetRecurringVoucherAsync("");
+                var recurringVoucherDto = await service.GetRecurringVoucherAsync("");
             }
             catch (ArgumentNullException aex)
             {
@@ -263,6 +288,69 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
         #endregion
 
+
+        #region Tests for GetRecurringVoucherAsync with GL approval roles functionality
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetRecurringVoucherAsync_ApprovalConfigurationNull()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+
+            await service2.GetRecurringVoucherAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetRecurringVoucherAsync_ApprovalConfigurationEmpty()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(new ApprovalConfiguration()));
+
+            await service2.GetRecurringVoucherAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetRecurringVoucherAsync_ApprovalConfigurationException()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Throws(new Exception());
+
+            await service2.GetRecurringVoucherAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetRecurringVoucherAsync_ApprovalConfigurationRecurringVouchersUseApprovalRoles()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(new ApprovalConfiguration() { RecurringVouchersUseApprovalRoles = true }));
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(() =>
+            {
+                IEnumerable<string> approvalAccess = new List<string>() { "11_11_11_11_00000_11111", "11_11_11_11_00000_11112" };
+                return Task.FromResult(approvalAccess);
+            });
+            
+            await service2.GetRecurringVoucherAsync("1");
+        }
+
+        #endregion
+
+
         #region Tests for GetRecurringVoucherAsync without a view permission
 
         [TestMethod]
@@ -297,11 +385,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.RecurringVoucher, Dtos.ColleagueFinance.RecurringVoucher>()).Returns(recurringVoucherDtoAdapter);
 
             // Set up the current user with a subset of projects and set up the service.
-            service = new RecurringVoucherService(testRecurringVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
-            service2 = new RecurringVoucherService(mockRecurringVoucherRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
+            service = new RecurringVoucherService(testRecurringVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, mockApprovalConfigurationRepositoryFalse.Object,
+                adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
+            service2 = new RecurringVoucherService(mockRecurringVoucherRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
+                mockApprovalConfigurationRepositoryFalse.Object, adapterRegistry.Object, currentUserFactory, roleRepository, loggerObject);
 
             // Build a service for a user that has no permissions.
-            serviceForNoPermission = new RecurringVoucherService(testRecurringVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, adapterRegistry.Object, noPermissionsUser, roleRepository, loggerObject);
+            serviceForNoPermission = new RecurringVoucherService(testRecurringVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
+                mockApprovalConfigurationRepositoryFalse.Object, adapterRegistry.Object, noPermissionsUser, roleRepository, loggerObject);
         }
         #endregion
     }

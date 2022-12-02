@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -56,6 +56,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var records = await DataReader.BulkReadRecordAsync<WebPayAdvices>(ids.Distinct().ToArray());
             if (records == null || !records.Any())
             {
+                logger.Debug("************Pay Statement source (WebPayAdvice) data for the requested ID(s), not found in the database************");
                 return payStatementEntities;
             }
 
@@ -66,12 +67,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var entity = BuildPayStatementSourceData(record);
                     payStatementEntities.Add(entity);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    LogDataError("WEB.PAY.ADVICE", record.Recordkey, record, e, "Error building PayStatementSource");                    
+                    LogDataError("WEB.PAY.ADVICE", record.Recordkey, new object(), e, "Error building PayStatementSource");
                 }
             }
-
+            logger.Debug("************Pay Statement source data(WebPayAdvice) entities created successfully************");
             return payStatementEntities;
         }
 
@@ -90,6 +91,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var record = await DataReader.ReadRecordAsync<WebPayAdvices>(id);
             if (record == null)
             {
+                logger.Debug("************Pay Statement data for the requested ID, not found in the database************");
                 throw new KeyNotFoundException(string.Format("WebPayAdvice with id {0} not found in database", id));
             }
 
@@ -97,9 +99,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 return BuildPayStatementSourceData(record);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                LogDataError("WEB.PAY.ADVICE", record.Recordkey, record, e, "Error building single PayStatementSource");
+                LogDataError("WEB.PAY.ADVICE", record.Recordkey, "Error building single PayStatementSource");
                 throw new ApplicationException(string.Format("Error building single PayStatementSource {0}", record.Recordkey), e);
             }
         }
@@ -123,14 +125,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 async () =>
                 {
                     var wpaCriteria = string.Format("WITH WPA.INDEX.EMP.ID EQ '{0}'", personId);
+                    logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - emp ID - data reader - query string: '{0}'.************", wpaCriteria));
+
                     if (startDate.HasValue)
                     {
                         wpaCriteria = string.Concat(wpaCriteria, string.Format(" AND WITH WPA.CHECK.DATE GE '{0}'", startDate));
+                        logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - startdate - data reader - query string: '{0}'.************", wpaCriteria));
+
                     }
 
                     if (endDate.HasValue)
                     {
                         wpaCriteria = string.Concat(wpaCriteria, string.Format(" AND WITH WPA.CHECK.DATE LE '{0}'", endDate));
+                        logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - endDate - data reader - query string: '{0}'************.", wpaCriteria));
                     }
 
                     var records = await BulkReadWebPayAdvicesAsync(string.Format(wpaCriteria));
@@ -138,6 +145,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var sourceDataObjects = new List<PayStatementSourceData>();
                     if (!records.Any())
                     {
+                        logger.Debug("************Web Pay Advice records not found. No data retrived************");
                         return sourceDataObjects;
                     }
 
@@ -148,16 +156,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             var sourceData = BuildPayStatementSourceData(record);
                             sourceDataObjects.Add(sourceData);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
-                            LogDataError("WEB.PAY.ADVICE", record.Recordkey, record, e, "Error building PayStatement for employee " + personId);
+                            LogDataError("WEB.PAY.ADVICE", record.Recordkey, new object(), e, "Error building PayStatement for employee " + personId);
                         }
                     }
                     return sourceDataObjects;
-                    
+
 
                 }, Level1CacheTimeoutValue);
-                                
+
 
             return payStatementSourceData;
         }
@@ -166,6 +174,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (personIds == null || !personIds.Any())
             {
+                logger.Debug("************PersonIds are null or empty. Unable to retrieve PayStatement Summary.************");
                 throw new ArgumentNullException("personIds");
             }
 
@@ -196,7 +205,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    logger.Info(e, string.Format("Unable to get cached PayStatementSourceData from cacheKey {0}", entry.Item2));
+                    logger.Debug(e.Message, string.Format("************Unable to get cached PayStatementSourceData from cacheKey {0}************", entry.Item2));
                 }
             }
 
@@ -218,21 +227,28 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 var uniDataStartDate = await GetUnidataFormatDateAsync(startDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH WPA.CHECK.DATE GE '{0}'", uniDataStartDate));
+                logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - startDate - data reader - query string: '{0}'************.", criteria));
+
             }
 
             if (endDate.HasValue)
             {
                 var uniDataEndDate = await GetUnidataFormatDateAsync(endDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH WPA.CHECK.DATE LE '{0}'", uniDataEndDate));
+                logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - endDate - data reader - query string: '{0}'.************", criteria));
             }
+
             var substitutionList = uncachedPersonIds.Select(id => string.Format("\"{0}\"", id));
+            logger.Debug(string.Format("************PayStatementSourceData(Web Pay Advice) - Final query criteria - data reader -'{0}'************.", criteria));
+
             var webPayAdviceKeys = await DataReader.SelectAsync("WEB.PAY.ADVICES", criteria, substitutionList.ToArray());
             if (webPayAdviceKeys == null || !webPayAdviceKeys.Any())
             {
+                logger.Debug("************Web Pay Advice Keys not found. No data retrived************");
                 return payStatementSourceDataEntities;
             }
             var webPayAdviceRecords = new List<WebPayAdvices>();
-            for (int i = 0; i < webPayAdviceKeys.Count(); i+=bulkReadSize)
+            for (int i = 0; i < webPayAdviceKeys.Count(); i += bulkReadSize)
             {
                 var records = await DataReader.BulkReadRecordAsync<WebPayAdvices>(webPayAdviceKeys.Skip(i).Take(bulkReadSize).ToArray());
                 if (records != null)
@@ -243,6 +259,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!webPayAdviceRecords.Any())
             {
+                logger.Debug("************Web Pay Advice records not found. No data retrived************");
                 return payStatementSourceDataEntities;
             }
 
@@ -260,18 +277,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             {
                                 var entity = BuildPayStatementSourceData(webPayAdviceRecord);
                                 sourceDataEntities.Add(entity);
+
                             }
                             catch (Exception e)
                             {
-                                LogDataError("WEB.PAY.ADVICE", webPayAdviceRecord.Recordkey, webPayAdviceRecord, e, "Error building PayStatement for employee " + recordGroup.Key);
+                                //revisit this
+                                LogDataError("WEB.PAY.ADVICE", webPayAdviceRecord.Recordkey, new object(), e, "Error building PayStatement for employee " + recordGroup.Key);
                             }
                         }
+                        logger.Debug(string.Format("************PayStatement Entities Count := {0} ************", sourceDataEntities.Count()));
+
                         return sourceDataEntities;
                     }, Level1CacheTimeoutValue);
 
                 payStatementSourceDataEntities.AddRange(entities);
+
             }
 
+            logger.Debug(string.Format("--> Total PayStatement Entities := {0} --<", payStatementSourceDataEntities.Count()));
             return payStatementSourceDataEntities;
         }
 
@@ -284,6 +307,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (string.IsNullOrEmpty(personId))
             {
+                logger.Debug("************PersonId is null or empty. Failed to build employee specific cache key.  Unable to retrieve PayStatement Summary.************");
                 throw new ArgumentNullException("personId");
             }
             return string.Format("{0}-{1}", personId, PayStatementDataCacheKeySuffix);
@@ -317,12 +341,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             if (webPayAdviceRecord == null)
             {
+                logger.Debug("************WebPayAdviceRecord is null. Unable to build PayStatement entity************");
                 throw new ArgumentNullException("webPayAdviceRecord");
             }
 
             var employeeName = webPayAdviceRecord.WpaMailLabel.FirstOrDefault();
             var employeeMailingLabel = webPayAdviceRecord.WpaMailLabel.Skip(1)
                 .Select(s => new PayStatementAddress(s));
+
 
             var payStatement = new PayStatementSourceData(
                         webPayAdviceRecord.Recordkey,
@@ -339,6 +365,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         webPayAdviceRecord.WpaTotalYtdGrossPay.Value,
                         webPayAdviceRecord.WpaTotalYtdNetPay.Value,
                         webPayAdviceRecord.WpaComments);
+
+            logger.Debug(string.Format("************ PayStatement Entity = {0},{1}************",
+                        webPayAdviceRecord.WpaEmployeId, webPayAdviceRecord.WpaPeriodDate.Value));
 
             if (webPayAdviceRecord.DirDepInfoEntityAssociation.Any())
             {

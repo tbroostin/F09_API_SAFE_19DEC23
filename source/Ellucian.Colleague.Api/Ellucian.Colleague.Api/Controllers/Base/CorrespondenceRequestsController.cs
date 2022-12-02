@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +14,8 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
+
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -64,6 +66,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 return await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {

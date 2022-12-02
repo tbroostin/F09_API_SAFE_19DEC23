@@ -1,8 +1,9 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -63,6 +64,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var coursePlaceholderDtos = await _coursePlaceholderService.GetCoursePlaceholdersByIdsAsync(coursePlaceholderIds, bypassCache);
                 return coursePlaceholderDtos;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while querying placeholder";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (KeyNotFoundException knfe)
             {
                 var message = "Information for one or more course placeholders could not be retrieved.";

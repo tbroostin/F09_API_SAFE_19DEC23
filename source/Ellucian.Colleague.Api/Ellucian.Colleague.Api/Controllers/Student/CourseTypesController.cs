@@ -21,6 +21,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using slf4net;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -60,19 +61,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All Course Type codes and descriptions.</returns>
         public async Task<IEnumerable<CourseType>> GetAsync()
         {
-            var CourseTypeCollection =await _referenceDataRepository.GetCourseTypesAsync();
-
-            // Get the right adapter for the type mapping
-            var CourseTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseType, CourseType>();
-
-            // Map the CourseType entity to the program DTO
-            var CourseTypeDtoCollection = new List<CourseType>();
-            foreach (var CourseType in CourseTypeCollection)
+            try
             {
-                CourseTypeDtoCollection.Add(CourseTypeDtoAdapter.MapToType(CourseType));
-            }
+                var CourseTypeCollection = await _referenceDataRepository.GetCourseTypesAsync();
 
-            return CourseTypeDtoCollection;
+                // Get the right adapter for the type mapping
+                var CourseTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseType, CourseType>();
+
+                // Map the CourseType entity to the program DTO
+                var CourseTypeDtoCollection = new List<CourseType>();
+                foreach (var CourseType in CourseTypeCollection)
+                {
+                    CourseTypeDtoCollection.Add(CourseTypeDtoAdapter.MapToType(CourseType));
+                }
+
+                return CourseTypeDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, "Timeout exception has occurred while retrieving course types");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>

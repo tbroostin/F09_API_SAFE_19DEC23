@@ -16,6 +16,7 @@ using Moq;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -98,7 +99,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
 
                 // Mock student petition response
                 studentPetitionsData = BuildStudentPetitionsRepositoryResponse();
@@ -243,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
 
                 // Mock student petition response
                 studentOverloadPetitionsData = BuildStudentOverloadPetitionsRepositoryResponse();

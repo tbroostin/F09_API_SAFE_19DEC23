@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -23,6 +23,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -859,11 +860,14 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="meeting">DTO of the new instructional-event</param>
         /// <returns>A DTO in the format of the updated instructional-event</returns>
-        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateInstructionalEvent)]
+    
         public async Task<Dtos.InstructionalEvent4> PostInstructionalEvent4Async([ModelBinder(typeof(EedmModelBinder))] Dtos.InstructionalEvent4 meeting)
         {          
             try
             {
+                _sectionCoordinationService.ValidatePermissions(GetPermissionsMetaData());
+
                 //call import extend method that needs the extracted extension data and the config
                 await _sectionCoordinationService.ImportExtendedEthosData(await ExtractExtendedData(await _sectionCoordinationService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -909,11 +913,13 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">GUID of the instructional event</param>
         /// <param name="meeting">DTO of the updated instructional event</param>
         /// <returns>A DTO in the format of InstructionalEvent4</returns>
-        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateInstructionalEvent)]
         public async Task<Dtos.InstructionalEvent4> PutInstructionalEvent4Async([FromUri]string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.InstructionalEvent4 meeting)
         {
             try
             {
+                _sectionCoordinationService.ValidatePermissions(GetPermissionsMetaData());
+
                 //get Data Privacy List
                 var dpList = await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -967,11 +973,13 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) an existing section meeting
         /// </summary>
         /// <param name="id">Unique ID of the Instructional Event to delete</param>
-        [HttpDelete]
+        [HttpDelete, PermissionsFilter(StudentPermissionCodes.DeleteInstructionalEvent)]
         public async Task DeleteHedmAsync(string id)
         {
             try
             {
+                _sectionCoordinationService.ValidatePermissions(GetPermissionsMetaData());
+
                 await _sectionCoordinationService.DeleteInstructionalEventAsync(id);
             }
             catch (PermissionsException e)

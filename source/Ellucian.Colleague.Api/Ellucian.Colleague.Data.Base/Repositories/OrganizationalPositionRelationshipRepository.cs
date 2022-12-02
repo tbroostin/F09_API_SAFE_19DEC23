@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Dependency;
 using System;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Base.DataContracts;
@@ -130,7 +131,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access RELATIONSHIP.CATEGORIES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return categoriesTable;
                 }, Level1CacheTimeoutValue);
@@ -152,7 +153,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var errorMessage = "RELATIONSHIP.CATEGORIES must have a default category designated with special action ORG. Unable to update relationship.";
                 logger.Error(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
     }

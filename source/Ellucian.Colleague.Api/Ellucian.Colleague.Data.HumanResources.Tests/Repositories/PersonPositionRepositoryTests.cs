@@ -167,7 +167,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 inputPersonIds = new List<string>() { "foobar" };
                 var actual = await getActual();
                 Assert.IsFalse(actual.Any(pps => pps.PersonId == "foobar"));
-                loggerMock.Verify(l => l.Info(It.IsAny<string>()), Times.AtLeastOnce);
+                loggerMock.Verify(l => l.Error(It.IsAny<string>()), Times.AtLeastOnce);
             }
 
             [TestMethod]

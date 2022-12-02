@@ -164,7 +164,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers
 
         [TestMethod]
         [Ignore]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task MessageCreateWorklist_NullWorkflow()
         {
 
@@ -176,7 +176,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers
 
         [TestMethod]
         [Ignore]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task MessageCreateWorklist_NullProcessCode()
         {
 
@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers
 
         [TestMethod]
         [Ignore]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task MessageCreateWorklist_NullSubjectLine()
         {
 
@@ -201,7 +201,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers
 
         [TestMethod]
         [Ignore]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task MessageCreateWorklist_NullPersonId()
         {
 

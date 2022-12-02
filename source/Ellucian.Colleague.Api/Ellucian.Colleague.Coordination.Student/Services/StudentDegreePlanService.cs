@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -8,6 +8,7 @@ using slf4net;
 using Ellucian.Web.Security;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -340,7 +341,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (logger.IsInfoEnabled)
             {
                 watch.Stop();
-                logger.Info("DegreePlan Timing: (GetDegreePlan) _studentDegreePlanRepository.Get completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                logger.Info(string.Format("DegreePlan Timing: (GetDegreePlan) _studentDegreePlanRepository.Get completed in {0} ms for degree plan id: {1} ",  watch.ElapsedMilliseconds.ToString(), id));
             }
             // Make sure user has permissions to view this degree plan. 
             // If not, an PermissionsException will be thrown.
@@ -361,7 +362,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (logger.IsInfoEnabled)
             {
                 watch.Stop();
-                logger.Info("DegreePlan Timing: (GetDegreePlan) _academidCreditRepository.Get completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                logger.Info(string.Format("DegreePlan Timing: (GetDegreePlan) _academidCreditRepository.Get completed in {0} ms for degree plan id: {1} ", watch.ElapsedMilliseconds.ToString() ,id));
             }
 
             // Check for conflicts in degree plan. This will be done only if the verify argument is true (default)
@@ -369,7 +370,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (logger.IsInfoEnabled)
                 {
-                    logger.Info("DegreePlan Timing: (GetDegreePlan) CheckForConflictsInDegreePlan starting");
+                    logger.Info(string.Format("DegreePlan Timing: (GetDegreePlan) CheckForConflictsInDegreePlan starting for degree plan id: ", id));
                     watch.Restart();
                 }
 
@@ -378,7 +379,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (logger.IsInfoEnabled)
                 {
                     watch.Stop();
-                    logger.Info("DegreePlan Timing: (GetDegreePlan) CheckForConflictsInDegreePlan completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                    logger.Info(string.Format("DegreePlan Timing: (GetDegreePlan) CheckForConflictsInDegreePlan completed in {0} ms for degree plan id: {1} ",  watch.ElapsedMilliseconds.ToString(), id));
 
                     watch.Restart();
                 }
@@ -396,7 +397,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (logger.IsInfoEnabled)
             {
                 watch.Stop();
-                logger.Info("DegreePlan Timing: (GetDegreePlan) conversion to dto completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                logger.Info(string.Format("DegreePlan Timing: (GetDegreePlan) conversion to dto completed in {0} ms for degree plan id: {1}" , watch.ElapsedMilliseconds.ToString() , id));
             }
             return resultDto;
         }
@@ -564,7 +565,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Domain.Student.Entities.Student student = await _studentRepository.GetAsync(studentId);
             if (student == null)
             {
-                throw new Exception("Could not retrieve student details for student Id " + studentId);
+                throw new ColleagueWebApiException("Could not retrieve student details for student Id " + studentId);
             }
 
             // Verify current user has the permissions to create a degree plan
@@ -611,7 +612,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Domain.Student.Entities.Student student = await _studentRepository.GetAsync(studentId);
             if (student == null)
             {
-                throw new Exception("Could not retrieve student details for student Id " + studentId);
+                throw new ColleagueWebApiException("Could not retrieve student details for student Id " + studentId);
             }
             // Verify current user has the permissions to create a degree plan
             await CheckCreatePlanPermissionsAsync(student);

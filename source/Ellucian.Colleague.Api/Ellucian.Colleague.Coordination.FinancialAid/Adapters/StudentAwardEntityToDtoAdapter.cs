@@ -58,7 +58,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                     IsStatusModifiable = studentAwardPeriodEntity.IsStatusModifiable,
                     IsIgnoredOnAwardLetter = studentAwardPeriodEntity.IsIgnoredOnAwardLetter,
                     IsViewableOnAwardLetterAndShoppingSheet = studentAwardPeriodEntity.IsViewableOnAwardLetterAndShoppingSheet,
-                    IsIgnoredOnChecklist = studentAwardPeriodEntity.IsIgnoredOnChecklist
+                    IsIgnoredOnChecklist = studentAwardPeriodEntity.IsIgnoredOnChecklist,
+                    IsDecreaseOnly = studentAwardPeriodEntity.IsDecreaseOnly
                 };
                 studentAwardDto.StudentAwardPeriods.Add(studentAwardPeriodDto);
             }

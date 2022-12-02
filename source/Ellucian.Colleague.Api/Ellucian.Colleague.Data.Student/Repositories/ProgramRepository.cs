@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,10 +14,11 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
-
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -36,32 +37,45 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<IEnumerable<Program>> GetAsync()
         {
-            var transGroupings = await GetOrAddToCacheAsync<Collection<TranscriptGroupings>>("AllTranscriptGroupings",
-                async () =>
-                {
-                    var transGroups = await DataReader.BulkReadRecordAsync<TranscriptGroupings>("TRANSCRIPT.GROUPINGS", "");
-                    return transGroups;
-                }
-            , Level1CacheTimeoutValue);
+            try
+            {
+                var transGroupings = await GetOrAddToCacheAsync<Collection<TranscriptGroupings>>("AllTranscriptGroupings",
+                    async () =>
+                    {
+                        var transGroups = await DataReader.BulkReadRecordAsync<TranscriptGroupings>("TRANSCRIPT.GROUPINGS", "");
+                        return transGroups;
+                    }
+                , Level1CacheTimeoutValue);
 
-            //TODO: when method should return null object - but then fails as async
-            var creditTypes =await GetOrAddToCacheAsync<Collection<CredTypes>>("AllCreditTypes",
-               async () =>
-                {
-                    var credTypes = await DataReader.BulkReadRecordAsync<CredTypes>("CRED.TYPES", "");
-                    return credTypes;
-                }
-            , Level1CacheTimeoutValue);
-            
-            var programData = await GetOrAddToCacheAsync<List<Program>>("AllPrograms",
-                async () =>
-                {
-                    var acadPrograms = await DataReader.BulkReadRecordAsync<AcadPrograms>("ACAD.PROGRAMS", "");
-                    var programList = await BuildProgramsAsync(acadPrograms, transGroupings, creditTypes);
-                    return programList;
-                }
-            );
-            return programData;
+                //TODO: when method should return null object - but then fails as async
+                var creditTypes =await GetOrAddToCacheAsync<Collection<CredTypes>>("AllCreditTypes",
+                   async () =>
+                    {
+                        var credTypes = await DataReader.BulkReadRecordAsync<CredTypes>("CRED.TYPES", "");
+                        return credTypes;
+                    }
+                , Level1CacheTimeoutValue);
+
+                var programData = await GetOrAddToCacheAsync<List<Program>>("AllPrograms",
+                    async () =>
+                    {
+                        var acadPrograms = await DataReader.BulkReadRecordAsync<AcadPrograms>("ACAD.PROGRAMS", "");
+                        var programList = await BuildProgramsAsync(acadPrograms, transGroupings, creditTypes);
+                        return programList;
+                    }
+                );
+                return programData;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving programs");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex,"Exception occurred while retrieving programs");
+                throw;
+            }
         }
 
         public async Task<Program> GetAsync(string code)
@@ -342,6 +356,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         programs.Add(program);
 
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         LogDataError("Program", prog.Recordkey, prog, ex);
@@ -368,7 +386,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access PROGRAM.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return programStatusesValcode;
                 }, Level1CacheTimeoutValue);

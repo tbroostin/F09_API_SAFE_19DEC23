@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 if (studentAwardYear.CurrentConfiguration == null)
                 {
                     var message = string.Format("StudentAwardYear has no configuration for student id {0}, awardYear {1}. Cannot retrieve average award package.", studentId, studentAwardYear.Code);
-                    logger.Info(message);
+                    logger.Debug(message);
                 }
                 else
                 {
@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     var csDataRecord = await DataReader.ReadRecordAsync<CsAcyr>(csAcyrFile, studentId);
                     if (csDataRecord == null)
                     {
-                        logger.Info(string.Format("Student {0} has no {1} record", studentId, csAcyrFile));
+                        logger.Debug(string.Format("Student {0} has no {1} record", studentId, csAcyrFile));
                     }
                     else
                     {

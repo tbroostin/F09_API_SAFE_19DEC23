@@ -15,6 +15,8 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -125,6 +127,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 var response = Request.CreateResponse<LoanRequest>(System.Net.HttpStatusCode.Created, newLoanRequest);
                 SetResourceLocationHeader("GetLoanRequest", new { id = newLoanRequest.Id });
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException ae)
             {

@@ -15,6 +15,7 @@ using Ellucian.Colleague.Dtos.Finance.Payments;
 using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Finance.Adapters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -112,15 +113,24 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Add the user's login ID to the DTO so we can create the entity
             acceptance.ApprovalUserId = CurrentUser.UserId;
 
-            // Convert the DTO to an entity, process the acceptance, convert the resulting entity
-            // back to a DTO, and return it
-            var acceptanceAdapter = _adapterRegistry.GetAdapter<PaymentPlanTermsAcceptance, Domain.Finance.Entities.PaymentPlanTermsAcceptance>();
-            var acceptanceEntity = acceptanceAdapter.MapToType(acceptance);
-            var approvalEntity = _paymentPlanRepository.ApprovePaymentPlanTerms(acceptanceEntity);
-            var approvalAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.PaymentPlanApproval, PaymentPlanApproval>();
-            var approvalDto = approvalAdapter.MapToType(approvalEntity);
+            try
+            {
+                // Convert the DTO to an entity, process the acceptance, convert the resulting entity
+                // back to a DTO, and return it
+                var acceptanceAdapter = _adapterRegistry.GetAdapter<PaymentPlanTermsAcceptance, Domain.Finance.Entities.PaymentPlanTermsAcceptance>();
+                var acceptanceEntity = acceptanceAdapter.MapToType(acceptance);
+                var approvalEntity = _paymentPlanRepository.ApprovePaymentPlanTerms(acceptanceEntity);
+                var approvalAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.PaymentPlanApproval, PaymentPlanApproval>();
+                var approvalDto = approvalAdapter.MapToType(approvalEntity);
 
-            return approvalDto;
+                return approvalDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
+
         }
 
         /// <summary>
@@ -135,15 +145,24 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 throw new ArgumentNullException("approvalId", "Approval response ID is required.");
             }
 
-            var approvalEntity = _paymentPlanRepository.GetPaymentPlanApproval(approvalId);
+            try
+            {
+                var approvalEntity = _paymentPlanRepository.GetPaymentPlanApproval(approvalId);
 
-            // Verify user permissions to data
-            CheckAccountPermission(approvalEntity.StudentId);
 
-            var approvalAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.PaymentPlanApproval, PaymentPlanApproval>();
-            var approvalDto = approvalAdapter.MapToType(approvalEntity);
+                // Verify user permissions to data
+                CheckAccountPermission(approvalEntity.StudentId);
 
-            return approvalDto;
+                var approvalAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.PaymentPlanApproval, PaymentPlanApproval>();
+                var approvalDto = approvalAdapter.MapToType(approvalEntity);
+
+                return approvalDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -366,127 +385,134 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 throw new ArgumentException("billing terms list cannot be empty");
             }
 
-            var billingTerms = criteria.BillingTerms;
-            // Validate inbound billing term payment plan information
-            ValidateBillingTermPaymentPlanInformation(billingTerms);
-
-            var personIds = billingTerms.Select(bt => bt.PersonId).Distinct().ToList();
-            personIds.ForEach(pid => CheckIfUserIsSelf(pid));
-
-            // Initialize list of DTOs to be returned;
-            Domain.Finance.Entities.PaymentPlanEligibility eligibilityEntity;
-            Domain.Finance.Entities.PaymentPlanIneligibilityReason? reasonEntity = (Domain.Finance.Entities.PaymentPlanIneligibilityReason?)null;
-            List<Domain.Finance.Entities.BillingTermPaymentPlanInformation> eligibleBillingTerms = new List<Domain.Finance.Entities.BillingTermPaymentPlanInformation>();
-
-            // Retrieve finance configuration information
-            FinanceConfiguration config = _financeConfigurationRepository.GetFinanceConfiguration();
-            if (config != null)
+            try
             {
-                // Determine if user payment plan creation is enabled
-                if (config.UserPaymentPlanCreationEnabled)
+                var billingTerms = criteria.BillingTerms;
+                // Validate inbound billing term payment plan information
+                ValidateBillingTermPaymentPlanInformation(billingTerms);
+
+                var personIds = billingTerms.Select(bt => bt.PersonId).Distinct().ToList();
+                personIds.ForEach(pid => CheckIfUserIsSelf(pid));
+
+                // Initialize list of DTOs to be returned;
+                Domain.Finance.Entities.PaymentPlanEligibility eligibilityEntity;
+                Domain.Finance.Entities.PaymentPlanIneligibilityReason? reasonEntity = (Domain.Finance.Entities.PaymentPlanIneligibilityReason?)null;
+                List<Domain.Finance.Entities.BillingTermPaymentPlanInformation> eligibleBillingTerms = new List<Domain.Finance.Entities.BillingTermPaymentPlanInformation>();
+
+                // Retrieve finance configuration information
+                FinanceConfiguration config = _financeConfigurationRepository.GetFinanceConfiguration();
+                if (config != null)
                 {
-                    // Convert DTOs to domain entities
-                    List<Ellucian.Colleague.Domain.Finance.Entities.BillingTermPaymentPlanInformation> billingTermEntities = new List<Domain.Finance.Entities.BillingTermPaymentPlanInformation>();
-                    var dtoAdapter = new BillingTermPaymentPlanInformationDtoAdapter(_adapterRegistry, logger);
-                    var entityAdapter = new BillingTermPaymentPlanInformationEntityAdapter(_adapterRegistry, logger);
-                    foreach (var billingTerm in billingTerms)
+                    // Determine if user payment plan creation is enabled
+                    if (config.UserPaymentPlanCreationEnabled)
                     {
-                        billingTermEntities.Add(dtoAdapter.MapToType(billingTerm));
-                    }
-
-                    // Eliminate any billing terms with receivable types that are not payable
-                    billingTermEntities = ReceivableService.RemoveBillingTermPaymentPlanInformationWithNonPayableReceivableType(billingTermEntities, config).ToList();
-
-                    // Retrieve account holder information 
-                    if (billingTermEntities.Any())
-                    {
-                        var accountHolder = await _arRepository.GetAccountHolderAsync(billingTermEntities[0].PersonId);
-
-                        // Evaluate account holder against any global payment plan eligibility rules
-                        bool isPlanEligible = AccountHolderIsEligibleForPaymentPlanCreation(config, accountHolder);
-                        if (isPlanEligible)
+                        // Convert DTOs to domain entities
+                        List<Ellucian.Colleague.Domain.Finance.Entities.BillingTermPaymentPlanInformation> billingTermEntities = new List<Domain.Finance.Entities.BillingTermPaymentPlanInformation>();
+                        var dtoAdapter = new BillingTermPaymentPlanInformationDtoAdapter(_adapterRegistry, logger);
+                        var entityAdapter = new BillingTermPaymentPlanInformationEntityAdapter(_adapterRegistry, logger);
+                        foreach (var billingTerm in billingTerms)
                         {
-                            // For each billing term, determine the applicable payment plan requirement definition,
-                            // either the default or a rule-specific requirement, and the applicable payment plan
-                            // option within that requirement.
-                            foreach (var billingTerm in billingTermEntities)
+                            billingTermEntities.Add(dtoAdapter.MapToType(billingTerm));
+                        }
+
+                        // Eliminate any billing terms with receivable types that are not payable
+                        billingTermEntities = ReceivableService.RemoveBillingTermPaymentPlanInformationWithNonPayableReceivableType(billingTermEntities, config).ToList();
+
+                        // Retrieve account holder information 
+                        if (billingTermEntities.Any())
+                        {
+                            var accountHolder = await _arRepository.GetAccountHolderAsync(billingTermEntities[0].PersonId);
+
+                            // Evaluate account holder against any global payment plan eligibility rules
+                            bool isPlanEligible = AccountHolderIsEligibleForPaymentPlanCreation(config, accountHolder);
+                            if (isPlanEligible)
                             {
-                                var paymentPlanOption = GetApplicablePaymentPlanOption(billingTerm.TermId, billingTerm.ReceivableTypeCode, config, accountHolder);
-                                if (paymentPlanOption != null)
+                                // For each billing term, determine the applicable payment plan requirement definition,
+                                // either the default or a rule-specific requirement, and the applicable payment plan
+                                // option within that requirement.
+                                foreach (var billingTerm in billingTermEntities)
                                 {
-                                    // Get the associated payment plan template 
-                                    Domain.Finance.Entities.PaymentPlanTemplate template;
-                                    try
+                                    var paymentPlanOption = GetApplicablePaymentPlanOption(billingTerm.TermId, billingTerm.ReceivableTypeCode, config, accountHolder);
+                                    if (paymentPlanOption != null)
                                     {
-                                        template = _paymentPlanRepository.GetTemplate(paymentPlanOption.TemplateId);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Info(ex, "Error retrieving template " + paymentPlanOption.TemplateId);
-                                        template = null;
-                                    }
-                                    // Determine if the template is valid for user payment plan creation
-                                    if (template != null)
-                                    {
-                                        List<string> messages;
-                                        Domain.Finance.Entities.PaymentPlanIneligibilityReason? reason;
-                                        if (template.IsValidForUserPaymentPlanCreation(billingTerm.ReceivableTypeCode, billingTerm.PaymentPlanAmount, out messages, out reason))
+                                        // Get the associated payment plan template 
+                                        Domain.Finance.Entities.PaymentPlanTemplate template;
+                                        try
                                         {
-                                            billingTerm.PaymentPlanTemplateId = template.Id;
-                                            eligibleBillingTerms.Add(billingTerm);
+                                            template = _paymentPlanRepository.GetTemplate(paymentPlanOption.TemplateId);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            logger.Info(ex, "Error retrieving template " + paymentPlanOption.TemplateId);
+                                            template = null;
+                                        }
+                                        // Determine if the template is valid for user payment plan creation
+                                        if (template != null)
+                                        {
+                                            List<string> messages;
+                                            Domain.Finance.Entities.PaymentPlanIneligibilityReason? reason;
+                                            if (template.IsValidForUserPaymentPlanCreation(billingTerm.ReceivableTypeCode, billingTerm.PaymentPlanAmount, out messages, out reason))
+                                            {
+                                                billingTerm.PaymentPlanTemplateId = template.Id;
+                                                eligibleBillingTerms.Add(billingTerm);
+                                            }
+                                            else
+                                            {
+                                                if (messages != null) messages.ForEach(m => logger.Info(m));
+                                                billingTerm.IneligibilityReason = reason;
+                                            }
                                         }
                                         else
                                         {
-                                            if (messages != null) messages.ForEach(m => logger.Info(m));
-                                            billingTerm.IneligibilityReason = reason;
+                                            string errorMessage = "Payment plan template " + paymentPlanOption.TemplateId + " is null.";
+                                            logger.Info(errorMessage);
+                                            reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
                                         }
                                     }
                                     else
                                     {
-                                        string errorMessage = "Payment plan template " + paymentPlanOption.TemplateId + " is null.";
-                                        logger.Info(errorMessage);
+                                        logger.Info("Payment plans cannot be created on " + DateTime.Today.ToShortDateString() + " for " + billingTerm.TermId + "; user cannot create a payment plan for " + billingTerm.TermId + " for receivable type " + billingTerm.ReceivableTypeCode);
                                         reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
                                     }
                                 }
-                                else
-                                {
-                                    logger.Info("Payment plans cannot be created on " + DateTime.Today.ToShortDateString() + " for " + billingTerm.TermId + "; user cannot create a payment plan for " + billingTerm.TermId + " for receivable type " + billingTerm.ReceivableTypeCode);
-                                    reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
-                                }
+                                var ineligibleReasons = billingTermEntities.Select(bt => bt.IneligibilityReason).Where(bt => bt.HasValue).Distinct().ToList();
+                                reasonEntity = ineligibleReasons.Any() ?
+                                    (ineligibleReasons.Any(ir => ir.Value == Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible) ? Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible : Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration) :
+                                    reasonEntity;
                             }
-                            var ineligibleReasons = billingTermEntities.Select(bt => bt.IneligibilityReason).Where(bt => bt.HasValue).Distinct().ToList();
-                            reasonEntity = ineligibleReasons.Any() ?
-                                (ineligibleReasons.Any(ir => ir.Value == Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible) ? Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible : Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration) :
-                                reasonEntity;
+                            else
+                            {
+                                logger.Info("Account holder " + accountHolder.Id + " did not pass all user eligibility rules.");
+                                reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
+                            }
                         }
                         else
                         {
-                            logger.Info("Account holder " + accountHolder.Id + " did not pass all user eligibility rules.");
-                            reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
+                            logger.Info("None of the receivable types for the user's payment item(s) is payable; user cannot create a payment plan at this time.");
+                            reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible;
                         }
                     }
                     else
                     {
-                        logger.Info("None of the receivable types for the user's payment item(s) is payable; user cannot create a payment plan at this time.");
-                        reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.ChargesAreNotEligible;
+                        logger.Info("User payment plan creation is disabled; user cannot create a payment plan for any term/receivable type.");
+                        reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
                     }
+                    eligibilityEntity = new Domain.Finance.Entities.PaymentPlanEligibility(eligibleBillingTerms, reasonEntity);
+                    PaymentPlanEligibilityAdapter eligibilityDtoAdapter = new PaymentPlanEligibilityAdapter(_adapterRegistry, logger);
+                    return eligibilityDtoAdapter.MapToType(eligibilityEntity);
                 }
+
+                // Finance configuration data is null; log an error.
                 else
                 {
-                    logger.Info("User payment plan creation is disabled; user cannot create a payment plan for any term/receivable type.");
-                    reasonEntity = Domain.Finance.Entities.PaymentPlanIneligibilityReason.PreventedBySystemConfiguration;
+                    string errorMessage = "Finance configuration data is null.";
+                    logger.Info(errorMessage);
+                    throw new ApplicationException(errorMessage);
                 }
-                eligibilityEntity = new Domain.Finance.Entities.PaymentPlanEligibility(eligibleBillingTerms, reasonEntity);
-                PaymentPlanEligibilityAdapter eligibilityDtoAdapter = new PaymentPlanEligibilityAdapter(_adapterRegistry, logger);
-                return eligibilityDtoAdapter.MapToType(eligibilityEntity);
             }
-
-            // Finance configuration data is null; log an error.
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                string errorMessage = "Finance configuration data is null.";
-                logger.Info(errorMessage);
-                throw new ApplicationException(errorMessage);
+                throw;
             }
         }
 
@@ -571,6 +597,11 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                                     // Convert plan to DTO and return
                                     var paymentPlanAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.PaymentPlan, PaymentPlan>();
                                     return paymentPlanAdapter.MapToType(proposedPlanEntity);
+                                }
+                                catch (ColleagueSessionExpiredException csee)
+                                {
+                                    logger.Error(csee, csee.Message);
+                                    throw;
                                 }
                                 catch (Exception ex)
                                 {

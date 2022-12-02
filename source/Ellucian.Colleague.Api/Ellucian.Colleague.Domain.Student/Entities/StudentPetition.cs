@@ -1,9 +1,12 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -91,9 +94,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public DateTimeOffset DateTimeChanged { get; set; }
 
         /// <summary>
-        /// The name of the person who last updated the petition
+        /// The name of the person who last updated the petition or consent
         /// </summary>
         public string UpdatedBy { get; set; }
+
+        /// <summary>
+        /// The Id of the person who set the petition or consent
+        /// </summary>
+        public string SetBy { get; set; }
 
         /// <summary>
         /// Indicates the type of student petition (faculty consent or regular)
@@ -166,7 +174,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                     // throw an exception 
                     if ((!string.IsNullOrEmpty(this.CourseId) && string.IsNullOrEmpty(this.TermCode)) || ((!string.IsNullOrEmpty(item.CourseId) && string.IsNullOrEmpty(item.TermCode))))
                     {
-                        throw new Exception("Cannot compare Petitions. Cannot compare Term against dates");
+                        throw new ColleagueWebApiException("Cannot compare Petitions. Cannot compare Term against dates");
                     }
                 }
                 else

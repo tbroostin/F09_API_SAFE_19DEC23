@@ -22,7 +22,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         // this will be a reference to the parent ProgramRequirements.  If this requirement
         // is a prerequisite or an additional requirment, this will be null.
 
-        public ProgramRequirements ProgramRequirements;
+        public ProgramRequirements ProgramRequirements { get; set; }
 
 
         // History Gen Ed Requirement

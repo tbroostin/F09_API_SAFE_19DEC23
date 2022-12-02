@@ -15,6 +15,7 @@ using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -55,6 +56,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetAccountActivityPeriodsForStudent(studentId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -103,6 +109,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetAccountActivityByTermForStudent2(termId, studentId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -153,6 +164,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.PostAccountActivityByPeriodForStudent2(arguments.AssociatedPeriods, arguments.StartDate, arguments.EndDate, studentId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -189,7 +205,12 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return await _service.GetStudentAwardDisbursementInfoAsync(studentId, awardYear, awardId);
             }
-            catch(ArgumentNullException ane)
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentNullException ane)
             {
                 _logger.Error(ane, ane.Message);
                 throw CreateHttpResponseException("One of the provided arguments is invalid. See log for details");
@@ -240,6 +261,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return await _service.GetPotentialD7FinancialAidAsync(criteria);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {

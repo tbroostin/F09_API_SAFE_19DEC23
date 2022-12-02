@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -11,12 +11,14 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Data.Colleague.DataContracts;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using System.Text;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -565,6 +567,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 // Get the unit part of the cost center ID associated to this GL account.
                 glAccountDomain.UnitId = glAccount.Substring(costCenterStructure.Unit.StartPosition, costCenterStructure.Unit.ComponentLength);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 // Log the message and throw the exception
@@ -591,7 +597,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         ApplValcodes GlSourceCodesValTable = await DataReader.ReadRecordAsync<ApplValcodes>("CF.VALCODES", "GL.SOURCE.CODES");
                         if (GlSourceCodesValTable == null)
-                            throw new Exception("GL.SOURCE.CODES validation table data is null.");
+                            throw new ColleagueWebApiException("GL.SOURCE.CODES validation table data is null.");
 
                         return GlSourceCodesValTable;
                     }, Level1CacheTimeoutValue);
@@ -601,7 +607,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             catch (Exception ex)
             {
                 LogDataError("CF.VALCODES", "GL.SOURCE.CODES", GlSourceCodesValidationTable, ex);
-                throw new Exception("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
+                throw new ColleagueWebApiException("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
             }
         }
 

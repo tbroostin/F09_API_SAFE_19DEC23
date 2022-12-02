@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -7,6 +7,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -64,6 +65,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 studentStandings.Add(studentStandingEntity);
                             }
                         }
+                        catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+                        {
+                            throw;
+                        }
                         catch (Exception e)
                         {
                             logger.Error(string.Format("Failed to build student standing {0} for student {1}", studentStanding.Recordkey, studentStanding.StsStudent));
@@ -75,7 +80,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             if (error && studentStandings.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No student standings records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No student standings records returned. Check API error log.");
 
             return studentStandings;
         }
@@ -187,7 +192,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             if (error && standingsByStudent.Count() == 0)
-                throw new Exception("Errors prevented partial return of student standings batch.");
+                throw new ColleagueWebApiException("Errors prevented partial return of student standings batch.");
 
             return standingsByStudent;
         }

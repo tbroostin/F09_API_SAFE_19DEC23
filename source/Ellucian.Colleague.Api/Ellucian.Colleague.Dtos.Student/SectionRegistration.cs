@@ -31,6 +31,13 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Action is drop.
         /// </summary>
         public string DropReasonCode { get; set; }
+
+        /// <summary>
+        /// The system ID of a record in the the INT.TO.WDRWL.CODE file.
+        /// An intent to withdraw ID may only be specified when the Action is Drop. It is optional when the
+        /// action is drop.
+        /// </summary>
+        public string IntentToWithdrawId { get; set; }
     }
 
 }

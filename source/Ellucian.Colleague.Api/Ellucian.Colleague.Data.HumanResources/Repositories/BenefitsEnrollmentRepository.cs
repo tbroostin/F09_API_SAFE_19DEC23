@@ -1,8 +1,9 @@
-﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using System.Linq;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -25,7 +27,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     public class BenefitsEnrollmentRepository : BaseColleagueRepository, IBenefitsEnrollmentRepository
     {
         private readonly ApiSettings apiSettings;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public BenefitsEnrollmentRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings) : base(cacheProvider, transactionFactory, logger)
         {
@@ -44,7 +46,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("employeeId");
             }
-
+            logger.Debug(string.Format("Fetching EmployeeBenefitsEnrollmentEligibility for {0}", employeeId));
             GetBenefitEnrollmentEligibilityRequest request = new GetBenefitEnrollmentEligibilityRequest();
             request.EmployeeId = employeeId;
             GetBenefitEnrollmentEligibilityResponse response = null;
@@ -52,6 +54,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             try
             {
                 response = await transactionInvoker.ExecuteAsync<GetBenefitEnrollmentEligibilityRequest, GetBenefitEnrollmentEligibilityResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -87,7 +93,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 BenefitsEnrollmentPageCustomText = response.BenefitsEnrollmentText,
                 ManageDepBenPageCustomText = response.ManageDepBenText
             };
-
+            
+            logger.Debug(string.Format("EmployeeBenefitsEnrollmentEligibility domain entity containing benefits enrollment eligibility information obtained successfully for {0}", employeeId));
+            logger.Debug(string.Format("The EnrollmentPeriodStartDate = {0}, EnrollmentPeriodEndDate = {1}", response.EnrollmentPeriodStartDate, response.EnrollmentPeriodEndDate));
             return EmployeeBenefitsEnrollmentEligibilityEntity;
         }
 
@@ -102,7 +110,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("employeeId");
             }
-
+            logger.Debug(string.Format("Fetching EmployeeBenefitsEnrollmentPoolItem for {0}", employeeId));
             GetBenefitEnrollmentPoolRequest request = new GetBenefitEnrollmentPoolRequest();
             request.EmployeeId = employeeId;
             GetBenefitEnrollmentPoolResponse response = null;
@@ -110,6 +118,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             try
             {
                 response = await transactionInvoker.ExecuteAsync<GetBenefitEnrollmentPoolRequest, GetBenefitEnrollmentPoolResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -136,7 +148,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 EmployeeBenefitsEnrollmentPoolItemEntities.Add(CreateEmployeeBenefitsEnrollmentPoolEntity(pool));
             }
-
+            
+            logger.Debug(string.Format("List of EmployeeBenefitsEnrollmentPoolItem domain entities count: {0} containing benefits enrollment dependent and beneficiary pool information obtained successfully for {1}", EmployeeBenefitsEnrollmentPoolItemEntities.Count(), employeeId));
             return EmployeeBenefitsEnrollmentPoolItemEntities;
         }
 
@@ -157,13 +170,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("benefitsEnrollmentPoolId");
             }
-
+            logger.Debug(string.Format("Fetching dependent information for {0}", employeeId));
             EmployeeBenefitsEnrollmentPoolItem result = null;
             IEnumerable<EmployeeBenefitsEnrollmentPoolItem> dependents = null;
 
             try
             {
                 dependents = await GetEmployeeBenefitsEnrollmentPoolAsync(employeeId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -175,6 +192,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (dependents != null && dependents.Any())
             {
                 result = dependents.FirstOrDefault(d => d.Id == benefitsEnrollmentPoolId);
+                logger.Debug(string.Format("EmployeeBenefitsEnrollmentPool information by id: {0} obtained successfully", benefitsEnrollmentPoolId));
             }
 
             return result;
@@ -192,6 +210,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("employeeId");
             }
+            logger.Debug(string.Format("Fetching EmployeeBenefitsEnrollmentPackage object for {0}", employeeId));
             GetBenefitEnrollmentPackageRequest request = new GetBenefitEnrollmentPackageRequest()
             {
                 EmployeeId = employeeId,
@@ -201,6 +220,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             try
             {
                 response = await transactionInvoker.ExecuteAsync<GetBenefitEnrollmentPackageRequest, GetBenefitEnrollmentPackageResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -226,6 +249,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 PackageDescription = response.PkgDescripion,
                 EmployeeEligibleBenefitTypes = BuildEligibleBenefitTypes(response)
             };
+            logger.Debug(string.Format("EmployeeBenefitsEnrollmentPackage obtained successfully for {0} with enrollment period id: {1}", employeeId, response.EnrollmentPeriodId));
             return benefitsPackage;
         }
 
@@ -250,7 +274,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new ArgumentNullException("employeeBenefitsEnrollmentPoolItem", message);
             }
-
+            logger.Debug(string.Format("Adding new benefits enrollment pool information to {0}", employeeId));
             DateTime? birthDate = null;
             if (employeeBenefitsEnrollmentPoolItem.BirthDate.HasValue)
             {
@@ -280,7 +304,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 MaritalStatus = employeeBenefitsEnrollmentPoolItem.MaritalStatus,
                 OrganizationName = employeeBenefitsEnrollmentPoolItem.OrganizationName
             };
-
+            logger.Debug(string.Format("Request object for employeeBenefitsEnrollmentPoolItem id: {0} and person id: {1} created successfully", employeeBenefitsEnrollmentPoolItem.Id, employeeBenefitsEnrollmentPoolItem.PersonId));
             var response = await transactionInvoker.ExecuteAsync<AddBenefitEnrollmentPoolRequest, AddBenefitEnrollmentPoolResponse>(request);
 
             if (response == null)
@@ -332,7 +356,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new ArgumentNullException("employeeBenefitsEnrollmentPoolItem.Id", message);
             }
-
+            logger.Debug(string.Format("Updating benefits enrollment pool information for {0}", employeeId));
             DateTime? birthDate = null;
             if (employeeBenefitsEnrollmentPoolItem.BirthDate.HasValue)
             {
@@ -362,6 +386,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 InMaritalStatus = employeeBenefitsEnrollmentPoolItem.MaritalStatus,
                 InOrgName = employeeBenefitsEnrollmentPoolItem.OrganizationName
             };
+            logger.Debug(string.Format("Request object for employeeBenefitsEnrollmentPoolItem id: {0} and person id: {1} created successfully", employeeBenefitsEnrollmentPoolItem.Id, employeeBenefitsEnrollmentPoolItem.PersonId));
 
             var response = await transactionInvoker.ExecuteAsync<UpdateBenEnrPoolRequest, UpdateBenEnrPoolResponse>(request);
 
@@ -396,7 +421,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("benefitsEnrollmentPoolId");
             }
-
+            logger.Debug(string.Format("Checking whether the dependent with id: {0} exists or not", benefitsEnrollmentPoolId));
             string criteria = "WITH BEN.ENR.POOL.ID EQ '{0}'";
             string[] benefitsEnrollmentPoolIds = await DataReader.SelectAsync("BEN.ENR.POOL", string.Format(criteria, benefitsEnrollmentPoolId));
 
@@ -427,6 +452,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("benefitTypeId");
             }
+            logger.Debug("Querying enrollment period benefits based on specified criteria");
             GetBenefitTypeBenefitsRequest request = new GetBenefitTypeBenefitsRequest()
             {
                 EnrPeriodId = enrollmentPeriodId,
@@ -434,7 +460,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 EnrPeriodBenTypeId = benefitTypeId,
                 EnrPeriodBenIdsIn = enrollmentPeriodBenefitIds
             };
-
+            logger.Debug(string.Format("enrollmentPeriodId: {0}, packageId: {1}, benefitTypeId: {2}", enrollmentPeriodId, packageId, benefitTypeId));
             List<EnrollmentPeriodBenefit> benefits = new List<EnrollmentPeriodBenefit>();
             GetBenefitTypeBenefitsResponse response = null;
             try
@@ -460,6 +486,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 throw new RepositoryException(message);
             }
             benefits = BuildBenefits(response, benefitTypeId);
+            logger.Debug("Enrollment period benefits obtained successfully");
             return benefits;
         }
 
@@ -483,6 +510,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("enrollmentPeriodId");
             }
+            logger.Debug("Querying employee benefits enrollment info based on specified criteria");
 
             GetEmployeeBenefitsEnrollmentInfoRequest request = new GetEmployeeBenefitsEnrollmentInfoRequest()
             {
@@ -490,12 +518,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 EnrollmentPeriodId = enrollmentPeriodId,
                 BenefitTypeId = benefitTypeId,
             };
-
+            logger.Debug(string.Format("employeeId: {0}, enrollmentPeriodId: {1}, benefitTypeId: {2}", employeeId, enrollmentPeriodId, benefitTypeId));
             GetEmployeeBenefitsEnrollmentInfoResponse response = new GetEmployeeBenefitsEnrollmentInfoResponse();
 
             try
             {
                 response = await transactionInvoker.ExecuteAsync<GetEmployeeBenefitsEnrollmentInfoRequest, GetEmployeeBenefitsEnrollmentInfoResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -510,6 +542,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             var employeeBenefitsEnrollmentInfoEntity = BuildEmployeeBenefitsEnrollmentInfo(employeeId, enrollmentPeriodId, response);
+            logger.Debug("employeeBenefitsEnrollmentInfoEntity obtained. Benefits enrollment info obtained successfully");
             return employeeBenefitsEnrollmentInfoEntity;
         }
 
@@ -526,7 +559,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(message);
                 throw new ArgumentNullException("employeeBenefitEnrollmentInfo", message);
             }
-
+            logger.Debug(string.Format("Updating the given benefits enrollment information with id: {0} for employee: {1}", employeeBenefitEnrollmentInfo.Id, employeeBenefitEnrollmentInfo.EmployeeId));
             var enrollPeriodSelections = employeeBenefitEnrollmentInfo.EmployeeBenefitEnrollmentDetails.Select(ebd => new EnrollPeriodSelections()
             {
                 EnrollPeriodBenId = ebd.PeriodBenefitId,
@@ -544,7 +577,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 BeneficiaryTypes = string.Join(_SM.ToString(), ebd.BeneficiaryTypes),
                 BeneficiaryPercents = string.Join(_SM.ToString(), ebd.BeneficiaryPercent),
             }).ToList();
-
+            logger.Debug("enrollPeriodSelections obtained");
             var request = new UpdateBenefitSelectionRequest()
             {
                 EnrollPeriodBenType = employeeBenefitEnrollmentInfo.BenefitType,
@@ -554,12 +587,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 EnrollOptout = employeeBenefitEnrollmentInfo.IsWaived,
                 EnrollPeriodSelections = enrollPeriodSelections
             };
-
+            logger.Debug(string.Format("Request object for UpdateBenefitSelection employeeBenefitEnrollmentInfo EmployeeId: {0} and EnrollmentPeriodId: {1} created successfully", employeeBenefitEnrollmentInfo.EmployeeId, employeeBenefitEnrollmentInfo.EnrollmentPeriodId));
             UpdateBenefitSelectionResponse response = new UpdateBenefitSelectionResponse();
 
             try
             {
                 response = await transactionInvoker.ExecuteAsync<UpdateBenefitSelectionRequest, UpdateBenefitSelectionResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -582,6 +619,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var benefitTypeId = employeeBenefitEnrollmentInfo.EmployeeBenefitEnrollmentDetails.FirstOrDefault().BenefitTypeId;
 
             var upddatedEntity = await QueryEmployeeBenefitsEnrollmentInfoAsync(employeeBenefitEnrollmentInfo.EmployeeId, employeeBenefitEnrollmentInfo.EnrollmentPeriodId, benefitTypeId);
+            logger.Debug(string.Format("The given benefits enrollment information updated successfully for {0}", employeeBenefitEnrollmentInfo.EmployeeId));
             return upddatedEntity;
         }
 
@@ -608,18 +646,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("benefitPackageId");
             }
-
+            logger.Debug(string.Format("Submitting the benefits elected by {0}, for enrollment completion process", employeeId));
             TxSubmitBenefitElectionRequest submitBenefitElectionRequest = new TxSubmitBenefitElectionRequest()
             {
                 EmployeeId = employeeId,
                 EnrollmentPeriodId = enrollmentPeriodId,
                 BenefitsPackageId = benefitPackageId
             };
-
+            logger.Debug(string.Format("submitBenefitElectionRequest object created. EmployeeId: {0}, EnrollmentPeriodId: {1}, BenefitsPackageId: {2}", employeeId, enrollmentPeriodId, benefitPackageId));
             TxSubmitBenefitElectionResponse submitBenefitElectionResponse = null;
             try
             {
                 submitBenefitElectionResponse = await transactionInvoker.ExecuteAsync<TxSubmitBenefitElectionRequest, TxSubmitBenefitElectionResponse>(submitBenefitElectionRequest);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -631,10 +673,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 var message = "Unable to submit benefit elections. Unexpected null response from CTX TxSubmitBenefitElection";
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             var benefitEnrollmentCompletionInfoEntity = BuildBenefitEnrollmentCompletionInfo(employeeId, enrollmentPeriodId, submitBenefitElectionResponse.EnrollmentConfirmationDate, submitBenefitElectionResponse.ErrorMessages);
+            logger.Debug(string.Format("benefitEnrollmentCompletionInfoEntity obtained. The benefits elected by {0} submitted successfully", employeeId));
             return benefitEnrollmentCompletionInfoEntity;
         }
 
@@ -655,17 +698,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("enrollmentPeriodId");
             }
+            logger.Debug(string.Format("Reopening the benefits elected by {0}", employeeId));
 
             ReopenBenefitSelectionRequest reOpenBenefitSelectionRequest = new ReopenBenefitSelectionRequest()
             {
                 EmployeeId = employeeId,
                 EnrollmentPeriodId = enrollmentPeriodId
             };
-
+            logger.Debug(string.Format("reOpenBenefitSelectionRequest object created. EmployeeId: {0}, EnrollmentPeriodId: {1}", employeeId, enrollmentPeriodId));
             ReopenBenefitSelectionResponse reOpenBenefitSelectionResponse = null;
             try
             {
                 reOpenBenefitSelectionResponse = await transactionInvoker.ExecuteAsync<ReopenBenefitSelectionRequest, ReopenBenefitSelectionResponse>(reOpenBenefitSelectionRequest);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -677,10 +725,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 var message = "Unable to re-open benefit elections. Unexpected null returned from the CTX REOPEN.BENEFIT.ELECTION";
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             var benefitEnrollmentCompletionInfoEntity = BuildBenefitEnrollmentCompletionInfo(employeeId, enrollmentPeriodId, reOpenBenefitSelectionResponse.EnrollmentConfirmationDate, null);
+            logger.Debug(string.Format("benefitEnrollmentCompletionInfoEntity obtained. The benefits elected by {0} reopened successfully", employeeId));
             return benefitEnrollmentCompletionInfoEntity;
         }
 
@@ -696,6 +745,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("response");
             }
+            logger.Debug("Start - Process to build and return a set of benefit enrollment period benefits based on specified criteria - Start");
             List<EnrollmentPeriodBenefit> benefits = new List<EnrollmentPeriodBenefit>();
             foreach (var benefit in response.Benefits)
             {
@@ -712,6 +762,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
 
             }
+            logger.Debug("End - Process to build and return a set of benefit enrollment period benefits based on specified criteria is successful - End");
             return benefits;
         }
 
@@ -722,6 +773,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns></returns>
         private IEnumerable<EmployeeBenefitType> BuildEligibleBenefitTypes(GetBenefitEnrollmentPackageResponse response)
         {
+            logger.Debug("Start - Process to build and return a list of benefit types objects - Start");
             var benefitTypes = new List<EmployeeBenefitType>();
             if (response != null && response.BenefitTypesGroup != null)
             {
@@ -758,6 +810,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                 }
             }
+            logger.Debug("End - Process to build and return a list of benefit types objects is successful - End");
             return benefitTypes;
         }
 
@@ -770,6 +823,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>EmployeeBenefitsEnrollmentInfo object</returns>
         private EmployeeBenefitsEnrollmentInfo BuildEmployeeBenefitsEnrollmentInfo(string employeeId, string enrollmentPeriodId, GetEmployeeBenefitsEnrollmentInfoResponse response)
         {
+            logger.Debug("Start - Process to build and return the EmployeeBenefitsEnrollmentInfo entity object - Start");
             var employeeBenefitsEnrollmentDetails = new List<EmployeeBenefitsEnrollmentDetail>();
             char specialChar = _SM;
 
@@ -805,7 +859,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 employeeBenefitsEnrollmentDetailEntity.EmployeeProviderName = benefitsEnrollmentInfoDetails.EmployeeProviderName;
                 employeeBenefitsEnrollmentDetails.Add(employeeBenefitsEnrollmentDetailEntity);
             }
-
+            logger.Debug("End - Process to build and return the EmployeeBenefitsEnrollmentInfo entity object is successful - End");
             return new EmployeeBenefitsEnrollmentInfo()
             {
                 EmployeeId = employeeId,
@@ -848,7 +902,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 IsBirthDateOnFile = benefitsEnrollmentPoolItem.BeplBirthdateOnFileFlag,
                 IsGovernmentIdOnFile = benefitsEnrollmentPoolItem.BeplSsnOnFileFlag
             };
-
+            logger.Debug(string.Format("EmployeeBenefitsEnrollmentPoolItem built successfully for benefits enrollment pool id: {0} and personId: {1}", benefitsEnrollmentPoolItem.BenEnrPoolId, benefitsEnrollmentPoolItem.BeplPersonId));
             return employeeBenefitsEnrollmentPoolItem;
         }
 

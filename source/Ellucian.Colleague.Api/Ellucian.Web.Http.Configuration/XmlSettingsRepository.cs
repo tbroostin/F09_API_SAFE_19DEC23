@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -252,7 +252,7 @@ namespace Ellucian.Web.Http.Configuration
             }
             catch (UnauthorizedAccessException uae)
             {
-                throw new Exception("No access to update '" + FileName + "'. " +
+                throw new ColleagueWebApiDtoException("No access to update '" + FileName + "'. " +
                     "Verify the application pool is running as an identity with permissions to update the App_Data folder.", uae);
             }
 
@@ -263,7 +263,7 @@ namespace Ellucian.Web.Http.Configuration
             }
             catch (UnauthorizedAccessException uae)
             {
-                throw new Exception("No access to update file '" + BackupFilename + "'. " +
+                throw new ColleagueWebApiDtoException("No access to update file '" + BackupFilename + "'. " +
                     "Verify the application pool is running as an identity with permissions to update the App_Data folder.", uae);
             }
 

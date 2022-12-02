@@ -1,4 +1,4 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -13,6 +13,7 @@ using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using System.Collections.Generic;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -27,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly ILogger logger;
         private readonly IBankRepository bankRepository;
         private readonly IAdapterRegistry adapterRegistry;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Instantiate a new BankRoutingInformationController
@@ -63,6 +65,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 var domainToDtoBankAdapter = adapterRegistry.GetAdapter<Domain.Base.Entities.Bank, Dtos.Base.Bank>();
                 var dtoBank = domainToDtoBankAdapter.MapToType(domainBank);
                 return dtoBank;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {

@@ -4,6 +4,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.FinancialAid.Services;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.FinancialAid;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -80,7 +81,11 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 }
                 return faPersons;
             }
-            catch(PermissionsException pe)
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException pe)
             {
                 logger.Error(pe, "Current User does not have correct permissions");
                 throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);

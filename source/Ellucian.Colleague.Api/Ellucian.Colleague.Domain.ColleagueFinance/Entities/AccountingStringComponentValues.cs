@@ -1,9 +1,7 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
 {
@@ -60,8 +58,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// List of poolee accounts in a year.
         /// </summary>
-        public IDictionary<string, string> PooleeAccounts;
+        public IDictionary<string, string> PooleeAccounts { get; set; }
+        public List<string> GrantIds { get { return grantIds; } set { grantIds = value; } }
 
-        public List<string> GrantIds = new List<string>();        
+        private List<string> grantIds = new List<string>();
     }
 }

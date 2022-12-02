@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -324,9 +324,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 studentChargeEntity.InvoiceItemID = (studentChargeDto.Id != null && !string.IsNullOrEmpty(studentChargeDto.Id)) ? (await referenceDataRepository.GetGuidLookupResultFromGuidAsync(studentChargeDto.Id)).PrimaryKey : string.Empty;
             }
-            catch
+            catch (Exception ex)
             {
                 // Do nothing if the GUID doesn't already exist, just leave the invoice item id blank.
+                logger.Error(ex, "Unable to get invoice item.");
             }
             return studentChargeEntity;
         }
@@ -887,7 +888,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
 
             if (IntegrationApiException != null)

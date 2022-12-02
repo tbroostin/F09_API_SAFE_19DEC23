@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -35,7 +35,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private const int PurchaseOrdersCacheTimeout = 20;
         private const string AllPurchaseOrdersCache = "AllPurchaseOrders";
         RepositoryException exception = null;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         /// The constructor to instantiate a purchase order repository object
@@ -94,8 +94,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     purchaseOrderId = await this.GetPurchaseOrdersIdFromGuidAsync(purchaseOrdersEntity.Guid);
                 }
-                catch (KeyNotFoundException)
-                { }
+                catch (KeyNotFoundException knfex)
+                {
+                    logger.Error(knfex, "Unable to get purchase order by guid.");
+                }
             }
 
             if (!string.IsNullOrEmpty(purchaseOrderId))
@@ -299,13 +301,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (!purchaseOrder.PoDate.HasValue)
             {
-                throw new ApplicationException("Missing date for purchase order: " + purchaseOrder.Recordkey);
+                logger.Error("Missing date for purchase order: " + purchaseOrder.Recordkey);
             }
 
             // The purchase order status date contains one to many dates
             var purchaseOrderStatusDate = purchaseOrder.PoStatusDate.First().Value;
 
-            var purchaseOrderDomainEntity = new PurchaseOrder(purchaseOrder.Recordkey, purchaseOrder.PoNo, purchaseOrderVendorName, purchaseOrderStatus, purchaseOrderStatusDate, purchaseOrder.PoDate.Value.Date);
+            var poDate = purchaseOrder.PoDate.HasValue ? purchaseOrder.PoDate.Value.Date : new DateTime().Date;
+            var purchaseOrderDomainEntity = new PurchaseOrder(purchaseOrder.Recordkey, purchaseOrder.PoNo, purchaseOrderVendorName, purchaseOrderStatus, purchaseOrderStatusDate, poDate);
 
             purchaseOrderDomainEntity.VendorId = purchaseOrder.PoVendor;
 
@@ -337,6 +340,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             purchaseOrderDomainEntity.Comments = purchaseOrder.PoPrintedComments;
             purchaseOrderDomainEntity.InternalComments = purchaseOrder.PoComments;
             purchaseOrderDomainEntity.ConfirmationEmailAddresses = purchaseOrder.PoConfEmailAddresses;
+            purchaseOrderDomainEntity.ApprovalReturnedIndicator = (!string.IsNullOrEmpty(purchaseOrder.PoReturnFlag) && purchaseOrder.PoReturnFlag.Equals("Y"));
 
             // Add any associated requisitions to the purchase order domain entity
             if ((purchaseOrder.PoReqIds != null) && (purchaseOrder.PoReqIds.Count > 0))
@@ -638,7 +642,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 // The GL Distribution always uses the local currency amount.
                                 decimal gldistGlQty = glDist.ItmPoGlQtyAssocMember.HasValue ? glDist.ItmPoGlQtyAssocMember.Value : 0;
                                 decimal gldistGlAmount = glDist.ItmPoGlAmtAssocMember.HasValue ? glDist.ItmPoGlAmtAssocMember.Value : 0;
-                                LineItemGlDistribution glDistribution = new LineItemGlDistribution(glDist.ItmPoGlNoAssocMember, gldistGlQty, gldistGlAmount);
+                                decimal gldistGLPct = glDist.ItmPoGlPctAssocMember.HasValue ? glDist.ItmPoGlPctAssocMember.Value : 0;
+                                LineItemGlDistribution glDistribution = new LineItemGlDistribution(glDist.ItmPoGlNoAssocMember, gldistGlQty, gldistGlAmount, gldistGLPct);
 
                                 if (!(string.IsNullOrEmpty(glDist.ItmPoProjectCfIdAssocMember)))
                                 {
@@ -1316,9 +1321,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                //do not throw exception.
+                // do not throw exception
+                logger.Error(ex, "Unable to get reference IDs.");
             }
             return dict;
         }
@@ -1354,14 +1360,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     response.ErrorMessages = createResponse.AlErrorMessages;
                     response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
                 }
-                response.WarningOccured = (!string.IsNullOrEmpty(createResponse.AWarning) && createResponse.AWarning == "1") ? true : false;
+                // The warning flag can contain the number of warnings.
+                response.WarningOccured = (!string.IsNullOrWhiteSpace(createResponse.AWarning) && createResponse.AWarning != "0") ? true : false;
                 response.WarningMessages = (createResponse.AlWarningMessages != null || createResponse.AlWarningMessages.Any()) ? createResponse.AlWarningMessages : new List<string>();
-
             }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -1405,7 +1411,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -1442,14 +1448,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     response.ErrorMessages = updateResponse.AlErrorMessages;
                     response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
                 }
-                response.WarningOccured = (!string.IsNullOrEmpty(updateResponse.AWarning) && updateResponse.AWarning == "1") ? true : false;
+                // The warning flag can contain the number of warnings.
+                response.WarningOccured = (!string.IsNullOrWhiteSpace(updateResponse.AWarning) && updateResponse.AWarning != "0") ? true : false;
                 response.WarningMessages = (updateResponse.AlWarningMessages != null || updateResponse.AlWarningMessages.Any()) ? updateResponse.AlWarningMessages : new List<string>();
-
             }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;
@@ -1605,15 +1611,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                         var glAccts = new List<string>();
                         var glDistributionAmounts = new List<decimal?>();
+                        var glDistributionQuantities = new List<decimal?>();
+                        var glDistributionPercents = new List<decimal?>();
                         var projectNos = new List<string>();
                         foreach (var item in apLineItem.GlDistributions)
                         {
                             glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
                             glDistributionAmounts.Add(item.Amount);
+                            glDistributionQuantities.Add(item.Quantity);
+                            glDistributionPercents.Add(item.Percent);
                             projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
                         }
                         lineItem.AlItemGlAccts = string.Join("|", glAccts);
                         lineItem.AlItemGlAcctAmts = string.Join("|", glDistributionAmounts);
+                        lineItem.AlItemGlAcctQtys = string.Join("|", glDistributionQuantities);
+                        lineItem.AlItemGlAcctPcts = string.Join("|", glDistributionPercents);
                         lineItem.AlItemProjectNos = string.Join("|", projectNos);
                         lineItems.Add(lineItem);
                     }
@@ -1637,6 +1649,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         deletedLineItem.AlItemVendorParts = string.Empty;
                         deletedLineItem.AlItemGlAccts = string.Empty;
                         deletedLineItem.AlItemGlAcctAmts = null;
+                        deletedLineItem.AlItemGlAcctQtys = null;
+                        deletedLineItem.AlItemGlAcctPcts = null;
                         deletedLineItem.AlItemProjectNos = string.Empty;
                         lineItems.Add(deletedLineItem);
                     }
@@ -2743,15 +2757,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     };
                     var glAccts = new List<string>();
                     var glDistributionAmounts = new List<decimal?>();
+                    var glDistributionQuantities = new List<decimal?>();
+                    var glDistributionPercents = new List<decimal?>();
                     var projectNos = new List<string>();
                     foreach (var item in apLineItem.GlDistributions)
                     {
                         glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
                         glDistributionAmounts.Add(item.Amount);
+                        glDistributionQuantities.Add(item.Quantity);
+                        glDistributionPercents.Add(item.Percent);
                         projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
                     }
                     lineItem.AlItemGlAccts = string.Join("|", glAccts);
                     lineItem.AlItemGlAcctAmts = string.Join("|", glDistributionAmounts);
+                    lineItem.AlItemGlAcctQtys = string.Join("|", glDistributionQuantities);
+                    lineItem.AlItemGlAcctPcts = string.Join("|", glDistributionPercents);
+
                     lineItem.AlItemProjectNos = string.Join("|", projectNos);
                     lineItems.Add(lineItem);
                 }
@@ -2901,19 +2922,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (!purchaseOrderDataContract.PoDate.HasValue)
             {
-                throw new ApplicationException("Missing date for purchase order id: " + purchaseOrderDataContract.Recordkey);
+                logger.Error("Missing date for purchase order id: " + purchaseOrderDataContract.Recordkey);
             }
 
+            if(purchaseOrderDataContract.PoStatus==null || !purchaseOrderDataContract.PoStatus.Any())
+            {
+                throw new ArgumentNullException("Missing status for purchase order: " + purchaseOrderDataContract.Recordkey);
+            }
 
             var requisitionStatus = GetPurchaseOrderStatus(purchaseOrderDataContract.PoStatus.FirstOrDefault(), purchaseOrderDataContract.Recordkey);
 
-            var purchaseOrderSummaryEntity = new PurchaseOrderSummary(purchaseOrderDataContract.Recordkey, purchaseOrderDataContract.PoNo, vendorName, purchaseOrderDataContract.PoDate.Value.Date)
+            var poDate = purchaseOrderDataContract.PoDate.HasValue ? purchaseOrderDataContract.PoDate.Value.Date : new DateTime().Date;
+            var purchaseOrderSummaryEntity = new PurchaseOrderSummary(purchaseOrderDataContract.Recordkey, purchaseOrderDataContract.PoNo, vendorName, poDate)
             {
                 Status = requisitionStatus,
                 VendorId = purchaseOrderDataContract.PoVendor,
                 InitiatorName = initiatorName,
                 RequestorName = requestorName,
-                Amount = purchaseOrderDataContract.PoTotalAmt.HasValue ? purchaseOrderDataContract.PoTotalAmt.Value : 0
+                Amount = purchaseOrderDataContract.PoTotalAmt.HasValue ? purchaseOrderDataContract.PoTotalAmt.Value : 0,
+                ApprovalReturnedIndicator = (!string.IsNullOrEmpty(purchaseOrderDataContract.PoReturnFlag) && purchaseOrderDataContract.PoReturnFlag.Equals("Y"))
             };
             // build approvers and add to entity
             if ((purchaseOrderDataContract.PoAuthEntityAssociation != null) && (purchaseOrderDataContract.PoAuthEntityAssociation.Any()))
@@ -3239,7 +3266,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch (Exception ex)
                     {
-                        throw ex;
+                        throw;
                     }
                 }
             }

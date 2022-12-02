@@ -12,6 +12,7 @@ using slf4net;
 using Ellucian.Web.Http.Configuration;
 using System.Text.RegularExpressions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -50,45 +51,54 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             int personId;
             bool isId = int.TryParse(criteria, out personId);
-            if (isId)
-            {
-                //Format the id according to the existing configuration
-               string id = await PadIdPerPid2ParamsAsync(criteria);
 
-               if ((await IsApplicantAsync(id)) || (await IsStudentAsync(id))){
-                    personIds.Add(id);
-                }
-            }
-            else
+            try
             {
-                string lastName = "";
-                string firstName = "";
-                string middleName = "";
-                ParseNames(criteria, ref lastName, ref firstName, ref middleName);
-                if (string.IsNullOrEmpty(lastName))
+                if (isId)
                 {
-                    throw new ArgumentException("Either an id or a last name must be supplied.");
-                }
-                var foundIds = await SearchByNameAsync(lastName, firstName, middleName);
-                foreach(var id in foundIds){
+                    //Format the id according to the existing configuration
+                    string id = await PadIdPerPid2ParamsAsync(criteria);
+
                     if ((await IsApplicantAsync(id)) || (await IsStudentAsync(id)))
                     {
                         personIds.Add(id);
                     }
                 }
-            }
+                else
+                {
+                    string lastName = "";
+                    string firstName = "";
+                    string middleName = "";
+                    ParseNames(criteria, ref lastName, ref firstName, ref middleName);
+                    if (string.IsNullOrEmpty(lastName))
+                    {
+                        throw new ArgumentException("Either an id or a last name must be supplied.");
+                    }
+                    var foundIds = await SearchByNameAsync(lastName, firstName, middleName);
+                    foreach (var id in foundIds)
+                    {
+                        if ((await IsApplicantAsync(id)) || (await IsStudentAsync(id)))
+                        {
+                            personIds.Add(id);
+                        }
+                    }
+                }
 
-            if (personIds.Any())
-            {
-                return await GetPersonsBaseAsync(personIds.AsEnumerable());
+                if (personIds.Any())
+                {
+                    return await GetPersonsBaseAsync(personIds.AsEnumerable());
+                }
+                else
+                {
+                    string message = string.Format("Could not locate a financial aid person for specified criteria: {0}", criteria);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
             }
-            else
+            catch (ColleagueSessionExpiredException)
             {
-                string message = string.Format("Could not locate a financial aid person for specified criteria: {0}", criteria);
-                logger.Warn(message);
-                throw new ApplicationException(message);
+                throw;
             }
-
         }
 
         /// <summary>
@@ -112,16 +122,22 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     personIds.Add(id);
                 }
             }
-
-            if (personIds.Any())
+            try
             {
-                return await GetPersonsBaseAsync(personIds.AsEnumerable());
+                if (personIds.Any())
+                {
+                    return await GetPersonsBaseAsync(personIds.AsEnumerable());
+                }
+                else
+                {
+                    string message = string.Format("Could not locate persons for specified ids");
+                    logger.Warn(message);
+                    throw new ApplicationException(message);
+                }
             }
-            else
+            catch (ColleagueSessionExpiredException)
             {
-                string message = string.Format("Could not locate persons for specified ids");
-                logger.Warn(message);
-                throw new ApplicationException(message);
+                throw;
             }
         }
 

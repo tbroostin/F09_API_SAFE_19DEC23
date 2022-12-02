@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -116,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 employeeLeavePlans = new List<EmployeeLeavePlan>();
                 employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null,
-                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, true, earningTypeIdList, 80, 50, 50, "P", false, true, true));
+                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, true, earningTypeIdList, 80, 50, 50, 10, "P", false, new DateTime(2022, 1, 1), true, true));
 
             }
 
@@ -189,8 +189,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ThrowsAsync(new Exception());
                 await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
             }
-
-           
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -285,20 +283,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public class GetEmployeeLeavePlansV2 : EmployeeLeavePlansServiceTests
         {
             public EmployeeLeavePlansService serviceUnderTest;
-            public string UserForAdminPermissionCheck
-            {
-                get
-                {
+            public string UserForAdminPermissionCheck {
+                get {
                     return "0003917";
                 }
             }
 
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
-                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
-                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
-                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
-                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "SIC", "SICK" }, 80, 50, 50, "P", false, true),
+                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1),  true),
+                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
+                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
+                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "SIC", "SICK" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -492,9 +488,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.IsNotNull(actual.First().AccrualLimit);
                 Assert.IsNotNull(actual.First().AccrualRate);
                 Assert.IsNotNull(actual.First().AccrualMaxCarryOver);
+                Assert.IsNotNull(actual.First().AccrualMaxRollOver);
                 Assert.AreEqual(expected.First().AccrualLimit, actual.First().AccrualLimit);
                 Assert.AreEqual(expected.First().AccrualRate, actual.First().AccrualRate);
                 Assert.AreEqual(expected.First().AccrualMaxCarryOver, actual.First().AccrualMaxCarryOver);
+                Assert.AreEqual(expected.First().AccrualMaxRollOver, actual.First().AccrualMaxRollOver);
             }
         }
 

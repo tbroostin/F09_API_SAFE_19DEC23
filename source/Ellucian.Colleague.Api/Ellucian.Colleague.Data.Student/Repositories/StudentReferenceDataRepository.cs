@@ -1,5 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -7,11 +6,13 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -25,9 +26,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     /// Repository for student reference data
     /// </summary>
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
-    public class StudentReferenceDataRepository : BaseColleagueRepository, IStudentReferenceDataRepository
+    public class StudentReferenceDataRepository : BaseApiRepository, IStudentReferenceDataRepository
     {
         private Data.Base.DataContracts.IntlParams internationalParameters;
+
+        // Sets the maximum number of records to bulk read at one time
+        readonly int readSize;
 
         /// <summary>
         /// Constructor
@@ -41,6 +45,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
+
+            // Use the bulk read size from API settings, or fall back to 5000
+            this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
         }
 
         public async Task<IEnumerable<AcademicDepartment>> GetAcademicDepartmentsAsync()
@@ -898,6 +905,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             string.IsNullOrWhiteSpace(at.ValExternalRepresentationAssocMember) ? at.ValInternalCodeAssocMember : at.ValExternalRepresentationAssocMember, 
                             at.ValActionCode1AssocMember);
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         // Log and return null for codes without a description.
@@ -975,7 +986,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception e)
                             {
-                                LogDataError("CAMPUS.ORGS", affiliation.Recordkey, affiliation, e, string.Format("Failed to add affiliation {0}", affiliation.Recordkey));
+                                LogDataError("CAMPUS.ORGS", affiliation.Recordkey, null, e, string.Format("Failed to add affiliation {0}", affiliation.Recordkey));
                             }
                     }
                     return affiliationsList;
@@ -2243,7 +2254,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (RepositoryException ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
                             ex.InnerException);
                     }
                 }
@@ -2488,7 +2499,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (RepositoryException ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
                             ex.InnerException);
                     }
                 }
@@ -3184,15 +3195,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<IEnumerable<Test>> GetTestsAsync()
         {
-            var Tests = await GetOrAddToCacheAsync<List<Test>>("AllTests",
-               async () =>
-               {
-                   Collection<NonCourses> TestsData = await DataReader.BulkReadRecordAsync<NonCourses>("NON.COURSES", "WITH NCRS.CATEGORY.INDEX = 'A''P''T'");
-                   var testsList = BuildTests(TestsData);
-                   return testsList;
-               }
-            );
-            return Tests;
+            try
+            {
+                var Tests = await GetOrAddToCacheAsync<List<Test>>("AllTests",
+                   async () =>
+                   {
+                       Collection<NonCourses> TestsData = await DataReader.BulkReadRecordAsync<NonCourses>("NON.COURSES", "WITH NCRS.CATEGORY.INDEX = 'A''P''T'");
+                       var testsList = BuildTests(TestsData);
+                       return testsList;
+                   }
+                );
+                return Tests;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired fetching tests");
+                throw;
+            }           
         }
 
         public async Task<IEnumerable<WaitlistStatusCode>> GetWaitlistStatusCodesAsync()
@@ -3331,26 +3350,35 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         // TODO: Clean  up
         public async Task<IEnumerable<NoncourseStatus>> GetNoncourseStatusesAsync()
         {
-            return await GetValcodeAsync<NoncourseStatus>("ST", "STUDENT.NON.COURSE.STATUSES", ncStatus =>
+            return 
+                await GetValcodeAsync<NoncourseStatus>("ST", "STUDENT.NON.COURSE.STATUSES", ncStatus =>
             {
-                NoncourseStatusType statusType = NoncourseStatusType.None;
-                switch (ncStatus.ValActionCode1AssocMember)
+                try
                 {
-                    case "1":
-                        statusType = NoncourseStatusType.Withdrawn;
-                        break;
-                    case "2":
-                        statusType = NoncourseStatusType.Accepted;
-                        break;
-                    case "3":
-                        statusType = NoncourseStatusType.Notational;
-                        break;
-                    default:
-                        statusType = NoncourseStatusType.None;
-                        break;
-                }
+                    NoncourseStatusType statusType = NoncourseStatusType.None;
+                    switch (ncStatus.ValActionCode1AssocMember)
+                    {
+                        case "1":
+                            statusType = NoncourseStatusType.Withdrawn;
+                            break;
+                        case "2":
+                            statusType = NoncourseStatusType.Accepted;
+                            break;
+                        case "3":
+                            statusType = NoncourseStatusType.Notational;
+                            break;
+                        default:
+                            statusType = NoncourseStatusType.None;
+                            break;
+                    }
 
-                return new NoncourseStatus(ncStatus.ValInternalCodeAssocMember, ncStatus.ValExternalRepresentationAssocMember, statusType);
+                    return new NoncourseStatus(ncStatus.ValInternalCodeAssocMember, ncStatus.ValExternalRepresentationAssocMember, statusType);
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee, "Colleague session expired while fetching non-course statuses");
+                    throw;
+                }
             });
         }
 
@@ -3417,7 +3445,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         public async Task<IEnumerable<HoldRequestType>> GetHoldRequestTypesAsync()
         {
-            return await GetValcodeAsync<HoldRequestType>("ST", "STU.REQUEST.LOG.HOLDS", c => new HoldRequestType(c.ValInternalCodeAssocMember, c.ValExternalRepresentationAssocMember), Level1CacheTimeoutValue);
+            try
+            {
+                return await GetValcodeAsync<HoldRequestType>("ST", "STU.REQUEST.LOG.HOLDS", c => new HoldRequestType(c.ValInternalCodeAssocMember, c.ValExternalRepresentationAssocMember), Level1CacheTimeoutValue);
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired  while retrieving the hold request type information.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving the hold request type information.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -3753,7 +3795,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";
@@ -4323,6 +4365,62 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new RepositoryException( string.Concat( "No record found, Entity:'FA.STU.MARITAL.STATUS', Record ID:'", year, "'" ) );
             }
             return codeCache;
+        }
+
+        /// <summary>
+        /// Returns all valid intent to withdraw codes.
+        /// </summary>
+        /// <param name="bypassCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>All valid <see cref="IntentToWithdrawCode">intent to withdraw codes</see></returns>
+        public async Task<IEnumerable<IntentToWithdrawCode>> GetIntentToWithdrawCodesAsync(bool bypassCache = false)
+        {
+            if (bypassCache)
+            {
+                var intentToWithdrawCodes = await RetrieveAndBuildIntentToWithdrawCodes();
+                return intentToWithdrawCodes;
+            } 
+            else
+            {
+                return await GetOrAddToCacheAsync<IEnumerable<IntentToWithdrawCode>>("AllIntentToWithdrawCodes", async () => 
+                    await RetrieveAndBuildIntentToWithdrawCodes(), 
+                    Level1CacheTimeoutValue);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves necessary data and builds <see cref="IntentToWithdrawCode"/> objects
+        /// </summary>
+        /// <returns>Collection of valid <see cref="IntentToWithdrawCode">intent to withdraw codes</see></returns>
+        private async Task<IEnumerable<IntentToWithdrawCode>> RetrieveAndBuildIntentToWithdrawCodes()
+        {
+            List<IntentToWithdrawCode> intentToWithdrawCodes = new List<IntentToWithdrawCode>();
+            string[] intToWdrlCodeIds = await DataReader.SelectAsync("INT.TO.WDRL.CODES", string.Empty);
+
+            List<IntToWdrlCodes> intToWdrlCodes = new List<IntToWdrlCodes>();
+            intToWdrlCodes = await BulkReadRecordWithLoggingAsync<IntToWdrlCodes>("INT.TO.WDRL.CODES", intToWdrlCodeIds.ToArray(), readSize, true, true);
+            foreach(var intw in intToWdrlCodes)
+            {
+                try 
+                {
+                    var intToWdrlCode = new IntentToWithdrawCode(intw.Recordkey, intw.ItwcCode, intw.ItwcDescription);
+                    intentToWithdrawCodes.Add(intToWdrlCode);
+                }
+                catch (Exception ex)
+                {
+                    LogDataError("INT.TO.WDRL.CODES", intw.Recordkey, intw, ex);
+                    continue;
+                }
+            }
+            return intentToWithdrawCodes;
+        }
+
+        /// <summary>
+        /// Get student release access codes
+        /// </summary>
+        public async Task<IEnumerable<StudentReleaseAccess>> GetStudentReleaseAccessCodesAsync()
+        {
+            return await GetCodeItemAsync<StuReleaseAccess, StudentReleaseAccess>("StudentReleaseAccessRecords", "STU.RELEASE.ACCESS",
+                 sr => new StudentReleaseAccess(sr.Recordkey, sr.SraDesc, sr.SraComments));
         }
     }
 }

@@ -1,10 +1,11 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Tests
 {
@@ -114,7 +115,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 case "D":
                     return BenefitDeductionTypeCategory.Deduction;
                 default:
-                    throw new Exception("unknown institution type code");
+                    throw new ColleagueWebApiException("unknown institution type code");
             }            
         }
     }

@@ -77,30 +77,30 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         [TestMethod]
-        public void CheckSingleFirstPhoneProperties_Valid()
+        public async Task CheckSingleFirstPhoneProperties_Valid()
         {
             var personId = personIds.ElementAt(0);
-            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = phoneNumberRepo.GetPersonPhones(personId);
+            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = await phoneNumberRepo.GetPersonPhonesAsync(personId);
             Assert.AreEqual("304-577-9924", phoneNumber.PhoneNumbers.ElementAt(0).Number);
             Assert.AreEqual("HO", phoneNumber.PhoneNumbers.ElementAt(0).TypeCode);
             Assert.AreEqual("", phoneNumber.PhoneNumbers.ElementAt(0).Extension);
         }
 
         [TestMethod]
-        public void CheckSingleSecondPhoneProperties_Valid()
+        public async Task CheckSingleSecondPhoneProperties_Valid()
         {
             var personId = personIds.ElementAt(0);
-            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = phoneNumberRepo.GetPersonPhones(personId);
+            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = await phoneNumberRepo.GetPersonPhonesAsync(personId);
             Assert.AreEqual("703-968-9000", phoneNumber.PhoneNumbers.ElementAt(1).Number);
             Assert.AreEqual("BU", phoneNumber.PhoneNumbers.ElementAt(1).TypeCode);
             Assert.AreEqual("4649", phoneNumber.PhoneNumbers.ElementAt(1).Extension);
         }
 
         [TestMethod]
-        public void SinglePersonPhoneNumberCount_Valid()
+        public async Task SinglePersonPhoneNumberCount_Valid()
         {
             var personId = personIds.ElementAt(0);
-            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = phoneNumberRepo.GetPersonPhones(personId);
+            Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumber = await phoneNumberRepo.GetPersonPhonesAsync(personId);
             Assert.AreEqual(3, phoneNumber.PhoneNumbers.Count());
         }
 

@@ -119,7 +119,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Dictionary containing High School attended and GPA
         /// </summary>
-        public List<HighSchoolGpa> HighSchoolGpas;
+        public List<HighSchoolGpa> HighSchoolGpas { get; set; }
         /// <summary>
         /// List of student home locations and start/end date
         /// </summary>

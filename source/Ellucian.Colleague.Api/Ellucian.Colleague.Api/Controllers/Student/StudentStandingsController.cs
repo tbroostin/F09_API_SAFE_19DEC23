@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -75,6 +76,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving list of student standings from a list of student keys";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 _logger.Error(e, "QueryStudentStandings error");
@@ -112,6 +119,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 IEnumerable<Ellucian.Colleague.Dtos.Student.StudentStanding> studentAcademicStandings = await _studentStandingService.GetStudentAcademicStandingsAsync(studentId);
                 return studentAcademicStandings;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving academic standings for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

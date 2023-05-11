@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,10 +8,12 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Utility;
 using slf4net;
 using System;
@@ -26,7 +28,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class AddressRepository : BaseColleagueRepository, IAddressRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private Data.Base.DataContracts.IntlParams internationalParameters;
         private RepositoryException exception;
 
@@ -49,6 +51,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return GetCodeItem<Ellucian.Colleague.Data.Base.DataContracts.Countries, Country>("AllCountries", "COUNTRIES",
                 d => new Country(d.Recordkey, d.CtryDesc, d.CtryIsoCode, d.CtryIsoAlpha3Code));
         }
+
+        private async Task<IEnumerable<Country>> GetCountriesAsync()
+        {
+            return await GetCodeItemAsync<Ellucian.Colleague.Data.Base.DataContracts.Countries, Country>("AllCountries", "COUNTRIES",
+                d => new Country(d.Recordkey, d.CtryDesc, d.CtryIsoCode, d.CtryIsoAlpha3Code));
+        }
         private ApplValcodes GetAddressRelationships()
         {
 
@@ -60,12 +68,29 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access ADREL.TYPES valcode table.";
                         logger.Info(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
+                    }
+                    return relationshipTable;
+                }, Level1CacheTimeoutValue);
+        }
+
+        private async Task<ApplValcodes> GetAddressRelationshipsAsync()
+        {
+
+            return await GetOrAddToCacheAsync<ApplValcodes>("AddressRelationships",
+                async () =>
+                {
+                    ApplValcodes relationshipTable =await  DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "ADREL.TYPES");
+                    if (relationshipTable == null)
+                    {
+                        var errorMessage = "Unable to access ADREL.TYPES valcode table.";
+                        logger.Info(errorMessage);
                         throw new Exception(errorMessage);
                     }
                     return relationshipTable;
                 }, Level1CacheTimeoutValue);
         }
-        
+
         private ApplValcodes GetPhoneTypes()
         {
 
@@ -77,11 +102,29 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access PHONE.TYPES valcode table.";
                         logger.Info(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
+                    }
+                    return phoneTypesTable;
+                }, Level1CacheTimeoutValue);
+        }
+
+        private async Task<ApplValcodes> GetPhoneTypesAsync()
+        {
+
+            return await GetOrAddToCacheAsync<ApplValcodes>("PhoneTypes",
+                async () =>
+                {
+                    ApplValcodes phoneTypesTable = await DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PHONE.TYPES");
+                    if (phoneTypesTable == null)
+                    {
+                        var errorMessage = "Unable to access PHONE.TYPES valcode table.";
+                        logger.Info(errorMessage);
                         throw new Exception(errorMessage);
                     }
                     return phoneTypesTable;
                 }, Level1CacheTimeoutValue);
         }
+
 
         /// <summary>
         /// Using a collection of zip code ids, get a dictionary collection of associated guids
@@ -163,7 +206,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";
@@ -223,13 +266,66 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     addresses.Add(address);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     /// Don't do anything, just skip this address
+                    logger.Error(ex.Message, "Cannot process address");
                 }
             }
             return addresses;
         }
+
+        /// <summary>
+        /// Get the Preferred Address and Preferred Residence for a single Person
+        /// </summary>
+        /// <param name="personId">Person Key</param>
+        /// <returns>Address Objects for preferred address and preferred residence</returns>
+        public async Task<IEnumerable<Address>> GetPersonAddressesAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person Id is required to retrieve the person's addresses.");
+            }
+            List<Address> addresses = new List<Address>();
+                Ellucian.Colleague.Data.Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personId);
+                if (person == null)
+                {
+                    throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning any data. Person may be corrupted.");
+                }
+                string[] addressIds = person.PersonAddresses.ToArray();
+                ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
+
+                if (addressesData == null)
+                {
+                    throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning address data.  Person or Address may be corrupted.");
+                }
+                foreach (var addressData in addressesData)
+                {
+                    var addressId = addressData.Recordkey;
+                    Address address = new Address(addressId, personId);
+
+                    try
+                    {
+                        address = await BuildAddressAsync(addressData, person);
+                        var phoneNumber =await BuildPhonesAsync(addressData, person);
+                        if (phoneNumber.PhoneNumbers.Count() > 0)
+                        {
+                            foreach (var phone in phoneNumber.PhoneNumbers)
+                            {
+                                address.AddPhone(phone);
+                            }
+                        }
+                        addresses.Add(address);
+                    }
+                    catch (Exception ex)
+                    {
+                        /// Don't do anything, just skip this address
+                        logger.Error(ex, "Cannot process address");
+                    }
+                }
+            return addresses;
+        }
+
         /// <summary>
         /// Get a preferred address and preferred residence for a list of person keys
         /// </summary>
@@ -296,7 +392,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             }
             if (error && addresses.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No address records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No address records returned. Check API error log.");
 
             return addresses;
         }
@@ -343,7 +439,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("Place", place.Recordkey, placeData, ex); //is this logging PII?
+                        LogDataError("Place", place.Recordkey, null, ex); 
                     }
                 }
             }
@@ -1014,7 +1110,116 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             return address;
         }
-       
+
+        private async Task<Address> BuildAddressAsync(Ellucian.Colleague.Data.Base.DataContracts.Address addressData, Ellucian.Colleague.Data.Base.DataContracts.Person person)
+        {
+            Address address = new Address("NEW", person.Recordkey);
+            if (addressData != null)
+            {
+                var addressId = addressData.Recordkey;
+                var personId = person.Recordkey;
+                address = new Address(addressId, personId);
+
+                // Update Person Data fields
+                var assoc = person.PseasonEntityAssociation.Where(r => r.PersonAddressesAssocMember == addressId).FirstOrDefault();
+
+                //if multiple address types are specified then 
+                //deal with it separately
+                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(_SM))
+                {
+                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(_SM);
+                    foreach (var typeCode in addressTypeCodes)
+                    {
+                        address.AddressTypeCodes.Add(typeCode);
+                    }
+                }
+
+                address.TypeCode = assoc.AddrTypeAssocMember;
+                if (!address.AddressTypeCodes.Any())
+                {
+                    address.AddressTypeCodes.Add(address.TypeCode);
+                }
+                address.Type = assoc.AddrTypeAssocMember;
+                if (!string.IsNullOrEmpty(address.Type))
+                {
+                    var codeAddressRelationship =( await GetAddressRelationshipsAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
+                    if (codeAddressRelationship != null)
+                    {
+                        address.Type = codeAddressRelationship.ValExternalRepresentationAssocMember;
+                    }
+                }
+                address.AddressModifier = assoc.AddrModifierLineAssocMember;
+                address.EffectiveStartDate = assoc.AddrEffectiveStartAssocMember;
+                address.EffectiveEndDate = assoc.AddrEffectiveEndAssocMember;
+
+                // Set Preferred Flags
+                address.IsPreferredAddress = false;
+                address.IsPreferredResidence = false;
+                if (addressId == person.PreferredAddress) { address.IsPreferredAddress = true; }
+                if (addressId == person.PreferredResidence) { address.IsPreferredResidence = true; }
+
+                // If there is no translation for country, the country description carries the country code.
+                string countryDesc = null;
+                if (!string.IsNullOrEmpty(addressData.Country))
+                {
+                    var codeCountry = (await GetCountriesAsync()).Where(v => v.Code == addressData.Country).FirstOrDefault();
+                    if (codeCountry != null)
+                    {
+                        countryDesc = codeCountry.Description;
+                    }
+                    else
+                    {
+                        countryDesc = addressData.Country;
+                    }
+                }
+
+                // Build address label
+                List<string> label = new List<string>();
+                if (!string.IsNullOrEmpty(address.AddressModifier))
+                {
+                    label.Add(address.AddressModifier);
+                }
+                if (addressData.AddressLines.Count > 0)
+                {
+                    label.AddRange(addressData.AddressLines);
+                }
+                string cityStatePostalCode = GetCityStatePostalCode(addressData.City, addressData.State, addressData.Zip);
+                if (!String.IsNullOrEmpty(cityStatePostalCode))
+                {
+                    label.Add(cityStatePostalCode);
+                }
+                if (!String.IsNullOrEmpty(countryDesc))
+                {
+                    // Country name gets included in all caps
+                    label.Add(countryDesc.ToUpper());
+                }
+
+                address.AddressLabel = label;
+                address.AddressLines = addressData.AddressLines;
+                address.City = addressData.City;
+                address.State = addressData.State;
+                address.PostalCode = addressData.Zip;
+                address.County = addressData.County;
+                address.CountryCode = addressData.Country;
+                address.Country = countryDesc;
+                address.RouteCode = addressData.AddressRouteCode;
+                address.CarrierRoute = addressData.CarrierRoute;
+
+                address.IntlLocality = addressData.IntlLocality;
+                address.IntlPostalCode = addressData.IntlPostalCode;
+                address.IntlRegion = addressData.IntlRegion;
+                address.IntlSubRegion = addressData.IntlSubRegion;
+
+                address.CorrectionDigit = addressData.CorrectionDigit;
+                address.DeliveryPoint = addressData.DeliveryPoint;
+                address.Latitude = addressData.Latitude;
+                address.Longitude = addressData.Longitude;
+
+                address.AddressChapter = addressData.AddressChapter;
+            }
+            return address;
+        }
+
         /// <summary>
         /// Returns a person's non-address related phone numbers as well as the phone numbers
         /// associated to an address entity.
@@ -1076,6 +1281,114 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 if (addrPhone != null && !string.IsNullOrEmpty(addrPhone.AddressPhoneTypeAssocMember))
                                 {
                                     var phoneType = GetPhoneTypes().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == addrPhone.AddressPhoneTypeAssocMember).FirstOrDefault();
+                                    if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")
+                                    {
+                                        try
+                                        {
+                                            Phone addressPhone = new Phone(addrPhone.AddressPhonesAssocMember, addrPhone.AddressPhoneTypeAssocMember, addrPhone.AddressPhoneExtensionAssocMember);
+                                            phoneNumber.AddPhone(addressPhone);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            var phoneError = "Person address phone information is invalid.";
+                                            // Log the original exception
+                                            logger.Error(ex.ToString());
+                                            logger.Info(phoneError);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Update Personal Phone
+                if (personData.PerphoneEntityAssociation != null && personData.PerphoneEntityAssociation.Count > 0)
+                {
+                    foreach (var phoneData in personData.PerphoneEntityAssociation)
+                    {
+                        try
+                        {
+                            Phone personalPhone = new Phone(phoneData.PersonalPhoneNumberAssocMember, phoneData.PersonalPhoneTypeAssocMember, phoneData.PersonalPhoneExtensionAssocMember);
+                            phoneNumber.AddPhone(personalPhone);
+                        }
+                        catch (Exception ex)
+                        {
+                            var phoneError = "Person personal phone information is invalid.";
+
+                            // Log the original exception
+                            logger.Error(ex.ToString());
+                            logger.Info(phoneError);
+                        }
+                    }
+                }
+                return phoneNumber;
+            }
+            return null;
+        }
+
+
+        // <summary>
+        /// Returns a person's non-address related phone numbers as well as the phone numbers
+        /// associated to an address entity.
+        /// </summary>
+        /// <param name="addressData">Address Data Contract object for the address being built</param>
+        /// <param name="personData">Person Data Contract object for the person at this address</param>
+        /// <returns>Returns a Phone Number entity which contains all phones for person and address</returns>
+        private async Task<PhoneNumber> BuildPhonesAsync(Ellucian.Colleague.Data.Base.DataContracts.Address addressData, Ellucian.Colleague.Data.Base.DataContracts.Person personData)
+        {
+            if (personData != null)
+            {
+                var personId = personData.Recordkey;
+                PhoneNumber phoneNumber = new PhoneNumber(personId);
+
+                // Update Address Phone Numbers
+                if (addressData != null)
+                {
+                    var addressId = addressData.Recordkey;
+                    if (!string.IsNullOrEmpty(addressId))
+                    {
+                        var assoc = personData.PseasonEntityAssociation.Where(r => r.PersonAddressesAssocMember == addressId).FirstOrDefault();
+
+                        if (!string.IsNullOrEmpty(assoc.AddrLocalPhoneAssocMember))
+                        {
+                            // Address Local Phones in Person data
+                            // This could be subvalued so need to split on subvalue mark ASCII 252.
+                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(_SM);
+                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(_SM);
+                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                            for (int i = 0; i < localPhones.Length; i++)
+                            {
+                                // Only get Address Phone numbers of type "Home"
+                                var phoneType =(await GetPhoneTypesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == localPhoneTypes[i]).FirstOrDefault();
+                                if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")
+                                {
+                                    try
+                                    {
+                                        // add in the address override phones into the person's list of phones
+                                        Phone personalPhone = new Phone(localPhones[i], localPhoneTypes[i], localPhoneExts[i]);
+                                        phoneNumber.AddPhone(personalPhone);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        var phoneError = "Person local phone information is invalid.";
+
+                                        // Log the original exception
+                                        logger.Error(ex.ToString());
+                                        logger.Info(phoneError);
+                                    }
+                                }
+                            }
+                        }
+                        // Update Address Phone
+                        if (addressData.AdrPhonesEntityAssociation != null && addressData.AdrPhonesEntityAssociation.Count > 0)
+                        {
+                            foreach (var addrPhone in addressData.AdrPhonesEntityAssociation)
+                            {
+                                // Only get Address Phone numbers of type "Home"
+                                if (addrPhone != null && !string.IsNullOrEmpty(addrPhone.AddressPhoneTypeAssocMember))
+                                {
+                                    var phoneType = (await GetPhoneTypesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == addrPhone.AddressPhoneTypeAssocMember).FirstOrDefault();
                                     if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")
                                     {
                                         try

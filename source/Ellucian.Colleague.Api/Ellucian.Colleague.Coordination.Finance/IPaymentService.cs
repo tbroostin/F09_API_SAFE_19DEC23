@@ -1,5 +1,8 @@
 ﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 using Ellucian.Colleague.Dtos.Finance.Payments;
 
 namespace Ellucian.Colleague.Coordination.Finance
@@ -43,5 +46,13 @@ namespace Ellucian.Colleague.Coordination.Finance
         /// <param name="paymentDetails">Payment details</param>
         /// <returns>Result of e-check processing</returns>
         ElectronicCheckProcessingResult PostProcessElectronicCheck(Payment paymentDetails);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="allPaymentMethods"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Ellucian.Colleague.Dtos.Finance.Configuration.AvailablePaymentMethod>> GetRestrictedPaymentMethodsAsync(string studentId, IEnumerable<AvailablePaymentMethod> allPaymentMethods);
     }
 }

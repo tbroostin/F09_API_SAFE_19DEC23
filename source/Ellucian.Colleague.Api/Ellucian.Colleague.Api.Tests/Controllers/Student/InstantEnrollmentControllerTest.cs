@@ -1,9 +1,10 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -19,6 +20,232 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
     [TestClass]
     public class InstantEnrollmentControllerTest
     {
+        [TestClass]
+        public class PostProposedRegistrationForClassesAsyncTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private InstantEnrollmentController _ieController;
+            private Mock<IInstantEnrollmentService> _ieServiceMock;
+            private Mock<ICourseService> _courseServiceMock;
+            private Mock<ILogger> _loggerMock;
+            private InstantEnrollmentProposedRegistration _proposedRegistration;
+            private InstantEnrollmentProposedRegistrationResult _proposedRegistrationResult;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                _loggerMock = new Mock<ILogger>();
+                _courseServiceMock = new Mock<ICourseService>();
+                _ieServiceMock = new Mock<IInstantEnrollmentService>();
+                _ieController = new InstantEnrollmentController(_courseServiceMock.Object, _ieServiceMock.Object, _loggerMock.Object);
+
+                _proposedRegistration = new InstantEnrollmentProposedRegistration();
+                _proposedRegistration.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>();
+                _proposedRegistration.ProposedSections.Add(new InstantEnrollmentRegistrationBaseSectionToRegister()
+                {
+                    SectionId = "sect1"
+                });
+
+                _proposedRegistrationResult = new InstantEnrollmentProposedRegistrationResult();
+                _proposedRegistrationResult.RegisteredSections = new List<InstantEnrollmentRegistrationBaseRegisteredSection>();
+                _proposedRegistrationResult.RegisteredSections.Add(
+                 new InstantEnrollmentRegistrationBaseRegisteredSection
+                 {
+                     SectionId = "sect1",
+                     SectionCost = 0
+                 });
+            }
+
+            [TestMethod]
+            public async Task PostProposedRegistrationForClassesAsync_Valid_proposedRegistration_Success()
+            {
+                _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).ReturnsAsync(_proposedRegistrationResult);
+                var result = await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                Assert.AreEqual(result.RegisteredSections[0].SectionId, _proposedRegistration.ProposedSections[0].SectionId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_NullProposedRegistration_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    await _ieController.PostProposedRegistrationForClassesAsync(null);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_NullProposedSections_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _proposedRegistration.ProposedSections = null;
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_EmptyProposedSections_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _proposedRegistration.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>();
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            public async Task PostProposedRegistrationForClassesAsync_ServiceThrows_ArgumentNullException()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    Assert.IsTrue(exMsg.Contains("Proposed registration argument was not provided in order to complete proposed registration for classes selected for instant enrollment"));
+                }
+            }
+
+            [TestMethod]
+            public async Task PostProposedRegistrationForClassesAsync_ServiceThrows_ArgumentException()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    Assert.IsTrue(exMsg.Contains("An invalid argument was supplied for proposed registrations."));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new PermissionsException());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_ArgumentNullException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_ArgumentException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ProposedRegistrationForClassesAsync(It.IsAny<InstantEnrollmentProposedRegistration>())).Throws(new Exception());
+                    await _ieController.PostProposedRegistrationForClassesAsync(_proposedRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
+
         [TestClass]
         public class StartPaymentGatewayRegistrationTests
         {
@@ -44,12 +271,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             #endregion
 
-            private InstantEnrollmentController IeController;
-            private Mock<IInstantEnrollmentService> IeServiceMock;
+            private InstantEnrollmentController ieController;
+            private Mock<IInstantEnrollmentService> ieServiceMock;
             private Mock<ICourseService> courseServiceMock;
             private Mock<ILogger> loggerMock;
-            private Dtos.Student.InstantEnrollment.InstantEnrollmentStartPaymentGatewayRegistrationResult IeStartPGResult;
-            private Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration GoodDto;
+            private InstantEnrollmentStartPaymentGatewayRegistrationResult ieStartPGResult;
+            private InstantEnrollmentPaymentGatewayRegistration goodDto;
 
             [TestInitialize]
             public void Initialize()
@@ -59,118 +286,167 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 loggerMock = new Mock<ILogger>();
                 courseServiceMock = new Mock<ICourseService>();
-                IeServiceMock = new Mock<IInstantEnrollmentService>();
-                IeController = new InstantEnrollmentController(courseServiceMock.Object, IeServiceMock.Object, loggerMock.Object);
+                ieServiceMock = new Mock<IInstantEnrollmentService>();
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
-                GoodDto = new Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration();
-                GoodDto.ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>();
-                GoodDto.ProposedSections.Add(new Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister() { SectionId = "sect1" });
+                goodDto = new InstantEnrollmentPaymentGatewayRegistration();
+                goodDto.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>();
+                goodDto.ProposedSections.Add(new InstantEnrollmentRegistrationBaseSectionToRegister() { SectionId = "sect1" });
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Dto_Null()
             {
-                var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(null);
+                await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_ProposedSections_Null()
             {
-                Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration dto = new Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration();
+                InstantEnrollmentPaymentGatewayRegistration dto = new InstantEnrollmentPaymentGatewayRegistration();
                 dto.ProposedSections = null;
-                var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(dto);
+                await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(dto);
             }
 
             [TestMethod]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Success()
             {
-                IeStartPGResult = new Dtos.Student.InstantEnrollment.InstantEnrollmentStartPaymentGatewayRegistrationResult();
-                IeStartPGResult.PaymentProviderRedirectUrl = "Url";
-                IeServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration>())).ReturnsAsync(IeStartPGResult);
+                ieStartPGResult = new Dtos.Student.InstantEnrollment.InstantEnrollmentStartPaymentGatewayRegistrationResult();
+                ieStartPGResult.PaymentProviderRedirectUrl = "Url";
+                ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).ReturnsAsync(ieStartPGResult);
 
-                var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(GoodDto);
+                var result = await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
                 Assert.AreEqual(result.PaymentProviderRedirectUrl, "Url");
             }
 
             [TestMethod]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Service_ArgNull_Exception()
             {
-                IeServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentNullException());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(GoodDto);
-                    failed = false;
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentNullException());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("A required argument was not provided."));
                 }
-
-                if (failed)
-                {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
-                }
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("A required argument was not provided."));
             }
 
             [TestMethod]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Service_ArgException()
             {
-                IeServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentException());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(GoodDto);
-                    failed = false;
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentException());
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("An invalid argument was supplied."));
                 }
-
-                if (failed)
-                {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
-                }
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("An invalid argument was supplied."));
             }
 
             [TestMethod]
             public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Service_Generic_Exception()
             {
-                IeServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration>())).Throws(new Exception());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await IeController.PostStartInstantEnrollmentPaymentGatewayTransaction(GoodDto);
-                    failed = false;
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new Exception());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("Unable to start the payment gateway instant enrollment registration"));
                 }
+            }
 
-                if (failed)
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
                 {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
                 }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
 
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("Unable to start the payment gateway instant enrollment registration"));
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new PermissionsException());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_ArgumentNullException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentNullException());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_ArgumentException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new ArgumentException());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostStartInstantEnrollmentPaymentGatewayTransaction_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    ieServiceMock.Setup(ies => ies.StartInstantEnrollmentPaymentGatewayTransaction(It.IsAny<InstantEnrollmentPaymentGatewayRegistration>())).Throws(new Exception());
+                    await ieController.PostStartInstantEnrollmentPaymentGatewayTransaction(goodDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
 
@@ -213,7 +489,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 _loggerMock = new Mock<ILogger>();
                 _courseServiceMock = new Mock<ICourseService>();
                 _ieServiceMock = new Mock<IInstantEnrollmentService>();
-                _ieController = new InstantEnrollmentController(_courseServiceMock.Object,_ieServiceMock.Object, _loggerMock.Object);
+                _ieController = new InstantEnrollmentController(_courseServiceMock.Object, _ieServiceMock.Object, _loggerMock.Object);
 
                 _zeroCostRegistration = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration();
                 _zeroCostRegistration.ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>();
@@ -236,7 +512,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostZeroCostRegistrationForClassesAsync_Dto_Null()
             {
-                var result = await _ieController.PostZeroCostRegistrationForClassesAsync(null);
+                await _ieController.PostZeroCostRegistrationForClassesAsync(null);
             }
 
             [TestMethod]
@@ -244,7 +520,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task PostZeroCostRegistrationForClassesAsync_ProposedSections_Null()
             {
                 _zeroCostRegistration = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration();
-                var result = await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
             }
 
             [TestMethod]
@@ -253,7 +529,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 _zeroCostRegistration = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration();
                 _zeroCostRegistration.ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>();
-                var result = await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
             }
 
             [TestMethod]
@@ -268,82 +544,349 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [TestMethod]
             public async Task PostZeroCostRegistrationForClassesAsync_ServiceThrows_ArgumentNullException()
             {
-                _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentNullException());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
-                    failed = false;
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("A required zero cost registration argument was not provided to register for classes for instant enrollment."));
                 }
-
-                if (failed)
-                {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
-                }
-
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("A required zero cost registration argument was not provided to register for classes for instant enrollment."));
             }
 
             [TestMethod]
             public async Task PostZeroCostRegistrationForClassesAsync_ServiceThrows_ArgumentException()
             {
-                _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentException());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
-                    failed = false;
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("An invalid argument was supplied for the zero cost registration."));
                 }
-
-                if (failed)
-                {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
-                }
-
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("An invalid argument was supplied for the zero cost registration."));
             }
 
             [TestMethod]
             public async Task PostZeroCostRegistrationForClassesAsync_ServiceThrows_GenericException()
             {
-                _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new Exception());
-                string exMsg = "";
-                HttpResponseException httpEx = null;
-                bool failed = true;
-
                 try
                 {
-                    var result = await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
-                    failed = false;
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Throws(new Exception());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
                 }
                 catch (HttpResponseException ex)
                 {
-                    httpEx = ex;
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("Could not complete the zero cost registration for selected classes for instant enrollment."));
                 }
+            }
 
-                if (failed)
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostZeroCostRegistrationForClassesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
                 {
-                    exMsg = await httpEx.Response.Content.ReadAsStringAsync();
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<InstantEnrollmentZeroCostRegistration>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
                 }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
 
-                // The message is contained within the string along with other elements, so check that it contains the expected message
-                Assert.IsTrue(exMsg.Contains("Could not complete the zero cost registration for selected classes for instant enrollment."));
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostZeroCostRegistrationForClassesAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<InstantEnrollmentZeroCostRegistration>())).Throws(new PermissionsException());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostZeroCostRegistrationForClassesAsync_ArgumentNullException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostZeroCostRegistrationForClassesAsync_ArgumentException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<InstantEnrollmentZeroCostRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostProposedRegistrationForClassesAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.ZeroCostRegistrationForClassesAsync(It.IsAny<InstantEnrollmentZeroCostRegistration>())).Throws(new Exception());
+                    await _ieController.PostZeroCostRegistrationForClassesAsync(_zeroCostRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
+
+        [TestClass]
+        public class EchecktRegistrationForClassesTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private InstantEnrollmentController _ieController;
+            private Mock<IInstantEnrollmentService> _ieServiceMock;
+            private Mock<ICourseService> _courseServiceMock;
+            private Mock<ILogger> _loggerMock;
+            private InstantEnrollmentEcheckRegistration _echeckRegistration;
+            private InstantEnrollmentEcheckRegistrationResult _echeckRegistrationResult;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                _loggerMock = new Mock<ILogger>();
+                _courseServiceMock = new Mock<ICourseService>();
+                _ieServiceMock = new Mock<IInstantEnrollmentService>();
+                _ieController = new InstantEnrollmentController(_courseServiceMock.Object, _ieServiceMock.Object, _loggerMock.Object);
+
+                _echeckRegistration = new InstantEnrollmentEcheckRegistration();
+                _echeckRegistration.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>();
+                _echeckRegistration.ProposedSections.Add(new InstantEnrollmentRegistrationBaseSectionToRegister()
+                {
+                    SectionId = "sect1"
+                });
+
+                _echeckRegistrationResult = new InstantEnrollmentEcheckRegistrationResult();
+                _echeckRegistrationResult.RegisteredSections = new List<InstantEnrollmentRegistrationBaseRegisteredSection>();
+                _echeckRegistrationResult.RegisteredSections.Add(
+                 new InstantEnrollmentRegistrationBaseRegisteredSection
+                 {
+                     SectionId = "sect1",
+                     SectionCost = 0
+                 });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_Dto_Null()
+            {
+                await _ieController.PostEcheckRegistrationForClassesAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ProposedSections_Null()
+            {
+                _echeckRegistration = new InstantEnrollmentEcheckRegistration();
+                await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ProposedSections_Empty()
+            {
+                _echeckRegistration = new InstantEnrollmentEcheckRegistration();
+                _echeckRegistration.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>();
+                await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+            }
+
+            [TestMethod]
+            public async Task PostEcheckRegistrationForClassesAsync_Success()
+            {
+                _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).ReturnsAsync(_echeckRegistrationResult);
+
+                var result = await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                Assert.AreEqual(result.RegisteredSections[0].SectionId, _echeckRegistration.ProposedSections[0].SectionId);
+            }
+
+            [TestMethod]
+            public async Task PostEcheckRegistrationForClassesAsync_ServiceThrows_ArgumentNullException()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("Echeck registration argument was not provided in order to complete registration for classes selected for instant enrollment"));
+                }
+            }
+
+            [TestMethod]
+            public async Task PostEcheckRegistrationForClassesAsync_ServiceThrows_ArgumentException()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("An invalid argument was supplied"));
+                }
+            }
+
+            [TestMethod]
+            public async Task PostEcheckRegistrationForClassesAsync_ServiceThrows_GenericException()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new Exception());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    var exMsg = await ex.Response.Content.ReadAsStringAsync();
+                    // The message is contained within the string along with other elements, so check that it contains the expected message
+                    Assert.IsTrue(exMsg.Contains("ouldn't complete the echeck registration for classes selected for instant enrollment"));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new PermissionsException());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ArgumentNullException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new ArgumentNullException());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ArgumentException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new ArgumentException());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(ies => ies.EcheckRegistrationForClassesAsync(It.IsAny<InstantEnrollmentEcheckRegistration>())).Throws(new Exception());
+                    await _ieController.PostEcheckRegistrationForClassesAsync(_echeckRegistration);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
 
@@ -393,7 +936,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsyncTests_Null_Request()
             {
-                var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
+                await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
             }
 
             [TestMethod]
@@ -409,7 +952,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
                 ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
-                var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
 
             [TestMethod]
@@ -425,7 +968,53 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
                 ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
-                var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(It.IsAny<InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).
+                        ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest()
+                    {
+                        CashReceiptId = "123",
+                        PersonId = "0001234"
+                    };
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(It.IsAny<InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).
+                        ThrowsAsync(new ApplicationException());
+                    var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest()
+                    {
+                        CashReceiptId = "123",
+                        PersonId = "0001234"
+                    };
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -449,8 +1038,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 CollectionAssert.AreEqual(response, text.ToList());
             }
         }
-
-        #region QueryPersonMatchResultsInstantEnrollmentByPostAsync Tests
 
         [TestClass]
         public class QueryPersonMatchResultsInstantEnrollmentByPostAsyncTests
@@ -490,7 +1077,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 _ieServiceMock = new Mock<IInstantEnrollmentService>();
                 _courseServiceMock = new Mock<ICourseService>();
-            _ieController = new InstantEnrollmentController(_courseServiceMock.Object,_ieServiceMock.Object, logger);
+                _ieController = new InstantEnrollmentController(_courseServiceMock.Object, _ieServiceMock.Object, logger);
 
             }
 
@@ -532,9 +1119,39 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 _ieServiceMock.Setup(s => s.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null)).Throws(new Exception("An error occurred"));
                 var results = await _ieController.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null);
             }
-        }
-        #endregion
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(s => s.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null)).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var results = await _ieController.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    _ieServiceMock.Setup(s => s.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null)).Throws(new Exception());
+                    var results = await _ieController.QueryPersonMatchResultsInstantEnrollmentByPostAsync(null);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
 
         [TestClass]
         public class GetInstantEnrollmentCashReceiptAcknowledgementAsyncTests
@@ -598,7 +1215,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     PersonId = ""
                 };
                 ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
-
                 await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
             }
 
@@ -615,8 +1231,56 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     PersonId = ""
                 };
                 ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
-
                 await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentCashReceiptAcknowledgementAsync(It.IsAny<InstantEnrollmentCashReceiptAcknowledgementRequest>())).
+                        ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    var request = new InstantEnrollmentCashReceiptAcknowledgementRequest()
+                    {
+                        TransactionId = "123",
+                        CashReceiptId = "",
+                        PersonId = ""
+                    };
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostEcheckRegistrationForClassesAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentCashReceiptAcknowledgementAsync(It.IsAny<InstantEnrollmentCashReceiptAcknowledgementRequest>())).
+                        Throws(new Exception());
+                    var request = new InstantEnrollmentCashReceiptAcknowledgementRequest()
+                    {
+                        TransactionId = "123",
+                        CashReceiptId = "",
+                        PersonId = ""
+                    };
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -743,9 +1407,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(cashReceiptAcknowledgement.RegisteredSections.Count(), response.RegisteredSections.Count());
                 Assert.AreEqual(cashReceiptAcknowledgement.FailedSections.Count(), response.FailedSections.Count());
             }
-
         }
-
 
         [TestClass]
         public class GetInstantEnrollmentStudentPrograms2AsyncTests
@@ -807,12 +1469,113 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task GetInstantEnrollmentStudentPrograms2AsyncTests_StudentId_Permissions_Exception()
+            public async Task GetInstantEnrollmentStudentPrograms2AsyncTests_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
             {
+                try
+                {
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentStudentPrograms2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentStudentPrograms2Async("0001", true);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
 
-                ieServiceMock.Setup(svc => svc.GetInstantEnrollmentStudentPrograms2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetInstantEnrollmentStudentPrograms2AsyncTests_StudentId_PermissionsException_Forbidden()
+            {
+                try
+                {
+                    ieServiceMock.Setup(svc => svc.GetInstantEnrollmentStudentPrograms2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
+                    await ieController.GetInstantEnrollmentStudentPrograms2Async("0001", true);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
+
+        [TestClass]
+        public class PostInstantEnrollmentCourseSearch2AsyncTests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            private InstantEnrollmentController ieController;
+            private Mock<IInstantEnrollmentService> ieServiceMock;
+            private Mock<ICourseService> courseServiceMock;
+            private Mock<ILogger> loggerMock;
+
+            [TestInitialize]
+            public void PostInstantEnrollmentCourseSearch2AsyncTests_Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                loggerMock = new Mock<ILogger>();
+                ieServiceMock = new Mock<IInstantEnrollmentService>();
+                courseServiceMock = new Mock<ICourseService>();
                 ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
-                await ieController.GetInstantEnrollmentStudentPrograms2Async("0001", true);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostInstantEnrollmentCourseSearch2Async_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                var criteria = new InstantEnrollmentCourseSearchCriteria() { Keyword = "ART-100" };
+                try
+                {
+                    courseServiceMock.Setup(svc => svc.InstantEnrollmentSearch2Async(It.IsAny<InstantEnrollmentCourseSearchCriteria>(), It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await ieController.PostInstantEnrollmentCourseSearch2Async(criteria, 0, 0);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostInstantEnrollmentCourseSearch2Async_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                var criteria = new InstantEnrollmentCourseSearchCriteria() { Keyword = "ART-100" };
+                try
+                {
+                    courseServiceMock.Setup(svc => svc.InstantEnrollmentSearch2Async(It.IsAny<InstantEnrollmentCourseSearchCriteria>(), It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(new ApplicationException());
+                    await ieController.PostInstantEnrollmentCourseSearch2Async(criteria, 0, 0);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
             }
         }
     }

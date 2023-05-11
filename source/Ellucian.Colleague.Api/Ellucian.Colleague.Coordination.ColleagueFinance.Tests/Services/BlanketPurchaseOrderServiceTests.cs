@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -42,6 +42,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -51,6 +53,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
+        private GeneralLedgerUser glUser;
 
 
         [TestInitialize]
@@ -61,12 +64,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Set up the mock BPO repository
             mockBlanketPurchaseOrderRepository = new Mock<IBlanketPurchaseOrderRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetAccountStructureAsync()).Returns(Task.FromResult(new GeneralLedgerAccountStructure()));
+            mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(new GeneralLedgerClassConfiguration("ClassName", new List<string>(), new List<string>(), new List<string>(), new List<string>(), new List<string>())));
+            
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                BlanketPurchaseOrdersUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                BlanketPurchaseOrdersUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
 
             // Create permission domain entities for viewing the blanket purchase order.
             permissionViewBlanketPurchaseOrder = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrder);
             // Assign view permission to the role that has view permissions.
             glUserRoleViewPermissions.AddPermission(permissionViewBlanketPurchaseOrder);
+
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
 
             // Build all service objects to use each of the user factories built above
             BuildValidBlanketPurchaseOrderService();
@@ -86,6 +107,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockBlanketPurchaseOrderRepository = null;
             mockGlConfigurationRepository = null;
             mockGeneralLedgerUserRepository = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
 
             roleRepositoryMock = null;
             roleRepository = null;
@@ -247,7 +270,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetBlanketPurchaseOrderAsync(null);
+                var blanketPurchaseOrderDto = await service.GetBlanketPurchaseOrderAsync(null);
             }
             catch (ArgumentNullException aex)
             {
@@ -264,7 +287,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetBlanketPurchaseOrderAsync("");
+                var blanketPurchaseOrderDto = await service.GetBlanketPurchaseOrderAsync("");
             }
             catch (ArgumentNullException aex)
             {
@@ -315,6 +338,59 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         #endregion
 
+        #region Tests for GetBlanketPurchaseOrderAsync with GL approval roles functionality
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetBlanketPurchaseOrderAsync_ApprovalConfigurationNull()
+        {
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+
+            await service2.GetBlanketPurchaseOrderAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetBlanketPurchaseOrderAsync_ApprovalConfigurationEmpty()
+        {
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(new ApprovalConfiguration()));
+
+            await service2.GetBlanketPurchaseOrderAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetBlanketPurchaseOrderAsync_ApprovalConfigurationException()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Throws(new Exception());
+
+            await service2.GetBlanketPurchaseOrderAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetBlanketPurchaseOrderAsync_ApprovalConfigurationBlanketPurchaseOrdersUseApprovalRoles()
+        {
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(new ApprovalConfiguration() { BlanketPurchaseOrdersUseApprovalRoles = true }));
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(() =>
+            {
+                IEnumerable<string> approvalAccess = new List<string>() { "11_11_11_11_00000_11111", "11_11_11_11_00000_11112" };
+                return Task.FromResult(approvalAccess);
+            });
+
+            await service2.GetBlanketPurchaseOrderAsync("1");
+        }
+
+        #endregion
+
         #region Tests for GetBlanketPurchaseOrderAsync without a view permission
 
         [TestMethod]
@@ -348,6 +424,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var buyerRepository = new Mock<IBuyerRepository>();
             var vendorsRepository = new Mock<IVendorsRepository>();
             var configurationRepository = new Mock<IConfigurationRepository>();
+            var approvalConfigurationRepository = new Mock<IApprovalConfigurationRepository>();
             var accountFundAvailableRepository = new Mock<IAccountFundsAvailableRepository>();
             var personRepository = new Mock<IPersonRepository>();
 
@@ -360,18 +437,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             service = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepository.Object, buyerRepository.Object, vendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, accountFundAvailableRepository.Object,
-                personRepository.Object, roleRepository, loggerObject);
+                personRepository.Object, roleRepository, approvalConfigurationRepository.Object, loggerObject);
 
             service2 = new BlanketPurchaseOrderService(mockBlanketPurchaseOrderRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
                 colleagueFinanceReferenceDataRepository, referenceDataRepository.Object, buyerRepository.Object, vendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, accountFundAvailableRepository.Object,
-                personRepository.Object, roleRepository, loggerObject);
+                personRepository.Object, roleRepository, mockApprovalConfigurationRepositoryFalse.Object, loggerObject);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepository.Object, buyerRepository.Object, vendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, noPermissionsUser, accountFundAvailableRepository.Object,
-                personRepository.Object, roleRepository, loggerObject);
+                personRepository.Object, roleRepository, approvalConfigurationRepository.Object, loggerObject);
         }
         #endregion
     }
@@ -610,7 +687,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetBlanketPurchaseOrderAsync(null);
+                var blanketPurchaseOrderDto = await service.GetBlanketPurchaseOrderAsync(null);
             }
             catch (ArgumentNullException aex)
             {
@@ -627,7 +704,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var actualParamName = "";
             try
             {
-                var journalEntryDto = await service.GetBlanketPurchaseOrderAsync("");
+                var blanketPurchaseOrderDto = await service.GetBlanketPurchaseOrderAsync("");
             }
             catch (ArgumentNullException aex)
             {
@@ -1272,6 +1349,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var configurationRepository = new Mock<IConfigurationRepository>();
             var accountFundAvailableRepository = new Mock<IAccountFundsAvailableRepository>();
             var personRepository = new Mock<IPersonRepository>();
+            var approvalConfigurationRepository = new Mock<IApprovalConfigurationRepository>();
             personRepository.Setup(pr => pr.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("b6ee96c5-c963-4933-94e4-183614b63b26");                 
 
             // Set up and mock the adapter, and setup the GetAdapter method.
@@ -1283,18 +1361,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             service = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, accountFundAvailableRepository.Object,
-                personRepository.Object, roleRepository, loggerObject);
+                personRepository.Object, roleRepository, approvalConfigurationRepository.Object, loggerObject);
 
             service2 = new BlanketPurchaseOrderService(mockBlanketPurchaseOrderRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
                 mockColleagueFinanceReferenceDataRepository.Object, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, mockaccountFundAvailableRepository.Object,
-                mockPersonRepository.Object, roleRepository, loggerObject);
+                mockPersonRepository.Object, roleRepository, approvalConfigurationRepository.Object, loggerObject);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, noPermissionsUser, accountFundAvailableRepository.Object,
-                personRepository.Object, roleRepository, loggerObject);
+                personRepository.Object, roleRepository, approvalConfigurationRepository.Object, loggerObject);
 
             GeneralLedgerAccountStructure accountStructure = new GeneralLedgerAccountStructure();
             accountStructure.AddMajorComponent(new GeneralLedgerComponent("ComponentName", true, GeneralLedgerComponentType.FullAccount, "5", "4"));

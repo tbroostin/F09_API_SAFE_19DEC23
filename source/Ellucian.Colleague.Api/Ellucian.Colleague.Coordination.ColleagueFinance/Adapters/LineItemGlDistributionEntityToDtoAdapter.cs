@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.ProjectLineItemCode = null;
                 lineItemGlDistributionDto.Quantity = 0.00m;
                 lineItemGlDistributionDto.Amount = 0.00m;
+                lineItemGlDistributionDto.Percent = 0.00m;
                 lineItemGlDistributionDto.GlAccountDescription = null;
                 lineItemGlDistributionDto.BudgetAmount = 0.00m;
                 lineItemGlDistributionDto.EncumbranceAmount = 0.00m;
@@ -55,6 +56,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.ProjectLineItemCode = Source.ProjectLineItemCode;
                 lineItemGlDistributionDto.Quantity = Source.Quantity;
                 lineItemGlDistributionDto.Amount = Source.Amount;
+                lineItemGlDistributionDto.Percent = Source.Percent;
                 lineItemGlDistributionDto.GlAccountDescription = Source.GlAccountDescription;
                 lineItemGlDistributionDto.BudgetAmount = Source.BudgetAmount;
                 lineItemGlDistributionDto.EncumbranceAmount = Source.EncumbranceAmount;

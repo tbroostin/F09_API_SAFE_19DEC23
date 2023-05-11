@@ -1,7 +1,5 @@
-﻿using System;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Dtos.Student
 {
@@ -14,7 +12,7 @@ namespace Ellucian.Colleague.Dtos.Student
         /// ERP prospect ID (ID in PERSON)
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Ellucian.StyleCop.WebApi.EllucianWebApiDtoAnalyzer", "EL1000:NoPublicFieldsOnDtos", Justification = "Already released. Risk of breaking change.")] 
-        public string ErpProspectId;
+        public string ErpProspectId { get; set; }
 
         /// <summary>
         /// ERP institutions ID

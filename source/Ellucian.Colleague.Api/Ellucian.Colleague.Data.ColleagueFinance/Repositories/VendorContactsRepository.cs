@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         protected const int AllVendorsCacheTimeout = 20;
         protected const string AllVendorContactsFilter = "AllVendorContactsFilter";
         RepositoryException repositoryException = new RepositoryException();
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public VendorContactsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -519,7 +519,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
         }
 

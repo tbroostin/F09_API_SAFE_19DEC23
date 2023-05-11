@@ -1,10 +1,11 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
         private readonly IColleagueFinanceTaxFormStatementService taxFormStatementService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initialize the Tax Form Statement controller.
@@ -59,6 +61,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 return await taxFormStatementService.Get2Async(personId, Domain.Base.TaxFormTypes.FormT4A);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -105,6 +112,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 return await taxFormStatementService.Get2Async(personId, Domain.Base.TaxFormTypes.Form1099MI);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
@@ -144,6 +156,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 return await taxFormStatementService.Get2Async(personId, Domain.Base.TaxFormTypes.Form1099NEC);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

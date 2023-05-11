@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Dependency;
 using System;
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception exception)
             {
                 _logger.Error(exception, "Unexpected Error in AccountFundsAvailable Service");
-                throw exception;
+                throw;
             }
         }
         
@@ -388,7 +388,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception exception)
             {
                 _logger.Error(exception, "Unexpected Error in AccountFundsAvailable Service");
-                throw exception;
+                throw;
             }
 
             return outTransaction;
@@ -644,7 +644,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception exception)
             {
                 _logger.Error(exception, "Unexpected Error in AccountFundsAvailable Service");
-                throw exception;
+                throw;
             }
 
             return outTransaction;

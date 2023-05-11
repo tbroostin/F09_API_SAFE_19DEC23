@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -85,7 +86,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     waiverServiceMock.Setup(x => x.GetSectionStudentWaiversAsync(It.IsAny<string>())).Throws(new PermissionsException());
-                    var waivers =await waiversController.GetSectionStudentWaiversAsync("SEC1");
+                    var waivers = await waiversController.GetSectionStudentWaiversAsync("SEC1");
                 }
                 catch (HttpResponseException ex)
                 {
@@ -126,6 +127,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetSectionWaivers_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    waiverServiceMock.Setup(x => x.GetSectionStudentWaiversAsync(It.IsAny<string>()))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await waiversController.GetSectionStudentWaiversAsync("SEC1");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
             private List<Dtos.Student.StudentWaiver> BuildWaiverDtos()
             {
                 List<StudentWaiver> waivers = new List<StudentWaiver>();
@@ -161,7 +179,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
         }
 
-         [TestClass]
+        [TestClass]
         public class StudentWaiversControllerTests_GetStudentWaivers
         {
             private TestContext testContextInstance;
@@ -234,7 +252,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
-          
+
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentWaivers_AnyOtherException_ReturnsHttpResponseException_BadRequest()

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -365,7 +365,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 catch(Exception e)
                 {
-                    throw new Exception(e.Message);
+                    throw new ColleagueWebApiException(e.Message);
                 }
             }
             return relationshipCode;
@@ -865,7 +865,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }           
         }
 
@@ -921,7 +921,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -1000,8 +1000,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     {
                         relaTypes = (await GetRelationTypes2Async(bypassCache)).ToList();
                     }
-                    catch
-                    { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.Message, "Cannot get relation type");
+                    }
                     if (relaTypes == null || !relaTypes.Any())
                     {
                         IntegrationApiExceptionAddError("Relationship types not found.", "Validation.Exception", personRelationshipsId, personRelationshipsDto.Id);
@@ -1064,8 +1066,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         {
                             relaTypes = (await GetRelationTypes2Async(bypassCache)).ToList();
                         }
-                        catch
-                        { }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex.Message, "Cannot get relation type");
+                        }
                         if (relaTypes == null || !relaTypes.Any())
                         {
                             IntegrationApiExceptionAddError("Relationship types not found.", "Validation.Exception", personRelationshipsId, personRelationshipsDto.Id);
@@ -1196,7 +1200,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -1266,7 +1270,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -1341,8 +1345,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     {
                         relaTypes = (await GetRelationTypes2Async(bypassCache)).ToList();
                     }
-                    catch
-                    { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.Message, "Cannot get relation type");
+                    }
                     if (relaTypes == null || !relaTypes.Any())
                     {
                         IntegrationApiExceptionAddError("Relationship types not found.", "Validation.Exception");

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -13,6 +13,9 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
+using System;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -49,15 +52,27 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Test>> GetAsync()
         {
             var testDtoCollection = new List<Ellucian.Colleague.Dtos.Student.Test>();
-            var testCollection = await _testRepository.GetTestsAsync();
-            // Get the right adapter for the type mapping
-            var testDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Test, Ellucian.Colleague.Dtos.Student.Test>();
-            // Map the Test entity to the grade DTO
-            foreach (var test in testCollection)
+            try
             {
-                testDtoCollection.Add(testDtoAdapter.MapToType(test));
+                var testCollection = await _testRepository.GetTestsAsync();
+                // Get the right adapter for the type mapping
+                var testDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Test, Ellucian.Colleague.Dtos.Student.Test>();
+                // Map the Test entity to the grade DTO
+                foreach (var test in testCollection)
+                {
+                    testDtoCollection.Add(testDtoAdapter.MapToType(test));
+                }
             }
-
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while fetching tests";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
+            {
+                throw CreateHttpResponseException(e.Message);
+            }
             return testDtoCollection;
 
         }

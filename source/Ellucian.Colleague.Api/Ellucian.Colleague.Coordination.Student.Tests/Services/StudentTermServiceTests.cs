@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -84,6 +84,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IAcademicCreditRepository pilotAcademicCreditRepo;
             private Mock<IStudentRepository> studentRepoMock;
             private IStudentRepository studentRepo;
+            private Mock<IApplicantRepository> applicantRepoMock;
+            private IApplicantRepository applicantRepo;
             private Mock<IStudentTermRepository> studentTermRepoMock;
             private IStudentTermRepository studentTermRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -96,6 +98,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ISectionRepository sectionRepo;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
 
             [TestInitialize]
             public void Initialize()
@@ -106,6 +110,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 pilotAcademicCreditRepo = pilotAcademicCreditRepoMock.Object;
                 studentRepoMock = new Mock<IStudentRepository>();
                 studentRepo = studentRepoMock.Object;
+                applicantRepoMock = new Mock<IApplicantRepository>();
+                applicantRepo = applicantRepoMock.Object;
                 studentTermRepoMock = new Mock<IStudentTermRepository>();
                 studentTermRepo = studentTermRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -115,8 +121,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 logger = new Mock<ILogger>().Object;
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
 
-                
                 // Mock adapter for Pilot academic history level to Pilot student term GPA
                 var pilotAcademicHistoryLevelDtoAdapter = new PilotAcademicHistoryLevelToPilotStudentTermLevelGpaDtoAdapter(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.PilotAcademicHistoryLevel, Ellucian.Colleague.Dtos.Student.PilotStudentTermLevelGpa>()).Returns(pilotAcademicHistoryLevelDtoAdapter);
@@ -140,7 +147,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
                 termRepo = null;
                 sectionRepo = null;
-                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, applicantRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository, referenceDataRepo);
                 studentTermService = new StudentTermService(adapterRegistry, studentTermRepo, currentUserFactory, roleRepo, logger, studentRepo, pilotAcademicCreditRepo, baseConfigurationRepository);
             }
 

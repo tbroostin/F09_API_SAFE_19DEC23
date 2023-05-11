@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
@@ -11,6 +12,7 @@ using Ellucian.Data.Colleague.Repositories;
 using System.Linq;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -23,7 +25,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PayPeriodsRepository : BaseColleagueRepository, IPayPeriodsRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// ..ctor
@@ -275,7 +277,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     catch (Exception e)
                     {
-                        throw new Exception(e.Message);
+                        throw new ColleagueWebApiException(e.Message);
                     }
                     // Because there is no way to select end date associated to the start date
                     // the total count could be off.  We may have selected records with a start

@@ -1,8 +1,7 @@
-﻿/* Copyright 2019-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -15,8 +14,10 @@ using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Text;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -30,13 +31,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         private readonly string colleagueTimeZone;
         private readonly string separator = ",";
         private readonly string space = " ";
-        public EmployeeLeaveRequestRepository(ICacheProvider cacheProvider,
+        private Dictionary<string, PersonHierarchyName> personNameHierarchyDict;
+        private IHumanResourcesReferenceDataRepository humanResourcesReferenceDataRepository;
+        public EmployeeLeaveRequestRepository(IHumanResourcesReferenceDataRepository humanResourcesReferenceDataRepository, ICacheProvider cacheProvider,
             IColleagueTransactionFactory transactionFactory,
             ILogger logger,
             ApiSettings settings) : base(cacheProvider, transactionFactory, logger, settings)
         {
             bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
             colleagueTimeZone = settings.ColleagueTimeZone;
+            this.humanResourcesReferenceDataRepository = humanResourcesReferenceDataRepository;
+
+            if (personNameHierarchyDict == null)
+                personNameHierarchyDict = new Dictionary<string, PersonHierarchyName>();
 
         }
 
@@ -64,10 +71,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             #region DATA ACCESS
-
+            logger.Debug(string.Format("Leave Requests will be retrieved for the employees = ", string.Join(",", employeeIds.ToArray())));
             var leaveRequestCriteria = "WITH LR.EMPLOYEE.ID EQ ?";
             var leaveRequestKeys = await DataReader.SelectAsync("LEAVE.REQUEST", leaveRequestCriteria, employeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
-            if (leaveRequestKeys == null) // || !leaveRequestKeys.Any() ??
+            if (leaveRequestKeys == null)
             {
                 var message = "Unexpected null returned from LEAVE.REQUEST SelectAsync";
                 logger.Error(message);
@@ -75,12 +82,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!leaveRequestKeys.Any())
             {
-                logger.Info("No LEAVE.REQUEST keys exist for the given employee Ids: " + string.Join(",", employeeIds));
+                logger.Error("No LEAVE.REQUEST keys exist for the given employee Ids: " + string.Join(",", employeeIds));
             }
 
             var leaveRequestDetailCriteria = "WITH LRD.LEAVE.REQUEST.ID EQ ?";
             var leaveRequestDetailKeys = await DataReader.SelectAsync("LEAVE.REQUEST.DETAIL", leaveRequestDetailCriteria, leaveRequestKeys.Select(key => string.Format("\"{0}\"", key)).ToArray());
-            if (leaveRequestDetailKeys == null) // || !leaveRequestDetailKeys.Any() ??
+            if (leaveRequestDetailKeys == null)
             {
                 var message = "Unexpected null returned from LEAVE.REQUEST.DETAIL SelectAsyc";
                 logger.Error(message);
@@ -88,12 +95,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!leaveRequestDetailKeys.Any())
             {
-                logger.Info("No LEAVE.REQUEST.DETAIL keys exist for the given Leave Request Ids: " + string.Join(",", leaveRequestKeys));
+                logger.Debug("No LEAVE.REQUEST.DETAIL keys exist for the given Leave Request Ids: " + string.Join(",", leaveRequestKeys));
             }
 
             var leaveRequestStatusCriteria = "WITH LRS.LEAVE.REQUEST.ID EQ ?";
             var leaveRequestStatusKeys = await DataReader.SelectAsync("LEAVE.REQUEST.STATUS", leaveRequestStatusCriteria, leaveRequestKeys.Select(key => string.Format("\"{0}\"", key)).ToArray());
-            if (leaveRequestStatusKeys == null) // || !leaveRequestStatusKeys.Any() ??
+            if (leaveRequestStatusKeys == null)
             {
                 var message = "Unexpected null returned from LEAVE.REQUEST.STATUS SelectAsyc";
                 logger.Error(message);
@@ -101,7 +108,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!leaveRequestStatusKeys.Any())
             {
-                logger.Info("No LEAVE.REQUEST.STATUS keys exist for the given Leave Request Ids: " + string.Join(",", leaveRequestKeys));
+                logger.Debug("No LEAVE.REQUEST.STATUS keys exist for the given Leave Request Ids: " + string.Join(",", leaveRequestKeys));
             }
 
 
@@ -127,6 +134,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     dbLeaveRequests.AddRange(records);
                 }
             }
+            logger.Debug("Leave Requests Records fetched from the database");
 
             for (int i = 0; i < leaveRequestDetailKeys.Count(); i += bulkReadSize)
             {
@@ -141,6 +149,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     dbLeaveRequestDetails.AddRange(records);
                 }
             }
+            logger.Debug("Leave Requests Detail Records fetched from the database");
 
             for (int i = 0; i < leaveRequestStatusKeys.Count(); i += bulkReadSize)
             {
@@ -155,6 +164,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     dbleaveRequestStatuses.AddRange(records);
                 }
             }
+            logger.Debug("Leave Requests Status Records fetched from the database");
+
             //Comments are optional for a leave request.
             if (leaveRequestCommentsKeys != null && leaveRequestCommentsKeys.Any())
             {
@@ -172,6 +183,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         dbleaveRequestComments.AddRange(selectedRecords);
                     }
                 }
+                logger.Debug("Leave Requests Comments Records fetched from the database");
             }
             #endregion
 
@@ -188,38 +200,54 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             //Loop through each Leave Request Record
             List<Task<Domain.HumanResources.Entities.LeaveRequest>> BuildLeaveRequestEntitiesTasks = new List<Task<Domain.HumanResources.Entities.LeaveRequest>>();
-            foreach (var leaveRequestRecord in dbLeaveRequests)
+
+            logger.Debug(string.Format("Total Leave Requests fetched = {0}", dbLeaveRequests.Count()));
+            try
             {
-                //Get all leave request details from dict and build entity
-                if (leaveRequestDetailsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                foreach (var leaveRequestRecord in dbLeaveRequests)
                 {
-                    LeaveRequestDetailEntities = BuildLeaveRequestDetailEntities(leaveRequestDetailsRecordDict[leaveRequestRecord.Recordkey].ToList());
-                }
+                    //logger.Debug("Leave Request Id + ", leaveRequestRecord.Recordkey);
+                    //Get all leave request details from dict and build entity
+                    if (leaveRequestDetailsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                    {
+                        LeaveRequestDetailEntities = BuildLeaveRequestDetailEntities(leaveRequestDetailsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                        //logger.Debug(string.Format("Leave Request Details Ids are {0}", string.Join(",", LeaveRequestDetailEntities.Select(lrd => lrd.Id).ToArray())));
+                    }
 
-                //Get all leave request statuses from dict and build entity
-                if (leaveRequestStatusRecordDict.Contains(leaveRequestRecord.Recordkey))
-                {
-                    LeaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecordDict[leaveRequestRecord.Recordkey].ToList());
-                }
+                    //Get all leave request statuses from dict and build entity
+                    if (leaveRequestStatusRecordDict.Contains(leaveRequestRecord.Recordkey))
+                    {
+                        LeaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecordDict[leaveRequestRecord.Recordkey].ToList());
+                        //logger.Debug(string.Format("Leave Request Status Ids are {0}", string.Join(",", LeaveRequestStatusEntities.Select(lrd => lrd.Id).ToArray())));
+                    }
 
-                //Get all leave request comments from dict and build entity
-                if (leaveRequestCommentsRecordDict.Contains(leaveRequestRecord.Recordkey))
-                {
-                    LeaveRequestCommentsEntities = BuildLeaveRequestCommentEntities(leaveRequestCommentsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                    //Get all leave request comments from dict and build entity
+                    if (leaveRequestCommentsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                    {
+                        LeaveRequestCommentsEntities = await BuildLeaveRequestCommentEntities(leaveRequestCommentsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                        //logger.Debug(string.Format("Leave Request Comment Ids are {0}", string.Join(",", LeaveRequestCommentsEntities.Select(lrd => lrd.Id).ToArray())));
+
+                    }
+                    else
+                    {
+                        LeaveRequestCommentsEntities = null;
+                        logger.Debug("There are no comments yet for this leave request");
+                    }
+                    //Create a task for each BuildLeaveRequestEntity and add to the list
+                    BuildLeaveRequestEntitiesTasks.Add(BuildLeaveRequestEntity(leaveRequestRecord, LeaveRequestDetailEntities, LeaveRequestStatusEntities, LeaveRequestCommentsEntities));
                 }
-                else
-                {
-                    LeaveRequestCommentsEntities = null;
-                }
-                //Create a task for each BuildLeaveRequestEntity and add to the list
-                BuildLeaveRequestEntitiesTasks.Add(BuildLeaveRequestEntity(leaveRequestRecord, LeaveRequestDetailEntities, LeaveRequestStatusEntities, LeaveRequestCommentsEntities));
+                //Invoke tasks parallely and collate the results
+                LeaveRequestEntities.AddRange(await Task.WhenAll(BuildLeaveRequestEntitiesTasks));
+
+                #endregion
+
+                return LeaveRequestEntities;
             }
-            //Invoke tasks parallely and collate the results
-            LeaveRequestEntities.AddRange(await Task.WhenAll(BuildLeaveRequestEntitiesTasks));
-
-            #endregion
-
-            return LeaveRequestEntities;
+            catch (Exception e)
+            {
+                logger.Error(string.Format("Unable to build LeaveRequest Entities. Exception Message = {0}", e.Message));
+                throw;
+            }
         }
 
 
@@ -232,14 +260,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>List of Leave Request Domain Entities</returns>
         public async Task<IEnumerable<Domain.HumanResources.Entities.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, IEnumerable<string> employeeIds)
         {
-          
+
             if (employeeIds == null || !employeeIds.Any())
             {
                 var message = "Employee Ids are required to get approved leave requests for the specified date range";
                 logger.Error(message);
                 throw new ArgumentNullException("employeeIds", message);
             }
-          
+
 
             //Get leave requests of loggedin user and their supervisees.
             var leaveRequestCriteria = "WITH LR.EMPLOYEE.ID EQ ?";
@@ -252,7 +280,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             if (!leaveRequestKeys.Any())
             {
-                logger.Info("No LEAVE.REQUEST keys exist for the given employee Ids: " + string.Join(",", employeeIds));
+                logger.Error("No LEAVE.REQUEST keys exist for the given employee Ids: " + string.Join(",", employeeIds));
             }
 
             //Filter leave requests that are in approved status
@@ -315,12 +343,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             //Either Leave Start Date (or) Leave End Date must be within time week range. 
             if (dbLeaveRequests != null && dbLeaveRequests.Any())
             {
-      
+
                 dbLeaveRequests = dbLeaveRequests.Where(lr => ((lr.LrStartDate >= startDate && lr.LrStartDate <= endDate) ||
-                                            (lr.LrEndDate >= startDate &&   lr.LrEndDate <= endDate))
+                                            (lr.LrEndDate >= startDate && lr.LrEndDate <= endDate) || (lr.LrStartDate <= startDate && lr.LrEndDate >= endDate))
                                             ).ToList();
             }
-            
+
             #region Final Leave Requests
 
             var dbLeaveRequestDetails = new List<DataContracts.LeaveRequestDetail>();
@@ -394,42 +422,50 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var leaveRequestDetailsRecordDict = dbLeaveRequestDetails.ToLookup(lrd => lrd.LrdLeaveRequestId);
             var leaveRequestStatusRecordDict = dbleaveRequestStatuses.ToLookup(lrs => lrs.LrsLeaveRequestId);
 
-
-            //Loop through each Leave Request Record
-            List<Task<Domain.HumanResources.Entities.LeaveRequest>> BuildLeaveRequestEntitiesTasks = new List<Task<Domain.HumanResources.Entities.LeaveRequest>>();
-            foreach (var leaveRequestRecord in dbLeaveRequests)
+            try
             {
-                //Get all leave request details from dict and build entity
-                if (leaveRequestDetailsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                //Loop through each Leave Request Record
+                List<Task<Domain.HumanResources.Entities.LeaveRequest>> BuildLeaveRequestEntitiesTasks = new List<Task<Domain.HumanResources.Entities.LeaveRequest>>();
+                foreach (var leaveRequestRecord in dbLeaveRequests)
                 {
-                    LeaveRequestDetailEntities = BuildLeaveRequestDetailEntities(leaveRequestDetailsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                    //Get all leave request details from dict and build entity
+                    if (leaveRequestDetailsRecordDict.Contains(leaveRequestRecord.Recordkey))
+                    {
+                        LeaveRequestDetailEntities = BuildLeaveRequestDetailEntities(leaveRequestDetailsRecordDict[leaveRequestRecord.Recordkey].ToList());
+                    }
+
+                    // Get all leave request statuses from dict and build entity
+                    if (leaveRequestStatusRecordDict.Contains(leaveRequestRecord.Recordkey))
+                    {
+                        LeaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecordDict[leaveRequestRecord.Recordkey].ToList());
+                    }
+
+
+                    //Create a task for each BuildLeaveRequestEntity and add to the list
+                    BuildLeaveRequestEntitiesTasks.Add(BuildLeaveRequestEntity(leaveRequestRecord, LeaveRequestDetailEntities, LeaveRequestStatusEntities, null));
                 }
+                //Invoke tasks parallely and collate the results
+                LeaveRequestEntities.AddRange(await Task.WhenAll(BuildLeaveRequestEntitiesTasks));
 
-               // Get all leave request statuses from dict and build entity
-                if (leaveRequestStatusRecordDict.Contains(leaveRequestRecord.Recordkey))
-                {
-                    LeaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecordDict[leaveRequestRecord.Recordkey].ToList());
-                }
+                #endregion
 
+                #endregion
 
-                //Create a task for each BuildLeaveRequestEntity and add to the list
-                BuildLeaveRequestEntitiesTasks.Add(BuildLeaveRequestEntity(leaveRequestRecord, LeaveRequestDetailEntities, LeaveRequestStatusEntities, null));
+                return LeaveRequestEntities;
             }
-            //Invoke tasks parallely and collate the results
-            LeaveRequestEntities.AddRange(await Task.WhenAll(BuildLeaveRequestEntitiesTasks));
-
-            #endregion
-
-            #endregion
-
-            return LeaveRequestEntities;
+            catch (Exception e)
+            {
+                logger.Error(string.Format("Unable to build LeaveRequest Entities. Exception Message = {0}", e.Message));
+                throw;
+            }
         }
         /// <summary>
         /// Gets a single LeaveRequest object matching the given id. 
         /// </summary>
-        /// <param name="id">Leave Request Id</param>     
+        /// <param name="id">Leave Request Id</param>
+        /// <param name="currentUserId">Current User Id(optional)</param>         
         /// <returns>LeaveRequest Entity</returns>
-        public async Task<Domain.HumanResources.Entities.LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string id)
+        public async Task<Domain.HumanResources.Entities.LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string id, string currentUserId = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -554,10 +590,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var leaveRequestStatusEntities = BuildLeaveRequestStatusEntities(leaveRequestStatusRecords);
 
             //Build the LEAVE.REQUEST.COMMENT Entities
-            var leaveRequestCommentEntities = BuildLeaveRequestCommentEntities(leaveRequestCommentsRecords);
+            var leaveRequestCommentEntities = await BuildLeaveRequestCommentEntities(leaveRequestCommentsRecords);
 
             // Build the LEAVE.REQUEST Entity
-            var leaveRequestEntity = await BuildLeaveRequestEntity(leaveRequestRecord, leaveRequestDetailEntities, leaveRequestStatusEntities, leaveRequestCommentEntities);
+            //Added new param currentUserId to compute the flag to show/hide Delete button for Supervisor user
+            var leaveRequestEntity = await BuildLeaveRequestEntity(leaveRequestRecord, leaveRequestDetailEntities, leaveRequestStatusEntities, leaveRequestCommentEntities, currentUserId);
 
             return leaveRequestEntity;
         }
@@ -615,7 +652,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Creates a new leave request status record
         /// </summary>
-        /// <param name="status">Leave Request Status Entity</param>
+        /// <param name="status">Leave Request Status Entity</param>        
         /// <returns>Newly created leave request status</returns>
         public async Task<Domain.HumanResources.Entities.LeaveRequestStatus> CreateLeaveRequestStatusAsync(Domain.HumanResources.Entities.LeaveRequestStatus status)
         {
@@ -636,13 +673,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 LrLeaveRequestId = status.LeaveRequestId,
                 LrActionType = status.ActionType.ToString(),
-                LrActionerId = status.ActionerId
+                LrActionerId = status.ActionerId,
+                LrWithdrawOption = status.WithdrawOption
             };
             CreateLeaveRequestStatusResponse response = null;
             try
             {
                 // execute the request
                 response = await transactionInvoker.ExecuteAsync<CreateLeaveRequestStatusRequest, CreateLeaveRequestStatusResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -676,7 +718,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             #endregion
 
-
             //Get the newly created Leave Request Status
             string id = response.NewLeaveStatusKey;
 
@@ -689,7 +730,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             var leaveRequestStatusEntity = BuildLeaveRequestStatusEntity(leaveRequestStatusRecord);
             //Extract Actioner Name
-            if (leaveRequestStatusEntity != null && (leaveRequestStatusEntity.ActionType == LeaveStatusAction.Approved || leaveRequestStatusEntity.ActionType == LeaveStatusAction.Rejected))
+            if (leaveRequestStatusEntity != null && leaveRequestStatusEntity.ActionType != LeaveStatusAction.Deleted)
             {
                 leaveRequestStatusEntity.ActionerName = await ExtractActionerNameFromPersonInfo(leaveRequestStatusEntity.ActionerId);
 
@@ -769,7 +810,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     LrEndDate = leaveRequestHelper.LeaveRequest.EndDate.HasValue ? DateTime.SpecifyKind(DateTime.Parse(leaveRequestHelper.LeaveRequest.EndDate.ToString()), DateTimeKind.Unspecified) as DateTime? : null,
                     LrApproverId = leaveRequestHelper.LeaveRequest.ApproverId,
                     LrApproverName = leaveRequestHelper.LeaveRequest.ApproverName,
-                    LeaveRequestDetails = allLeaveRequestDetails
+                    LeaveRequestDetails = allLeaveRequestDetails,
+                    IsLeaveRequestFromSupervisorOrProxy = leaveRequestHelper.IsLeaveRequestFromSupervisorOrProxy
                 };
             }
             else
@@ -859,7 +901,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 throw new ApplicationException(message);
             }
 
-            return BuildCommentsEntity(newComment);
+            return await BuildCommentsEntity(newComment);
         }
 
 
@@ -888,25 +930,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="leaveRequestCommentRecords"></param>
         /// <returns>Leave Request Comment Entity</returns>
-        private List<Domain.HumanResources.Entities.LeaveRequestComment> BuildLeaveRequestCommentEntities(List<DataContracts.LeaveReqComments> leaveRequestCommentRecords)
+        private async Task<List<Domain.HumanResources.Entities.LeaveRequestComment>> BuildLeaveRequestCommentEntities(List<DataContracts.LeaveReqComments> leaveRequestCommentRecords)
         {
             var leaveRequestCommentEntities = new List<Domain.HumanResources.Entities.LeaveRequestComment>();
             if (leaveRequestCommentRecords != null && leaveRequestCommentRecords.Any())
             {
+                StringBuilder commentsAuthorName = new StringBuilder();
+                logger.Debug("Leave Request Comments are =");
                 foreach (var leaveRequestComment in leaveRequestCommentRecords)
                 {
+                    commentsAuthorName.Append(string.IsNullOrWhiteSpace(leaveRequestComment.LrcEmployeeId) ? leaveRequestComment.LrcAddOpername : await ExtractCommentAuthorNameFromPersonInfo(leaveRequestComment.LeaveReqCommentsAddopr));
+
                     leaveRequestCommentEntities.Add(new LeaveRequestComment(leaveRequestComment.Recordkey,
                                                                             leaveRequestComment.LrcLeaveRequestId,
                                                                             leaveRequestComment.LrcEmployeeId,
                                                                             leaveRequestComment.LrcComments,
-                                                                            leaveRequestComment.LrcAddOpername)
+                                                                           commentsAuthorName.ToString())
+
                     {
                         Timestamp = new Timestamp(leaveRequestComment.LeaveReqCommentsAddopr,
                     leaveRequestComment.LeaveReqCommentsAddtime.ToPointInTimeDateTimeOffset(leaveRequestComment.LeaveReqCommentsAdddate, colleagueTimeZone).Value,
                      leaveRequestComment.LeaveReqCommentsChgopr,
                      leaveRequestComment.LeaveReqCommentsChgtime.ToPointInTimeDateTimeOffset(leaveRequestComment.LeaveReqCommentsChgdate, colleagueTimeZone).Value)
                     });
-                    ;
+
+                    commentsAuthorName.Clear();
+
+                    logger.Debug(string.Format("LeaveCommentId :{0}, LeaveRequestId :{1},EmployeeId :{2}, Comment Text :{3}.",
+                        leaveRequestComment.Recordkey, leaveRequestComment.LrcLeaveRequestId, leaveRequestComment.LrcEmployeeId, leaveRequestComment.LrcComments));
                 }
             }
             // Sort the leave request comments based on the Timestamp
@@ -926,8 +977,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (!Enum.TryParse(leaveRequestStatusRecord.LrsActionType, true, out actionType))
             {
                 var message = string.Format("Unable to resolve action type for leaveRequestStatus {0}", leaveRequestStatusRecord.Recordkey);
+                logger.Error(message);
                 throw new ApplicationException(message);
             }
+
+            logger.Debug(string.Format("LeaveRequestStatusId ={0}, LeaveRequestId ={1} ",leaveRequestStatusRecord.Recordkey,
+                leaveRequestStatusRecord.LrsLeaveRequestId));
+
             return (new Domain.HumanResources.Entities.LeaveRequestStatus(
               leaveRequestStatusRecord.Recordkey,
               leaveRequestStatusRecord.LrsLeaveRequestId,
@@ -952,17 +1008,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var leaveRequestDetailEntities = new List<Domain.HumanResources.Entities.LeaveRequestDetail>();
             if (leaveRequestDetailRecords != null && leaveRequestDetailRecords.Any())
             {
+                logger.Debug("****Leave Request Details*****");
                 foreach (var leaveRequestDetail in leaveRequestDetailRecords)
                 {
-                    leaveRequestDetailEntities.Add(new Domain.HumanResources.Entities.LeaveRequestDetail(
-                      leaveRequestDetail.Recordkey,
-                      leaveRequestDetail.LrdLeaveRequestId,
-                      leaveRequestDetail.LrdLeaveDate.Value,
-                      leaveRequestDetail.LrdLeaveHours,
-                      !string.IsNullOrWhiteSpace(leaveRequestDetail.LrdPayPeriodProcessed) && leaveRequestDetail.LrdPayPeriodProcessed.Equals("Y", StringComparison.OrdinalIgnoreCase)));
+                    leaveRequestDetailEntities.Add(new Domain.HumanResources.Entities.LeaveRequestDetail(leaveRequestDetail.Recordkey, leaveRequestDetail.LrdLeaveRequestId,
+                    leaveRequestDetail.LrdLeaveDate.Value, leaveRequestDetail.LrdLeaveHours, !string.IsNullOrWhiteSpace(leaveRequestDetail.LrdPayPeriodProcessed) && leaveRequestDetail.LrdPayPeriodProcessed.Equals("Y", StringComparison.OrdinalIgnoreCase),
+                    leaveRequestDetail.LeaveRequestDetailChgopr));
+
+                    logger.Debug(string.Format("leaveRequestDetail :{0}, LeaveRequestId :{1},LeaveDetailDate :{2}, Hours :{3}.",
+                        leaveRequestDetail.Recordkey, leaveRequestDetail.LrdLeaveRequestId, leaveRequestDetail.LrdLeaveDate.Value, leaveRequestDetail.LrdLeaveHours));
                 }
             }
-
+            logger.Debug("******Total Leave Requests Detail Records are = " + leaveRequestDetailEntities.Count() + "*****");
             return leaveRequestDetailEntities;
         }
 
@@ -973,40 +1030,77 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="leaveRequestDetailRecords"></param>
         /// <param name="leaveRequestStatusRecords"></param>
         /// <param name="leaveRequestCommentsRecords"></param>
+        /// <param name="currentUserId">?Current user id (optional)</param>
         /// <returns>A LeaveRequest entity</returns>
         private async Task<Domain.HumanResources.Entities.LeaveRequest> BuildLeaveRequestEntity(DataContracts.LeaveRequest leaveRequestRecord,
             List<Domain.HumanResources.Entities.LeaveRequestDetail> leaveRequestDetailEntities,
             List<Domain.HumanResources.Entities.LeaveRequestStatus> leaveRequestStatusEntities,
-            List<Domain.HumanResources.Entities.LeaveRequestComment> leaveRequestCommentEntities)
+            List<Domain.HumanResources.Entities.LeaveRequestComment> leaveRequestCommentEntities,
+            string currentUserId = null)
         {
+            logger.Debug(" Process to build leave request entity started");
             if (!leaveRequestRecord.LrStartDate.HasValue)
             {
+                logger.Debug("Leave Request Record must have a Start Date");
                 throw new ArgumentException("LrStartDate must have a value", "leaveRequestRecord.LrStartDate");
             }
             if (!leaveRequestRecord.LrEndDate.HasValue)
             {
+                logger.Debug("Leave Request Record must have a End Date");
                 throw new ArgumentException("LrEndDate must have a value", "leaveRequestRecord.LrEndDate");
             }
-            //Fetch latest leave request status entity
-            var latestLeaveRequestStatusEntity = GetLatestLeaveRequestStatusEntity(leaveRequestStatusEntities);
 
-            //Check if Leave Request Status is Approved or Rejected
-            var latestStatusAction = latestLeaveRequestStatusEntity.ActionType;
-            bool isStatusApprovedOrRejected = (latestStatusAction == LeaveStatusAction.Approved || latestStatusAction == LeaveStatusAction.Rejected);
+            try
+            {
+                //Fetch latest leave request status entity
+                var latestLeaveRequestStatusEntity = GetLatestLeaveRequestStatusEntity(leaveRequestStatusEntities);
+                logger.Debug("Latest Leave Request Status Extracted");
 
-            //Default Approver Details from Leave Request Record .Based on leave request status update it accordingly.
-            string approverId = isStatusApprovedOrRejected ? latestLeaveRequestStatusEntity.ActionerId : leaveRequestRecord.LrApproverId;
-            string approverName = isStatusApprovedOrRejected ? await ExtractActionerNameFromPersonInfo(latestLeaveRequestStatusEntity.ActionerId) : string.Empty;
+                //Check if Leave Request Status is Approved or Rejected
+                var latestStatusAction = latestLeaveRequestStatusEntity.ActionType;
 
-            return new Domain.HumanResources.Entities.LeaveRequest(leaveRequestRecord.Recordkey,
-                leaveRequestRecord.LrPerleaveId,
-                leaveRequestRecord.LrEmployeeId,
-                leaveRequestRecord.LrStartDate.Value,
-                leaveRequestRecord.LrEndDate.Value,
-                approverId,
-                approverName,
-                latestStatusAction,
-                leaveRequestDetailEntities, leaveRequestCommentEntities);
+                //Default Actioner Details from Leave Request Record 
+                string approverId = latestLeaveRequestStatusEntity.ActionerId;
+                string approverName = await ExtractActionerNameFromPersonInfo(latestLeaveRequestStatusEntity.ActionerId);
+                string employeeName = await ExtractActionerNameFromPersonInfo(leaveRequestRecord.LrEmployeeId);
+                logger.Debug("Approver and Employee Names computed as per name hierarchy");
+
+                //enableDeleteForSupervisor - True when Detail and Status changes are done by same Supervisor user 
+                bool enableDeleteForSupervisor = false;
+                if (currentUserId != null)
+                {
+                    bool detailChangesBySameSupervisor = !leaveRequestDetailEntities.Where(lrd => lrd.LeaveRequestDetailChgopr != currentUserId).Any();
+                    bool statusChangesBySameSupervisor = !leaveRequestStatusEntities.Where(lrs => lrs.Timestamp.ChangeOperator != currentUserId).Any();
+                    enableDeleteForSupervisor = detailChangesBySameSupervisor && statusChangesBySameSupervisor;
+                }
+
+                logger.Debug(string.Format("LeaveRequestId :{0}, PerLeaveId :{1},EmployeeId :{2}, LeaveStartDate :{3}, LeaveEndDate :{4}, ApproverId :{5}",
+                           leaveRequestRecord.Recordkey, leaveRequestRecord.LrPerleaveId,
+                           leaveRequestRecord.LrEmployeeId, leaveRequestRecord.LrStartDate.Value,
+                           leaveRequestRecord.LrEndDate.Value, approverId));
+
+                var leaveRequestEntity = new Domain.HumanResources.Entities.LeaveRequest(leaveRequestRecord.Recordkey,
+                    leaveRequestRecord.LrPerleaveId,
+                    leaveRequestRecord.LrEmployeeId,
+                    leaveRequestRecord.LrStartDate.Value,
+                    leaveRequestRecord.LrEndDate.Value,
+                    approverId,
+                    approverName,
+                    employeeName,
+                    latestStatusAction,
+                    leaveRequestDetailEntities, leaveRequestCommentEntities,
+                    leaveRequestRecord.LrIsWdrwPendingApproval == "Y" ? true : false,
+                    leaveRequestRecord.LrIsWithdrawn == "Y" ? true : false,
+                    leaveRequestRecord.LrWithdrawOption,
+                    enableDeleteForSupervisor);
+
+                return leaveRequestEntity;
+            }
+            catch (Exception e)
+            {
+                logger.Error(string.Format("Unable to build LeaveRequest Entity for record = {0}. Exception Message = {1}", leaveRequestRecord.Recordkey, e.Message));
+                throw;
+            }
         }
 
 
@@ -1031,7 +1125,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="dbCommment">leave request comment datacontract</param>
         /// <returns>leave request comment entity</returns>
-        private LeaveRequestComment BuildCommentsEntity(DataContracts.LeaveReqComments dbCommment)
+        private async Task<LeaveRequestComment> BuildCommentsEntity(DataContracts.LeaveReqComments dbCommment)
         {
             if (dbCommment == null)
             {
@@ -1041,13 +1135,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentException("leave request id must have a value");
             }
+            //fetch AuthorName from Name Hierarchy.If no name found from hierarachy, return the operator name
+            string commentsAuthorName = string.IsNullOrWhiteSpace(dbCommment.LeaveReqCommentsAddopr) ? dbCommment.LrcAddOpername : await ExtractCommentAuthorNameFromPersonInfo(dbCommment.LeaveReqCommentsAddopr);
+
+            logger.Debug(string.Format("LeaveCommentId :{0}, LeaveRequestId :{1},EmployeeId :{2}, Comment Text :{3}.",
+                        dbCommment.Recordkey, dbCommment.LrcLeaveRequestId, dbCommment.LrcEmployeeId, dbCommment.LrcComments));
 
             return (new LeaveRequestComment(
                 dbCommment.Recordkey,
                 dbCommment.LrcLeaveRequestId,
                 dbCommment.LrcEmployeeId,
                 dbCommment.LrcComments,
-                dbCommment.LrcAddOpername)
+                commentsAuthorName)
             {
                 Timestamp = new Timestamp(dbCommment.LeaveReqCommentsAddopr,
                     dbCommment.LeaveReqCommentsAddtime.ToPointInTimeDateTimeOffset(dbCommment.LeaveReqCommentsAdddate, colleagueTimeZone).Value,
@@ -1057,49 +1156,72 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             });
         }
 
-        /// <summary>
-        /// Retrieves Person records based on list of employee IDs
-        /// </summary>
-        /// <param name="employeeIds">List of employee IDs whose person records are required.</param>
-        /// <returns>List of Person Base Entities</returns>
-        private async Task<IEnumerable<PersonBase>> GetPersonBaseEntities(IEnumerable<string> employeeIds)
-        {
-            IEnumerable<PersonBase> personBaseEntities = new List<PersonBase>();
-            if (employeeIds != null && employeeIds.Any())
-            {
-                personBaseEntities = await GetPersonsBaseAsync(employeeIds);
-            }
 
-            return personBaseEntities;
-        }
 
-        /// <summary>
-        /// Derives employee name from their first/last names,as per their person record
-        /// </summary>
-        /// <param name="firstName">first name of the employee </param>
-        /// <param name="lastName">last name of the employee</param>
-        /// <returns></returns>
-        private string GetFormattedEmployeeName(string firstName, string lastName)
-        {
-            return (!string.IsNullOrWhiteSpace(firstName)) ? string.Format("{0}" + " " + "{1}", firstName, lastName) : lastName;
-        }
-
-        /// <summary>
-        /// Returns Actioner Name extracted from actioner Id
+        /// Returns Actioner Name extracted from actioner Id either using
+        /// Name Hierarchy or person base entity
         /// </summary>
         /// <param name="actionerId">person id of the actioner</param>
-        /// <returns></returns>
+        /// <returns>Actioner Name in Last,First,Middle Format</returns>
         private async Task<string> ExtractActionerNameFromPersonInfo(string actionerId)
         {
             string actionerName = string.Empty;
-            var PersonBaseEntities = await GetPersonBaseEntities(new List<string>() { actionerId });
-            if (PersonBaseEntities != null && PersonBaseEntities.Any())
+            try
             {
-                var person = PersonBaseEntities.First();
-                actionerName = GetFormattedActionerName(person.LastName, person.FirstName, person.MiddleName);
+                PersonBase personBase = null;
+                var PersonBaseEntities = await GetPersonsBaseAsync(new List<string>() { actionerId });
+                if (PersonBaseEntities != null && PersonBaseEntities.Any())
+                {
+                    personBase = PersonBaseEntities.First();
+                    var personHierarchyName = await GetPersonNameFromNameHierarchy(personBase);
+
+                    if (personHierarchyName != null)
+                        actionerName = personHierarchyName.FullName;
+                    else
+                        actionerName = GetFormattedActionerName(personBase.LastName, personBase.FirstName, personBase.MiddleName);
+                }
             }
+            catch (Exception e)
+            {
+                var message = string.Format("Unable to determine actionerName for user {0} {1}", actionerId, e.Message);
+                logger.Error(message);
+            }
+
             return actionerName;
         }
+
+
+        /// Returns Comments Author Name extracted from actioner Id either using
+        /// Name Hierarchy or person base entity
+        /// </summary>
+        /// <param name="actionerId">person id of the actioner</param>
+        /// <returns>Actioner Name in Last,First,Middle Format</returns>
+        private async Task<string> ExtractCommentAuthorNameFromPersonInfo(string commentAuthorId)
+        {
+
+            string commentAuthorName = string.Empty;
+            try
+            {
+                PersonBase personBase = null;
+                var PersonBaseEntities = await GetPersonsBaseAsync(new List<string>() { commentAuthorId });
+                if (PersonBaseEntities != null && PersonBaseEntities.Any())
+                {
+                    personBase = PersonBaseEntities.First();
+                    var personHierarchyName = await GetPersonNameFromNameHierarchy(personBase);
+
+                    if (personHierarchyName != null)
+                        commentAuthorName = personHierarchyName.FullName;
+                    else
+                        commentAuthorName = GetFormattedCommentAuthorName(personBase.LastName, personBase.FirstName);
+                }
+            } catch (Exception e)
+            {
+                var message = string.Format("Unable to determine commentAuthorName for user {0} {1}", commentAuthorId, e.Message);
+                logger.Error(message);
+            }
+            return commentAuthorName;
+        }
+
 
         /// <summary>
         /// Formats name for an actioner based on their first last and middle name
@@ -1127,6 +1249,93 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return name;
 
         }
+
+        /// <summary>
+        /// Formats name for an comment author based on their first and last name
+        /// </summary>
+        /// <param name="lastname">last name of the author</param>
+        /// <param name="firstName">first name of the author</param>
+        /// <returns>Name in (First Name ,Last Name) format</returns>
+        private string GetFormattedCommentAuthorName(string lastname, string firstName)
+        {
+            // if the entity has a FirstName, use FirstName and LastName, else just return the LastName
+            return !string.IsNullOrWhiteSpace(firstName) ? string.Format("{0}" + " " + "{1}", firstName, lastname) : lastname;
+
+        }
+
+
+        /// <summary>
+        /// Retrieves Name from the Person Name Hierarchy Service.
+        /// Builds a PersonHeirarchyName lookup dictionary.
+        /// </summary>
+        /// <param name="personBase">Person Base Object of the person whose name needs to be extracted</param>
+        /// <returns>Person Hierarchy Name Object</returns>
+        public async Task<PersonHierarchyName> GetPersonNameFromNameHierarchy(PersonBase personBase)
+        {
+            PersonHierarchyName personhierarchyname = null;
+
+            //Check if the person name as per hierarchy exists in the dictionary.
+            if (personNameHierarchyDict != null && personNameHierarchyDict.Any())
+            {
+                try
+                {
+                    var personnamesfromdict = personNameHierarchyDict.Where(psn => psn.Key == personBase.Id);
+                    if (personnamesfromdict != null && personnamesfromdict.Any())
+                    {
+                        personhierarchyname = personnamesfromdict.First().Value;
+                        return personhierarchyname;
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Format("Unable to fetch person name hierarchy from the dictionary for employee = {0}. Exception Message = {1}", personBase.Id, e.Message));
+                }
+            }
+
+            //Fetch Person Name as per NAHM only when the name is not found in the dictionary.
+            HRSSConfiguration hrssConfiguration = await humanResourcesReferenceDataRepository.GetHrssConfigurationAsync();
+            if (hrssConfiguration != null && !string.IsNullOrEmpty(hrssConfiguration.HrssDisplayNameHierarchy))
+            {
+                // Calculate the person display name
+                NameAddressHierarchy hierarchy = null;
+                try
+                {
+                    hierarchy = await GetCachedNameAddressHierarchyAsync(hrssConfiguration.HrssDisplayNameHierarchy);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", hrssConfiguration.HrssDisplayNameHierarchy));
+
+                }
+                if (hierarchy != null)
+                {
+                    personhierarchyname = PersonNameService.GetHierarchyName(personBase, hierarchy);
+                }
+
+            }
+            if (personhierarchyname != null)
+            {
+                try
+                {
+                    //Add this to Person Name Hierarchy Dictionary
+                    if (!personNameHierarchyDict.ContainsKey(personBase.Id))
+                        personNameHierarchyDict.Add(personBase.Id, personhierarchyname);
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Format("Unable to add person name hierarchy to the dictionary for employee = {0}. Exception Message = {1}", personBase.Id, e.Message));
+                }
+            }
+
+            return personhierarchyname;
+        }
         #endregion
     }
+
+
 }

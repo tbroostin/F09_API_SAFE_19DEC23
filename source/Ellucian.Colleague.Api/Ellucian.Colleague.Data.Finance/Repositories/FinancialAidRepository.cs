@@ -1,8 +1,9 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Finance.Transactions;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -34,10 +35,18 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 throw new ArgumentNullException("criteria");
             }
-            var awards = criteria.AwardsToEvaluate.Select(x => x.AwardPeriodAward).ToList();
-            var xmitInds = criteria.AwardsToEvaluate.Select(x => x.TransmitExcessIndicator).ToList();
+            try
+            {
+                var awards = criteria.AwardsToEvaluate.Select(x => x.AwardPeriodAward).ToList();
+                var xmitInds = criteria.AwardsToEvaluate.Select(x => x.TransmitExcessIndicator).ToList();
 
-            return await ExecuteGetPotentialD7FinancialAid(criteria.StudentId, criteria.TermId, awards, xmitInds);
+                return await ExecuteGetPotentialD7FinancialAid(criteria.StudentId, criteria.TermId, awards, xmitInds);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            } 
+
         }
 
         private async Task<IEnumerable<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid>> ExecuteGetPotentialD7FinancialAid(string studentId, string termId, IEnumerable<string> awardPeriodAwardsToEvaluate, IEnumerable<bool> awardPeriodAwardTransmitExcess)
@@ -86,6 +95,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                     throw new ApplicationException(ctxResponse.AbortMessage);
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (ApplicationException ae)
             {
                 logger.Error(ae.Message);
@@ -94,7 +107,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
         }
     }

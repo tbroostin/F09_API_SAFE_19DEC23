@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -18,6 +18,7 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
 using System.Net;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -61,6 +62,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     }
                 }
                 return await _personalPronounTypeService.GetBasePersonalPronounTypesAsync(ignoreCache);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving personal pronoun types";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

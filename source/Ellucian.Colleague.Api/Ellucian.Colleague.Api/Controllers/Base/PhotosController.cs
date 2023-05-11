@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -30,7 +31,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IPhotoService photoService;
         private readonly ApiSettings apiSettings;
         private readonly ILogger logger;
-
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string invalidPermissionsErrorMessage = "The current user does not have the permissions to perform the requested operation.";
         /// <summary>
         /// injection constructor
         /// </summary>
@@ -86,10 +88,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment") { FileName = repoResult.Filename ?? id };
                 return result;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 logger.Error(pex.ToString());
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {

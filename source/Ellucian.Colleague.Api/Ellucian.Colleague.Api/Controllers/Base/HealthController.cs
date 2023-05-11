@@ -1,5 +1,6 @@
 ﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Http.Configuration;
@@ -69,6 +70,17 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         }
                         else
                         {
+                            if (AppConfigUtility.ConfigServiceClientSettings != null && AppConfigUtility.ConfigServiceClientSettings.IsSaaSEnvironment)
+                            {
+                                // if we are in SaaS and the EACSS health check isn't clean, then this site will have issues
+                                var eacssHealthCheckResponse = await AppConfigUtility.StorageServiceClient.HealthCheckAsync();
+                                healthCheckResult.EACSSResult = eacssHealthCheckResponse.ToString();
+                                if (eacssHealthCheckResponse != System.Net.HttpStatusCode.OK)
+                                {
+                                    healthCheckResult.Status = Dtos.Base.HealthCheckStatusType.Unavailable;
+                                }
+                            }
+
                             return healthCheckResult;
                         }
                     }
@@ -90,6 +102,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             else if (level == null)
             {
+                if (AppConfigUtility.ConfigServiceClientSettings != null && AppConfigUtility.ConfigServiceClientSettings.IsSaaSEnvironment)
+                {
+                    // if we are in SaaS and the EACSS health check isn't clean, then this site will have issues
+                    var eacssHealthCheckResponse = await AppConfigUtility.StorageServiceClient.HealthCheckAsync();
+                    if (eacssHealthCheckResponse != System.Net.HttpStatusCode.OK)
+                    {
+                        return Dtos.Base.HealthCheckStatusType.Unavailable;
+                    }
+                }
+
                 // basic health check meant for load balancers.  Return available to confirm the application
                 // is running and accessible
                 return new Dtos.Base.HealthCheckResponse()

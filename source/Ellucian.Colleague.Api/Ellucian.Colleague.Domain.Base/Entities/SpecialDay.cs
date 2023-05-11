@@ -1,4 +1,4 @@
-﻿/* Copyright 2018 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2018-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +40,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public bool IsHoliday { get; private set; }
 
         /// <summary>
+        /// Whether this special day is a Payroll Holiday
+        /// </summary>
+        public bool IsPayrollHoliday { get; private set; }
+
+        /// <summary>
         /// Whether this special day is a full day or not.
         /// </summary>
         public bool IsFullDay { get; private set; }
@@ -72,7 +77,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             bool isHoliday, 
             bool isFullDay,
             DateTimeOffset startDateTime,
-            DateTimeOffset endDateTime)
+            DateTimeOffset endDateTime,
+            bool isPayrollHoliday = false)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -111,6 +117,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             IsFullDay = isFullDay;
             StartDateTime = startDateTime;
             EndDateTime = endDateTime;
+            IsPayrollHoliday = isPayrollHoliday;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2022 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
@@ -25,5 +25,15 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Number of days to lookback for leave
         /// </summary>
         public int? LeaveRequestLookbackDays { get; set; }
+
+        /// <summary>
+        /// Unsubmit/Withdraw type for Leave Request
+        /// </summary>
+        public LeaveRequestActionType LeaveRequestActionType { get; set; }
+
+        /// <summary>
+        /// Allow the supervisor to create/edit leave requests
+        /// </summary>
+        public bool AllowSupervisorToEditLeaveRequests { get; set; }
     }
 }

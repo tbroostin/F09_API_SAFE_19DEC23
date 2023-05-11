@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -77,6 +77,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         public DateTime? LastReviewedDate { get; set; }
 
         public string LastReviewedAdvisorId { get; set; }
+
+        public string AdvisingOfficeEmailId { get; set; }
 
         public DateTime? ReviewRequestedDate { get; set; }
         public DateTime? ReviewRequestedTime { get; set; }
@@ -325,7 +327,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                             }
                             catch
                             {
-
+                                var DoNothing = true; // avoid empty catch block
                             }
                             if (program != null)
                             {
@@ -432,6 +434,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                     catch
                     {
                         // not a viable planned course without a valid course Id
+                        var DoNothing = true; // avoid empty catch block
                     }
                 }
             }

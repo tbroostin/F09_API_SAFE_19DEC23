@@ -1,11 +1,13 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -60,8 +62,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 throw new ApplicationException(message);
             }
 
-
-
             // read chunks of pay control records and add them to return argument...
             for (int i = 0; i < payControlIds.Count(); i += bulkReadSize)
             {
@@ -113,7 +113,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             {
                                 payCycleEntities.Add(validPayCycleEntityToAdd);
                             }
-
+                        }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
                         }
                         catch (Exception e)
                         {
@@ -230,6 +233,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         payPeriodEntities.Add(await BuildPayPeriod(payPeriodRecord, payCycleRecord, payControlRecordsForThisCycle));
                     }
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     LogDataError("PAYCYCLE_PAYPERIODS", payCycleRecord.Recordkey, payPeriodRecord, e, e.Message);
@@ -266,7 +273,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     (await GetHRSSDefaultsAsync()).HrssDfltWorkWeekStartDy
                 );
                 logger.Info(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
         }
 
@@ -285,14 +292,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             else
             {
                 // get the first pay control record that matches this start date for the pay period...
-                var payControlRecord = payControlRecordsForThisCycle.FirstOrDefault(pc => pc.PclPeriodStartDate == payPeriodRecord.PcyStartDateAssocMember.Value);
-
-                if (payControlRecord == null)
-                {
-                    var message = string.Format("No matching pay control record for payperiod record with PcyStartDateAssocMember {0}", payPeriodRecord.PcyStartDateAssocMember.ToString());
-                    logger.Info(message);
-                }
-
+                var payControlRecord = payControlRecordsForThisCycle.FirstOrDefault(pc => pc.PclPeriodStartDate == payPeriodRecord.PcyStartDateAssocMember.Value);                                
                 // get the employee cutoff dates from the pay control if available, otherwise get them from defaults
                 DateTimeOffset? employeeCutoffDate = null;
                 if (payControlRecord != null && payControlRecord.PclEmployeeCutoffDate != null && payControlRecord.PclSupervisorCutoffTime != null)

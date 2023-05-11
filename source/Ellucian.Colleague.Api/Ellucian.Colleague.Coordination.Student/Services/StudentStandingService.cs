@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -94,8 +94,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-            try
-            {
                 IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentStanding> studentAcademicStandingEntity = await _studentStandingRepository.GetAsync(new List<string>(){studentId }); ;
                 if (studentAcademicStandingEntity != null && studentAcademicStandingEntity.Any())
                 {
@@ -109,12 +107,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     logger.Warn("Repository call to retrieve student's academic standings returns null or empty entity");
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, string.Format("Couldn't retrieve student academic standings for student {0}", studentId));
-                throw;
-            }
             return studentAcademicStandingsDto;
         }
 

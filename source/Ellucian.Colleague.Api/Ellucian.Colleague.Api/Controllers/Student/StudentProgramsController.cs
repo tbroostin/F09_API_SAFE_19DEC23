@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -80,6 +81,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student programs";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 throw CreateHttpResponseException(e.Message);
@@ -123,6 +130,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _studentProgramService.AddStudentProgram(studentAcademicProgram);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while adding new  program for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -171,6 +184,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _studentProgramService.UpdateStudentProgram(studentAcademicProgram);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while updating program for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

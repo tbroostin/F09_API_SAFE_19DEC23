@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             if (isirFafsaIds == null || isirFafsaIds.Count() == 0)
             {
                 var message = string.Format("No CsIsirTransIds exist in any award year for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<ProfileApplication>();
             }
 
@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             if (isirFafsaRecords == null || isirFafsaRecords.Count() == 0)
             {
                 var message = string.Format("Record ids in CS.ISIR.TRANS.IDS for all award years do not exist in ISIR.FASFA for student {0}", studentId);
-                logger.Warn(message);
+                logger.Debug(message);
                 return new List<ProfileApplication>();
             }
 
@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             }
                             else
                             {
-                                logger.Warn(string.Format("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", csAcyrRecord.CsFc, studentId, profileRecord.IfafImportYear));
+                                logger.Debug(string.Format("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", csAcyrRecord.CsFc, studentId, profileRecord.IfafImportYear));
                             }
                         }
 
@@ -122,12 +122,12 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     catch (Exception e)
                     {
                         var message = string.Format("Unable to build ProfileApplication object with record id {0}, studentId {1}, awardYear {2}", profileRecord.Recordkey, profileRecord.IfafStudentId, profileRecord.IfafImportYear);
-                        logger.Warn(e, message);
+                        logger.Debug(e, message);
                     }
                 }
                 else
                 {
-                    logger.Warn(string.Format("Error getting CsAcyr record for student {0}, awardYear {1}. Possible data corruption between CsAcyr and ProfileRecord Id {2}", studentId, profileRecord.IfafImportYear, profileRecord.Recordkey));
+                    logger.Debug(string.Format("Error getting CsAcyr record for student {0}, awardYear {1}. Possible data corruption between CsAcyr and ProfileRecord Id {2}", studentId, profileRecord.IfafImportYear, profileRecord.Recordkey));
                 }
             }
 

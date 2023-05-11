@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -52,6 +52,12 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public ReadOnlyCollection<string> LocationIds { get; private set; }
 
+        
+        /// <summary>
+        /// The list of person Ids assigned to Department as Departmental Oversights
+        /// </summary>
+        public List<string> DepartmentalOversightIds { get;  set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Department"/> class.
         /// </summary>
@@ -62,6 +68,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         {
             _IsActive = isActive;
             LocationIds = _LocationIds.AsReadOnly();
+            DepartmentalOversightIds = new List<string>();
+         
         }
 
         public void AddLocation(string locationId)

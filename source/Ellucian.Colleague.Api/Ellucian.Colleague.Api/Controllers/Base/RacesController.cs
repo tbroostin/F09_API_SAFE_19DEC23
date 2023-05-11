@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -36,6 +37,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly IDemographicService _demographicService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the RacesController class.
@@ -59,27 +61,40 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         public async Task<IEnumerable<Race>> GetAsync()
         {
             bool bypassCache = false;
-           if ((Request != null ) && (Request.Headers.CacheControl != null))
-           {
+            if ((Request != null) && (Request.Headers.CacheControl != null))
+            {
                 if (Request.Headers.CacheControl.NoCache)
                 {
                     bypassCache = true;
                 }
             }
 
-            var raceCollection = await _referenceDataRepository.GetRacesAsync(bypassCache);
-
-            // Get the right adapter for the type mapping
-            var raceDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Race, Race>();
-
-            // Map the race entity to the program DTO
-            var raceDtoCollection = new List<Race>();
-            foreach (var race in raceCollection)
+            try
             {
-                raceDtoCollection.Add(raceDtoAdapter.MapToType(race));
-            }
+                var raceCollection = await _referenceDataRepository.GetRacesAsync(bypassCache);
 
-            return raceDtoCollection;
+                // Get the right adapter for the type mapping
+                var raceDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Race, Race>();
+
+                // Map the race entity to the program DTO
+                var raceDtoCollection = new List<Race>();
+                foreach (var race in raceCollection)
+                {
+                    raceDtoCollection.Add(raceDtoAdapter.MapToType(race));
+                }
+
+                return raceDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving race type data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 6</remarks>
@@ -111,7 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                               await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               races.Select(a => a.Id).ToList()));
                 }
-                return races;                
+                return races;
             }
             catch (Exception ex)
             {
@@ -136,7 +151,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                    await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
                    await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                        new List<string>() { id }));
-                return await _demographicService.GetRaceById2Async(id);                
+                return await _demographicService.GetRaceById2Async(id);
             }
             catch (Exception ex)
             {

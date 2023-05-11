@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -40,13 +41,14 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         private readonly ICatalogRepository _catalogRepository;
         private readonly IPlanningConfigurationRepository _configurationRepository;
         private readonly IReferenceDataRepository _referenceDataRepository;
+        private readonly IApplicantRepository _applicantRepository;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger logger;
         private readonly IConfigurationRepository _baseConfigurationRepository;
 
         public ProgramEvaluationService(IAdapterRegistry adapterRegistry, IStudentDegreePlanRepository studentDegreePlanRepository, 
             IProgramRequirementsRepository programRequirementsRepository, IStudentRepository studentRepository,
-            IPlanningStudentRepository planningStudentRepository, IStudentProgramRepository studentProgramRepository,
+            IPlanningStudentRepository planningStudentRepository, IApplicantRepository applicantRepository, IStudentProgramRepository studentProgramRepository,
             IRequirementRepository requirementRepository, IAcademicCreditRepository academicCreditRepository,
             IDegreePlanRepository degreePlanRepository, ICourseRepository courseRepository, ITermRepository termRepository,
             IRuleRepository ruleRepository, IProgramRepository programRepository, ICatalogRepository catalogRepository,
@@ -61,6 +63,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             _requirementRepository = requirementRepository;
             _studentRepository = studentRepository;
             _planningStudentRepository = planningStudentRepository;
+            _applicantRepository = applicantRepository;
             _studentProgramRepository = studentProgramRepository;
             _academicCreditRepository = academicCreditRepository;
             _degreePlanRepository = degreePlanRepository;
@@ -110,6 +113,97 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             return evalResults;
         }
 
+        /// <summary>
+        /// Return a list of program evaluations for the given applicant and program
+        /// </summary>
+        /// <param name="applicantId">Id of the applicant</param>
+        /// <param name="programCodes">List of program codes</param>
+        /// <param name="catalogYear">The catalogYear code</param>
+        /// <returns>A list of <see cref="ProgramEvaluation">ProgramEvaluation</see> objects</returns>
+        public async Task<IEnumerable<Domain.Student.Entities.ProgramEvaluation>> EvaluateApplicantAsync(string applicantId, List<string> programCodes, string catalogYear=null)
+        {
+            IEnumerable<Domain.Student.Entities.ProgramEvaluation> evalResults;
+            if (string.IsNullOrEmpty(applicantId))
+            {
+                throw new ArgumentNullException("applicantId", "Applicant id must be provided to run evaluation");
+            }
+            if (programCodes == null || !programCodes.Any())
+            {
+                throw new ArgumentNullException("programCodes", "At least one program code must be provided to run evaluation.");
+            }
+            //user should be self
+            if (!UserIsSelf(applicantId))
+            {
+                var error = "User " + CurrentUser.PersonId + " does not match given applicant ID " + applicantId + " and may not run program evaluation.";
+                logger.Error(error);
+                throw new PermissionsException(error);
+            }
+            //User should have appropriate permission of EVALUATE.WHAT.IF
+            if(!await CheckEvaluatePermissionAsync())
+            {
+                var error = "User " + CurrentUser.PersonId + " does not have EVALUATE.WHAT.IF permission to run program evaluation.";
+                logger.Error(error);
+                throw new PermissionsException(error);
+
+            }
+            // validate user should be an applicant
+            Domain.Student.Entities.Applicant applicant;
+            applicant = await _applicantRepository.GetApplicantAsync(applicantId);
+            if (applicant == null)
+            {
+                throw new KeyNotFoundException("Applicant with ID " + applicantId + " not found in the repository.");
+            }
+           
+            var watch = new Stopwatch();
+            watch.Start();
+            evalResults = await EvaluateApplicantProgramsAsync(applicantId, programCodes, applicant, catalogYear);
+            watch.Stop();
+            logger.Info("EvaluationTiming: Completed EvaluatePrograms for an applicant in " + watch.ElapsedMilliseconds.ToString() + " ms");
+
+            return evalResults;
+        }
+
+
+        /// <summary>
+        /// Gets notices pertaining to the evaluation for a given student and program.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="programCode">Code of the program</param>
+        /// <returns>List of <see cref="EvaluationNotice">EvaluationNotice</see> Dtos</returns>
+        public async Task<IEnumerable<Dtos.Student.EvaluationNotice>> GetEvaluationNoticesAsync(string studentId, string programCode)
+        {
+            var noticeDtos = new List<Dtos.Student.EvaluationNotice>();
+
+            // First, check permissions for this function. If user is not the student id, read student and verify permissions
+            // for another user.
+            if (!(UserIsSelf(studentId)))
+            {
+                // If permissions not found, this will throw a permissions exception. 
+                await CheckUserAccessAsync(studentId);
+            }
+
+            // If still here... continue on to get student program notices from the repository, convert to dto
+            var notices = await _studentProgramRepository.GetStudentProgramEvaluationNoticesAsync(studentId, programCode);
+            if (notices != null)
+            {
+                var noticeDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.EvaluationNotice, Dtos.Student.EvaluationNotice>();
+
+                foreach (var notice in notices)
+                {
+                    try
+                    {
+                        noticeDtos.Add(noticeDtoAdapter.MapToType(notice));
+                    }
+                    catch (Exception ex)
+                    {
+                        var message = "Error converting notice type " + notice.Type.ToString() + " for student " + studentId + " program " + programCode;
+                        logger.Error(ex, message);
+                        throw new ColleagueWebApiException(message);
+                    }
+                }
+            }
+            return noticeDtos;
+        }
         private async Task<IEnumerable<Domain.Student.Entities.ProgramEvaluation>> EvaluateProgramsAsync(
             string studentId, List<string> programCodes, Domain.Student.Entities.PlanningStudent student, string catalogYear)
         {
@@ -227,6 +321,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var degreeAuditParameters = await _requirementRepository.GetDegreeAuditParametersAsync();
                 bool modifiedSortSpec = degreeAuditParameters != null ? degreeAuditParameters.ModifiedDefaultSort : false;
                 bool excludeCompletedReplaceInProgressCreditsFromGPA = degreeAuditParameters != null ? degreeAuditParameters.ExcludeCompletedPossibleReplaceInProgressCoursesFromGPA : false;
+                bool applyRepeatedCreditsOverPlannedCourse = degreeAuditParameters != null ? degreeAuditParameters.ApplyRepeatedCreditsOverPlannedCourse : false;
 
                 // Get the main requirements from the student's program
                 ProgramRequirements ProgramRequirements = null;
@@ -236,9 +331,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     /// If the Default sort spec has been modified, apply DEFAULT to all requirements missing a sort spec and then cascade it down to lower levels missing a sort spec
                     ApplyDefaultSortSpecWhereApplicable(modifiedSortSpec, ProgramRequirements.Requirements);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Requirements not found: Null program requirements will result in exit with empty program.
+                    logger.Error(ex, "Requirements not found: Null program requirements will result in exit with empty program.");
                 }
 
                 // Get any additional requirements
@@ -340,15 +435,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     {
                         filteredCreditsDict = await _academicCreditRepository.GetSortedAcademicCreditsBySortSpecificationIdAsync(FilteredCredits, sortSpecIds);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Either there are no credits to sort or it couldn't sort them using the sort specs. Either way, continue without sort overrides.
+                        logger.Error(ex, "Either there are no credits to sort or it couldn't sort them using the sort specs. Either way, continue without sort overrides.");
                     }
                 }
                 //pass filteredcredits and filteredplannedcourses to identify which one will be replacing the other
                 try
                 {
-                    UpdateCreditsReplaceStatus(FilteredCredits, FilteredPlannedCourses, terms, excludeCompletedReplaceInProgressCreditsFromGPA);
+                    UpdateCreditsReplaceStatus(FilteredCredits, FilteredPlannedCourses, terms, excludeCompletedReplaceInProgressCreditsFromGPA, applyRepeatedCreditsOverPlannedCourse);
                 }
                 catch(Exception ex)
                 {
@@ -390,6 +485,257 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             return evaluations;
         }
+
+        /// <summary>
+        /// running evaluations for an applicant
+        /// </summary>
+        /// <param name="applicantId"></param>
+        /// <param name="programCodes"></param>
+        /// <param name="applicant"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<Domain.Student.Entities.ProgramEvaluation>> EvaluateApplicantProgramsAsync(
+          string applicantId, List<string> programCodes, Domain.Student.Entities.Applicant applicant, string catalogYear)
+        {
+            var evaluations = new List<Domain.Student.Entities.ProgramEvaluation>();
+
+            var watch = new Stopwatch();
+
+            // Get the student's academic credits.
+            List<AcademicCredit> credits = new List<AcademicCredit>();
+
+            var creditsDict = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { applicantId }, false, true, false);
+            if (creditsDict.ContainsKey(applicantId))
+            {
+                credits = creditsDict[applicantId];
+            }
+
+            // List of courses needed for the evaluation (added for evaluating equated courses)
+            IEnumerable<Course> courses = new List<Course>();
+            courses = await _courseRepository.GetAsync();
+
+
+            // Get all terms for later use.
+            var terms = await _termRepository.GetAsync();
+
+            // Get all of the student's programs
+            var studentPrograms = await _studentProgramRepository.GetApplicantProgramsAsync( applicantId , true, true);
+  
+            foreach (var programCode in programCodes)
+            {
+                IEnumerable<AcademicCredit> FilteredCredits = new List<AcademicCredit>();
+                StudentProgram StudentProgram;
+                Program Program;
+                List<AcademicCredit> CreditsExcludedFromTranscriptGrouping = new List<AcademicCredit>();
+                List<Override> Overrides = new List<Override>();
+
+                Domain.Student.Entities.ProgramEvaluation eval = null;
+                // Get the program itself
+                Program = await _programRepository.GetAsync(programCode);
+                //filter academic credits based upon transcript grouping settings- TRGR
+                FilteredCredits = await FilterCreditsOnTranscriptGroupingAsync(credits, Program);
+
+                // Get the student's program from the list of all of the student's programs
+                StudentProgram = studentPrograms != null ? studentPrograms.Where(sp => sp.ProgramCode == programCode).FirstOrDefault() : null;
+
+                string catalogCode = null;
+
+
+                if (string.IsNullOrEmpty(catalogYear))
+                {
+                    ICollection<Catalog> catalogs = await _catalogRepository.GetAsync();
+                    string defaultCatalog = Program.GetCurrentCatalogCode(catalogs);
+                    catalogCode = defaultCatalog;
+
+                }
+                else
+                {
+                    catalogCode = catalogYear;
+                }
+
+
+                // Build a temporary student program for what-if evaluation
+                // Note: Catalog code above could come back null - constructor for the new program will throw an exception.
+                if (StudentProgram == null)
+                {
+                    StudentProgram = new StudentProgram(applicantId, programCode, catalogCode);
+                }
+
+                // Get the student's overrides (if any)
+                if (StudentProgram.Overrides != null && StudentProgram.Overrides.Count() > 0)
+                {
+                    Overrides = StudentProgram.Overrides.ToList();
+                }
+
+                //after retrieving overrides validate if any course that was filtered out from transcript grouping is in override credits allowed list and if it is then add to new collection
+                //if credits allowed in override is not in filtered credits list but is in raw credit list then add the credit from raw to new collection
+
+                foreach (var creditAllowed in Overrides.Where(o => o != null).SelectMany(o => o.CreditsAllowed))
+                {
+                    if (creditAllowed != null && FilteredCredits != null && !FilteredCredits.Any(acr => !string.IsNullOrEmpty(acr.Id) && acr.Id == creditAllowed))
+                    {
+                        var excludedCredit = credits.Where(cr => !string.IsNullOrEmpty(cr.Id) && cr.Id == creditAllowed).FirstOrDefault();
+                        if (excludedCredit != null && !string.IsNullOrEmpty(excludedCredit.Id))
+                        {
+                            CreditsExcludedFromTranscriptGrouping.Add(excludedCredit);
+                        }
+
+                    }
+                }
+
+
+
+                // If the client has modified the sort spec, be sure DEFAULT is in the list of sortSpecIds
+                var degreeAuditParameters = await _requirementRepository.GetDegreeAuditParametersAsync();
+                bool modifiedSortSpec = degreeAuditParameters != null ? degreeAuditParameters.ModifiedDefaultSort : false;
+                bool excludeCompletedReplaceInProgressCreditsFromGPA = degreeAuditParameters != null ? degreeAuditParameters.ExcludeCompletedPossibleReplaceInProgressCoursesFromGPA : false;
+                bool applyRepeatedCreditsOverPlannedCourse = degreeAuditParameters != null ? degreeAuditParameters.ApplyRepeatedCreditsOverPlannedCourse : false;
+
+                // Get the main requirements from the student's program
+                ProgramRequirements ProgramRequirements = null;
+                try
+                {
+                    ProgramRequirements = await _programRequirementsRepository.GetAsync(StudentProgram.ProgramCode, StudentProgram.CatalogCode);
+                    /// If the Default sort spec has been modified, apply DEFAULT to all requirements missing a sort spec and then cascade it down to lower levels missing a sort spec
+                    ApplyDefaultSortSpecWhereApplicable(modifiedSortSpec, ProgramRequirements.Requirements);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Requirements not found: Null program requirements will result in exit with empty program.");
+                }
+                // Get any additional requirements
+                List<Requirement> AdditionalRequirements = new List<Requirement>();
+                var additionalRequirementIds = StudentProgram.AdditionalRequirements.Where(r => !string.IsNullOrEmpty(r.RequirementCode)).Select(r => r.RequirementCode).ToList();
+                if (additionalRequirementIds.Count() > 0)
+                {
+                    // Make sure to apply default sort specifications if it has been modified.
+                    AdditionalRequirements = (await _requirementRepository.GetAsync(additionalRequirementIds)).ToList();
+
+                    /// If the Default sort spec has been modified, apply DEFAULT to all addl requirements missing a sort spec 
+                    ApplyDefaultSortSpecWhereApplicable(modifiedSortSpec, AdditionalRequirements);
+                }
+
+
+                // If we don't have any requirements or additional requirements then create an empty program evaluation for this program.
+                if (ProgramRequirements == null || StudentProgram == null ||
+                    (ProgramRequirements.Requirements == null && ProgramRequirements.Requirements.Count() == 0))
+                {
+                    // Create a blank evaluation result and loop to the next program code.
+                    eval = new Domain.Student.Entities.ProgramEvaluation(new List<AcademicCredit>(), programCode, StudentProgram != null ? StudentProgram.CatalogCode : string.Empty);
+                    evaluations.Add(eval);
+                    continue;
+                }
+
+                // Build rules (if any) and evaluate the program.
+
+                // Get rules for program requirements
+                var allRules = new List<RequirementRule>();
+
+                if (ProgramRequirements != null)
+                {
+                    allRules.AddRange(ProgramRequirements.GetAllRules());
+                }
+
+                var creditRequests = new List<RuleRequest<AcademicCredit>>();
+
+                // Run all credits against credit rules
+                foreach (var credit in credits)
+                {
+                    var creditRules = allRules.Where(rr => rr.CreditRule != null).ToList();
+                    foreach (var rule in creditRules)
+                    {
+                        creditRequests.Add(new RuleRequest<AcademicCredit>(rule.CreditRule, credit));
+                    }
+                }
+
+                // Create hard list of rules that are course rules
+                var courseRules = allRules.Where(rr => rr.CourseRule != null).ToList();
+
+                // Run all courses from credits against course rules
+                var courseRequests = new List<RuleRequest<Course>>();
+                var creditsWithCourse = credits.Where(stc => stc.Course != null).Select(stc => stc.Course).ToList();
+                foreach (var rule in courseRules)
+                {
+                    foreach (var creditCourse in creditsWithCourse)
+                    {
+                        courseRequests.Add(new RuleRequest<Course>(rule.CourseRule, creditCourse));
+                    }
+                }
+
+
+                // Execute all the rules. The rule repository will not need to get the ones with .NET expressions
+                var courseResults = await _ruleRepository.ExecuteAsync(courseRequests);
+                var creditResults = await _ruleRepository.ExecuteAsync(creditRequests);
+                var ruleResults = courseResults.Union(creditResults);
+
+                Dictionary<string, List<AcademicCredit>> filteredCreditsDict = null;
+                if (FilteredCredits != null && FilteredCredits.Any())
+                {
+                    // If the student has any academic credits, build a dictionary of sorted filtered credits, using only unique, non-null/non-empty spec IDs
+                    var reqSortSpecs = ProgramRequirements.Requirements.Select(r => r.SortSpecificationId).ToList();
+                    var subreqSortSpecs = ProgramRequirements.Requirements.SelectMany(r => r.SubRequirements).Select(sub => sub.SortSpecificationId).ToList();
+                    var groupSortSpecs = ProgramRequirements.Requirements.SelectMany(r => r.SubRequirements).SelectMany(sub => sub.Groups).Select(g => g.SortSpecificationId).ToList();
+                    var additionalReqSortSpecs = AdditionalRequirements.Select(ar => ar.SortSpecificationId).ToList();
+                    var sortSpecIds = reqSortSpecs.Union(subreqSortSpecs).Union(groupSortSpecs).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+                    if (modifiedSortSpec && !sortSpecIds.Contains(_DefaultSortSpecId))
+                    {
+                        sortSpecIds.Add(_DefaultSortSpecId);
+                    }
+                    try
+                    {
+                        filteredCreditsDict = await _academicCreditRepository.GetSortedAcademicCreditsBySortSpecificationIdAsync(FilteredCredits, sortSpecIds);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Either there are no credits to sort or it couldn't sort them using the sort specs. Either way, continue without sort overrides.");
+                    }
+                }
+                //pass filteredcredits and filteredplannedcourses to identify which one will be replacing the other
+                try
+                {
+                    UpdateCreditsReplaceStatus(FilteredCredits, null, terms, excludeCompletedReplaceInProgressCreditsFromGPA, applyRepeatedCreditsOverPlannedCourse);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Exception occurred while processing possible replace and replacement in progress for credits and planned courses.");
+                }
+                // All pieces in place, run the eval
+                var ProgramEvaluator = new Domain.Student.Services.ProgramEvaluator(StudentProgram, ProgramRequirements, AdditionalRequirements, FilteredCredits, new List<PlannedCredit>(), ruleResults, Overrides, CreditsExcludedFromTranscriptGrouping, courses, degreeAuditParameters, logger);
+
+
+                if (logger.IsInfoEnabled) watch.Restart();
+
+                eval = ProgramEvaluator.Evaluate(filteredCreditsDict);
+
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Stop();
+                    logger.Info("EvaluationTiming: (EvaluatePrograms)(programCode " + programCode + ") Completed ProgramEvaluator.Evaluate in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                }
+
+                // Optimize credit/course application
+                List<string> groupsToSkip = new List<string>();
+                List<string> subsToSkip = new List<string>();
+
+                if (OptimizeEval(eval, groupsToSkip, subsToSkip))
+                {
+                    if (subsToSkip.Count > 0) { ProgramEvaluator.AddSubRequirementsToSkip(subsToSkip); }
+                    eval = null;
+
+                    watch.Restart();
+
+                    eval = ProgramEvaluator.Evaluate(filteredCreditsDict);
+
+                    watch.Stop();
+                    logger.Info("EvaluationTiming: (EvaluatePrograms)(programCode " + programCode + ") Completed OptimizeEval ProgramEvaluator.Evaluate in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                }
+
+                evaluations.Add(eval);
+            }
+
+            return evaluations;
+        }
+
         // Identifies the list of groups and subrequirements that do not need to have items applied to them because the requirement or subrequirement
         // (respectively) is satisfied. Create a list of these items that can be ignored the next time through the evaluation.
         private bool OptimizeEval(Domain.Student.Entities.ProgramEvaluation eval, List<string> groupsToSkip, List<string> subsToSkip)
@@ -415,46 +761,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             return (subsToSkip.Count > 0);
         }
 
-        /// <summary>
-        /// Gets notices pertaining to the evaluation for a given student and program.
-        /// </summary>
-        /// <param name="studentId">Id of the student</param>
-        /// <param name="programCode">Code of the program</param>
-        /// <returns>List of <see cref="EvaluationNotice">EvaluationNotice</see> Dtos</returns>
-        public async Task<IEnumerable<Dtos.Student.EvaluationNotice>> GetEvaluationNoticesAsync(string studentId, string programCode)
-        {
-            var noticeDtos = new List<Dtos.Student.EvaluationNotice>();
-
-            // First, check permissions for this function. If user is not the student id, read student and verify permissions
-            // for another user.
-            if (!(UserIsSelf(studentId)))
-            {
-                // If permissions not found, this will throw a permissions exception. 
-                await CheckUserAccessAsync(studentId);
-            }
-
-            // If still here... continue on to get student program notices from the repository, convert to dto
-            var notices = await _studentProgramRepository.GetStudentProgramEvaluationNoticesAsync(studentId, programCode);
-            if (notices != null)
-            {
-                var noticeDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.EvaluationNotice, Dtos.Student.EvaluationNotice>();
-
-                foreach (var notice in notices)
-                {
-                    try
-                    {
-                        noticeDtos.Add(noticeDtoAdapter.MapToType(notice));
-                    }
-                    catch
-                    {
-                        var message = "Error converting notice type " + notice.Type.ToString() + " for student " + studentId + " program " + programCode;
-                        logger.Error(message);
-                        throw new Exception(message);
-                    }
-                }
-            }
-            return noticeDtos;
-        }
 
         private async Task<IDictionary<Course, Tuple<IEnumerable<Department>, IEnumerable<string>>>> CreateTranscriptGroupingLookupsAsync(IEnumerable<PlannedCredit> EvaluationPlannedCourses)
         {
@@ -533,8 +839,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// </summary>
 
 
-        private void UpdateCreditsReplaceStatus(IEnumerable<AcademicCredit> allCredits, IEnumerable<PlannedCredit> plannedCourses, IEnumerable<Term> terms, bool excludeCompletedReplaceInProgressCreditsFromGPA=false)
+        private void UpdateCreditsReplaceStatus(IEnumerable<AcademicCredit> allCredits, IEnumerable<PlannedCredit> plannedCourses, IEnumerable<Term> terms, bool excludeCompletedReplaceInProgressCreditsFromGPA=false, bool applyRepeatedCreditsOverPlannedCourse=false)
         {
+            logger.Info("Starting updating replace and replacement statuses for credits and planned courses");
             if(allCredits==null)
             {
                 allCredits = new List<AcademicCredit>();
@@ -567,6 +874,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 //process each grouped course to mark credits replace/replacement status
                 foreach (var creditsLst in groupedCredits)
                 {
+                    logger.Info(string.Format("processing to find possible replace in progress/possible replacement for course {0} ", creditsLst.Key));
                     //add equated course credits to above list
                     //find all the credits that are equated to current course
                     var equatedCredits = filteredCredits.Where(c => c.Course != null && c.Course.EquatedCourseIds != null && c.Course.EquatedCourseIds.Contains(creditsLst.Key));
@@ -585,6 +893,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         int completedCredits = orderedCreditsToProcess.Where(o => o.IsCompletedCredit).Count();
                         if (completedCredits > 0 && completedCredits == orderedCreditsToProcess.Count())
                         {
+                            logger.Info("All the credits are already completed for course : " + creditsLst.Key);
+
                             //find if any other repeated credits are replaced and completed
                             List<string> otherRepeatedCredits = currentCredit.RepeatAcademicCreditIds.Where(c => c != currentCredit.Id).ToList();
                             if (otherRepeatedCredits.Any())
@@ -592,6 +902,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                                 int countOfCreditsReplaced = allCredits.Where(c => otherRepeatedCredits.Contains(c.Id) && c.ReplacedStatus == ReplacedStatus.Replaced && c.IsCompletedCredit).Count();
                                 if (countOfCreditsReplaced > 0)
                                 {
+                                    logger.Info("All the credits are complete for course therefore updating them with replacement status for course : " + creditsLst.Key);
                                     //mark all the completed credits as Replacement
                                     orderedCreditsToProcess.ForEach(o => o.ReplacementStatus = ReplacementStatus.Replacement);
                                 }
@@ -599,17 +910,19 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         }
                         else if (orderedCreditsToProcess.Count > 1)
                         {
+                            logger.Info("Processing credits to determine replace/replacement statuses for course: " + creditsLst.Key);
                             var nextCredit = orderedCreditsToProcess[1];
                             updateReplaceStatus(currentCredit, nextCredit, orderedCreditsToProcess, excludeCompletedReplaceInProgressCreditsFromGPA);
                         }
                     }
-
+                    logger.Info("All the credits have appropriately set for replace/replacement statuses for the course: " + creditsLst.Key);
                 }
             }
 
             //now process planned courses to set replaced or replacement status
             if (groupedPlannedCourses != null && groupedPlannedCourses.Any())
             {
+                logger.Info("Processing repeated planned courses for finding replace/repalcement statuses" );
                 //process each grouped course to mark credits replace/replacement status
                 foreach (var plannedCoursesLst in groupedPlannedCourses)
                 {
@@ -623,6 +936,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         for (index = 0; index < coursesToProcess.Count() - 1; index = index + 1)
                         {
                             var currentCourse = coursesToProcess[index];
+                            logger.Info("Setting the repelace/replacement status of planned course: "+ currentCourse.Item1.Course.Id);
+
                             currentCourse.Item1.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
                             currentCourse.Item1.ReplacementStatus = ReplacementStatus.NotReplacement;
                         }
@@ -639,35 +954,57 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                             coursesToProcess[index].Item1.ReplacementStatus = ReplacementStatus.NotReplacement;
 
                         }
+                        logger.Info(string.Format("Replaced Status of planned course: {0} is {1} " , coursesToProcess[index].Item1.Course.Id,  coursesToProcess[index].Item1.ReplacedStatus));
+                        logger.Info(string.Format("Replacement Status of planned course: {0} is {1} ", coursesToProcess[index].Item1.Course.Id, coursesToProcess[index].Item1.ReplacementStatus));
                     }
                 }
             }
             //now find which one to take if already there is possible replacement in academic credits - take planned one over completed/inprogress course
             foreach (string course in allTheCourses)
             {
+                logger.Info("Going through each course to determine which one will apply over the other - if it planed course or credits that will replace each other. Processing for course: "+ course);
                 var possibleCreditReplacement = groupedCredits[course].Where(c => (c.ReplacementStatus == ReplacementStatus.PossibleReplacement || (c.ReplacedStatus == ReplacedStatus.NotReplaced && c.ReplacementStatus == ReplacementStatus.NotReplacement) || c.ReplacementStatus == ReplacementStatus.Replacement)).FirstOrDefault();
                 if (possibleCreditReplacement != null)
                 {
                     var possiblePlannedCourseReplacement = groupedPlannedCourses[course].Where(c => c.Item1.ReplacementStatus == ReplacementStatus.PossibleReplacement || (c.Item1.ReplacedStatus == ReplacedStatus.NotReplaced && c.Item1.ReplacementStatus == ReplacementStatus.NotReplacement)).FirstOrDefault();
                     if (possiblePlannedCourseReplacement != null)
-                    {
-                        possiblePlannedCourseReplacement.Item1.ReplacedStatus = ReplacedStatus.NotReplaced;
-                        possiblePlannedCourseReplacement.Item1.ReplacementStatus = ReplacementStatus.PossibleReplacement;
-                        possibleCreditReplacement.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
-                        possibleCreditReplacement.ReplacementStatus = ReplacementStatus.NotReplacement;
-                        //if planned course is replacing completed course then adjust the credits and gpa of completed course to 0
-                        if (possibleCreditReplacement.IsCompletedCredit)
+                    { 
+                        //If on AEDF flag is false then planned course will replace credit course otherwise credit course will take precedence over planned course
+                        if (applyRepeatedCreditsOverPlannedCourse == false)
                         {
-                            possibleCreditReplacement.AdjustedCredit = 0M;
-                            if (excludeCompletedReplaceInProgressCreditsFromGPA == true)
+                            logger.Info("Taking planned course over credit for course: " + course);
+                            possiblePlannedCourseReplacement.Item1.ReplacedStatus = ReplacedStatus.NotReplaced;
+                            possiblePlannedCourseReplacement.Item1.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                            possibleCreditReplacement.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                            possibleCreditReplacement.ReplacementStatus = ReplacementStatus.NotReplacement;
+                            //if planned course is replacing completed course then adjust the credits and gpa of completed course to 0
+                            if (possibleCreditReplacement.IsCompletedCredit)
                             {
-                                possibleCreditReplacement.AdjustedGpaCredit = 0m;
-                                possibleCreditReplacement.AdjustedGradePoints = 0m;
+                                possibleCreditReplacement.AdjustedCredit = 0M;
+                                if (excludeCompletedReplaceInProgressCreditsFromGPA == true)
+                                {
+                                    possibleCreditReplacement.AdjustedGpaCredit = 0m;
+                                    possibleCreditReplacement.AdjustedGradePoints = 0m;
+                                }
                             }
-
                         }
+                        else
+                        {
+                            logger.Info("Taking in-progress/completed/registerd course over planned course for course: " + course);
+                            possiblePlannedCourseReplacement.Item1.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                            possiblePlannedCourseReplacement.Item1.ReplacementStatus = ReplacementStatus.NotReplacement;
+                            possibleCreditReplacement.ReplacedStatus = ReplacedStatus.NotReplaced; 
+                            possibleCreditReplacement.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                        }
+                        logger.Info(string.Format("Replaced Status of planned course: {0} is {1} ", possiblePlannedCourseReplacement.Item1.Course.Id, possiblePlannedCourseReplacement.Item1.ReplacedStatus));
+                        logger.Info(string.Format("Replacement Status of planned course: {0} is {1} ", possiblePlannedCourseReplacement.Item1.Course.Id, possiblePlannedCourseReplacement.Item1.ReplacementStatus));
+                        logger.Info(string.Format("Replaced Status of credit with Id {0} is {1} ", possibleCreditReplacement.Id, possibleCreditReplacement.ReplacedStatus));
+                        logger.Info(string.Format("Replacement Status of credit with Id {0} is {1} ", possibleCreditReplacement.Id, possibleCreditReplacement.ReplacementStatus));
+
                     }
+
                 }
+
             }
         }
         /// <summary>
@@ -685,7 +1022,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 return;
             }
-
+            logger.Info(string.Format("Comparing credit {0} with next credit {1} to find appropriate replace/replacement statuses", currentCredit.Id, nextCredit.Id));
             if (!nextCredit.IsCompletedCredit)
             {
                 currentCredit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
@@ -723,7 +1060,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 }
                 creditCompared = currentCredit;
             }
-
+            logger.Info(string.Format("Replaced Status for current credit {0} is {1} ", currentCredit.Id, currentCredit.ReplacedStatus));
+            logger.Info(string.Format("Replacement Status for current credit {0} is {1} ", currentCredit.Id, currentCredit.ReplacementStatus));
+            logger.Info(string.Format("Replaced Status for next credit {0} is {1} ", nextCredit.Id, nextCredit.ReplacedStatus));
+            logger.Info(string.Format("Replacement Status for next credit {0} is {1} ", nextCredit.Id, nextCredit.ReplacementStatus));
             //find the next credit in list
             try
             {

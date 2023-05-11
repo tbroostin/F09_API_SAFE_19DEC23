@@ -6,6 +6,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -47,6 +48,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             CanOverrideFundsAvailability = false,
             FundsAvailabilityOn = false,
+            AllowReturns = false,
             ApprovalDocuments = new List<ApprovalDocument>()
             {
                  new ApprovalDocument()
@@ -214,6 +216,104 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
         };
 
+        // Create a list of approval document requests for testing the update method for document return.
+        private List<ApprovalDocumentRequest> validApprovalReturnDocumentRequests = new List<ApprovalDocumentRequest>()
+        {
+            new ApprovalDocumentRequest()
+            {
+                Approve = false,
+                DocumentType = "REQ",
+                DocumentId = "1325",
+                DocumentNumber = "0001196",
+                Return = true,
+                ReturnComments = "Need more info",
+                ChangeDate = "12345",
+                ChangeTime = "33333",
+                DocumentItems = new List<ApprovalItem>()
+                {
+                    new ApprovalItem()
+                    {
+                        DocumentType = "REQ",
+                        DocumentId = "1325",
+                        ItemId = "7237",
+                        ChangeDate = "12345",
+                        ChangeTime = "33333"
+                    }
+                 }
+            }
+        };
+
+        // Create a list of approval document requests for testing the update method for document return.
+        private List<ApprovalDocumentRequest> invalidApprovalReturnDocumentRequests = new List<ApprovalDocumentRequest>()
+        {
+            new ApprovalDocumentRequest()
+            {
+                Approve = false,
+                DocumentType = "REQ",
+                DocumentId = "1325",
+                DocumentNumber = "0001196",
+                Return = true,
+                ReturnComments = "Need more info",
+                ChangeDate = "12345",
+                ChangeTime = "33333",
+                DocumentItems = new List<ApprovalItem>()
+                {
+                    new ApprovalItem()
+                    {
+                        DocumentType = "REQ",
+                        DocumentId = "1325",
+                        ItemId = "7237",
+                        ChangeDate = "12345",
+                        ChangeTime = "33333"
+                    }
+                 }
+            },
+            new ApprovalDocumentRequest()
+            {
+                Approve = false,
+                DocumentType = "REQ",
+                DocumentId = "1326",
+                DocumentNumber = "0001197",
+                Return = true,
+                ReturnComments = "Need more info",
+                ChangeDate = "12345",
+                ChangeTime = "33555",
+                DocumentItems = new List<ApprovalItem>()
+                {
+                    new ApprovalItem()
+                    {
+                        DocumentType = "REQ",
+                        DocumentId = "1326",
+                        ItemId = "7238",
+                        ChangeDate = "12345",
+                        ChangeTime = "33555"
+                    }
+                 }
+            },
+            new ApprovalDocumentRequest()
+            {
+                Approve = true,
+                DocumentType = "REQ",
+                DocumentId = "1327",
+                DocumentNumber = "0001198",
+                ChangeDate = "12345",
+                ChangeTime = "33777",
+                DocumentItems = new List<ApprovalItem>()
+                {
+                    new ApprovalItem()
+                    {
+                        DocumentType = "REQ",
+                        DocumentId = "1327",
+                        ItemId = "7239",
+                        ChangeDate = "12345",
+                        ChangeTime = "33777"
+                    }
+                 }
+            }
+        };
+
+
+
         // Create an approval document request for testing the update method where there is an overbudget amount
         // but not override budget boolean.
         private List<ApprovalDocumentRequest> approvalDocumentRequestsRequiringOverride = new List<ApprovalDocumentRequest>()
@@ -290,6 +390,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             Assert.AreEqual(documentApprovalRecord.CanOverrideFundsAvailability, documentApprovalEntity.CanOverrideFundsAvailability);
             Assert.AreEqual(documentApprovalRecord.FundsAvailabilityOn, documentApprovalEntity.FundsAvailabilityOn);
+            Assert.AreEqual(documentApprovalRecord.AllowReturns, documentApprovalEntity.AllowReturns);
             foreach (var approvalDocument in documentApprovalEntity.ApprovalDocuments)
             {
                 var matchingApprovalDocumentRecord = documentApprovalRecord.ApprovalDocuments.FirstOrDefault(x => x.Id == approvalDocument.Id
@@ -364,6 +465,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             documentApprovalEntity = await actualRepository.GetAsync("");
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task GetAsync_ExpiredColleagueCtx()
+        {
+            var request = new TxGetApprovalDocumentsRequest()
+            {
+                AApprovalId = "GTT"
+            };
+            var response = new TxGetApprovalDocumentsResponse();
+            response.AFaRequired = false;
+            response.AFundsOverride = false;
+            response.AlApprovalDocuments = new List<AlApprovalDocuments>();
+            response.AlAssociatedDocuments = new List<AlAssociatedDocuments>();
+            response.AlDocumentApprovals = new List<AlDocumentApprovals>();
+            response.AlDocumentItems = new List<AlDocumentItems>();
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxGetApprovalDocumentsRequest, TxGetApprovalDocumentsResponse>(It.IsAny<TxGetApprovalDocumentsRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+
+            documentApprovalEntity = await actualRepository.GetAsync("GTT");
+        }
+
         #endregion
 
         #region UpdateDocumentApprovalAsync Tests
@@ -390,7 +512,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     && x.DocumentStatus == notupdatedDocument.DocumentStatus);
                 Assert.IsNotNull(matchingNotupdatedDocumentRecord);
             }
-        }
+        }        
 
         [TestMethod]
         public async Task UpdateDocumentApprovalAsync_NoOverrideBudgetBooleanWhenNeeded()
@@ -442,6 +564,110 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", null);
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task UpdateDocumentApprovalAsync_ExpiredColleagueCtx()
+        {
+            var request = new TxUpdateDocumentApprovalsRequest()
+            {
+                AApprovalId = "GTT",
+                AlDocTypes = new List<string>(),
+                AlDocIds = new List<string>(),
+                AlDocNumbers = new List<string>(),
+                AlDocNextAppr = new List<string>(),
+                AlDocOverAmts = new List<decimal?>(),
+                AlDocTimestamps = new List<string>(),
+                AlDocItems = new List<string>(),
+                AlItemTimestamps = new List<string>()
+            };
+            var response = new TxUpdateDocumentApprovalsResponse();
+            response.AlNonUpdatedDocuments = new List<AlNonUpdatedDocuments>();
+            response.AlUpdatedDocuments = new List<AlUpdatedDocuments>();
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxUpdateDocumentApprovalsRequest, TxUpdateDocumentApprovalsResponse>(It.IsAny<TxUpdateDocumentApprovalsRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+
+            documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", approvalDocumentRequests);
+        }
+
+        #region Approval returns tests
+
+        [TestMethod]
+        public async Task UpdateDocumentApprovalAsync_ReturnDocumentSuccess()
+        {
+            var purDefaults = new PurDefaults();
+            purDefaults.PurApprAllowReturnFlag = "Y";
+            dataReaderMock.Setup(reader => reader.ReadRecordAsync<DataContracts.PurDefaults>("CF.PARMS", "PUR.DEFAULTS", It.IsAny<bool>()))
+                .ReturnsAsync(purDefaults);
+
+            // build a CTX response for the update endpoint
+            updateDocumentApprovalResponse = new TxUpdateDocumentApprovalsResponse()
+            {
+                AlUpdatedDocuments = new List<AlUpdatedDocuments>()
+                {
+                    new AlUpdatedDocuments()
+                    {
+                        AlApprDocTypes = "REQ",
+                        AlApprDocIds = "1325",
+                        AlApprDocNumbers = "0001196",
+                        AlApprDocStatuses = "NotApproved",
+                        AlApprDocMsgs = ""
+                    }
+                },
+                AlNonUpdatedDocuments = new List<AlNonUpdatedDocuments>()
+            };
+
+            transManagerMock.Setup(tm => tm.ExecuteAsync<TxUpdateDocumentApprovalsRequest, TxUpdateDocumentApprovalsResponse>(It.IsAny<TxUpdateDocumentApprovalsRequest>())).Returns(() =>
+            {
+                return Task.FromResult(updateDocumentApprovalResponse);
+            });
+
+            documentApprovalResponseRecord = await UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+            documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+
+            Assert.IsNotNull(documentApprovalResponseEntity.UpdatedApprovalDocumentResponses);
+            Assert.IsNotNull(documentApprovalResponseEntity.NotUpdatedApprovalDocumentResponses);
+            Assert.IsTrue(documentApprovalResponseEntity.UpdatedApprovalDocumentResponses.Count == 1);
+            Assert.IsTrue(documentApprovalResponseEntity.NotUpdatedApprovalDocumentResponses.Count == 0);
+
+            var updatedDocument = documentApprovalResponseEntity.UpdatedApprovalDocumentResponses.FirstOrDefault();
+            var matchingUpdatedDocumentRecord = documentApprovalResponseRecord.UpdatedApprovalDocumentResponses.FirstOrDefault(x => x.DocumentType == updatedDocument.DocumentType
+                && x.DocumentId == updatedDocument.DocumentId
+                && x.DocumentNumber == updatedDocument.DocumentNumber);
+            Assert.IsNotNull(matchingUpdatedDocumentRecord);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task UpdateDocumentApprovalAsync_ReturnContainsMoreThanOneDocument()
+        {
+            documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", invalidApprovalReturnDocumentRequests);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task UpdateDocumentApprovalAsync_ReturnDocumentPurDefaultsIsNull()
+        {
+            documentApprovalResponseRecord = await UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+            documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task UpdateDocumentApprovalAsync_ReturnDocumentAllowReturnFlagIsFalse()
+        {
+            var purDefaults = new PurDefaults();
+            purDefaults.PurApprAllowReturnFlag = "N";
+            dataReaderMock.Setup(reader => reader.ReadRecordAsync<DataContracts.PurDefaults>("CF.PARMS", "PUR.DEFAULTS", It.IsAny<bool>()))
+                .ReturnsAsync(purDefaults);
+
+            documentApprovalResponseRecord = await UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+            documentApprovalResponseEntity = await actualRepository.UpdateDocumentApprovalAsync("GTT", validApprovalReturnDocumentRequests);
+        }
+
+        #endregion
+
         #endregion
 
         #region QueryApprovedDocumentsAsync Tests
@@ -785,6 +1011,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task QueryApprovedDocumentsAsync_EmptyStaffIdArgument()
         {
             actualApprovedDocuments = await actualRepository.QueryApprovedDocumentsAsync("", filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task QueryApprovedDocumentsAsync_ExpiredColleagueCtx()
+        {
+            var request = new TxGetApprovedDocumentsRequest()
+            {
+                AApprovalId = "GTT"
+            };
+            var response = new TxGetApprovedDocumentsResponse();
+            response.AlApprovedDocuments = new List<AlApprovedDocuments>();
+            response.AlDocumentApprovers = new List<AlDocumentApprovers>();
+
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxGetApprovedDocumentsRequest, TxGetApprovedDocumentsResponse>(It.IsAny<TxGetApprovedDocumentsRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+
+            actualApprovedDocuments = await actualRepository.QueryApprovedDocumentsAsync("GTT", filterCriteria);
         }
 
         #endregion

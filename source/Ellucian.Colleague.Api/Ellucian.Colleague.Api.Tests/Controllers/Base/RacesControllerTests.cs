@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -109,6 +110,46 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
 
             [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                Mock<IReferenceDataRepository> _referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                IReferenceDataRepository _referenceDataRepository = _referenceDataRepositoryMock.Object;
+                var _racesController = new RacesController(AdapterRegistry, _referenceDataRepository, demographicsService, logger);
+
+                try
+                {
+                    _referenceDataRepositoryMock.Setup(x => x.GetRacesAsync(false)).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await _racesController.GetAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetAsync_Exception_ReturnsHttpResponseException_BadRequest()
+            {
+                Mock<IReferenceDataRepository> _referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                IReferenceDataRepository _referenceDataRepository = _referenceDataRepositoryMock.Object;
+                var _racesController = new RacesController(AdapterRegistry, _referenceDataRepository, demographicsService, logger);
+
+                try
+                {
+                    _referenceDataRepositoryMock.Setup(x => x.GetRacesAsync(false)).Throws(new ApplicationException());
+                    await _racesController.GetAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
             public async Task GetRacesByGuidAsync_Validate()
             {
                 var thisRace = RaceList.Where(m => m.Id == racesGuid).FirstOrDefault();
@@ -119,8 +160,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(thisRace.Id, race.Id);
                 Assert.AreEqual(thisRace.Code, race.Code);
                 Assert.AreEqual(thisRace.Description, race.Description);
-                //Assert.AreEqual(thisRace.RaceReporting[0].RaceReportingCountry.CountryCode, race.RaceReporting[0].RaceReportingCountry.CountryCode);
-                //Assert.AreEqual(thisRace.RaceReporting[0].RaceReportingCountry.ReportingRacialCategory, race.RaceReporting[0].RaceReportingCountry.ReportingRacialCategory);
             }
 
             [TestMethod]

@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IAdapterRegistry _iAdapterRegistry;
         private readonly ILogger _logger;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private IEnumerable<Domain.Base.Entities.SocialMediaType> _socialMediaTypes = null;
         private IEnumerable<Domain.Base.Entities.EmailType> _emailTypes = null;
         private IEnumerable<string> _homeInstitutionsList = null;
@@ -545,9 +545,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             socialMediaEntries.Add(socialMedia);
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Do not include code since we couldn't find a category
+                        logger.Error(ex.Message, "could not find SocialMediaTypeCategory");
                     }
                 }
             }
@@ -607,10 +608,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             phoneDtos.Add(phoneDto);
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // do not fail if we can't find a guid from the code table or category
                         // Just exclude the phone number from the output.
+                        logger.Error(ex.Message, "Could not find a guid. Phone number excluded from output.");
                     }
                 }
 

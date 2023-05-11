@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -167,7 +168,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("No procurement-receipts was found for guid  " + guid, ex);
+                throw new ColleagueWebApiException("No procurement-receipts was found for guid  " + guid, ex);
             }
             if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
             {
@@ -209,7 +210,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
             if (createdProcurementReceipt != null)
             {
@@ -422,16 +423,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var purchaseOrder = await purchaseOrderRepository.GetPurchaseOrdersByGuidAsync(dto.PurchaseOrder.Id);
             if (purchaseOrder == null)
             {
-                throw new Exception(string.Concat("Purchase Order GUID is not found: ", dto.PurchaseOrder.Id));
+                throw new ColleagueWebApiException(string.Concat("Purchase Order GUID is not found: ", dto.PurchaseOrder.Id));
             }
             if (purchaseOrder.Status == PurchaseOrderStatus.InProgress || purchaseOrder.Status == PurchaseOrderStatus.NotApproved)
             {
-                throw new Exception("You cannot accept items on an unapproved or unfinished purchase order.");
+                throw new ColleagueWebApiException("You cannot accept items on an unapproved or unfinished purchase order.");
             }
             if (((purchaseOrder.OutstandingItemsId == null) || !purchaseOrder.OutstandingItemsId.Any())
                 && ((purchaseOrder.AcceptedItemsId == null) || !purchaseOrder.AcceptedItemsId.Any()))
             {
-                throw new Exception("There are no outstanding items to accept, and no accepted items to adjust. No receiving actions are possible on this purchase order at this time.");
+                throw new ColleagueWebApiException("There are no outstanding items to accept, and no accepted items to adjust. No receiving actions are possible on this purchase order at this time.");
             }
 
             procurementReceiptsEntity.PoId = purchaseOrder.Id;
@@ -442,9 +443,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     currency = (Dtos.EnumProperties.CurrencyIsoCode)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyIsoCode), purchaseOrder.CurrencyCode);
                 }
-                catch (ArgumentException)
+                catch (Exception ex)
                 {
                     // if we are unable to convert the purchare order currency code then GetCurrencyCodeFromCurrencyIsoCodeAsync will use the hostCountry
+                    logger.Error(ex, "Unable to convert the purchare order currency code.");
                 }
             }
             var purchaseOrderCurrency = await this.GetCurrencyCodeFromCurrencyIsoCodeAsync(currency, purchaseOrder.HostCountry);
@@ -478,19 +480,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var shippingMethod = shippingMethods.FirstOrDefault(sm => sm.Guid == dto.ShippingMethod.Id);
                 if (shippingMethod == null)
                 {
-                    throw new Exception(string.Concat("ShippingMethod GUID is not found: ", dto.ShippingMethod.Id));
+                    throw new ColleagueWebApiException(string.Concat("ShippingMethod GUID is not found: ", dto.ShippingMethod.Id));
                 }
                 procurementReceiptsEntity.ArrivedVia = shippingMethod.Code;
             }
          
             if (dto.ReceivedBy == null || dto.ReceivedBy.Id == null || string.IsNullOrEmpty(dto.ReceivedBy.Id))
             {
-                throw new Exception("The required property receivedBy.id is missing from the request.");
+                throw new ColleagueWebApiException("The required property receivedBy.id is missing from the request.");
             }
             var submittedById = await personRepository.GetPersonIdFromGuidAsync(dto.ReceivedBy.Id);
             if (string.IsNullOrEmpty(submittedById))
             {
-                throw new Exception(string.Concat("ReceivedBy GUID is not found: ", dto.ReceivedBy.Id));
+                throw new ColleagueWebApiException(string.Concat("ReceivedBy GUID is not found: ", dto.ReceivedBy.Id));
             }
             procurementReceiptsEntity.ReceivedBy = submittedById;
 
@@ -517,7 +519,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             if (!purchaseOrder.LineItems.Any(x => x.Id == lineItem.LineItemNumber))
             {
-                throw new Exception(string.Concat("The requested item ID ", lineItem.LineItemNumber, " is not associated with purchase order ", purchaseOrder.Number));
+                throw new ColleagueWebApiException(string.Concat("The requested item ID ", lineItem.LineItemNumber, " is not associated with purchase order ", purchaseOrder.Number));
             }
             if ((!lineItem.Received.Quantity.HasValue) && (lineItem.Received.Cost == null))
             {
@@ -543,7 +545,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var receivedAmtCurrency = lineItem.Received.Cost.Currency.ToString(); // await GetCurrencyCodeFromCurrencyIsoCodeAsync(lineItem.Received.Cost.Currency, purchaseOrder.HostCountry);
                 if (receivedAmtCurrency != purchaseOrderCurrency)
                 {
-                    throw new Exception("Dollar-based receiving can only be done in the same currency as the purchase order itself.");
+                    throw new ColleagueWebApiException("Dollar-based receiving can only be done in the same currency as the purchase order itself.");
                 }
                 receiptItem.ReceivedAmtCurrency = receivedAmtCurrency;
             }
@@ -638,7 +640,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     var rejectedAmtCurrency = lineItem.Rejected.Cost.Currency.ToString(); 
                     if (rejectedAmtCurrency != purchaseOrderCurrency)
                     {
-                        throw new Exception("Dollar-based receiving can only be done in the same currency as the purchase order itself.");
+                        throw new ColleagueWebApiException("Dollar-based receiving can only be done in the same currency as the purchase order itself.");
                     }
                     receiptItem.RejectedAmtCurrency = rejectedAmtCurrency;
                 }

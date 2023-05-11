@@ -19,6 +19,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -127,7 +128,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiDtoException))]
             public async Task BuyerRepository_GetBuyersAsync_Exception()
             {
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());

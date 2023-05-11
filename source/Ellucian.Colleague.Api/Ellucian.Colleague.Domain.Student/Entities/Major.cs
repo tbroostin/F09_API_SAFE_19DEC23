@@ -14,19 +14,19 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Division Code assigned to this Major
         /// </summary>
-        public string DivisionCode;
+        public string DivisionCode { get; set; }
         /// <summary>
         /// Boolean Flag for active Majors
         /// </summary>
-        public bool ActiveFlag;
+        public bool ActiveFlag { get; set; }
         /// <summary>
         /// Federal Course Classification assigned to this Major
         /// </summary>
-        public string FederalCourseClassification;
+        public string FederalCourseClassification { get; set; }
         /// <summary>
         /// List of Local Course Classifications assigned to this Major
         /// </summary>
-        public List<string> LocalCourseClassifications;
+        public List<string> LocalCourseClassifications { get; set; }
 
         public Major(string code, string desc)
             : base(code, desc)

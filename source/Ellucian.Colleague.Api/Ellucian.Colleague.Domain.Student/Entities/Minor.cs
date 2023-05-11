@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Federal Course Classification designated to this Minor
         /// </summary>
-        public string FederalCourseClassification;
+        public string FederalCourseClassification { get; set; }
 
         public Minor(string code, string desc)
             : base(code, desc)

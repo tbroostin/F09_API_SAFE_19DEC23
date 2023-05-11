@@ -1,10 +1,11 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -213,14 +214,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // get roles
                 var roleEntities = await _roleRepository.GetRolesAsync();
                 if (roleEntities == null || !roleEntities.Any())
-                    throw new Exception("No roles found for conversion of titles to IDs");
+                    throw new ColleagueWebApiException("No roles found for conversion of titles to IDs");
                 
                 foreach (var roleIdentity in attachmentCollectionEntity.Roles)
                 {
                     // convert role title to its ID
                     var roleEntity = roleEntities.Where(r => r.Title == roleIdentity.Id).FirstOrDefault();
                     if (roleEntity == null)
-                        throw new Exception(string.Format("Cannot convert role title {0} to its ID", roleIdentity.Id));
+                        throw new ColleagueWebApiException(string.Format("Cannot convert role title {0} to its ID", roleIdentity.Id));
 
                     roleIdentity.Id = roleEntity.Id.ToString();
                 }
@@ -254,7 +255,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // get roles
                 var roleEntities = await _roleRepository.GetRolesAsync();
                 if (roleEntities == null || !roleEntities.Any())
-                    throw new Exception("No roles found for conversion of IDs to titles");
+                    throw new ColleagueWebApiException("No roles found for conversion of IDs to titles");
 
                 var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.AttachmentCollection, AttachmentCollection>();
                 
@@ -269,7 +270,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             // convert the role ID to its title
                             var roleEntity = roleEntities.Where(r => r.Id.ToString() == roleIdentity.Id).FirstOrDefault();
                             if (roleEntity == null)
-                                throw new Exception(string.Format("Cannot convert role ID {0} to its title", roleIdentity.Id));
+                                throw new ColleagueWebApiException(string.Format("Cannot convert role ID {0} to its title", roleIdentity.Id));
 
                             roleIdentity.Id = roleEntity.Title;
                         }

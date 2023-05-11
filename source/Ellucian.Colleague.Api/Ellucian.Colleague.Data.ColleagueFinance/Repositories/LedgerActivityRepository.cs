@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -12,6 +12,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -579,7 +580,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         ApplValcodes GlSourceCodesValTable = await DataReader.ReadRecordAsync<ApplValcodes>("CF.VALCODES", "GL.SOURCE.CODES");
                         if (GlSourceCodesValTable == null)
-                            throw new Exception("GL.SOURCE.CODES validation table data is null.");
+                            throw new ColleagueWebApiException("GL.SOURCE.CODES validation table data is null.");
 
                         return GlSourceCodesValTable;
                     }, Level1CacheTimeoutValue);
@@ -588,8 +589,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception ex)
             {
-                LogDataError("CF.VALCODES", "GL.SOURCE.CODES", GlSourceCodesValidationTable, ex);
-                throw new Exception("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
+                LogDataError("CF.VALCODES", "GL.SOURCE.CODES", null, ex);
+                throw new ColleagueWebApiException("Unable to retrieve GL.SOURCE.CODES validation table from Colleague.");
             }
         }
 

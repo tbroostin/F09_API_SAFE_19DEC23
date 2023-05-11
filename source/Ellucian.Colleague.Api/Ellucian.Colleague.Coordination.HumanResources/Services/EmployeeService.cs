@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -16,6 +17,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -1350,9 +1354,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 // get the person ID associated with the incoming employee guid
                 employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(guid);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                logger.Error(knfex, "Unable to get employee by guid.");
             }
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
@@ -1388,7 +1393,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -1565,7 +1570,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -1811,9 +1816,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(employeeDto.Id);
                 }
-                catch (KeyNotFoundException)
+                catch (KeyNotFoundException knfex)
                 {
                     // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                    logger.Error(knfex, "Unable to get employee by guid.");
                 }
                 if (!string.IsNullOrEmpty(employeeId) && personId != employeeId)
                 {
@@ -1864,7 +1870,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewAllTotalCompensation) &&
-                !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+                !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest) &&
+                !HasPermission(HumanResourcesPermissionCodes.AddAllEmployeeProxy))
             {
                 throw new PermissionsException("Current user is not authorized to view employee data");
             }
@@ -1877,23 +1884,56 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var results = new List<Dtos.Base.Person>();
 
-            foreach (var personBase in employeePersonBases)
-            {                
-                var personDto = new Dtos.Base.Person()
+            if (employeePersonBases != null && employeePersonBases.Any())
+            {
+                var hrssConfiguration = await hrReferenceDataRepository.GetHrssConfigurationAsync();
+
+                if (hrssConfiguration != null && !string.IsNullOrWhiteSpace(hrssConfiguration.HrssDisplayNameHierarchy))
                 {
-                    Id = personBase.Id,
-                    FirstName = personBase.FirstName,
-                    MiddleName = personBase.MiddleName,
-                    LastName = personBase.LastName,
-                    BirthNameFirst = personBase.BirthNameFirst,
-                    BirthNameMiddle = personBase.BirthNameMiddle,
-                    BirthNameLast = personBase.BirthNameLast,
-                    PreferredName = personBase.PreferredName,
-                    PrivacyStatusCode = personBase.PrivacyStatusCode
-                };
-                results.Add(personDto);
+                    NameAddressHierarchy nameHierarchy = null;
+                    try
+                    {
+                        nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hrssConfiguration.HrssDisplayNameHierarchy);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", nameHierarchy));
+
+                    }
+                    if (nameHierarchy != null)
+                    {
+                        employeePersonBases = GetPersonHierarchyName(employeePersonBases, nameHierarchy);
+                    }
+                }
+
+                var personBaseEntityToPersonDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.PersonBase, Ellucian.Colleague.Dtos.Base.Person>();
+                foreach (var personBase in employeePersonBases)
+                {
+                    results.Add(personBaseEntityToPersonDtoAdapter.MapToType(personBase));
+                }
             }
             return results;
+        }
+
+        /// <summary>
+        /// Add Person display name to each person base entity in list based on name heirarchy 
+        /// </summary>
+        /// <param name="personBaseList">contains list of person base enity</param>
+        /// <returns></returns>
+        private IEnumerable<PersonBase> GetPersonHierarchyName(IEnumerable<PersonBase> personBaseList, NameAddressHierarchy nameHierarchy)
+        {
+            if (personBaseList != null && personBaseList.Any())
+            {
+                foreach (var personBase in personBaseList)
+                {
+                    personBase.PersonDisplayName = PersonNameService.GetHierarchyName(personBase, nameHierarchy);
+                }
+            }
+            return personBaseList;
         }
     }
 }

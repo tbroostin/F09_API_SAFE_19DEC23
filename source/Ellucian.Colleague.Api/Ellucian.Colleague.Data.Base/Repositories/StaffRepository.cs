@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -7,11 +7,13 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -49,6 +51,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 //Call batch get to retrieve single staff member.
                 //Throw key not found exception if nothing is returned
                 return (await GetAsync(new List<string>() { id })).Single();
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving staff with the id " + id);
+                throw;
             }
             catch (Exception)
             {
@@ -238,7 +245,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     var errorMessage = "Requested staff " + id + " does not have a valid Staff type.";
                     logger.Error(errorMessage);
-                    throw new Exception(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
                 }
 
                 // update IsActive flag on staff record if status indicates Active
@@ -262,7 +269,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var errorMessage = ("Colleague STAFF record not found for Person " + id);
                 logger.Error(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
 
@@ -309,7 +316,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         if (staffTypesValTable == null)
                         {
                             logger.Error("STAFF.TYPES validation table data is null.");
-                            throw new Exception();
+                            throw new ColleagueWebApiException();
                         }
                         return staffTypesValTable;
                     }, Level1CacheTimeoutValue);
@@ -318,7 +325,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var errorMessage = "Unable to retrieve STAFF.TYPES validation table from Colleague.";
                 logger.Error(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
             return staffTypesValidationTable;
         }

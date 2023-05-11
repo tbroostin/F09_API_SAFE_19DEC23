@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -10,6 +10,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -150,13 +151,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (ArgumentException ex)
                 {
-                    LogDataError("Room", room.Recordkey, room, ex);
+                    LogDataError("Room", room.Recordkey, null, ex);
                     throw new ArgumentException(string.Format("Guid: {0}, Room ID must contain a building code, an asterisk, and a room number. Room ID: {1}", room.RecordGuid, room.Recordkey));
                 }
                 catch (Exception ex)
                 {
-                    LogDataError("Room", room.Recordkey, room, ex);
-                    throw new Exception(ex.Message);
+                    LogDataError("Room", room.Recordkey, null, ex);
+                    throw new ColleagueWebApiException(ex.Message);
                 }
             }
 
@@ -216,13 +217,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (ArgumentException ex)
                 {
-                    LogDataError("Room", room.Recordkey, room, ex);
+                    LogDataError("Room", room.Recordkey, null, ex);
                     throw new ArgumentException(string.Format("Guid: {0}, Room ID must contain a building code, an asterisk, and a room number. Room ID: {1}", room.RecordGuid, room.Recordkey));
                 }
                 catch (Exception ex)
                 {
-                    LogDataError("Room", room.Recordkey, room, ex);
-                    throw new Exception(ex.Message);
+                    LogDataError("Room", room.Recordkey, null, ex);
+                    throw new ColleagueWebApiException(ex.Message);
                 }
             }
 

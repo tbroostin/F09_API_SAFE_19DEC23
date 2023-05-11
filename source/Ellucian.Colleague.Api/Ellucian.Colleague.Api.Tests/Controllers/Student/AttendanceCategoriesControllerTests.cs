@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -117,6 +118,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
                 Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
                 Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AttendanceCategoriesController_GetAttendanceCategories_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                attendanceCategoriesServiceMock.Setup(x => x.GetAttendanceCategoriesAsync(false))
+                            .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await attendanceCategoriesController.GetAttendanceCategoriesAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
             }
         }
 

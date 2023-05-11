@@ -1502,7 +1502,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_Update_DtoToEntity_Invalid_DirectRelationshipType_OrgIndicator()
             {
                 personalRelationships2.DirectRelationshipType.Id = "3a59eed8-5fe7-4120-b1cf-f23266b9e874";
@@ -1526,7 +1526,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_Update_DtoToEntity_DirectRelation_Without_InverseRelation()
             {
                 personalRelationships2.DirectRelationshipType.Id = "4a59eed8-5fe7-4120-b1cf-f23266b9e874";
@@ -1535,7 +1535,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_Update_DtoToEntity_InverseRelation_DoesNotMatch_ReciprocalRelation()
             {
                 personalRelationships2.DirectRelationshipType.Id = "6a59eed8-5fe7-4120-b1cf-f23266b9e874";
@@ -1618,7 +1618,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_UpdatePersonalRelationshipsAsync_Exception()
             {
                 relationshipRepositoryMock.Setup(r => r.UpdatePersonalRelationshipsAsync(It.IsAny<Domain.Base.Entities.Relationship>())).ThrowsAsync(new Exception());
@@ -1737,7 +1737,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_DeletePersonalRelationshipsAsync_Exception()
             {
                 relationship = new Domain.Base.Entities.Relationship(guid, "1", "1", "1", true, null, null) { };
@@ -1959,7 +1959,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 phoneTypes = new List<Domain.Base.Entities.PhoneType>()
                  {
-                    new Domain.Base.Entities.PhoneType(guid, "HOME", "Home", Domain.Base.Entities.PhoneTypeCategory.Home)
+                    new Domain.Base.Entities.PhoneType(guid, "HOME", "Home", Domain.Base.Entities.PhoneTypeCategory.Home, false)
                 };
 
                 addressTypes = new List<Domain.Base.Entities.AddressType2>()
@@ -2128,7 +2128,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetEmailTypesAsync_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetEmailTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2161,7 +2161,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await personalRelationships2Service.CreatePersonalRelationshipInitiationProcessAsync(personalRelationshipInitProcessDTO);
             }
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetPhoneTypesAsync_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetPhoneTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2169,7 +2169,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetCountyCodes_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetCountiesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2186,7 +2186,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetStateCodes_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetStateCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2212,7 +2212,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetCountryCodes_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetCountryCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2279,7 +2279,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PerRelshpService_CreatePerRelInitProcess_DtoToEntity_GetAddressTypesAsync_Null()
             {
                 referenceDataRepositoryMock.Setup(r => r.GetAddressTypes2Async(It.IsAny<bool>())).ReturnsAsync(() => null);

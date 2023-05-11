@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -27,6 +27,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly INonAcademicAttendanceService _nonAcademicAttendanceService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the NonAcademicAttendancesController class.
@@ -52,6 +53,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await _nonAcademicAttendanceService.GetNonAcademicAttendancesAsync(studentId);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

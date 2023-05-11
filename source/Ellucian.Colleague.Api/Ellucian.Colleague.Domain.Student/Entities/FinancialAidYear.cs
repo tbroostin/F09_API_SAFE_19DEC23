@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Status of financial aid year
         /// </summary>
-        public string status;
+        public string status { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidYear

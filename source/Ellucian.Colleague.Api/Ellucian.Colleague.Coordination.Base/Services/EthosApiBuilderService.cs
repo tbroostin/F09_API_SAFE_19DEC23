@@ -1,8 +1,7 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Domain.Base;
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
@@ -23,6 +22,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IEthosApiBuilderRepository _ethosApiBuilderRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private ILogger _logger;
+        char _XM = Convert.ToChar(250);
 
         /// <summary>
         /// Constructor for EthosApiBuilderService
@@ -55,7 +55,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Tuple<IEnumerable<Dtos.EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, string resourceName, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary, bool bypassCache)
         {
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
-            CheckUserEthosApiBuilderViewPermissions(configuration);
+            
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+
+            CheckUserEthosApiBuilderViewAllPermissions(configuration);
 
             try
             {
@@ -72,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     foreach (var extendedDataEntity in extendedDataEntities.Item1)
                     {
-                        Dtos.EthosApiBuilder extendedDataDto = ConvertEthosApiBuilderEntityToDtoAsync(extendedDataEntity, bypassCache);
+                        Dtos.EthosApiBuilder extendedDataDto = ConvertEthosApiBuilderEntityToDto(extendedDataEntity, bypassCache);
                         extendedDataDtos.Add(extendedDataDto);
                     }
                 }
@@ -103,6 +107,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Dtos.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string id, string resourceName)
         {
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+            
             CheckUserEthosApiBuilderViewPermissions(configuration);
 
             if (string.IsNullOrEmpty(id))
@@ -118,7 +126,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
                 }
 
-                Dtos.EthosApiBuilder extendedDataDto = ConvertEthosApiBuilderEntityToDtoAsync(extendedDataEntity, false);
+                Dtos.EthosApiBuilder extendedDataDto = ConvertEthosApiBuilderEntityToDto(extendedDataEntity, false);
                 return extendedDataDto;
             }
             catch (KeyNotFoundException ex)
@@ -170,6 +178,43 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
+        /// Checks User GET by ID permissions (view) for Business Process API
+        /// </summary>
+        /// <param name="configuration">Configuration of the Business Process API</param>
+        /// <param name="method">Method requested for permissions verification</param>
+        /// <returns></returns>
+        public async Task<string> GetEthosApiBuilderPermissionsAsync(string resourceName, string method)
+        {
+            var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+
+            if (method == "GET" || method == "GET_ID")
+            {
+                CheckUserEthosApiBuilderViewPermissions(configuration);
+            }
+            else if (method == "GET_ALL" || method == "POST_QAPI")
+            {
+                CheckUserEthosApiBuilderViewAllPermissions(configuration);
+            }
+            else if (method == "PUT")
+            {
+                CheckUserEthosApiBuilderUpdatePermissions(configuration);
+            }
+            else if (method == "POST")
+            {
+                CheckUserEthosApiBuilderCreatePermissions(configuration);
+            }
+            else if (method == "DELETE")
+            {
+                CheckUserEthosApiBuilderDeletePermissions(configuration);
+            }
+
+            return CurrentUser.PersonId;
+        }
+
+        /// <summary>
         /// Verifies if the user has the correct permissions to view a person's guardian.
         /// </summary>
         private void CheckUserEthosApiBuilderViewPermissions(EthosApiConfiguration configuration)
@@ -178,7 +223,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             bool userHasPermission = false;
             foreach (var method in configuration.HttpMethods)
             {
-                if (string.IsNullOrEmpty(method.Permission) && method.Method == "GET")
+                if (string.IsNullOrEmpty(method.Permission) && (method.Method == "GET" || method.Method == "PUT" || method.Method == "POST" || method.Method == "GET_ID"))
                 {
                     userHasPermission = true;
                 }
@@ -186,7 +231,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     if (!string.IsNullOrEmpty(method.Permission) && !userHasPermission)
                     {
-                        if (method.Method == "GET" || method.Method == "PUT" || method.Method == "POST")
+                        if (method.Method == "GET" || method.Method == "PUT" || method.Method == "POST" || method.Method == "GET_ID")
                         {
                             userHasPermission = HasPermission(method.Permission);
                         }
@@ -196,8 +241,40 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             
             if (!userHasPermission)
             {
-                logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to view {0}.", configuration.ResourceName));
-                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to view {0}.", configuration.ResourceName));
+                logger.Error(string.Format("User '" + CurrentUser.UserId + "' does not have permission to view {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' does not have permission to view {0}.", configuration.ResourceName));
+            }
+        }
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to view a person's guardian.
+        /// </summary>
+        private void CheckUserEthosApiBuilderViewAllPermissions(EthosApiConfiguration configuration)
+        {
+            // access is ok if the current user has the view or update permission
+            bool userHasPermission = false;
+            foreach (var method in configuration.HttpMethods)
+            {
+                if (string.IsNullOrEmpty(method.Permission) && (method.Method == "GET" || method.Method == "GET_ALL" || method.Method == "POST_QAPI"))
+                {
+                    userHasPermission = true;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(method.Permission) && !userHasPermission)
+                    {
+                        if (method.Method == "GET" || method.Method == "GET_ALL" || method.Method == "POST_QAPI")
+                        {
+                            userHasPermission = HasPermission(method.Permission);
+                        }
+                    }
+                }
+            }
+
+            if (!userHasPermission)
+            {
+                logger.Error(string.Format("User '" + CurrentUser.UserId + "' does not have permission to view {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' does not have permission to view {0}.", configuration.ResourceName));
             }
         }
 
@@ -210,16 +287,20 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="id">the guid for extended data record</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
         /// <returns>Dtos.EthosApiBuilder</returns>
-        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, string resourceName)
+        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
         {
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+
             CheckUserEthosApiBuilderUpdatePermissions(configuration);
 
             if (string.IsNullOrEmpty(id))
             {
-                id = extendedData.Id;
+                id = extendedData._Id;
             }
-            if (extendedData == null || string.IsNullOrEmpty(extendedData.Id))
+            if (extendedData == null || string.IsNullOrEmpty(extendedData._Id))
             {
                 throw new KeyNotFoundException(string.Format("id is a required property for {0}", resourceName));
             }
@@ -228,32 +309,38 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             string primaryEntity = configuration.PrimaryEntity;
             if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
             {
-                if (!id.Equals(extendedData.Id, StringComparison.OrdinalIgnoreCase))
+                primaryKey = UnEncodePrimaryKey(id).Split(_XM)[0];
+                string idInBody = extendedData._Id;
+                if (!idInBody.Contains("+"))
                 {
-                    throw new KeyNotFoundException(string.Format("Request Id '{0}' doesn't match request body Id '{2}'.  Invalid Id for {1}: '{2}'",id,  resourceName, extendedData.Id));
+                    idInBody = _configurationRepository.UnEncodePrimaryKey(extendedData._Id);
                 }
-                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                if (idInBody.Contains("+"))
                 {
-                    var idSplit = _configurationRepository.UnEncodePrimaryKey(id).Split('+');
-                    if (idSplit.Count() > 1)
-                    {
-                        primaryEntity = idSplit[0];
-                        primaryKey = idSplit[1];
-                    }
-                    else
-                    {
-                        primaryKey = idSplit[0];
-                    }
+                    idInBody = idInBody.Split('+')[1];
+                }
+                var idSplit = primaryKey.Split('+');
+                if (idSplit.Count() > 1)
+                {
+                    primaryKey = idSplit[1];
+                }
+                else
+                {
+                    primaryKey = idSplit[0];
+                }
+                if (!primaryKey.Equals(idInBody, StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(configuration.ApiType) || !configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new KeyNotFoundException(string.Format("Request Id '{0}' doesn't match request body Id '{2}'.  Invalid Id for {1}: '{2}'", primaryKey, resourceName, extendedData._Id));
                 }
             }
             else
             {
                 var extendedDataLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(id);
-                var personLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(extendedData.Id);
+                var personLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(extendedData._Id);
 
                 if (personLookUpResult == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, extendedData.Id));
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, extendedData._Id));
                 }
 
                 if (extendedDataLookUpResult != null && !extendedDataLookUpResult.PrimaryKey.Equals(personLookUpResult.PrimaryKey, StringComparison.InvariantCultureIgnoreCase))
@@ -275,27 +362,59 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequestAsync(primaryKey, extendedData, primaryEntity);
+            EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequest(primaryKey, extendedData, primaryEntity);
+            var filterDefinitions = ConvertFilterDictionary(filterDictionary);
 
-            EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
-
-            try
+            // A Business Process API (Type "T") will return the list of returned fields so that
+            // the GET following the PUT or POST isn't required any longer.  Just use the result
+            // coming from the PUT/POST operation by setting the service level property.
+            if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
             {
-                Dtos.EthosApiBuilder extendedDataDto = await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
-                return extendedDataDto;
-            }
-            catch (IntegrationApiException ex)
-            {
-                var messages = ex.Errors;
-                IntegrationApiException = new IntegrationApiException();
-                foreach (var message in messages)
+                try
                 {
-                    var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
-                    var primaryId = string.IsNullOrEmpty(message.Id) ? primaryKey : message.Id;
-                    IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields);
+                    EthosExtendedDataDictionary = responseDictionary.FirstOrDefault().Value;
+                    extendedData._Id = responseDictionary.FirstOrDefault().Key;
+                    _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                    _configurationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                    SecureDataDefinition = _ethosApiBuilderRepository.GetSecureDataDefinition();
                 }
-                throw IntegrationApiException;
+                catch (IntegrationApiException ex)
+                {
+                    var messages = ex.Errors;
+                    IntegrationApiException = new IntegrationApiException();
+                    foreach (var message in messages)
+                    {
+                        var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
+                        var primaryId = string.IsNullOrEmpty(message.Id) ? string.Empty : message.Id;
+                        IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                    }
+                    throw IntegrationApiException;
+                }
             }
+            else
+            {
+                EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
+                try
+                {
+                    Dtos.EthosApiBuilder extendedDataDto = await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
+                    return extendedDataDto;
+                }
+                catch (IntegrationApiException ex)
+                {
+                    var messages = ex.Errors;
+                    IntegrationApiException = new IntegrationApiException();
+                    foreach (var message in messages)
+                    {
+                        var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
+                        var primaryId = string.IsNullOrEmpty(message.Id) ? primaryKey : message.Id;
+                        IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                    }
+                    throw IntegrationApiException;
+                }
+            }
+
+            return extendedData;
         }
 
         /// <summary>
@@ -325,8 +444,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (!userHasPermission)
             {
-                logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to update {0}.", configuration.ResourceName));
-                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to update {0}.", configuration.ResourceName));
+                logger.Error(string.Format("User '" + CurrentUser.UserId + "' does not have permission to update {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' does not have permission to update {0}.", configuration.ResourceName));
             }
         }
 
@@ -339,27 +458,45 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="id">the guid for extended data record</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
         /// <returns>Dtos.EthosApiBuilder</returns>
-        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName)
+        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
         {
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+
             CheckUserEthosApiBuilderCreatePermissions(configuration);
 
-            if (extendedData == null || string.IsNullOrEmpty(extendedData.Id))
+            if (extendedData == null || string.IsNullOrEmpty(extendedData._Id))
             {
                 throw new KeyNotFoundException(string.Format("id is a required property for {0}", resourceName));
             }
 
+            var filterDefinitions = ConvertFilterDictionary(filterDictionary);
+
             _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
             _configurationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) || !string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("S", StringComparison.OrdinalIgnoreCase))
             {
-                EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequestAsync("$NEW", extendedData, configuration.PrimaryEntity);
+                return extendedData;
+            }
 
-                EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
+            EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequest("$NEW", extendedData, configuration.PrimaryEntity);
+
+            // A Business Process API (Type "T") will return the list of returned fields so that
+            // the GET following the PUT or POST isn't required any longer.  Just use the result
+            // coming from the PUT/POST operation by setting the service level property.
+            if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
+            {
                 try
-                { 
-                    return await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
+                {
+                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields);
+                    EthosExtendedDataDictionary = responseDictionary.FirstOrDefault().Value;
+                    extendedData._Id = responseDictionary.FirstOrDefault().Key;
+                    _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                    _configurationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                    SecureDataDefinition = _ethosApiBuilderRepository.GetSecureDataDefinition();
                 }
                 catch (IntegrationApiException ex)
                 {
@@ -376,8 +513,37 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             else
             {
-                return extendedData;
+                if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) || !string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
+                    _ethosApiBuilderRepository.EthosExtendedDataDictionary = null;
+                    _configurationRepository.EthosExtendedDataDictionary = null;
+                    if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ConvertEthosApiBuilderEntityToDto(extendedDataResponse, false);
+                    }
+
+                    try
+                    {
+                        return await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        var messages = ex.Errors;
+                        IntegrationApiException = new IntegrationApiException();
+                        foreach (var message in messages)
+                        {
+                            var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
+                            var primaryId = string.IsNullOrEmpty(message.Id) ? string.Empty : message.Id;
+                            IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                        }
+                        throw IntegrationApiException;
+                    }
+                }
             }
+
+            return extendedData;
+
         }
 
         /// <summary>
@@ -407,9 +573,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (!userHasPermission)
             {
-                var message = string.Format("User '" + CurrentUser.UserId + "' is not authorized to create {0}.", configuration.ResourceName);
-                if (string.IsNullOrEmpty(configuration.PrimaryGuidSource))
-                    message = string.Format("User '" + CurrentUser.UserId + "' is not authorized to access the subroutine {0}.", configuration.PrimaryEntity);
+                var message = string.Format("User '" + CurrentUser.UserId + "' does not have permission to create {0}.", configuration.ResourceName);
+                if (configuration.ApiType != null && configuration.ApiType.Equals("S", StringComparison.OrdinalIgnoreCase))
+                    message = string.Format("User '" + CurrentUser.UserId + "' does not have permission to access the subroutine {0}.", configuration.PrimaryEntity);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
@@ -432,6 +598,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+
+            // These configuraiton properties must be set at run-time and cannot be cached.
+            configuration.CurrentUserId = CurrentUser.PersonId;
+
             CheckUserEthosApiBuilderDeletePermissions(configuration);
 
             if (string.IsNullOrEmpty(configuration.PrimaryKeyName))
@@ -450,6 +620,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             await _ethosApiBuilderRepository.DeleteEthosApiBuilderAsync(id, configuration);
         }
 
+      
         /// <summary>
         /// Verifies if the user has the correct permissions to delete.
         /// </summary>
@@ -477,24 +648,70 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (!userHasPermission)
             {
-                logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to delete {0}.", configuration.ResourceName));
-                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to delete {0}.", configuration.ResourceName));
+                logger.Error(string.Format("User '" + CurrentUser.UserId + "' does not have permission to delete {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' does not have permission to delete {0}.", configuration.ResourceName));
             }
         }
 
         #endregion
 
         #region Convert Methods
+
+        /// <summary>
+        ///  GetEthosApiConfigurationByResource
+        /// </summary>
+        /// <param name="resourceName">resourceName</param>
+        /// <returns>EthosApiConfiguration</returns>
+        public async Task<Ellucian.Colleague.Domain.Base.Entities.EthosApiConfiguration> GetEthosApiConfigurationByResourceAsync(string resourceName)
+        {
+            return await _configurationRepository.GetEthosApiConfigurationByResource(resourceName, false);
+        }
+
+        /// <summary>
+        /// Gets  extended configurations by resource, returns null if there are none
+        /// </summary>
+        /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
+        /// <param name="bypassCache">bypassCache </param>
+        /// <returns>List with all of the extended configurations if available. Returns an null if none available or none configured</returns>
+        public async Task<List<Domain.Base.Entities.EthosExtensibleData>> GetExtendedEthosVersionsConfigurationsByResource(Ellucian.Web.Http.EthosExtend.EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false, bool customOnly = true)
+        {
+            if (!bypassCache)
+            {
+                bypassCache = ethosResourceRouteInfo.BypassCache;
+            }
+            return (await _configurationRepository.GetEthosExtensibilityConfigurationEntitiesByResource(ethosResourceRouteInfo.ResourceName, customOnly, bypassCache)).ToList();
+        }
+
+        /// <summary>
+        ///  Encode a Primary Key
+        /// </summary>
+        /// <param name="id">Id to encode</param>
+        /// <returns>EthosApiConfiguration</returns>
+        public string EncodePrimaryKey(string id)
+        {
+            return _configurationRepository.EncodePrimaryKey(id);
+        }
+
+        /// <summary>
+        ///  Un-Encode a Primary Key
+        /// </summary>
+        /// <param name="id">Id to encode</param>
+        /// <returns>EthosApiConfiguration</returns>
+        public string UnEncodePrimaryKey(string id)
+        {
+            return _configurationRepository.UnEncodePrimaryKey(id);
+        }
+
         /// <summary>
         /// Converts extended data dto to extended data request
         /// </summary>
         /// <param name="entityId">entityId</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
         /// <returns>EthosApiBuilderRequest</returns>
-        private EthosApiBuilder ConvertEthosApiBuilderDtoToRequestAsync(string entityId, Dtos.EthosApiBuilder extendedData, string entity)
+        private EthosApiBuilder ConvertEthosApiBuilderDtoToRequest(string entityId, Dtos.EthosApiBuilder extendedData, string entity)
         {
 
-            var extendedDataRequest = new EthosApiBuilder(extendedData.Id, entityId, entity);        
+            var extendedDataRequest = new EthosApiBuilder(extendedData._Id, entityId, entity);        
 
             return extendedDataRequest;
         }
@@ -504,10 +721,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="extendedDataEntity">EthosApiBuilder</param>
         /// <returns>Dtos.EthosApiBuilder</returns>
-        private Dtos.EthosApiBuilder ConvertEthosApiBuilderEntityToDtoAsync(EthosApiBuilder extendedDataEntity, bool bypassCache)
+        private Dtos.EthosApiBuilder ConvertEthosApiBuilderEntityToDto(EthosApiBuilder extendedDataEntity, bool bypassCache)
         {
             Dtos.EthosApiBuilder extendedDataDto = new Dtos.EthosApiBuilder();
-            extendedDataDto.Id = extendedDataEntity.Guid;
+            extendedDataDto._Id = extendedDataEntity.Guid;
             
             return extendedDataDto;
         }
@@ -519,14 +736,21 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 var dictKey = dictItem.Key;
                 var filterRow = dictItem.Value;
-                if (!string.IsNullOrEmpty(dictKey) && filterRow != null && filterRow.FilterValue != null && filterRow.FilterValue.Any())
+                if (!string.IsNullOrEmpty(dictKey) && filterRow != null)
                 {
+                    bool namedQuery = false;
                     string jsonPropertyType = filterRow.JsonPropertyType.ToString();
+                    if (string.IsNullOrEmpty(filterRow.ColleagueFileName) && !filterRow.KeyQuery)
+                    {
+                        namedQuery = true;
+                    }
 
                     var row = new EthosExtensibleDataFilter(filterRow.ColleagueColumnName, filterRow.ColleagueFileName,
-                        filterRow.JsonTitle, filterRow.JsonPath, jsonPropertyType, filterRow.FilterValue)
+                        filterRow.JsonTitle, filterRow.JsonPath, jsonPropertyType, filterRow.FilterValue, namedQuery: namedQuery, keyQuery: filterRow.KeyQuery)
                     {
                         DatabaseUsageType = filterRow.DatabaseUsageType,
+                        ColleagueFieldPosition = filterRow.ColleaguePropertyPosition,
+                        Required = filterRow.Required,
                         GuidColumnName = filterRow.GuidColumnName,
                         GuidDatabaseUsageType = filterRow.GuidDatabaseUsageType,
                         GuidFileName = filterRow.GuidFileName,

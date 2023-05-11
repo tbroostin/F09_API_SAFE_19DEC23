@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,9 +47,14 @@ namespace Ellucian.Colleague.Dtos.Student
         public string Comment { get; set; }
 
         /// <summary>
-        /// The Id of the person who last updated the petition or consent. Ignored if a new petition or consent.
+        /// The name of the person who last updated the petition or consent.Ignored if a new petition or consent.
         /// </summary>
         public string UpdatedBy { get; set; }
+
+        /// <summary>
+        /// The Id of the person who set the petition or consent
+        /// </summary>
+        public string SetBy { get; set; }
 
         /// <summary>
         /// Date/time this petition or consent was last changed. Ignored if a new petition or consent.

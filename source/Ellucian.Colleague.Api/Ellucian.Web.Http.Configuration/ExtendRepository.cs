@@ -35,7 +35,7 @@ namespace Ellucian.Web.Http.Configuration
             return GetOrAddToCache<Dictionary<string, string>>(ethosExtensiblityCacheKey,
                  () =>
                 {
-                    var edmExtVersions = DataReader.BulkReadRecord<EdmExtVersions>("EDM.EXT.VERSIONS", "");
+                    var edmExtVersions = DataReader.BulkReadRecord<EdmExtVersions>("EDM.EXT.VERSIONS", "WITH EDMV.EXTENSION NE ''");
 
                     if (edmExtVersions != null)
                     {

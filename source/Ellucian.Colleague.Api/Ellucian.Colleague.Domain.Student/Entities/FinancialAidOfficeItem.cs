@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// The name of the financial aid office
         /// </summary>
-        public string Name;
+        public string Name { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidOffice

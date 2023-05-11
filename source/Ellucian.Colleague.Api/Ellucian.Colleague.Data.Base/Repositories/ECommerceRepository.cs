@@ -6,6 +6,7 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -39,8 +40,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             get
             {
                 // Cache this entry for 1 day
-                return GetCodeItem<ConvenienceFees, ConvenienceFee>("AllConvenienceFees", "CONVENIENCE.FEE",
-                    cf => new ConvenienceFee(cf.Recordkey, cf.ConvfDescription), Level1CacheTimeoutValue);
+                try
+                {
+                    return GetCodeItem<ConvenienceFees, ConvenienceFee>("AllConvenienceFees", "CONVENIENCE.FEE",
+                        cf => new ConvenienceFee(cf.Recordkey, cf.ConvfDescription), Level1CacheTimeoutValue);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
             }
         }
 

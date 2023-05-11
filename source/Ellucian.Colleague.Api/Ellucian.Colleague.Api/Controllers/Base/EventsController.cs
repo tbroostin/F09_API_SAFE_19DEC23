@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Http.Filters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -27,6 +28,8 @@ namespace Ellucian.Colleague.Api.Controllers
     {
         private readonly IEventService _eventService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// EventsController constructor
@@ -115,9 +118,14 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _eventService.GetCampusCalendarsAsync();
             }
-            catch(Exception e)
+            catch (ColleagueSessionExpiredException csse)
             {
-                throw CreateHttpResponseException(e.Message);
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception)
+            {
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
     }

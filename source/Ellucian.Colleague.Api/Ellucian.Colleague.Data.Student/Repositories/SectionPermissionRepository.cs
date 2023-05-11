@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Repositories;
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Cache;
 using Ellucian.Data.Colleague;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Web.Http.Configuration;
 using System.Collections.ObjectModel;
@@ -99,7 +100,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 facultyConsent.TermCode = studentPetition.StpeTerm;
                                 facultyConsent.Comment = facConsentCmnts;
                                 facultyConsent.DateTimeChanged = dateTimeChanged;
-                                facultyConsent.UpdatedBy = petition.StpeFacultyConsentSetByAssocMember;
+                                facultyConsent.SetBy = petition.StpeFacultyConsentSetByAssocMember;
+                                facultyConsent.UpdatedBy = studentPetition.StudentPetitionsChgopr;
                                 facultyConsent.StartDate = studentPetition.StpeStartDate;
                                 facultyConsent.EndDate = studentPetition.StpeEndDate;
                                 sectionEntity.AddFacultyConsent(facultyConsent);
@@ -120,7 +122,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 stuPetition.Comment = stuPetitionCmnts;
                                 stuPetition.TermCode = studentPetition.StpeTerm;
                                 stuPetition.ReasonCode = petition.StpePetitionReasonCodeAssocMember;
-                                stuPetition.UpdatedBy = petition.StpePetitionStatusSetByAssocMember;
+                                stuPetition.SetBy = petition.StpePetitionStatusSetByAssocMember;
+                                stuPetition.UpdatedBy = studentPetition.StudentPetitionsChgopr;
                                 stuPetition.StartDate = studentPetition.StpeStartDate;
                                 stuPetition.EndDate = studentPetition.StpeEndDate;
                                 sectionEntity.AddStudentPetition(stuPetition);
@@ -181,7 +184,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch
             {
                 logger.Error("Error occurred during CreateStudentPetition transaction execution.");
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
             if (createResponse != null && !createResponse.ErrorOccurred && !string.IsNullOrEmpty(createResponse.StudentPetitionsId))
             {
@@ -194,13 +197,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (newStudentPetition.StudentId != studentPetition.StudentId || newStudentPetition.SectionId != studentPetition.SectionId)
                     {
                         logger.Error("StudentPetition for student " + studentPetition.StudentId + " section " + studentPetition.SectionId + " appeared successful but new studentPetition could not be retrieved");
-                        throw new Exception();
+                        throw new ColleagueWebApiException();
                     }
                 }
                 catch (KeyNotFoundException)
                 {
                     logger.Error("Could not retrieve the newly created student petition specified by id " + createResponse.StudentPetitionsId);
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 catch (Exception)
                 {
@@ -213,7 +216,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (createResponse == null)
             {
                 logger.Error("Null response returned by create student petition.");
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
 
             if (!string.IsNullOrEmpty(createResponse.ExistingPetitionId))
@@ -227,7 +230,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // - Invalid data in request
                 // - transaction appeared successful but no waiver id returned
                 logger.Error("Error creating a student petition for Student " + studentPetition.StudentId + " Section " + studentPetition.SectionId + ". Transaction Message: " + createResponse.ErrorMessage);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
 
         }
@@ -276,7 +279,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (updateResponse == null || updateResponse.ErrorOccurred)
                 {
                     logger.Error(updateResponse.ErrorMessage);
-                    throw new Exception(string.Format("Error occurred while retrieving updated student petition. Message: '{0}'", updateResponse.ErrorMessage));
+                    throw new ColleagueWebApiException(string.Format("Error occurred while retrieving updated student petition. Message: '{0}'", updateResponse.ErrorMessage));
                 }
 
                 // Update was successful
@@ -289,7 +292,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         string message = "StudentPetition for student " + studentPetition.StudentId + " section " + studentPetition.SectionId + " appeared successful but updated studentPetition could not be retrieved";
                         logger.Error(message);
-                        throw new Exception(message);
+                        throw new ColleagueWebApiException(message);
                     }
                 }
                 catch (KeyNotFoundException knfex)
@@ -396,7 +399,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 facultyConsent.Comment = facConsentCmnts;
                                 facultyConsent.ReasonCode = petition.StpeConsentReasonCodeAssocMember;
                                 facultyConsent.TermCode = studentPetitionData.StpeTerm;
-                                facultyConsent.UpdatedBy = petition.StpeFacultyConsentSetByAssocMember;
+                                facultyConsent.SetBy = petition.StpeFacultyConsentSetByAssocMember;
+                                facultyConsent.UpdatedBy = studentPetitionData.StudentPetitionsChgopr;
                                 facultyConsent.StartDate = studentPetitionData.StpeStartDate;
                                 facultyConsent.EndDate = studentPetitionData.StpeEndDate;
                                 studentPetition = facultyConsent;
@@ -425,7 +429,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 stuPetition.Comment = stuPetitionCmnts;
                                 stuPetition.ReasonCode = petition.StpePetitionReasonCodeAssocMember;
                                 stuPetition.TermCode = studentPetitionData.StpeTerm;
-                                stuPetition.UpdatedBy = petition.StpePetitionStatusSetByAssocMember;
+                                stuPetition.SetBy = petition.StpePetitionStatusSetByAssocMember;
+                                stuPetition.UpdatedBy = studentPetitionData.StudentPetitionsChgopr;
                                 stuPetition.StartDate = studentPetitionData.StpeStartDate;
                                 stuPetition.EndDate = studentPetitionData.StpeEndDate;
                                 studentPetition = stuPetition;

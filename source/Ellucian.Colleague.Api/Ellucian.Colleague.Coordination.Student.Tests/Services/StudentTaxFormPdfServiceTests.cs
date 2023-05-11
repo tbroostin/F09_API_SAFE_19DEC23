@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString, false)).Returns<string, string, bool>((personId, recordId, suppressNotification) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             // Mock T2202A
@@ -72,7 +73,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<FormT2202aPdfData>>(rep => rep.GetT2202aPdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
 
             institutionAddressLines = new List<string>();
@@ -143,7 +144,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task Get1098TaxFormData_RepositoryThrowsException()
         {
             var pdfData = await service.Get1098TaxFormData(personId, exceptionString);
@@ -335,7 +336,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task GetT2202aTaxFormData_RepositoryThrowsException()
         {
             var pdfData = await service.GetT2202aTaxFormData(personId, exceptionString);

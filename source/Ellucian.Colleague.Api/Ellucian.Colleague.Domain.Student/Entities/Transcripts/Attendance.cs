@@ -13,6 +13,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Transcripts
         public DateTime? ExitDate { get; set; }
         public string CurrentEnrollmentIndicator { get; set; }
         [XmlElement]
-        public List<AcademicAwardsReported> AcademicAwardsReported = new List<AcademicAwardsReported>();
+        private List<AcademicAwardsReported> academicAwardsReported = new List<AcademicAwardsReported>();
+        public List<AcademicAwardsReported> AcademicAwardsReported
+        {
+            get { return academicAwardsReported; }
+            set { if (value != null) { academicAwardsReported = value; } }
+        }
     }
 }

@@ -1,22 +1,22 @@
 ﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
-using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -350,16 +350,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 glAccountValidationResponseDto.Status = "success";
                 glAccountValidationResponseDto.RemainingBalance = glAccountValidationResponseEntity.RemainingBalance;
 
-                var glAccountEntity = await generalLedgerAccountRepository.GetAsync(generalLedgerAccountId, glAccountStructure.MajorComponentStartPositions);
-                if (glAccountEntity == null)
+                try
                 {
-                    logger.Debug("==> glAccountEntity not returned <==");
-                    throw new ApplicationException("No GL account entity returned.");
-                }
+                    var glAccountEntity = await generalLedgerAccountRepository.GetAsync(generalLedgerAccountId, glAccountStructure.MajorComponentStartPositions);
 
-                glAccountValidationResponseDto.Id = glAccountEntity.Id;
-                glAccountValidationResponseDto.Description = glAccountEntity.Description;
-                glAccountValidationResponseDto.FormattedId = glAccountEntity.FormattedGlAccount;
+                    if (glAccountEntity == null)
+                    {
+                        logger.Debug("==> glAccountEntity not returned <==");
+                        throw new ApplicationException("No GL account entity returned.");
+                    }
+
+                    glAccountValidationResponseDto.Id = glAccountEntity.Id;
+                    glAccountValidationResponseDto.Description = glAccountEntity.Description;
+                    glAccountValidationResponseDto.FormattedId = glAccountEntity.FormattedGlAccount;
+
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee, "==> generalLedgerAccountRepository.GetAsync session expired <==");
+                    throw;
+                }
             }
 
             return glAccountValidationResponseDto;

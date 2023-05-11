@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -98,7 +98,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception exception)
             {
                 _logger.Error(exception, "Unexpected Error in AccountingString Service");
-                throw exception;
+                throw;
             }
         }
 

@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -24,7 +24,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GeographicAreasRepository : BaseColleagueRepository, IGeographicAreasRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        //public static char _VM = Convert.ToChar(DynamicArray.VM);
         const int AllGeographicAreasCacheTimeout = 20; // Clear from cache every 20 minutes
         const string AllGeographicAreasCache = "AllGeographicAreas";
 

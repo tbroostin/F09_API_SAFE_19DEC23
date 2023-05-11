@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -15,6 +15,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -134,6 +135,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             GetRegControlsIdForUserResponse response = await transactionInvoker.ExecuteAsync<GetRegControlsIdForUserRequest, GetRegControlsIdForUserResponse>(request);
                             return response.PersonRegControls.Where(prc => prc.PersonIds == id).Select(prc => prc.RegControlsIds).First();
                         }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             logger.Error("Unable to retrieve reg.controls Id for user " + id + ". Exception: " + ex.Message);
@@ -161,6 +166,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         return await DataReader.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true);
                     }
                 );
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

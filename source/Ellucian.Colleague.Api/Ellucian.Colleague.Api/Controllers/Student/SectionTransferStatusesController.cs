@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -13,6 +13,9 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using System.Threading.Tasks;
+using System;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -47,17 +50,31 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="Ellucian.Colleague.Domain.Student.Entities.SectionTransferStatus">section transfer statuses</see></returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.SectionTransferStatus>> GetAsync()
         {
-            var transferStatusDtoCollection = new List<Ellucian.Colleague.Dtos.Student.SectionTransferStatus>();
-            var transferStatusCollection =await _referenceDataRepository.GetSectionTransferStatusesAsync();
-            // Get the right adapter for the type mapping
-            var testDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionTransferStatus, Ellucian.Colleague.Dtos.Student.SectionTransferStatus>();
-            // Map the Test entity to the grade DTO
-            foreach (var test in transferStatusCollection)
+            try
             {
-                transferStatusDtoCollection.Add(testDtoAdapter.MapToType(test));
+                var transferStatusDtoCollection = new List<Ellucian.Colleague.Dtos.Student.SectionTransferStatus>();
+                var transferStatusCollection = await _referenceDataRepository.GetSectionTransferStatusesAsync();
+                // Get the right adapter for the type mapping
+                var testDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionTransferStatus, Ellucian.Colleague.Dtos.Student.SectionTransferStatus>();
+                // Map the Test entity to the grade DTO
+                foreach (var test in transferStatusCollection)
+                {
+                    transferStatusDtoCollection.Add(testDtoAdapter.MapToType(test));
+                }
+                return transferStatusDtoCollection;
             }
-
-            return transferStatusDtoCollection;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                var message = "Session has expired while retrieving section transfer statuses.";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
+            {
+                var message = "An error has occurred while retrieving section transfer statuses";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
     }
 }

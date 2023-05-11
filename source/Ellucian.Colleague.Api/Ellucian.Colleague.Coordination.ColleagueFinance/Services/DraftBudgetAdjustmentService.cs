@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -26,7 +27,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     {
         private IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository;
         private readonly IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository;
-        public DraftBudgetAdjustment adjustmentOutputDto;
 
         /// <summary>
         /// Initialize the service.
@@ -36,10 +36,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="currentUserFactory">User factory</param>
         /// <param name="roleRepository">Role repository</param>
         /// <param name="logger">Logger object</param>
-        public DraftBudgetAdjustmentService(IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository, 
+        public DraftBudgetAdjustmentService(IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentRepository,
             IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository,
-            IAdapterRegistry adapterRegistry, 
-            ICurrentUserFactory currentUserFactory, 
+            IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
@@ -56,6 +56,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (draftBudgetAdjustmentDto == null)
             {
+                logger.Error("==> Draft budget adjustment is required <==");
                 throw new ArgumentNullException("draftBudgetAdjustmentDto", "Draft budget adjustment is required.");
             }
 
@@ -63,6 +64,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null || !glAccountStructure.MajorComponentStartPositions.Any())
             {
+                logger.Error("==> Account structure must be defined <==");
                 throw new ConfigurationException("Account structure must be defined.");
             }
 
@@ -73,6 +75,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // draft budget adjustment that they created.
             if (!string.IsNullOrEmpty(draftBudgetAdjustmentDto.Id))
             {
+                logger.Debug("==> DraftBudgetAdjustmentService TR date: " + draftBudgetAdjustmentDto.TransactionDate + " <==");
                 // Get the draft budget adjustment domain entity.
                 var draftBudgetAdjustmentEntity = await draftBudgetAdjustmentRepository.GetAsync(draftBudgetAdjustmentDto.Id);
 
@@ -80,6 +83,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // throw an exception.
                 if (draftBudgetAdjustmentEntity == null)
                 {
+                    logger.Error("==> Unable to verify person Id for the draft budget adjustment <==");
                     throw new ApplicationException("Unable to verify person Id for the draft budget adjustment.");
                 }
 
@@ -87,6 +91,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 //  the same as the current user, throw an exception.
                 if (!CurrentUser.IsPerson(draftBudgetAdjustmentEntity.PersonId))
                 {
+                    logger.Error("==> The draft budget adjustment person ID is not the same as the person ID of the current user <==");
                     throw new PermissionsException("The draft budget adjustment person ID is not the same as the person ID of the current user.");
                 }
             }
@@ -126,63 +131,74 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
 
-            // Call the repository method to create or update the draft budget adjustment.
-            var adjustmentOutputEntity = await draftBudgetAdjustmentRepository.SaveAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
-
-            // Throw an exception if a draft budget adjustment was not returned.
-            if (adjustmentOutputEntity == null)
+            try
             {
-                throw new ApplicationException("Draft budget adjustment must not be null.");
-            }
+                // Call the repository method to create or update the draft budget adjustment.
+                var adjustmentOutputEntity = await draftBudgetAdjustmentRepository.SaveAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
 
-            // If error exists, throw exception with message.
-            if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
-            {
-                throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
-            }
-
-            // Throw an exception if the returned draft budget adjustment does not have an ID.
-            if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
-            {
-                throw new ApplicationException("Adjustment appears to have succeeded, but no ID was returned.");
-            }
-
-            // Initialize the DTO to return.
-            var adjustmentLineDtos = new List<DraftAdjustmentLine>();
-            foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
-            {
-                adjustmentLineDtos.Add(new DraftAdjustmentLine()
+                // Throw an exception if a draft budget adjustment was not returned.
+                if (adjustmentOutputEntity == null)
                 {
-                    GlNumber = adjustmentLineEntity.GlNumber,
-                    FromAmount = adjustmentLineEntity.FromAmount,
-                    ToAmount = adjustmentLineEntity.ToAmount
-                });
-            }
-
-            var adjustmentOutputDto = new DraftBudgetAdjustment()
-            {
-                Id = adjustmentOutputEntity.Id,
-                AdjustmentLines = adjustmentLineDtos,
-                Comments = adjustmentOutputEntity.Comments,
-                Initiator = adjustmentOutputEntity.Initiator,
-                Reason = adjustmentOutputEntity.Reason,
-                TransactionDate = adjustmentOutputEntity.TransactionDate
-            };
-
-            // Get the adapter for the next approver and assign them to the dto.
-            var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
-
-            adjustmentOutputDto.NextApprovers = new List<NextApprover>();
-            if (adjustmentInputEntity.NextApprovers != null)
-            {
-                foreach (var nextApprover in adjustmentInputEntity.NextApprovers)
-                {
-                    var nextApproverDto = adapterOut.MapToType(nextApprover);
-                    adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
+                    logger.Error("==> Draft budget adjustment must not be null <==");
+                    throw new ApplicationException("Draft budget adjustment must not be null.");
                 }
-            }
 
-            return adjustmentOutputDto;
+                // If error exists, throw exception with message.
+                if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
+                {
+                    logger.Error("==>" + String.Join(" <> ", adjustmentOutputEntity.ErrorMessages) + "<==");
+                    throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
+                }
+
+                // Throw an exception if the returned draft budget adjustment does not have an ID.
+                if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
+                {
+                    logger.Error("==> Adjustment appears to have succeeded, but no ID was returned <==");
+                    throw new ApplicationException("Adjustment appears to have succeeded, but no ID was returned.");
+                }
+
+                // Initialize the DTO to return.
+                var adjustmentLineDtos = new List<DraftAdjustmentLine>();
+                foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
+                {
+                    adjustmentLineDtos.Add(new DraftAdjustmentLine()
+                    {
+                        GlNumber = adjustmentLineEntity.GlNumber,
+                        FromAmount = adjustmentLineEntity.FromAmount,
+                        ToAmount = adjustmentLineEntity.ToAmount
+                    });
+                }
+
+                var adjustmentOutputDto = new DraftBudgetAdjustment()
+                {
+                    Id = adjustmentOutputEntity.Id,
+                    AdjustmentLines = adjustmentLineDtos,
+                    Comments = adjustmentOutputEntity.Comments,
+                    Initiator = adjustmentOutputEntity.Initiator,
+                    Reason = adjustmentOutputEntity.Reason,
+                    TransactionDate = adjustmentOutputEntity.TransactionDate
+                };
+
+                // Get the adapter for the next approver and assign them to the dto.
+                var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
+
+                adjustmentOutputDto.NextApprovers = new List<NextApprover>();
+                if (adjustmentInputEntity.NextApprovers != null)
+                {
+                    foreach (var nextApprover in adjustmentInputEntity.NextApprovers)
+                    {
+                        var nextApproverDto = adapterOut.MapToType(nextApprover);
+                        adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
+                    }
+                }
+
+                return adjustmentOutputDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "==> Session expired exception <==");
+                throw;
+            }
         }
 
         /// <summary>
@@ -194,6 +210,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (string.IsNullOrEmpty(id))
             {
+                logger.Error("==> id is null or empty <==");
                 throw new ArgumentNullException("id");
             }
 
@@ -212,7 +229,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // draft budget adjustment is the same as the current user.
                 if (!CurrentUser.IsPerson(draftBudgetAdjustmentEntity.PersonId))
                 {
-                    var message = "The current user " + CurrentUser.PersonId + " is not the person " + draftBudgetAdjustmentEntity.PersonId + " that owns the record returned from the repository";
+                    var message = "==> The current user " + CurrentUser.PersonId + " is not the person " + draftBudgetAdjustmentEntity.PersonId + " that owns the record returned from the repository <==";
                     logger.Error(message);
                     throw new PermissionsException("The draft budget adjustment person ID is not the same as the person ID of the current user.");
                 }
@@ -234,6 +251,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (string.IsNullOrEmpty(id))
             {
+                logger.Error("==> id is null or empty <==");
                 throw new ArgumentNullException("id");
             }
 
@@ -246,6 +264,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // throw an exception.
             if (draftBudgetAdjustmentEntity == null)
             {
+                logger.Error("==> Unable to verify person Id for the draft budget adjustment <==");
                 throw new ApplicationException("Unable to verify person Id for the draft budget adjustment.");
             }
 
@@ -253,12 +272,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             //  the same as the current user, throw an exception.
             if (!CurrentUser.IsPerson(draftBudgetAdjustmentEntity.PersonId))
             {
+                logger.Error("==> The draft budget adjustment person ID is not the same as the person ID of the current user <==");
                 throw new PermissionsException("The draft budget adjustment person ID is not the same as the person ID of the current user.");
             }
             else
             {
-                // Proceed with deleting the draft budget adjustment id.
-                await draftBudgetAdjustmentRepository.DeleteAsync(id);
+                try
+                {
+                    // Proceed with deleting the draft budget adjustment id.
+                    await draftBudgetAdjustmentRepository.DeleteAsync(id);
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Debug(csee, "==> Session expired exception <==");
+                    throw;
+                }
             }
         }
 
@@ -273,7 +301,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                var message = string.Format("{0} does not have permission to view budget adjustments.", CurrentUser.PersonId);
+                var message = string.Format("==> {0} does not have permission to view budget adjustments <==", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
@@ -290,7 +318,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                var message = string.Format("{0} does not have permission to create or update budget adjustments.", CurrentUser.PersonId);
+                var message = string.Format("==> {0} does not have permission to create or update budget adjustments <==", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
@@ -307,7 +335,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                var message = string.Format("{0} does not have permission to delete budget adjustments.", CurrentUser.PersonId);
+                var message = string.Format("==> {0} does not have permission to delete budget adjustments <==", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -28,7 +28,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             Assert.IsFalse(config.ShowCommentsOnPrintedSchedules);
             Assert.IsTrue(config.AddDefaultTermsToDegreePlan);
             Assert.IsFalse(config.QuickRegistrationIsEnabled);
-            Assert.AreEqual(0, config.QuickRegistrationTermCodes.Count); 
+            Assert.AreEqual(0, config.QuickRegistrationTermCodes.Count);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
         }
 
         [TestMethod]
@@ -50,6 +52,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             Assert.IsFalse(config.AddDefaultTermsToDegreePlan);
             Assert.IsTrue(config.QuickRegistrationIsEnabled);
             Assert.AreEqual(1, config.QuickRegistrationTermCodes.Count);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
         }
 
         [TestMethod]
@@ -77,6 +81,65 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             var config = new RegistrationConfiguration(false, 9, false);
             Assert.IsFalse(config.QuickRegistrationIsEnabled);
             config.AddQuickRegistrationTerm("2019/FA");
+        }
+
+        [TestMethod]
+        public void RegistrationConfiguration_AlwaysPromptUsersForIntentToWithdrawWhenDropping_true()
+        {
+            var config = new RegistrationConfiguration(true, 0);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+
+            config.AlwaysPromptUsersForIntentToWithdrawWhenDropping = true;
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsTrue(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+        }
+
+        [TestMethod]
+        public void RegistrationConfiguration_CensusDateNumberForPromptingIntentToWithdraw_valid()
+        {
+            var config = new RegistrationConfiguration(true, 0);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+
+            config.CensusDateNumberForPromptingIntentToWithdraw = 1;
+            Assert.AreEqual(1, config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void RegistrationConfiguration_CensusDateNumberForPromptingIntentToWithdraw_invalid()
+        {
+            var config = new RegistrationConfiguration(true, 0);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+
+            config.CensusDateNumberForPromptingIntentToWithdraw = -1;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void RegistrationConfiguration_CensusDateNumberForPromptingIntentToWithdraw_valid_with_AlwaysPromptUsersForIntentToWithdrawWhenDropping_true()
+        {
+            var config = new RegistrationConfiguration(true, 0);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+
+            config.CensusDateNumberForPromptingIntentToWithdraw = 1;
+            config.AlwaysPromptUsersForIntentToWithdrawWhenDropping = true;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void RegistrationConfiguration_AlwaysPromptUsersForIntentToWithdrawWhenDropping_true_with_CensusDateNumberForPromptingIntentToWithdraw_valid()
+        {
+            var config = new RegistrationConfiguration(true, 0);
+            Assert.IsNull(config.CensusDateNumberForPromptingIntentToWithdraw);
+            Assert.IsFalse(config.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+
+            config.AlwaysPromptUsersForIntentToWithdrawWhenDropping = true;
+            config.CensusDateNumberForPromptingIntentToWithdraw = 1;
         }
     }
 }

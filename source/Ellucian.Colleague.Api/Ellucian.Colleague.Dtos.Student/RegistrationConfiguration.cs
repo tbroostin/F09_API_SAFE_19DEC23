@@ -1,5 +1,4 @@
 ﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
-
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -52,5 +51,15 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Indicates whether or not Faculty can add authorization from the waitlist
         /// </summary>
         public bool AllowFacultyAddAuthFromWaitlist { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not to *always* present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution
+        /// </summary>
+        public bool AlwaysPromptUsersForIntentToWithdrawWhenDropping { get; set; }
+
+        /// <summary>
+        /// Numeric position of the census date to check when deciding whether or not to present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution; today's date must be on or after the census date at the specified position for the course section being dropped
+        /// </summary>
+        public int? CensusDateNumberForPromptingIntentToWithdraw { get; set; }
     }
 }

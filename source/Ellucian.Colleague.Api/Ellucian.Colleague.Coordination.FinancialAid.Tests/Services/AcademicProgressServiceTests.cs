@@ -206,7 +206,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     .ReturnsAsync(() => null);
                 actualEvaluations = await actualService.GetAcademicProgressEvaluationsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No evaluationResults exist for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -215,7 +215,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 academicProgressRepository.financialAidStudentData.sapResultsIds = new List<string>();
                 actualEvaluations = await actualService.GetAcademicProgressEvaluationsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No evaluationResults exist for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -261,7 +261,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualEvaluations = await actualService.GetAcademicProgressEvaluationsAsync(studentId);
                 Assert.IsFalse(actualEvaluations.Any());
 
-                loggerMock.Verify(l => l.Warn("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Debug("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", It.IsAny<object[]>()));
                 //loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to create AcademicProgressEvaluation {0} for student {1}", It.IsAny<object[]>()));
 
             }
@@ -275,7 +275,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualEvaluations = await actualService.GetAcademicProgressEvaluationsAsync(studentId);
                 Assert.IsFalse(actualEvaluations.Any());
 
-                loggerMock.Verify(l => l.Warn("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Debug("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", It.IsAny<object[]>()));
                 //loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to create AcademicProgressEvaluation {0} for student {1}", It.IsAny<object[]>()));
 
             }
@@ -409,7 +409,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     .ReturnsAsync(() => null);
                 actualEvaluations = await actualService.GetAcademicProgressEvaluations2Async(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No evaluationResults exist for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -418,7 +418,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 academicProgressRepository.financialAidStudentData.sapResultsIds = new List<string>();
                 actualEvaluations = await actualService.GetAcademicProgressEvaluations2Async(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No evaluationResults exist for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -464,7 +464,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualEvaluations = await actualService.GetAcademicProgressEvaluations2Async(studentId);
                 Assert.IsFalse(actualEvaluations.Any());
 
-                loggerMock.Verify(l => l.Warn("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Debug("StudentProgram does not exist for programId {0} in AcademicProgressEvaluation {1} for student {2}", It.IsAny<object[]>()));
             }
 
             [TestMethod]
@@ -475,7 +475,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualEvaluations = await actualService.GetAcademicProgressEvaluations2Async(studentId);
                 Assert.IsTrue(actualEvaluations.Any());
 
-                loggerMock.Verify(l => l.Warn("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", It.IsAny<object[]>()));                
+                loggerMock.Verify(l => l.Debug("ProgramRequirements do not exist for programId {0} and catalogCode {1} in AcademicProgressEvaluation {2} for student {3}", It.IsAny<object[]>()));                
             }
 
             [TestMethod]

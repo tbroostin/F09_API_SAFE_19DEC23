@@ -1,7 +1,9 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using slf4net;
+using Moq;
 using Ellucian.Colleague.Coordination.Planning.Reports;
 using Ellucian.Colleague.Domain.Planning.Entities;
 using Ellucian.Colleague.Domain.Planning.Tests;
@@ -23,6 +25,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
         IEnumerable<Term> terms;
         DegreePlanArchiveReport degreePlanArchiveReport;
         IEnumerable<StudentProgram> studentPrograms;
+        private ILogger logger;
 
         [TestInitialize]
         public async void Initialize()
@@ -43,7 +46,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
             terms = new TestTermRepository().Get();
 
             advisors = new List<Advisor>() { new Advisor("0000111", "Johnson") { FirstName = "Edward", Name = "Edward Johnson" }, new Advisor("1212121", "Smithson") };
-            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, studentPrograms);
+            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, studentPrograms, logger);
+
+            logger = new Mock<ILogger>().Object;
         }
 
         [TestCleanup]
@@ -56,56 +61,56 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoDegreePlanArchive_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(null, student, programs, advisors, terms, studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(null, student, programs, advisors, terms, studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoStudent_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, null, programs, advisors, terms, studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, null, programs, advisors, terms, studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoPrograms_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, null, advisors, terms, studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, null, advisors, terms, studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoAdvisors_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, null, terms, studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, null, terms, studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoTerms_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, null, studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, null, studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ZeroTerms_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, new List<Term>(), studentPrograms);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, new List<Term>(), studentPrograms, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void NoStudentPrograms_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, null);
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, null, logger);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ZeroStudentPrograms_ThowsException()
         {
-            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, new List<StudentProgram>());
+            var degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, new List<StudentProgram>(), logger);
         }
 
         [TestMethod]
@@ -145,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
             student2 = new Domain.Student.Entities.Student("0000698", "LastName", 2, new List<string>(), new List<string>());
             student2.FirstName = "FirstName";
             student2.PreferredName = "PreferredName";
-            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms);
+            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms, logger);
             Assert.AreEqual(student2.PreferredName, degreePlanArchiveReport.StudentName);
         }
 
@@ -155,7 +160,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
             student2 = new Domain.Student.Entities.Student("0000698", "LastName", 2, new List<string>(), new List<string>());
             student2.FirstName = "FirstName";
             student2.PreferredName = "PreferredName";
-            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms);
+            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms, logger);
             Assert.AreEqual(student2.LastName, degreePlanArchiveReport.StudentLastName);
         }
 
@@ -165,7 +170,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
             student2 = new Domain.Student.Entities.Student("0000698", "LastName", 2, new List<string>(), new List<string>());
             student2.FirstName = "FirstName";
             student2.PreferredName = "PreferredName";
-            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms);
+            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student2, programs, advisors, terms, studentPrograms, logger);
             Assert.AreEqual(student2.FirstName, degreePlanArchiveReport.StudentFirstName);
         }
 
@@ -225,6 +230,19 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Reports
         {
             var studentProgram = degreePlanArchiveReport.StudentPrograms.FirstOrDefault();
             Assert.AreEqual(studentProgram.Key, studentPrograms.FirstOrDefault().ProgramName);
+        }
+
+        [TestMethod]
+        public void DegreePlanArchiveReport_with_ArchivedCoursePlaceholders()
+        {
+            degreePlanArchive.ArchivedCoursePlaceholders = new List<Domain.Planning.Entities.ArchivedCoursePlaceholder>()
+            {
+                null, // Nulls should be handled gracefully
+                new Domain.Planning.Entities.ArchivedCoursePlaceholder("CSPH1", "Placeholder 1", "3 to 5 credits", null, "2019/SP"),
+                new Domain.Planning.Entities.ArchivedCoursePlaceholder("CSPH2", "Placeholder 2", "4", new AcademicRequirementGroup("REQ", "SUBREQ", "GRP"), "2019/FA")
+            };
+            degreePlanArchiveReport = new DegreePlanArchiveReport(degreePlanArchive, student, programs, advisors, terms, studentPrograms, logger);
+            Assert.AreEqual(degreePlanArchive.ArchivedCourses.Count() + 2, degreePlanArchiveReport.ArchivedCourses.Count());
         }
     }
 }

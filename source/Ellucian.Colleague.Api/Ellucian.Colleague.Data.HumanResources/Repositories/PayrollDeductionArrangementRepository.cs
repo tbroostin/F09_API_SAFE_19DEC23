@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -114,44 +114,50 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 AllPayrollDeducationArrangementsCacheTimeout,
                 async () =>
                 {
+                    string[] limitingKeys = null;
                     var criteria = "WITH PERBEN.INTG.INTERVAL NE '' OR WITH PERBEN.INTG.MON.PAY.PERIODS NE ''";
                     if (!string.IsNullOrEmpty(person))
                     {
-                        criteria = string.Concat(criteria, "WITH PERBEN.HRP.ID EQ '", person, "'");
+                        criteria = string.Concat(criteria, " AND WITH PERBEN.HRP.ID EQ '", person, "'");
                     }
                     if (!string.IsNullOrEmpty(contribution))
                     {
-                        if (!string.IsNullOrEmpty(criteria))
-                        {
-                            criteria = string.Concat(criteria, " AND ");
-                        }
-                        criteria = string.Concat(criteria, "WITH PERBEN.INTG.CONTRIBUTION EQ '", contribution, "'");
+                        criteria = string.Concat(criteria, " AND WITH PERBEN.INTG.CONTRIBUTION EQ '", contribution, "'");
                     }
                     if (!string.IsNullOrEmpty(deductionType))
                     {
-                        if (!string.IsNullOrEmpty(criteria))
-                        {
-                            criteria = string.Concat(criteria, " AND ");
-                        }
-                        criteria = string.Concat(criteria, "WITH PERBEN.BD.ID EQ '", deductionType, "'");
+                        criteria = string.Concat(criteria, " AND WITH PERBEN.BD.ID EQ '", deductionType, "'");
                     }
                     if (!string.IsNullOrEmpty(status))
                     {
-                        if (!string.IsNullOrEmpty(criteria))
-                        {
-                            criteria = string.Concat(criteria, " AND ");
-                        }
                         var todaysDate = await GetUnidataFormatDateAsync(DateTime.Today);
+                        criteria = string.Concat(criteria, " AND WITH PERBEN.ENROLL.DATE LE '", todaysDate, "'");
+                        limitingKeys = await DataReader.SelectAsync("PERBEN", criteria);
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
                         if (status.ToLower() == "cancelled")
                         {
-                            criteria = string.Concat(criteria, string.Format("WITH PERBEN.CANCEL.DATE NE '' AND WITH PERBEN.CANCEL.DATE LT '{0}'", todaysDate));
+                            criteria = string.Format("WITH PERBEN.CANCEL.DATE NE '' AND WITH PERBEN.CANCEL.DATE LT '{0}'", todaysDate);
                         }
                         else
                         {
-                            criteria = string.Concat(criteria, string.Format("WITH PERBEN.CANCEL.DATE EQ '' OR WITH PERBEN.CANCEL.DATE GE '{0}'", todaysDate));
+                            criteria = string.Format("WITH PERBEN.CANCEL.DATE EQ '' OR WITH PERBEN.CANCEL.DATE GE '{0}'", todaysDate);
                         }
+                        return new CacheSupport.KeyCacheRequirements()
+                        {
+                            limitingKeys = limitingKeys.ToList(),
+                            criteria = criteria
+                        };
                     }
-                    return new CacheSupport.KeyCacheRequirements() { criteria = criteria };
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        criteria = criteria
+                    };
                 });
             if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
@@ -449,7 +455,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Ellucian.Data.Colleague.DataContracts.IntlParams newIntlParams = new Ellucian.Data.Colleague.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";

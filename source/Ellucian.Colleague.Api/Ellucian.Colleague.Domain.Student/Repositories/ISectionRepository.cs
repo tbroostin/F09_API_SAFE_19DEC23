@@ -19,7 +19,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="id">Record ID</param>
         /// <returns>The section</returns>
-        Task<Section>  GetSectionAsync(string id);
+        Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false);
 
         /// <summary>
         /// Get section using filters
@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="limit"></param>
-        /// <param name="title"></param>
+        /// <param name="title"></param>getsectiona
         /// <param name="startDate"></param>
         /// <param name="endDate"></param>
         /// <param name="code"></param>
@@ -274,7 +274,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="guid">The GUID</param>
         /// <returns>The section</returns>
-        Task<Section> GetSectionByGuidAsync(string guid);
+        Task<Section> GetSectionByGuidAsync(string guid, bool ignoreFaculty = false);
 
         /// <summary>
         /// Get a section using its GUID V16
@@ -597,6 +597,31 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="sectionId">Unique identifier for the course section</param>
         /// <returns>Grading status for the specified course section</returns>
         Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId);
-    
+
+        /// <summary>
+        /// <summary>
+        /// Retrieves the data for departmental oversight person based  on the section name search performed
+        /// </summary>
+        /// <param name="keyword"></param>
+        /// <param name="terms"></param>
+        /// <param name="depts"></param>
+        /// <returns>IEnumerable<DeptOversightSearchResult></returns>
+        Task<IEnumerable<DeptOversightSearchResult>> GetDeptOversightSectionDetails(string keyword, IEnumerable<Term> terms, IEnumerable<string> depts);
+
+        
+        /// <summary>
+        /// GetFacultySectionsAsync is used to retrieve sections taught by a faculties
+        /// </summary>
+        /// <param name="facultyId"></param>
+        /// <param name="bestFit"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Section>> GetFacultySectionsAsync(IEnumerable<string> facultyIds, bool bestFit = false);
+
+        /// <summary>
+        ///  GetSectionDates is used to retrieve sections date information for a given set of sections from their GUIDs
+        /// </summary>
+        /// <param name="guids"></param>
+        /// <returns>Section entities</returns>
+        Task<List<Section>> GetSectionsDatesByIds(List<string> guids);
     }
 }

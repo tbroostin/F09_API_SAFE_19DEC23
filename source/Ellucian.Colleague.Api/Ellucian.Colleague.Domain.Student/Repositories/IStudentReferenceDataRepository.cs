@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -1094,7 +1094,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <summary>
         /// Returns all registration marketing sources
         /// </summary>
-        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <param name="bypassCache">Flag indicating whether or not to bypass the cache</param>
         /// <returns>Collection of <see cref="RegistrationMarketingSource">registration marketing sources</see></returns>
         Task<IEnumerable<RegistrationMarketingSource>> GetRegistrationMarketingSourcesAsync(bool bypassCache = false);
 
@@ -1112,5 +1112,17 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="year"></param>
         /// <returns></returns>
         Task<FinancialAidMaritalStatus> GetFinancialAidMaritalStatusAsync( string year, string code );
+
+        /// <summary>
+        /// Returns all valid intent to withdraw codes.
+        /// </summary>
+        /// <param name="bypassCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>All valid <see cref="IntentToWithdrawCode">intent to withdraw codes</see></returns>
+        Task<IEnumerable<IntentToWithdrawCode>> GetIntentToWithdrawCodesAsync(bool bypassCache = false);
+        /// <summary>
+        ///Returns a collection of student release access code.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<StudentReleaseAccess>> GetStudentReleaseAccessCodesAsync();
     }
 }

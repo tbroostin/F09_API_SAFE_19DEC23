@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -153,7 +154,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ContentKeyService_GetContentKeyAsync_PassProtectedKeyException()
             {
                 encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(fakePassProtectedEncrKey);
@@ -229,7 +230,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ContentKeyService_PostContentKeyAsync_PassProtectedKeyException()
             {
                 encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(fakePassProtectedEncrKey);

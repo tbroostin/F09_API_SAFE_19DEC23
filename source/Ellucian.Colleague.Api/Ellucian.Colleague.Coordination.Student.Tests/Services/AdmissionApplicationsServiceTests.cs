@@ -827,7 +827,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetAdmissionApplicationsAsync_Exception()
             {
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
@@ -835,7 +835,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_Exception()
             {
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
@@ -947,7 +947,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetById_Exception()
             {
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -955,7 +955,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetById2_Exception()
             {
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -1241,7 +1241,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetById_Catch_Exception()
             {
                 var id = "0111d6ef-5a86-465f-ac58-4265a997c136";
@@ -1253,7 +1253,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdmissionApplications_GetById2_Catch_Exception()
             {
                 var id = "0111d6ef-5a86-465f-ac58-4265a997c136";

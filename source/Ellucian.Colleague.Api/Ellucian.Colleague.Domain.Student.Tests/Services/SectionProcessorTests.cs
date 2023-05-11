@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -471,7 +471,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                         new Requisite("R1", true, RequisiteCompletionOrder.Previous, true),
                         new Requisite("R2", false, RequisiteCompletionOrder.PreviousOrConcurrent, false),
                         new Requisite("R3", true, RequisiteCompletionOrder.Concurrent, false),
-                        new Requisite("R4", true, RequisiteCompletionOrder.PreviousOrConcurrent, true), 
+                        new Requisite("R4", true, RequisiteCompletionOrder.PreviousOrConcurrent, true),
                     };
 
                 section = new Section("s1", "c1", "01", DateTime.Today, 3, 0, "section 1", "IN", depts, new List<string> { "100" }, "ug", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "X", DateTime.Today) });
@@ -498,7 +498,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             {
                 var requisites = SectionProcessor.DetermineEffectiveSectionRequisites(section, course);
                 Assert.IsNull(requisites.Where(r => r.RequirementCode == "R2").FirstOrDefault());
-                Assert.IsNull(requisites.Where(r => r.RequirementCode == "R3").FirstOrDefault());                
+                Assert.IsNull(requisites.Where(r => r.RequirementCode == "R3").FirstOrDefault());
             }
 
             [TestMethod]
@@ -539,7 +539,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                         new Requisite("R1", true, RequisiteCompletionOrder.Previous, true),
                         new Requisite("R2", false, RequisiteCompletionOrder.PreviousOrConcurrent, false),
                         new Requisite("R3", true, RequisiteCompletionOrder.Concurrent, false),
-                        new Requisite("R4", true, RequisiteCompletionOrder.PreviousOrConcurrent, true), 
+                        new Requisite("R4", true, RequisiteCompletionOrder.PreviousOrConcurrent, true),
                     };
 
                 section = new Section("s1", "c1", "01", DateTime.Today, 3, 0, "section 1", "IN", depts, new List<string> { "100" }, "ug", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "X", DateTime.Today) });
@@ -606,20 +606,20 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
 
                 allSections = new TestSectionRepository().GetAsync().Result;
                 regTerms = await new TestTermRepository().GetRegistrationTermsAsync();
-                
+
                 var term = regTerms.Where(t => t.Code == "2012/FA").FirstOrDefault();
                 termdates = term.RegistrationDates.Where(r => r.Location == null).FirstOrDefault();
-                
+
                 registrationGroup = new RegistrationGroup("REGISTRAR");
                 // Add a section specific override for section 15 in term 2012/FA.
                 section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
                 registrationGroup.AddSectionRegistrationDate(section15overrides);
                 // Add a section specific override for section 165 with no term.
                 var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
-                
+
                 otherDates = new RegistrationDate(null, date1.AddYears(1), date2.AddYears(1), date3.AddYears(1), date4.AddYears(1), date5.AddYears(1), date6.AddYears(1), date7.AddYears(1), date8.AddYears(1), date9.AddYears(1), null);
                 otherDatesMain = new RegistrationDate("MAIN", date1.AddYears(2), date2.AddYears(2), date3.AddYears(2), date4.AddYears(2), date5.AddYears(2), date6.AddYears(2), date7.AddYears(2), date8.AddYears(2), date9.AddYears(2), null);
-                
+
                 registrationGroup.AddSectionRegistrationDate(section165overrides);
 
                 loggerMock = new Mock<ILogger>();
@@ -712,11 +712,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 // Prepare
 
                 // section 15 has registration User Section override
-                requestedSections = allSections.Where(s => s.Id == "15" || s.Id == "16");  
-     
+                requestedSections = allSections.Where(s => s.Id == "15" || s.Id == "16");
+
                 // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
-                
+
                 // Verify
                 Assert.AreEqual(2, sectionRegistrationDates.Count());
                 var section15dates = sectionRegistrationDates.Where(s => s.SectionId == "15").FirstOrDefault();
@@ -729,7 +729,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(section15overrides.AddEndDate, section15dates.AddEndDate);
                 Assert.AreEqual(section15overrides.DropEndDate, section15dates.DropEndDate);
                 Assert.AreEqual(section15overrides.DropGradeRequiredDate, section15dates.DropGradeRequiredDate);
-                
+
                 // And the one with no override should show the term dates
                 var section16dates = sectionRegistrationDates.Where(s => s.SectionId == "16").FirstOrDefault();
                 Assert.AreEqual(termdates.PreRegistrationStartDate, section16dates.PreRegistrationStartDate);
@@ -747,7 +747,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             public void GetSectionRegistrationDates_SectionWithSectionOverrideReturnsOverrides()
             {
                 // Stage: Give section 17 specific Section overrides - using otherDates 
-                var sec17  = allSections.Where(s => s.Id == "17").FirstOrDefault();
+                var sec17 = allSections.Where(s => s.Id == "17").FirstOrDefault();
                 sec17.RegistrationDateOverrides = otherDates;
                 requestedSections = new List<Section>() { sec17 };
 
@@ -775,7 +775,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
 
                 var section = allSections.Where(s => s.CourseId == "42" && s.TermId == "2013/SP" && s.Number == "01").FirstOrDefault();
                 requestedSections = new List<Section>() { section };
-                
+
                 // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
 
@@ -843,6 +843,273 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(otherDates.AddEndDate, sectionDates.AddEndDate);
                 Assert.AreEqual(otherDates.DropEndDate, sectionDates.DropEndDate);
                 Assert.AreEqual(otherDates.DropGradeRequiredDate, sectionDates.DropGradeRequiredDate);
+            }
+        }
+
+        [TestClass]
+        public class GetSectionCensusDatesTests
+        {
+            private IEnumerable<Term> allTterms;
+            private IEnumerable<Section> allSections;
+            private IEnumerable<Section> requestedSections;
+            private DateTime date1;
+            private DateTime date2;
+            private DateTime date3;
+            private DateTime date4;
+            private DateTime date5;
+            private DateTime date6;
+            private DateTime date7;
+            private DateTime date8;
+            private DateTime date9;
+            private RegistrationDate termdates;
+            private RegistrationDate otherDates;
+            private RegistrationDate otherDatesMain;
+            private Mock<ILogger> loggerMock;
+            private ILogger logger;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                date1 = DateTime.Today;
+                date2 = DateTime.Today.AddDays(1);
+                date3 = DateTime.Today.AddDays(2);
+                date4 = DateTime.Today.AddDays(3);
+                date5 = DateTime.Today.AddDays(4);
+                date6 = DateTime.Today.AddDays(5);
+                date7 = DateTime.Today.AddDays(6);
+                date8 = DateTime.Today.AddDays(7);
+                date9 = DateTime.Today.AddDays(8);
+
+                allTterms = await new TestTermRepository().GetAsync();
+                allSections = new TestSectionRepository().GetAsync().Result;
+
+                var term = allTterms.Where(t => t.Code == "2012/FA").FirstOrDefault();
+                termdates = term.RegistrationDates.Where(r => r.Location == null).FirstOrDefault();
+
+                otherDates = new RegistrationDate(null, date1.AddYears(1), date2.AddYears(1), date3.AddYears(1), date4.AddYears(1), date5.AddYears(1), date6.AddYears(1), date7.AddYears(1), date8.AddYears(1), date9.AddYears(1), null);
+                otherDatesMain = new RegistrationDate("MAIN", date1.AddYears(2), date2.AddYears(2), date3.AddYears(2), date4.AddYears(2), date5.AddYears(2), date6.AddYears(2), date7.AddYears(2), date8.AddYears(2), date9.AddYears(2), null);
+
+                loggerMock = new Mock<ILogger>();
+                logger = loggerMock.Object;
+                SectionProcessor.InitializeLogger(logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                allTterms = null;
+                allSections = null;
+                termdates = null;
+                otherDates = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void GetSectionCensusDates_Null_Sections_ThrowsException()
+            {
+                SectionProcessor.GetSectionCensusDates(null, allTterms);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void GetSectionCensusDates_Empty_Sections_ThrowsException()
+            {
+                SectionProcessor.GetSectionCensusDates(new List<Section>(), allTterms);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_Null_Terms_DoesNotThrowsException()
+            {
+                requestedSections = allSections.Where(s => s != null && !string.IsNullOrEmpty(s.TermId) && s.TermId == "2012/FA");
+                var result = SectionProcessor.GetSectionCensusDates(requestedSections, null);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_Empty_Terms_DoesNotThrowsException()
+            {
+                requestedSections = allSections.Where(s => s != null && !string.IsNullOrEmpty(s.TermId) && s.TermId == "2012/FA");
+                var result = SectionProcessor.GetSectionCensusDates(requestedSections, new List<Term>());
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_SectionsInNonRegTermReturnsDates()
+            {
+                // Sections in terms outside of the terms open for registration will not return any DTOs with date information.
+                // Terms open for registration are "2012/FA" and "2013/SP".
+                var term = allTterms.Where(t => t.Code == "2014/FA").FirstOrDefault();
+
+                // Give it some registration dates and census dates
+                term.RegistrationDates.Add(new RegistrationDate(null, new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 01, 01), new DateTime(2021, 03, 02) }));
+                term.RegistrationDates.Add(new RegistrationDate("NW", new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 02, 01), new DateTime(2021, 05, 02), new DateTime(2021, 06, 02) }));
+
+                requestedSections = allSections.Where(s => s.TermId == "2014/FA");
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(requestedSections, new List<Term>() { term });
+                Assert.AreEqual(expected: requestedSections.Count(), actual: sectionCensusDates.Count);
+
+                //get section with no location
+                var censusDates = sectionCensusDates["669"];
+                Assert.AreEqual(expected: 2, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 01, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 03, 02), actual: censusDates[1]);
+
+                //get section with location
+                censusDates = sectionCensusDates["678"];
+                Assert.AreEqual(expected: 3, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 02, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 05, 02), actual: censusDates[1]);
+                Assert.AreEqual(expected: new DateTime(2021, 06, 02), actual: censusDates[2]);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_NonTermSectionsWithNoOverridesReturnsNone()
+            {
+                // Sections with no terms and no overrides will not return any DTOs with date information.
+                requestedSections = allSections.Where(s => string.IsNullOrEmpty(s.TermId));
+                var censusDates = SectionProcessor.GetSectionCensusDates(requestedSections, null);
+                Assert.AreEqual(expected: 0, actual: censusDates.Count);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_MixOfTermAndNonTermHaveOverrideWithNullCensusDatesReturnsSectionNullCensusDates()
+            {
+                var terms = allTterms.Where(t => t.Code == "2012/FA");
+                var section15 = allSections.Where(s => s.Id == "15").FirstOrDefault();
+                var section165 = allSections.Where(s => s.Id == "165").FirstOrDefault();
+
+                // Add a section specific override for section 15 in term 2012/FA.
+                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
+                section15.RegistrationDateOverrides = section15overrides;
+
+                // Add a section specific override for section 165 with no term.
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
+                section165.RegistrationDateOverrides = section165overrides;
+
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);
+                //check for both sections
+                Assert.AreEqual(2, sectionCensusDates.Count());
+
+                var section15dates = sectionCensusDates["15"];
+                //check that census dates list is null
+                Assert.IsNull(section15dates);
+
+                var section165dates = sectionCensusDates["165"];
+                //check that census dates list is null
+                Assert.IsNull(section165dates);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_MixOfTermAndNonTermHaveOverrideWithEmptyCensusDatesReturnsSectionEmptyCensusDates()
+            {
+                var terms = allTterms.Where(t => t.Code == "2012/FA");
+                var section15 = allSections.Where(s => s.Id == "15").FirstOrDefault();
+                var section165 = allSections.Where(s => s.Id == "165").FirstOrDefault();
+
+                // Add a section specific override for section 15 in term 2012/FA.
+                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>());
+                section15.RegistrationDateOverrides = section15overrides;
+
+                // Add a section specific override for section 165 with no term.
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>());
+                section165.RegistrationDateOverrides = section165overrides;
+
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);
+                Assert.AreEqual(2, sectionCensusDates.Count());
+
+                var section15dates = sectionCensusDates["15"];
+                Assert.AreEqual(expected: 0, actual: section15dates.Count);
+
+                var section165dates = sectionCensusDates["165"];
+                Assert.AreEqual(expected: 0, actual: section165dates.Count);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_MixOfTermAndNonTermHaveOverrideWithCensusDatesReturnsBoth()
+            {
+                var terms = allTterms.Where(t => t.Code == "2012/FA");
+                var section15 = allSections.Where(s => s.Id == "15").FirstOrDefault();
+                var section165 = allSections.Where(s => s.Id == "165").FirstOrDefault();
+
+                // Add a section specific override for section 165 with no term.
+                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9,
+                    new List<DateTime?>() { new DateTime(2021, 02, 02), new DateTime(2021, 05, 03), new DateTime(2021, 06, 04) });
+                section15.RegistrationDateOverrides = section15overrides;
+
+                // Add a section specific override for section 165 with no term.
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9,
+                    new List<DateTime?>() { new DateTime(2021, 04, 02), new DateTime(2021, 06, 04) });
+                section165.RegistrationDateOverrides = section165overrides;
+
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);
+                Assert.AreEqual(2, sectionCensusDates.Count());
+
+                var section15dates = sectionCensusDates["15"];
+                Assert.AreEqual(expected: 3, actual: section15dates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 02, 02), actual: section15dates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 05, 03), actual: section15dates[1]);
+                Assert.AreEqual(expected: new DateTime(2021, 06, 04), actual: section15dates[2]);
+
+                var section165dates = sectionCensusDates["165"];
+                Assert.AreEqual(expected: 2, actual: section165dates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 04, 02), actual: section165dates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 06, 04), actual: section165dates[1]);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_TermSectionWithTermLocationeOverrideCensusDatesReturnsTermLocationCensusDates()
+            {
+                var term2012 = allTterms.Where(t => t.Code == "2012/FA").FirstOrDefault(); //reg term
+                var term2014 = allTterms.Where(t => t.Code == "2014/FA").FirstOrDefault(); // non-reg term
+
+                // Give it some registration dates and census dates
+                term2014.RegistrationDates.Add(new RegistrationDate(null, new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 01, 01), new DateTime(2021, 03, 02) }));
+                term2014.RegistrationDates.Add(new RegistrationDate("NW", new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 02, 01), new DateTime(2021, 05, 02), new DateTime(2021, 06, 02) }));
+
+                requestedSections = allSections.Where(s => (s.Id == "270" && s.TermId == "2012/FA") || (s.Id == "678" && s.TermId == "2014/FA"));
+
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(requestedSections, new List<Term>() { term2012, term2014 });
+                Assert.AreEqual(expected: requestedSections.Count(), actual: sectionCensusDates.Count);
+
+                //get reg section with location
+                var censusDates = sectionCensusDates["270"];
+                Assert.AreEqual(expected: 3, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 02, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 05, 02), actual: censusDates[1]);
+                Assert.AreEqual(expected: new DateTime(2021, 06, 02), actual: censusDates[2]);
+
+                //get non-reg section with location
+                censusDates = sectionCensusDates["678"];
+                Assert.AreEqual(expected: 3, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 02, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 05, 02), actual: censusDates[1]);
+                Assert.AreEqual(expected: new DateTime(2021, 06, 02), actual: censusDates[2]);
+            }
+
+            [TestMethod]
+            public void GetSectionCensusDates_TermSectionWithTermOverrideCensusDatesReturnsTermLocationCensusDates()
+            {
+                var term2012 = allTterms.Where(t => t.Code == "2012/FA").FirstOrDefault(); //reg term
+                var term2014 = allTterms.Where(t => t.Code == "2014/FA").FirstOrDefault(); // non-reg term
+
+                // Give it some registration dates and census dates
+                term2014.RegistrationDates.Add(new RegistrationDate(null, new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 01, 01), new DateTime(2021, 03, 02) }));
+                term2014.RegistrationDates.Add(new RegistrationDate("NW", new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 02, 01), new DateTime(2021, 05, 02), new DateTime(2021, 06, 02) }));
+
+                requestedSections = allSections.Where(s => (s.Id == "91" && s.TermId == "2012/FA") || (s.Id == "669" && s.TermId == "2014/FA"));
+
+                var sectionCensusDates = SectionProcessor.GetSectionCensusDates(requestedSections, new List<Term>() { term2012, term2014 });
+                Assert.AreEqual(expected: requestedSections.Count(), actual: sectionCensusDates.Count);
+
+                //get reg section with no location (not in location NW)
+                var censusDates = sectionCensusDates["91"];
+                Assert.AreEqual(expected: 2, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 01, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 03, 02), actual: censusDates[1]);
+
+                //get non-reg section with no location (not in location NW)
+                censusDates = sectionCensusDates["669"];
+                Assert.AreEqual(expected: 2, actual: censusDates.Count);
+                Assert.AreEqual(expected: new DateTime(2021, 01, 01), actual: censusDates[0]);
+                Assert.AreEqual(expected: new DateTime(2021, 03, 02), actual: censusDates[1]);
             }
         }
     }

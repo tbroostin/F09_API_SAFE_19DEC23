@@ -19,6 +19,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string AnonymousGradingId { get; private set; }
 
         /// <summary>
+        /// Grading Id for student and term or course section for Mid Term.
+        /// </summary>
+        public string MidTermGradingId { get; private set; }
+
+        /// <summary>
         /// ID of the academic term to which the anonymous grading ID applies.
         /// </summary>
         public string TermId { get; private set; }
@@ -50,6 +55,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             SectionId = sectionId;
             Message = message;
         }
-
+        public StudentAnonymousGrading(string anonymousGradingId, string midTermGradingId, string termId, string sectionId = null, string message = null):this(anonymousGradingId,termId,sectionId,message)
+        {
+            MidTermGradingId = midTermGradingId;
+        }
     }
 }

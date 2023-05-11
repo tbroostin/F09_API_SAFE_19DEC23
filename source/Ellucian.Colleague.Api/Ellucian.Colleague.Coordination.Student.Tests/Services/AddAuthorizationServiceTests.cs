@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -29,6 +31,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private IAddAuthorizationRepository _addAuthorizationRepo;
         private Mock<ISectionRepository> sectionRepoMock;
         private ISectionRepository _sectionRepo;
+        private IReferenceDataRepository _referenceDataRepository;
+        private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
         private Dtos.Student.AddAuthorization authorizationToUpdate;
         private Ellucian.Colleague.Domain.Student.Entities.AddAuthorization authorizationEntity;
         private Domain.Student.Entities.Section section;
@@ -39,6 +43,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             sectionRepoMock = new Mock<ISectionRepository>();
             _sectionRepo = sectionRepoMock.Object;
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            _referenceDataRepository = referenceDataRepositoryMock.Object;
             addAuthorizationRepoMock = new Mock<IAddAuthorizationRepository>();
             _addAuthorizationRepo = addAuthorizationRepoMock.Object;
             var _roleRepositoryMock = new Mock<IRoleRepository>();
@@ -93,7 +99,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Mock return from repo for GetAsync
             addAuthorizationRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).ReturnsAsync(authorizationEntity);
 
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
         }
 
@@ -194,7 +200,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 RevokedTime = DateTime.Now
 
             };
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.UpdateAddAuthorizationAsync(authorizationToUpdate);
         }
 
@@ -364,7 +370,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _currentUserFactory = new CurrentUserFactorySetup.FacultyUserFactory();
             var sectionEntities = new List<Domain.Student.Entities.Section>() { section };
             sectionRepoMock.Setup(x => x.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).ReturnsAsync(sectionEntities);
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
             var serviceResult = await _addAuthorizationService.UpdateAddAuthorizationAsync(authorizationToUpdate);
             Assert.AreEqual(authorizationToUpdate.Id, serviceResult.Id);
@@ -399,6 +405,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private IAddAuthorizationRepository _addAuthorizationRepo;
         private Mock<ISectionRepository> sectionRepoMock;
         private ISectionRepository _sectionRepo;
+        private IReferenceDataRepository _referenceDataRepository;
+        private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
         private Dtos.Student.AddAuthorization authorizationToUpdate;
         private IEnumerable<AddAuthorization> addAuthorizationEntities;
         private Domain.Student.Entities.Section section;
@@ -410,6 +418,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             sectionRepoMock = new Mock<ISectionRepository>();
             _sectionRepo = sectionRepoMock.Object;
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            _referenceDataRepository = referenceDataRepositoryMock.Object;
             addAuthorizationRepoMock = new Mock<IAddAuthorizationRepository>();
             _addAuthorizationRepo = addAuthorizationRepoMock.Object;
             var _roleRepositoryMock = new Mock<IRoleRepository>();
@@ -470,7 +480,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             addAuthorizationRepoMock.Setup(repo => repo.GetSectionAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationEntities);
 
 
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
         }
 
@@ -513,7 +523,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             var sectionEntities = new List<Domain.Student.Entities.Section>() { section };
             sectionRepoMock.Setup(x => x.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).ReturnsAsync(sectionEntities);
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetSectionAddAuthorizationsAsync(sectionId);
         }
 
@@ -577,6 +587,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private IAddAuthorizationRepository _addAuthorizationRepo;
         private Mock<ISectionRepository> sectionRepoMock;
         private ISectionRepository _sectionRepo;
+        private IReferenceDataRepository _referenceDataRepository;
+        private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
         private Dtos.Student.AddAuthorizationInput authorizationToCreate;
         private Ellucian.Colleague.Domain.Student.Entities.AddAuthorization authorizationEntity;
         private Domain.Student.Entities.Section section;
@@ -587,6 +599,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             sectionRepoMock = new Mock<ISectionRepository>();
             _sectionRepo = sectionRepoMock.Object;
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            _referenceDataRepository = referenceDataRepositoryMock.Object;
             addAuthorizationRepoMock = new Mock<IAddAuthorizationRepository>();
             _addAuthorizationRepo = addAuthorizationRepoMock.Object;
             var _roleRepositoryMock = new Mock<IRoleRepository>();
@@ -633,7 +647,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             //// Mock return from repo for GetAsync
             //addAuthorizationRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).ReturnsAsync(authorizationEntity);
 
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
         }
 
@@ -726,7 +740,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             };
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.CreateAddAuthorizationAsync(authorizationToCreate);
         }
 
@@ -737,7 +751,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Set up faculty as the current user.
             var sectionEntities = new List<Domain.Student.Entities.Section>() { section };
             sectionRepoMock.Setup(x => x.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).ReturnsAsync(sectionEntities);
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, null, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
             var serviceResult = await _addAuthorizationService.CreateAddAuthorizationAsync(authorizationToCreate);
             Assert.AreEqual("addAuthorizationId", serviceResult.Id);
@@ -774,6 +788,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private IStudentRepository _studentRepo;
         private Dtos.Student.AddAuthorization authorizationToUpdate;
         private IEnumerable<AddAuthorization> addAuthorizationEntities;
+        private IReferenceDataRepository _referenceDataRepository;
+        private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
         private string sectionId;
 
         [TestInitialize]
@@ -781,6 +797,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             sectionRepoMock = new Mock<ISectionRepository>();
             _sectionRepo = sectionRepoMock.Object;
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            _referenceDataRepository = referenceDataRepositoryMock.Object;
             studentRepoMock = new Mock<IStudentRepository>();
             _studentRepo = studentRepoMock.Object;
             var advisorRole = new Domain.Entities.Role(1, "Advisor");
@@ -843,7 +861,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Mock return from the repo on update
             addAuthorizationRepoMock.Setup(repo => repo.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationEntities);
 
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
 
         }
 
@@ -881,7 +899,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_NotAdvisor()
         {
             _currentUserFactory = new CurrentUserFactorySetup.StudentUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(_currentUserFactory.CurrentUser.PersonId + "1");
         }
 
@@ -894,7 +912,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -907,7 +925,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -920,7 +938,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -933,7 +951,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -946,7 +964,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -958,7 +976,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentRepoMock.Setup(x => x.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<StudentAccess>() { studentEntity });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -971,7 +989,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -984,7 +1002,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -997,7 +1015,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 
@@ -1010,7 +1028,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
 
             _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
-            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, _referenceDataRepository, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
             var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
         }
 

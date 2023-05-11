@@ -1,8 +1,9 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -25,6 +26,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly IPersonEmploymentStatusService personEmploymentStatusService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Constructor
@@ -57,10 +59,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 return await personEmploymentStatusService.GetPersonEmploymentStatusesAsync(effectivePersonId, lookupStartDate);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting person employment statuses");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var genericErrorMessage = "Unknown error occurred while getting person employment statuses";
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(genericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-18 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -144,7 +144,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 if ((!string.IsNullOrEmpty(chargeType)) && (!ValidEnumerationValue(typeof(Dtos.EnumProperties.StudentChargeTypes), chargeType)))
                 {
-                    throw new Exception(string.Concat("'", chargeType, "' is an invalid enumeration value. "));
+                    throw new ColleagueWebApiException(string.Concat("'", chargeType, "' is an invalid enumeration value. "));
                 }
 
                 var pageOfItems = await studentChargeService.GetAsync(page.Offset, page.Limit, bypassCache, student, academicPeriod, accountingCode, chargeType);

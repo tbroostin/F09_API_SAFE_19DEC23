@@ -208,6 +208,15 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public List<string> AlhPellEntitlementList { get; set; }
 
         /// <summary>
+        /// True or false flag indicating that the offer letter is for a zero awards definition
+        /// </summary>
+        public bool AlhZeroAwardFlg { get; set; }
+        /// <summary>
+        /// List of award periods for use by zero award offer letters
+        /// </summary>
+        public List<string> AlhZeroAwpds { get; set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         public AwardLetter3()

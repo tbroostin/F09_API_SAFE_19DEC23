@@ -17,6 +17,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -527,7 +528,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 startTime = new DateTime(2018, 1, 5, 9, 0, 0);
                 endTime = new DateTime(2018, 1, 5, 10, 0, 0);
 
-                var colleagueTimeZone = "Eastern Standard Time";
+                var colleagueTimeZone = TimeZoneInfo.Local.Id;
                 startTimeOffset = startTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone);
                 endTimeOffset = endTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone);
 
@@ -588,7 +589,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionIfSectionMeetingInstanceNotFound()
             {
                 // Date Times don't match any in meeting list
@@ -760,7 +761,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 startTime = new DateTime(2018, 1, 5, 9, 0, 0);
                 endTime = new DateTime(2018, 1, 5, 10, 0, 0);
 
-                var colleagueTimeZone = "Eastern Standard Time";
+                var colleagueTimeZone = TimeZoneInfo.Local.Id;
                 startTimeOffset = startTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone);
                 endTimeOffset = endTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone);
 

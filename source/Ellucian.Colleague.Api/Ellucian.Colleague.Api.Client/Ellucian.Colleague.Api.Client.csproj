@@ -173,6 +173,7 @@
     <Compile Include="ColleagueApiClient.Finance.cs" />
     <Compile Include="ColleagueApiClient.FinancialAid.cs" />
     <Compile Include="ColleagueApiClient.Student.cs" />
+    <Compile Include="ColleagueSessionExpiredException.cs" />
     <Compile Include="Core\ColleagueApiErrorDetail.cs" />
     <Compile Include="Core\ColleagueServiceClient.cs" />
     <Compile Include="Core\ColleagueServiceClientManager.cs" />

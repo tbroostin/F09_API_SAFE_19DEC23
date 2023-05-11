@@ -36,8 +36,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public decimal? forwardingBalance;
         }
 
-
-
         public List<EmployeeLeavePlanRecord> employeeLeavePlanRecords = new List<EmployeeLeavePlanRecord>()
         {
             new EmployeeLeavePlanRecord()
@@ -168,6 +166,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         public Decimal? accrualRate = 80;
         public Decimal? accrualLimit = 50;
         public Decimal? accrualMaxCarryOver = 20;
+        public decimal? accrualMaxRollOver = 20;
 
         /// <summary>
         /// This one is owned by the HR team for Self Service
@@ -216,8 +215,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                 accrualRate,
                                 accrualLimit,
                                 accrualMaxCarryOver,
+                                accrualMaxRollOver,
                                 leavePlan.AccrualMethod,
                                 false,
+                                new DateTime(2022, 1, 1),
                                 true);
 
                             employeeLeavePlans.Add(employeeLeavePlan);
@@ -285,8 +286,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     return LeaveTransactionType.Used;
                 case "J":
                     return LeaveTransactionType.Adjusted;
+                case "L":
+                    return LeaveTransactionType.LeaveReporting;
+                case "S":
+                    return LeaveTransactionType.StartingBalanceAdjustment;
+                case "B":
+                    return LeaveTransactionType.StartingBalance;
+                case "C":
+                    return LeaveTransactionType.MidYearBalanceAdjustment;
+                case "R":
+                    return LeaveTransactionType.Rollover;
                 default:
-                    throw new ArgumentException("leave transaction action does not match allowable values, A, U and J", "action");
+                    throw new ArgumentException("leave transaction action does not match allowable values, A, U, L, J, S, B, C or R", "action");
             }
         }
 

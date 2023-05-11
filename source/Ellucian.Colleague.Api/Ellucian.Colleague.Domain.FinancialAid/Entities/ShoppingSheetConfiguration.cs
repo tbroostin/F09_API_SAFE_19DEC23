@@ -219,6 +219,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// </summary>
         public string GraduateUndergraduateRuleId { get; set; }
 
+        ///<summary>
+        ///
+        /// </summary>
+        public List<string> VetsAwards { get; set; }
+
+        ///<summary
+        ///
+        ///</summary>
+        public string UseVetsData { get; set; }
+
         /// <summary>
         /// 
         /// </summary>
@@ -238,6 +248,15 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// 
         /// </summary>
         public Decimal? UnsubOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? GradUnsubInterestRate { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? GradUnsubOriginationFee { get; set; }
 
         /// <summary>
         /// 

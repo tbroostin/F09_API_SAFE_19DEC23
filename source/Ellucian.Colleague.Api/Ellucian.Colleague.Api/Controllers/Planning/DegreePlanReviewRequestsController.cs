@@ -3,6 +3,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -122,6 +123,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
                 _logger.Info("User is not authorized to query degree plans where a review has been requested.");
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving degree plan submitted for review";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Info(ex.ToString(), "Unable to get QueryDegreePlanReviewRequests");
@@ -160,6 +167,12 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
             {
                 _logger.Info("User is not authorized to assign advisor for review requested degree plan.");
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while posting degree plan review request assignment details";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

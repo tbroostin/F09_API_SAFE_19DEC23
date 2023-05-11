@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
@@ -12,6 +12,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
+using System.Web.Http;
+using Ellucian.Data.Colleague.Exceptions;
+using System;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -77,7 +80,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 allPrograms = await new TestProgramRepository().GetAsync();
                 var ProgramsList = new List<Program>();
 
-                ProgramController = new ProgramsController(AdapterRegistry, ProgramRepository, ProgramRequirmentsRepository);
+                ProgramController = new ProgramsController(AdapterRegistry, ProgramRepository, ProgramRequirmentsRepository, logger);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Requirements.Program, Program>();
                 foreach (var Program in allPrograms)
                 {
@@ -92,6 +95,39 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 ProgramController = null;
                 ProgramRepository = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    ProgramRepositoryMock.Setup(x => x.GetAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await ProgramController.GetAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetAsync_AnyOtherException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    ProgramRepositoryMock.Setup(x => x.GetAsync()).Throws(new ApplicationException());
+                    //termRepoMock.Setup(x => x.GetAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await ProgramController.GetAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -115,9 +151,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(repoProgram.Departments.Count(), program.Departments.Count());
                 Assert.AreEqual(repoProgram.Catalogs.ElementAt(0), program.Catalogs.ElementAt(0));
                 Assert.AreEqual(repoProgram.Catalogs.Count(), program.Catalogs.Count());
-
             }
         }
+
+
         [TestClass]
         public class ProgramControllerGetActivePrograms
         {
@@ -177,7 +214,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 allPrograms = await new TestProgramRepository().GetAsync();
                 var ProgramsList = new List<Program>();
 
-                ProgramController = new ProgramsController(AdapterRegistry, ProgramRepository, ProgramRequirmentsRepository);
+                ProgramController = new ProgramsController(AdapterRegistry, ProgramRepository, ProgramRequirmentsRepository, logger);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Requirements.Program, Program>();
                 foreach (var Program in allPrograms)
                 {

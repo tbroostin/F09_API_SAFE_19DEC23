@@ -15,6 +15,7 @@ using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {

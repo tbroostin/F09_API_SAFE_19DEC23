@@ -19,6 +19,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -98,6 +99,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var limitingKeys = ids == null ? new string[0] : ids.ToArray();
                 return await DataReader.SelectAsync(fileName, limitingKeys, criteria.Trim());
 
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -449,7 +454,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             }
                             catch (Exception e)
                             {
-                                LogDataError("Employees", hrPersonRecord.Recordkey, hrPersonRecord, e, e.Message);
+                                LogDataError("Employees", hrPersonRecord.Recordkey, null, e, e.Message);
                             }
                         }
                     }
@@ -1502,19 +1507,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             }
                             //v12 addition: Department
                             employeeEntity.PrimaryPosition = perstat.PerstatPrimaryPosId;
+                            if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
+                            {
+                                employeeEntity.StatusEndReasonCode = perstat.PerstatEndReason;
+                            }
                         }
-                    }
-                    if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
-                    {
-                        employeeEntity.StatusEndReasonCode = perstat.PerstatEndReason;
                     }
                 }
                 if (string.IsNullOrEmpty(employeeEntity.StatusCode))
                 {
                     // If we didn't find an active PERSTAT record than
-                    // Take the most recent status.
+                    // Take the status AND Ending Reason from the most recent perstat record
                     var perstat = personStatusRecords.OrderByDescending(i => i.PerstatEndDate).FirstOrDefault();
                     employeeEntity.StatusCode = perstat.PerstatStatus;
+                    employeeEntity.StatusEndReasonCode = perstat.PerstatEndReason;
                 }
             }
 

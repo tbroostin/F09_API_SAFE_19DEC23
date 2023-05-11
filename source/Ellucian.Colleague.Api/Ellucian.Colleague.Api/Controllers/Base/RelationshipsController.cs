@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +13,7 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -26,7 +27,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
     {
         private IRelationshipService _relationshipService;
         private ILogger _logger;
-
+        private const string permissionExceptionMessage = "User does not have permission to access the requested information";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string invalidArgumentException = "Invalid argument";
         /// <summary>
         /// Instantiates a RelationshipController
         /// </summary>
@@ -44,7 +48,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personId">The identifier of the person of interest</param>
         /// <returns>An enumeration of the person's primary relationship with other persons or organizations.</returns>
         /// <accessComments>
-        /// Only the current user can get their own primary relationships.
+        /// Any logged in user can get their own primary relationships.
+        /// A user with the permission ADD.ALL.HR.PROXY is considered as an admin and can access the primary relationship info of any employee.
         /// </accessComments>
         public async Task<IEnumerable<Relationship>> GetPersonPrimaryRelationshipsAsync(string personId)
         {
@@ -52,15 +57,25 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _relationshipService.GetPersonPrimaryRelationshipsAsync(personId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException anex)
             {
                 _logger.Error(anex.ToString());
-                throw CreateHttpResponseException(anex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(invalidArgumentException, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.ToString());
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 _logger.Info(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -78,14 +93,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _relationshipService.PostRelationshipAsync(relationship.OtherEntity, relationship.RelationshipType, relationship.PrimaryEntity);
             }
-            catch (PermissionsException pex)
+            catch (ColleagueSessionExpiredException csse)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException)
+            {
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 _logger.Info(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
     }

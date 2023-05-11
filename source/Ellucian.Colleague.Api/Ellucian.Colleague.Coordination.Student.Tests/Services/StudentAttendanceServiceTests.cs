@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -48,7 +49,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
         }
 
-
         [TestClass]
         public class QueryStudentAttendancesAsync : CurrentUserSetup
         {
@@ -70,6 +70,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<Domain.Student.Entities.Section> unassignedSectionData;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository referenceDataRepository;
+            private IStudentConfigurationRepository studentConfigurationRepository;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+            private ITermRepository termRepository;
+            private Mock<ITermRepository> termRepositoryMock;
             private DateTime attendanceDate;
 
             [TestInitialize]
@@ -90,10 +96,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
 
+                studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+
+
                 logger = new Mock<ILogger>().Object;
 
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
 
                 // Mock section response
                 sectionData = new List<Domain.Student.Entities.Section>();
@@ -124,7 +140,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionMeetingInstance, Dtos.Student.SectionMeetingInstance>()).Returns(MeetingDtoAdapter);
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
-                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository,
+                    currentUserFactory, roleRepository, logger, baseConfigurationRepository, referenceDataRepository, studentConfigurationRepository, termRepository);
             }
 
             [TestCleanup]
@@ -259,7 +276,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Attendances.Add(studentAttendance8);
                 return Attendances;
             }
-
         }
 
         [TestClass]
@@ -278,8 +294,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ISectionRepository sectionRepository;
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
+            private IStudentConfigurationRepository studentConfigurationRepository;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+            private ITermRepository termRepository;
+            private Mock<ITermRepository> termRepositoryMock;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository referenceDataRepository;
 
             //attendance service
             private IStudentAttendanceService studentAttendanceService;
@@ -291,6 +313,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Dtos.Student.SectionAttendance adHocSecondaryAttendanceToUpdate;
 
             //responses
+            private Domain.Student.Entities.FacultyAttendanceConfiguration facultyAttendanceConfiguration;
             private Domain.Student.Entities.SectionAttendanceResponse sectionAttendanceResponse;
             private Domain.Student.Entities.SectionAttendanceResponse adHocSectionAttendanceResponse;
             private Domain.Student.Entities.SectionAttendanceResponse secondaryAttendanceResponse;
@@ -310,8 +333,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private DateTimeOffset? endTime;
             private SectionMeetingInstance meetingInstance;
             private SectionMeetingInstance adHocMeetingInstance;
-            //private Domain.Student.Entities.SectionAttendance sectionAttendanceEntity;
             private List<StudentSectionAttendance> studentSectionAttendancesToUpdate;
+
+
+            private IEnumerable<Domain.Student.Entities.Term> allTterms;
+            private IEnumerable<Domain.Student.Entities.Section> allSections;
+            private IEnumerable<Domain.Student.Entities.Section> requestedSections;
+
 
             [TestInitialize]
             public void Initialize()
@@ -327,6 +355,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
 
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
                 sectionRepositoryMock = new Mock<ISectionRepository>();
                 sectionRepository = sectionRepositoryMock.Object;
 
@@ -335,6 +366,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 studentAttendanceRepositoryMock = new Mock<IStudentAttendanceRepository>();
                 studentAttendanceRepository = studentAttendanceRepositoryMock.Object;
+
+                studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
 
                 meetingDate = DateTime.Today;
                 adHocMeetingDate = new DateTime(2012, 09, 01);
@@ -388,7 +425,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     MeetingInstance = meetingInstance,
                     StudentAttendances = studentSectionAttendancesToUpdate
                 };
-                
+
                 secondaryAttendanceToUpdate = new Dtos.Student.SectionAttendance()
                 {
                     SectionId = "SECXL1",
@@ -452,7 +489,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 testSection3A.AddFaculty("0000011");
                 adHocSecondarySectionData.Add(testSection3A);
 
-
                 List<string> queryIds1 = new List<string>() { "SEC1" };
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
                 sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
@@ -485,6 +521,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SEC1A")).ReturnsAsync(adHocSectionMeetingInstanceResponse);
                 sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SECXL1A")).ReturnsAsync(new List<Domain.Student.Entities.SectionMeetingInstance>());
 
+                // Mock faculty Attendance Configuration response
+                facultyAttendanceConfiguration = new Domain.Student.Entities.FacultyAttendanceConfiguration()
+                {
+                    CloseAttendanceCensusTrackNumber = null,
+                    CloseAttendanceNumberOfDaysPastCensusTrackDate = null,
+                    CloseAttendanceNumberOfDaysPastSectionEndDate = null,
+                };
+                studentConfigurationRepositoryMock.Setup(repository => repository.GetFacultyAttendanceConfigurationAsync()).ReturnsAsync(facultyAttendanceConfiguration);
+
                 // Mock student Attendance response
                 sectionAttendanceResponse = BuildStudentAttendancesRepositoryResponse(sectionAttendanceDto);
                 adHocSectionAttendanceResponse = BuildStudentAttendancesRepositoryResponse(adHocSectionAttendanceDto);
@@ -516,7 +561,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
                 // create attendance service
-                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository,
+                    currentUserFactory, roleRepository, logger, baseConfigurationRepository, referenceDataRepository, studentConfigurationRepository, termRepository);
             }
 
             [TestCleanup]
@@ -706,8 +752,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(0, newResult.StudentAttendanceErrors.Count());
             }
 
-
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
             public async Task UpdateSectionAttendance2Async_AdHocMeetingInFutureThrows()
@@ -862,6 +906,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<Domain.Student.Entities.Section> unassignedSectionData;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository referenceDataRepository;
+            private IStudentConfigurationRepository studentConfigurationRepository;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+            private ITermRepository termRepository;
+            private Mock<ITermRepository> termRepositoryMock;
             private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> sectionMeetingInstanceResponse;
             private DateTime meetingDate;
             private DateTimeOffset? startTime;
@@ -887,10 +937,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
 
+                studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+
                 logger = new Mock<ILogger>().Object;
 
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
 
                 meetingDate = DateTime.Today;
                 startTime = DateTimeOffset.Now.AddHours(-10);
@@ -1001,7 +1060,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
 
-                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository,
+                    currentUserFactory, roleRepository, logger, baseConfigurationRepository, referenceDataRepository, studentConfigurationRepository, termRepository);
             }
 
             [TestCleanup]
@@ -1281,6 +1341,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<Domain.Student.Entities.Section> unassignedSectionData;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository referenceDataRepository;
+            private IStudentConfigurationRepository studentConfigurationRepository;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+            private ITermRepository termRepository;
+            private Mock<ITermRepository> termRepositoryMock;
             private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> sectionMeetingInstanceResponse;
             private DateTime meetingDate;
             private DateTimeOffset? startTime;
@@ -1303,10 +1369,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
 
+
+                studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+
                 logger = new Mock<ILogger>().Object;
 
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
 
                 meetingDate = DateTime.Today;
                 startTime = DateTimeOffset.Now.AddHours(-10);
@@ -1398,7 +1474,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
 
-                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository,
+                    currentUserFactory, roleRepository, logger, baseConfigurationRepository, referenceDataRepository, studentConfigurationRepository, termRepository);
             }
 
             [TestCleanup]

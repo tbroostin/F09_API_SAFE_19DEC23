@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -23,10 +25,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private ApiSettings apiSettingsMock;
         private InstEnrollProposedRgstrtnResponse registrationResponse;
         private InstEnrollZeroCostRgstrtnResponse zeroCostRegistrationResponse;
-
-        // echeck
         private InstEnrollEcheckRgstrtnResponse echeckResponse;
-
 
         [TestInitialize]
         public void Initialize()
@@ -119,7 +118,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 phones.Add(null);
                 phones.Add(new Domain.Base.Entities.Phone("222", "t1"));
                 phones.Add(new Domain.Base.Entities.Phone("222", "t1", "ext01"));
-
             }
 
             [TestMethod]
@@ -136,7 +134,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 InstantEnrollmentProposedRegistrationResult result = await repository.GetProposedRegistrationResultAync(iepr);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(3, result.RegisteredSections.Count());
-
             }
 
             //with students phones
@@ -148,7 +145,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 InstantEnrollmentProposedRegistrationResult result = await repository.GetProposedRegistrationResultAync(iepr);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(3, result.RegisteredSections.Count());
-
             }
 
             //with addresses
@@ -162,7 +158,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 InstantEnrollmentProposedRegistrationResult result = await repository.GetProposedRegistrationResultAync(iepr);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(3, result.RegisteredSections.Count());
-
             }
 
             [TestMethod]
@@ -243,7 +238,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsNotNull(result);
                 Assert.AreEqual(3, result.RegisteredSections.Count());
                 Assert.AreEqual(2, result.RegistrationMessages.Count());
-
             }
         }
 
@@ -329,6 +323,23 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 zeroCostRegistration = new InstantEnrollmentZeroCostRegistration("001", personDemographic, "POLI.BA", "2018", new List<InstantEnrollmentRegistrationBaseSectionToRegister>());
                 await repository.GetZeroCostRegistrationResultAsync(zeroCostRegistration);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ColleagueSessionExpiredException))]
+            public async Task InstantEnrollmentRepository_GetZeroCostRegistrationResultAsync_RepositoryThrowsColleagueExpiredException()
+            {
+                transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstEnrollZeroCostRgstrtnRequest, InstEnrollZeroCostRgstrtnResponse>(
+                    It.IsAny<InstEnrollZeroCostRgstrtnRequest>()))
+                    .Returns(() =>
+                    {
+                        throw new ColleagueSessionExpiredException("session timeout");
+                    });
+
+                zeroCostRegistrationResponse.StudentId = null;
+                zeroCostRegistration = new InstantEnrollmentZeroCostRegistration("001", personDemographic, "POLI.BA", "2018", sectionsToRegister);
+
+                var result = await repository.GetZeroCostRegistrationResultAsync(zeroCostRegistration);
             }
 
             [TestMethod]
@@ -503,7 +514,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             [TestMethod]
             public async Task InstantEnrollmentRepository_GetEcheckRegistrationResultAync_ProposedSections_IsEmpty_responseIsNUll()
-
             {
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstEnrollEcheckRgstrtnRequest, InstEnrollEcheckRgstrtnResponse>(It.IsAny<InstEnrollEcheckRgstrtnRequest>())).ReturnsAsync(echeckResponse);
 
@@ -537,7 +547,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstantEnrollmentRepository_StartInstantEnrollmentPaymentGatewayTransactionAsync_ReturnObjNull()
             {
 
@@ -555,7 +565,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Create a response
                 InstantEnrollmentPaymentGatewayRegResponse response = new InstantEnrollmentPaymentGatewayRegResponse()
                 {
-                    PmtGatewayRegistrationMessages = new List<PmtGatewayRegistrationMessages>() { new PmtGatewayRegistrationMessages() { Messages = "Msg1"}, new PmtGatewayRegistrationMessages() { Messages = "Msg2" } }
+                    PmtGatewayRegistrationMessages = new List<PmtGatewayRegistrationMessages>() { new PmtGatewayRegistrationMessages() { Messages = "Msg1" }, new PmtGatewayRegistrationMessages() { Messages = "Msg2" } }
                 };
 
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentPaymentGatewayRegRequest, InstantEnrollmentPaymentGatewayRegResponse>(It.Is<InstantEnrollmentPaymentGatewayRegRequest>(
@@ -602,21 +612,24 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     new InstantEnrollmentRegistrationBaseSectionToRegister("SECT2",2) {MarketingSource = "MKT2", RegistrationReason = "RSN2" },
                 };
 
-                InstantEnrollmentPaymentGatewayRegistration entity = 
+                InstantEnrollmentPaymentGatewayRegistration entity =
                         new InstantEnrollmentPaymentGatewayRegistration
-                            ( "PID", demoFull, "Program", "Catalog", sections, 100, "CC", "ReturnUrl", 
-                              "Gldistr", "provAcct", "ConvFee", 23.50m, "ConvGL") { EducationalGoal = "GOAL" };
+                            ("PID", demoFull, "Program", "Catalog", sections, 100, "CC", "ReturnUrl",
+                              "Gldistr", "provAcct", "ConvFee", 23.50m, "ConvGL")
+                        { EducationalGoal = "GOAL" };
 
                 // Create a response
-                InstantEnrollmentPaymentGatewayRegResponse response = new InstantEnrollmentPaymentGatewayRegResponse() {
-                    ExtlPaymentUrl = "ReturnUrl333" };
+                InstantEnrollmentPaymentGatewayRegResponse response = new InstantEnrollmentPaymentGatewayRegResponse()
+                {
+                    ExtlPaymentUrl = "ReturnUrl333"
+                };
 
                 // Mock a call to the invoker in which every entity attribute matches.
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentPaymentGatewayRegRequest, InstantEnrollmentPaymentGatewayRegResponse>
                     (It.Is<InstantEnrollmentPaymentGatewayRegRequest>(
                     rq => (rq.StudentId == "PID") && (rq.AcadProgram == "Program") && (rq.Catalog == "Catalog") &&
                           (rq.PaymentAmt == 100) && (rq.PaymentMethod == "CC") && (rq.ReturnUrl == "ReturnUrl") &&
-                          (rq.GlDistribution == "Gldistr") && (rq.ProviderAccount == "provAcct") && 
+                          (rq.GlDistribution == "Gldistr") && (rq.ProviderAccount == "provAcct") &&
                           (rq.ConvenienceFeeAmt == 23.50m) && (rq.ConvenienceFeeDesc == "ConvFee") && (rq.ConvenienceFeeGlNo == "ConvGL") &&
                           (rq.EducationalGoal == "GOAL") &&
                           (rq.PmtGatewayProposedSectionInformation.Count() == 2) &&
@@ -630,12 +643,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                           (rq.StudentCounty == "Fairfax") && (rq.StudentEmailAddress == "email@email.org") &&
                           (rq.StudentEthnics.Count == 2) && (rq.StudentEthnics[0] == "ETH1") && (rq.StudentEthnics[1] == "ETH2") &&
                           (rq.StudentGivenName == "Joe") && (rq.StudentId == "PID") && (rq.StudentMiddleName == "Middle") &&
-                          (rq.StudentPostalCode == "ZIP") && (rq.StudentPrefix == "MR") && 
+                          (rq.StudentPostalCode == "ZIP") && (rq.StudentPrefix == "MR") &&
                           (rq.StudentRacialGroups.Count == 2) && (rq.StudentRacialGroups[0] == "HIS") && (rq.StudentRacialGroups[1] == "RAC2") &&
                           (rq.StudentState == "VA") && (rq.StudentSuffix == "JR") &&
-                          (rq.StudentTaxId == null) && 
-                          (rq.PmtGatewayStudentPhones.Count == 2) && 
-                          (rq.PmtGatewayStudentPhones[0].StudentPhoneNumbers == "1111") && (rq.PmtGatewayStudentPhones[0].StudentPhoneExtensions == "ext") && 
+                          (rq.StudentTaxId == null) &&
+                          (rq.PmtGatewayStudentPhones.Count == 2) &&
+                          (rq.PmtGatewayStudentPhones[0].StudentPhoneNumbers == "1111") && (rq.PmtGatewayStudentPhones[0].StudentPhoneExtensions == "ext") &&
                           (rq.PmtGatewayStudentPhones[0].StudentPhoneTypes == "type") &&
                           (rq.PmtGatewayStudentPhones[1].StudentPhoneNumbers == "2222") && (rq.PmtGatewayStudentPhones[1].StudentPhoneExtensions == "ext2") &&
                           (rq.PmtGatewayStudentPhones[1].StudentPhoneTypes == "type2")
@@ -660,7 +673,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task InstantEnrollmentRepository_GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_null_request()
             {
-                var text = await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
+                await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
             }
 
             [TestMethod]
@@ -670,7 +683,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentBuildAcknowledgementParagraphRequest, InstantEnrollmentBuildAcknowledgementParagraphResponse>(It.IsAny<InstantEnrollmentBuildAcknowledgementParagraphRequest>())).
                     ThrowsAsync(new ApplicationException("CTX exception during execution."));
                 var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest("0001234", "0004567");
-                var text = await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
 
             [TestMethod]
@@ -680,7 +693,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentBuildAcknowledgementParagraphRequest, InstantEnrollmentBuildAcknowledgementParagraphResponse>(It.IsAny<InstantEnrollmentBuildAcknowledgementParagraphRequest>())).
                     ReturnsAsync(() => null);
                 var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest("0001234", "0004567");
-                var text = await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
 
             [TestMethod]
@@ -693,7 +706,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         AError = "Error from CTX"
                     });
                 var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest("0001234", "0004567");
-                var text = await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+                await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ColleagueSessionExpiredException))]
+            public async Task InstantEnrollmentRepository_GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_RepositoryThrowsColleagueExpiredException()
+            {
+                transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentBuildAcknowledgementParagraphRequest, InstantEnrollmentBuildAcknowledgementParagraphResponse>(
+                    It.IsAny<InstantEnrollmentBuildAcknowledgementParagraphRequest>()))
+                    .Returns(() =>
+                    {
+                        throw new ColleagueSessionExpiredException("session timeout");
+                    });
+
+                var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest("0001234", "0004567");
+                await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
 
             [TestMethod]

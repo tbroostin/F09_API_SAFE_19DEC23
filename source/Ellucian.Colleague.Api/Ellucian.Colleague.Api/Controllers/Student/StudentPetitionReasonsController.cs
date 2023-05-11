@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +13,8 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -66,10 +68,18 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 return studentPetitionReasonDtos;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving petition reasons";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to retrieve StudentPetitionReason.");
+                string message = "Unable to retrieve StudentPetitionReason.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

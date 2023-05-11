@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -82,5 +82,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The number of cost centers involved in the budget adjustment.
         /// </summary>
         public int CostCenterCount { get; set; }
+
+        /// <summary>        
+        /// Flag to capture if all attachments were moved to budget adjustment successfully, if budget adjustment was created from the draft and draft had attachments associated.
+        /// </summary>
+        public bool MoveAttachmentsFromDraftSuccessful { get; set; }
     }
 }

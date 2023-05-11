@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -168,10 +168,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     secondaryKey = admissionApplicationSupportingItemsEntityId.Value.SecondaryKey;
                 }
             }
-            catch
-            {
-                // Primary and Secondary keys are null.  Continue as a CREATE instead of an update.
-            }
+			catch (Exception ex)
+			{
+				logger.Error(ex, "Primary and Secondary keys are null.  Continue as a CREATE instead of an update.");
+
+			}
 
 			if (!string.IsNullOrEmpty(primaryKey) && !string.IsNullOrEmpty(secondaryKey))
 			{

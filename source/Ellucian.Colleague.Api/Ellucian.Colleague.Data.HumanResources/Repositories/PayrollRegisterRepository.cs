@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -23,7 +23,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     public class PayrollRegisterRepository : BaseColleagueRepository, IPayrollRegisterRepository
     {
         private readonly int bulkReadSize;
-        private const string PayrollRegisterCacheKeySuffix = "EmployeePayrollRegisterCache";
         private const string PayControlCacheKey = "PayControlCache";
 
         /// <summary>
@@ -41,25 +40,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         /// <summary>
-        /// Helper to build an employee specific cache key.
-        /// </summary>
-        /// <param name="employeeId"></param>
-        /// <returns></returns>
-        private string BuildEmployeePayrollRegisterCacheKey(string employeeId)
-        {
-            if (string.IsNullOrEmpty(employeeId))
-            {
-                throw new ArgumentNullException("employeeId");
-            }
-            return string.Format("{0}-{1}", employeeId, PayrollRegisterCacheKeySuffix);
-        }
-
-        /// <summary>
         /// Get PayrollRegister entries for the given employee id
         /// </summary>
         /// <param name="employeeIds"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<PayrollRegisterEntry>> GetPayrollRegisterByEmployeeIdsAsync(IEnumerable<string> employeeIds, 
+        public async Task<IEnumerable<PayrollRegisterEntry>> GetPayrollRegisterByEmployeeIdsAsync(IEnumerable<string> employeeIds,
             DateTime? startDate = null, DateTime? endDate = null)
         {
             if (employeeIds == null || !employeeIds.Any())
@@ -72,104 +57,44 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             //this is the return list
             var payrollRegister = new List<PayrollRegisterEntry>();
 
-
-            //build a set of tuples with
-            //item1: personId
-            //item2: full cache key
-            var employeeIdCacheKeys = employeeIds
-                .Select(id => new Tuple<string, string>(id, BuildFullCacheKey(BuildEmployeePayrollRegisterCacheKey(id))))
-                .ToList();
-
-
-            //first try to get employee paytodats from cache
-            var keysInCache = employeeIdCacheKeys.Where(tuple => _cacheProvider.Contains(tuple.Item2));
-            foreach (var entry in keysInCache)
-            {
-                try
-                {
-                    var cachedEntities = (IEnumerable<PayrollRegisterEntry>)_cacheProvider.Get(entry.Item2);
-                    if (cachedEntities != null)
-                    {
-                        payrollRegister.AddRange(cachedEntities);
-                    }
-                }
-                catch (Exception e)
-                {
-                    logger.Info(e, string.Format("Unable to get cached PayrollRegisterEntries from cacheKey {0}", entry.Item2));
-                }
-            }
-
-
-            //now get remaining uncached employeeids
-            //-----------------------------------------------------
-            var uncachedEmployeeIds = employeeIdCacheKeys
-                .Where(tuple => !_cacheProvider.Contains(tuple.Item2))
-                .Select(tuple => tuple.Item1)
-                .ToList();
-
-            if (!uncachedEmployeeIds.Any())
-            {
-                return payrollRegister;
-            }
-
             var criteria = "WITH PTD.EMPLOYEE.INDEX EQ ? AND PTD.SEQ.NO NE \"\"";
-            var values = uncachedEmployeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray();
+            var values = employeeIds.Select(id => string.Format("\"{0}\"", id)).ToArray();
 
             if (startDate.HasValue)
             {
                 var uniDataStartDate = await GetUnidataFormatDateAsync(startDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH PTD.CHECK.ADVICE.DATE GE '{0}'", uniDataStartDate)); //PTD.CHECK.ADVICE.DATE is a computed column so we use the Pick Date here (as opposed to a date string, like in the PayStatementRepository
+                logger.Debug(string.Format("************PayrollRegisterInfo - startDate - data reader - query string: '{0}'************.", criteria));
             }
 
             if (endDate.HasValue)
             {
                 var uniDataEndDate = await GetUnidataFormatDateAsync(endDate.Value);
                 criteria = string.Concat(criteria, string.Format(" AND WITH PTD.CHECK.ADVICE.DATE LE '{0}'", uniDataEndDate)); //PTD.CHECK.ADVICE.DATE is a computed column so we use the Pick Date here (as opposed to a date string, like in the PayStatementRepository
+                logger.Debug(string.Format("************PayrollRegisterInfo - endDate - data reader - query string: '{0}'.************", criteria));
             }
+            logger.Debug(string.Format("************PayrollRegisterInfo - Final query criteria - data reader -'{0}'************.", criteria));
 
             var paytodatRecords = await ReadPaytodatRecords(DataReader.SelectAsync("PAYTODAT", criteria, values));
 
             if (paytodatRecords == null || !paytodatRecords.Any())
             {
+                logger.Debug("************Payroll Register records not found. No data retrived************");
                 return payrollRegister;
             }
 
-            //group by employee id
-            //item1 = paytodat
-            //item2 = paycontrol
-            var entryDictByEmployeeId = new Dictionary<string, List<PayrollRegisterEntry>>();
             foreach (var paytodatRecord in paytodatRecords)
             {
                 try
                 {
-                    var entry = await BuildPayrollRegisterEntry(paytodatRecord);
-                    if (entryDictByEmployeeId.ContainsKey(entry.EmployeeId))
-                    {
-                        entryDictByEmployeeId[entry.EmployeeId].Add(entry);
-                    }
-                    else
-                    {
-                        entryDictByEmployeeId.Add(entry.EmployeeId, new List<PayrollRegisterEntry>() { entry });
-                    }
+                    payrollRegister.Add(await BuildPayrollRegisterEntry(paytodatRecord));
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT", paytodatRecord.Recordkey, paytodatRecord, e);
+                    LogDataError("PAYTODAT", paytodatRecord.Recordkey, new object(), e);
                 }
             }
-
-            //create cache entries
-            foreach (var entry in entryDictByEmployeeId)
-            {
-                var employeeEntries = GetOrAddToCache(BuildEmployeePayrollRegisterCacheKey(entry.Key),
-                    () => entry.Value,
-                    Level1CacheTimeoutValue);
-
-                payrollRegister.AddRange(employeeEntries);
-
-            }
-
-
+            logger.Debug("************Payroll Register Entry Entities created************");
             return payrollRegister;
         }
 
@@ -186,7 +111,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var paytodatIds = await recordIdSelectTask;
             if (paytodatIds == null || !paytodatIds.Any())
             {
-                logger.Info("DataReader selected zero PAYTODAT records");
+                logger.Debug("DataReader selected zero PAYTODAT records");
                 return paytodatRecords;
             }
 
@@ -285,8 +210,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             bool isAdjustment = !string.IsNullOrEmpty(record.PtdStatus) && record.PtdStatus.Equals("A", StringComparison.CurrentCultureIgnoreCase);
 
-            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate, 
-                periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo, 
+            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate,
+                periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo,
                 !string.IsNullOrEmpty(record.PtdW4NewFlag) && record.PtdW4NewFlag.Equals("Y", StringComparison.CurrentCultureIgnoreCase),
                 record.PtdAdviceDate.HasValue ? record.PtdAdviceDate.Value : record.PtdCheckDate.HasValue ? record.PtdCheckDate.Value : (DateTime?)null,
                 isAdjustment);
@@ -300,7 +225,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDEARN", record.Recordkey, earningsRecord, e);
+                    LogDataError("PAYTODAT~PTDEARN", record.Recordkey, new object(), e);
                     throw;
                 }
             }
@@ -313,7 +238,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception e)
             {
-                LogDataError("PAYTODAT~PTDTAXEXP", record.Recordkey, record, e, "Error building Ptdtaxexp lookup from the tax code (first postiion) of the PtdTaxExpController");
+                LogDataError("PAYTODAT~PTDTAXEXP", record.Recordkey, new object(), e, "Error building Ptdtaxexp lookup from the tax code (first postiion) of the PtdTaxExpController");
             }
 
             foreach (var taxRecord in record.PtdtaxesEntityAssociation)
@@ -328,7 +253,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDTAXES", record.Recordkey, taxRecord, e);
+                    LogDataError("PAYTODAT~PTDTAXES", record.Recordkey, new object(), e);
                     throw;
                 }
             }
@@ -341,7 +266,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception e)
             {
-                LogDataError("PAYTODAT~PTDBDEXP", record.Recordkey, record, e, "Error building Ptdbdexp lookup from the bended code (first postiion) of the PtdBdExpController");
+                LogDataError("PAYTODAT~PTDBDEXP", record.Recordkey, new object(), e, "Error building Ptdbdexp lookup from the bended code (first postiion) of the PtdBdExpController");
             }
 
             foreach (var benefitDeductionRecord in record.PtdbndedEntityAssociation)
@@ -356,7 +281,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDBNDED", record.Recordkey, benefitDeductionRecord, e);
+                    LogDataError("PAYTODAT~PTDBNDED", record.Recordkey, new object(), e);
                 }
             }
 
@@ -369,7 +294,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDLEAVE", record.Recordkey, leaveRecord, e);
+                    LogDataError("PAYTODAT~PTDLEAVE", record.Recordkey, new object(), e);
                 }
             }
 
@@ -382,7 +307,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PAYTODAT~PTDTXBLBD", record.Recordkey, taxableBenefit, e);
+                    LogDataError("PAYTODAT~PTDTXBLBD", record.Recordkey, new object(), e);
                 }
             }
 
@@ -395,7 +320,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="benefitDeductionRecord"></param>
         /// <param name="employerBenefitDeductionRecords"></param>
         /// <returns></returns>
-        private PayrollRegisterBenefitDeductionEntry BuildPayrollRegisterBenefitDeductionEntry(PaytodatPtdbnded benefitDeductionRecord, 
+        private PayrollRegisterBenefitDeductionEntry BuildPayrollRegisterBenefitDeductionEntry(PaytodatPtdbnded benefitDeductionRecord,
             IEnumerable<PaytodatPtdbdexp> employerBenefitDeductionRecords, bool isAdjustment)
         {
             if (benefitDeductionRecord == null)
@@ -452,7 +377,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             PayrollRegisterTaxEntry taxEntry = null;
-            if (!isAdjustment) {
+            if (!isAdjustment)
+            {
                 taxEntry = new PayrollRegisterTaxEntry(taxRecord.PtdTaxCodesAssocMember, ConvertInternalCode(taxRecord.PtdTaxFaterdCodesAssocMember))
                 {
                     SpecialProcessingAmount = taxRecord.PtdTaxFaterdAmtsAssocMember,
@@ -557,7 +483,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         throw new ArgumentException("earningsRecord has no value in PTD.EARN.DIFF.RATES column. differential rates are required when differential id is specified");
 
                     }
-                    earningsEntry.SetEarningsDifferential(earningsRecord.PtdEarndiffIdAssocMember, earningsRecord.PtdEarnDiffEarningsAssocMember.Value, 
+                    earningsEntry.SetEarningsDifferential(earningsRecord.PtdEarndiffIdAssocMember, earningsRecord.PtdEarnDiffEarningsAssocMember.Value,
                         earningsRecord.PtdEarnDiffUnitsAssocMember, earningsRecord.PtdEarnDiffRatesAssocMember.Value);
                 }
 

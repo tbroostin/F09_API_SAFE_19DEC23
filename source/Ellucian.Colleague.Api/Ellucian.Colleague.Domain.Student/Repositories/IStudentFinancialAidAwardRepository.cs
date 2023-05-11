@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
@@ -20,5 +20,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
            IEnumerable<string> awardYears, Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null, IEnumerable<string> personFilterKeys = null, string personFilter = null);
 
         Task<IEnumerable<string>> GetNotAwardedCategoriesAsync();
+
+        /// <summary>
+        /// Get a collection of financial aid years that may be limited by user
+        /// </summary>
+        /// <returns>Collection of financial aid years</returns>
+        Task<IEnumerable<FinancialAidYear>> GetLimitedFinancialAidYearsAsync(bool restricted = false);
+
     }
 }

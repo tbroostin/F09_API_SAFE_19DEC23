@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -35,12 +36,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly IPhoneTypeService _phoneTypeService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the PhoneTypesController class.
         /// </summary>
         /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
-       /// <param name="phoneTypeService">Service of type<see cref="IPhoneTypeService"> IPhoneTypeService</see></param>
+        /// <param name="phoneTypeService">Service of type<see cref="IPhoneTypeService"> IPhoneTypeService</see></param>
         /// <param name="logger">Interface to Logger</param>
         public PhoneTypesController(IAdapterRegistry adapterRegistry, IPhoneTypeService phoneTypeService, ILogger logger)
         {
@@ -120,6 +122,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 return await _phoneTypeService.GetBasePhoneTypesAsync();
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

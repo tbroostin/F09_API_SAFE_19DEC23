@@ -198,5 +198,14 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// List of Pell Entitlements to be displayed on an OLTR offer letter
         /// </summary>
         public List<string> AlhPellEntitlementList { get; set; }
+
+        /// <summary>
+        /// True or false flag indicating if this is a zero awards offer letter definition
+        /// </summary>
+        public bool AlhZeroAwardFlg { get; set; }
+        /// <summary>
+        /// List of award periods for zero award offer letters
+        /// </summary>
+        public List<string> ZeroAwardPeriods { get; set; }
     }
 }

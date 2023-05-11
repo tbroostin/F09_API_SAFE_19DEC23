@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -9,9 +9,11 @@ using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
@@ -43,17 +45,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>1098 T/E data for a pdf</returns>
         public async Task<Form1098PdfData> Get1098PdfAsync(string personId, string recordId, bool suppressNotification = false)
         {
-            // Get student demographic information and box numbers.
-            var pdfDataContract = await DataReader.ReadRecordAsync<TaxForm1098Forms>(recordId);
-
-            // Read person record to get SSN.
-            var personContract = await DataReader.ReadRecordAsync<Person>(personId);
-
-            // Get Parm1098 
-            var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
-
             try
             {
+                // Get student demographic information and box numbers.
+                var pdfDataContract = await DataReader.ReadRecordAsync<TaxForm1098Forms>(recordId);
+
+                // Read person record to get SSN.
+                var personContract = await DataReader.ReadRecordAsync<Person>(personId);
+
+                // Get Parm1098 
+                var parm1098Contract = await DataReader.ReadRecordAsync<Parm1098>("ST.PARMS", "PARM.1098");
+                
                 string taxFormName = string.Empty;
                 if (pdfDataContract == null)
                 {
@@ -124,7 +126,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     else
                     {
-                        throw new Exception("The tax form should be either 1098T or 1098E");
+                        throw new ColleagueWebApiException("The tax form should be either 1098T or 1098E");
                     }
 
                     entity.TaxFormName = taxFormName;
@@ -330,6 +332,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 return entity;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Couldn't retrieve 1098 tax form data.");
@@ -359,16 +365,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>T2202A data for a pdf.</returns>
         public async Task<FormT2202aPdfData> GetT2202aPdfAsync(string personId, string recordId)
         {
-            // Get student demographic information and box numbers.
-            var pdfDataContract = await DataReader.ReadRecordAsync<CnstT2202aRepos>(recordId);
-            var rptParmsDataContract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
-            var personDataContract = await DataReader.ReadRecordAsync<Person>("PERSON", personId);
-
-            // Get the default institution ID and read the default institution name.
-            var institutionName = string.Empty;
-            var defaultCorpId = string.Empty;
             try
             {
+                // Get student demographic information and box numbers.
+                var pdfDataContract = await DataReader.ReadRecordAsync<CnstT2202aRepos>(recordId);
+                var rptParmsDataContract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+                var personDataContract = await DataReader.ReadRecordAsync<Person>("PERSON", personId);
+                
+                // Get the default institution ID and read the default institution name.
+                var institutionName = string.Empty;
+                var defaultCorpId = string.Empty;
+            
                 if (pdfDataContract == null)
                 {
                     throw new NullReferenceException("pdfDataContract cannot be null.");
@@ -475,6 +482,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.TaxForm = "T2202A";
                 var response = await transactionInvoker.ExecuteAsync<TxNotifyStPdfAccessRequest, TxNotifyStPdfAccessResponse>(request);
                 return entity;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {

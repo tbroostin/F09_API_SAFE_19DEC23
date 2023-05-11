@@ -17,6 +17,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -291,7 +292,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorByGuidAsync_FacultyContractType_Exception()
             {
                 var expected = new Ellucian.Colleague.Domain.Student.Entities.Instructor("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT")
@@ -419,7 +420,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorsAsync_Exception()
             {
                 _instructorRepositoryMock.Setup(i => i.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
@@ -455,7 +456,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorByGuidAsync_Exception()
             {
                 _instructorRepositoryMock.Setup(i => i.GetInstructorByIdAsync(It.IsAny<string>()))
@@ -731,7 +732,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorByGuid2Async_FacultyContractType_Exception()
             {
                 var expected = new Ellucian.Colleague.Domain.Student.Entities.Instructor("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT")
@@ -859,7 +860,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorsAsync_Exception()
             {
                 _instructorRepositoryMock.Setup(i => i.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
@@ -895,7 +896,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task InstructorsService_GetInstructorByGuid2Async_Exception()
             {
                 _instructorRepositoryMock.Setup(i => i.GetInstructorByIdAsync(It.IsAny<string>()))

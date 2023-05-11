@@ -1,6 +1,8 @@
-﻿using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
+﻿//Copyright 2021 Ellucian Company L.P.and its affiliates.
+using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -132,6 +134,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var expected = nextApproverCollection.AsEnumerable();
             approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
             var nextApprovers = await approverController.GetNextApproverByKeywordAsync(personId);
+        }
+
+        #endregion
+
+        #region QAPI
+
+        [TestMethod]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+            Assert.AreEqual(nextApproverCollection.ToList().Count, expected.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync_Keyword_AsNull()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync_ArgumentNullException()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync_PermissionException()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync_KeyNotFoundException()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ApproverController_QueryNextApproverByKeywordAsync_Exception()
+        {
+            var expected = nextApproverCollection.AsEnumerable();
+            approverServiceMock.Setup(r => r.QueryNextApproverByKeywordAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            var nextApprovers = await approverController.QueryNextApproverByKeywordAsync(new KeywordSearchCriteria() { Keyword = personId });
         }
 
         #endregion

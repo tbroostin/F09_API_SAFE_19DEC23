@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -13,6 +13,7 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class ApplicationStatusRepository : BaseColleagueRepository, IApplicationStatusRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly string colleagueTimeZone;
         private int bulkReadSize;
         const string AllApplicationStatusCacheKey = "AllApplicationStatusKeys";
@@ -347,7 +348,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex); 
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex); 
             }
 
             return guidCollection;

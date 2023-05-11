@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -112,7 +113,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task DeductionType_GetById_Exception()
         {
             referenceDataRepository.Setup(i => i.GetDeductionTypesAsync(true)).ThrowsAsync(new Exception());
@@ -240,7 +241,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task DeductionType_GetById_Exception()
         {
             referenceDataRepository.Setup(i => i.GetDeductionTypes2Async(true)).ThrowsAsync(new Exception());

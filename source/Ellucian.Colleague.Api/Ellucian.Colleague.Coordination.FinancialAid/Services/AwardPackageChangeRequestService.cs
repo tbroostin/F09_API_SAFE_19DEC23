@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +9,11 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -85,7 +87,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (changeRequestEntitiesForStudent == null || changeRequestEntitiesForStudent.Count() == 0)
             {
                 var message = string.Format("Student {0} has no AwardPackageChangeRequests", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<AwardPackageChangeRequest>();
             }
 
@@ -220,38 +222,49 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 allStudentAwardsForYear = await studentAwardRepository.GetStudentAwardsForYearAsync(studentId, studentAwardYear, awards, awardStatuses);
             }
-            
-            var newChangeRequestEntity = await awardPackageChangeRequestRepository.CreateAwardPackageChangeRequestAsync(
-                AwardPackageChangeRequestDomainService.VerifyAwardPackageChangeRequest(changeRequestEntity, studentAward, awardStatuses, allStudentAwardsForYear),
-                studentAward);
-            
-            if (newChangeRequestEntity == null)
+            try
             {
-                var message = "Unable to create award package change request resource";
-                logger.Error(message);
-                throw new Exception(message);
-            }
+                var newChangeRequestEntity = await awardPackageChangeRequestRepository.CreateAwardPackageChangeRequestAsync(
+                    AwardPackageChangeRequestDomainService.VerifyAwardPackageChangeRequest(changeRequestEntity, studentAward, awardStatuses, allStudentAwardsForYear),
+                    studentAward);
 
-            var communications = AwardPackageChangeRequestDomainService.GetCommunications(newChangeRequestEntity, studentAward, awardStatuses);
-            
-            if (communications != null && communications.Any())
-            {
-                foreach (var communication in communications)
+                if (newChangeRequestEntity == null)
                 {
-                    try
+                    var message = "Unable to create award package change request resource";
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
+
+
+                var communications = AwardPackageChangeRequestDomainService.GetCommunications(newChangeRequestEntity, studentAward, awardStatuses);
+
+                if (communications != null && communications.Any())
+                {
+                    foreach (var communication in communications)
                     {
-                        communicationRepository.SubmitCommunication(communication);
-                    }
-                    catch (Exception e)
-                    {
-                        var message = string.Format("Error submitting Communication {0} for student {1}", communication.ToString(), studentId);
-                        logger.Warn(e, message);
+                        try
+                        {
+                            communicationRepository.SubmitCommunication(communication);
+                        }
+                        catch (ColleagueSessionExpiredException csee)
+                        {
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            var message = string.Format("Error submitting Communication {0} for student {1}", communication.ToString(), studentId);
+                            logger.Debug(e, message);
+                        }
                     }
                 }
-            }
 
-            var awardPackageChangeRequestDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.AwardPackageChangeRequest, AwardPackageChangeRequest>();
-            return awardPackageChangeRequestDtoAdapter.MapToType(newChangeRequestEntity);
+                var awardPackageChangeRequestDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.AwardPackageChangeRequest, AwardPackageChangeRequest>();
+                return awardPackageChangeRequestDtoAdapter.MapToType(newChangeRequestEntity);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
 
         }
     }

@@ -516,7 +516,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 Assert.IsTrue(actualStudentAwardsForYear.SelectMany(a => a.StudentAwardPeriods).All(p => !p.HasLoanDisbursement));
 
-                loggerMock.Verify(l => l.Info(string.Format("No {0} record ids for student {1} award year {2}", "SL." + studentAwardYear.Code, studentId, studentAwardYear.Code)));
+                loggerMock.Verify(l => l.Debug(string.Format("No {0} record ids for student {1} award year {2}", "SL." + studentAwardYear.Code, studentId, studentAwardYear.Code)));
             }
 
             //studentawardperioddata is null thorws  knfe
@@ -856,7 +856,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void UpdateTransactionReturnsGenericErrorMessage()
             {
                 updateResponseTestData.ErrorMessage = "foobar";
@@ -1063,7 +1063,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 .Setup<Task<SlAcyr>>(reader => reader.ReadRecordAsync<SlAcyr>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(() => null);
                 await actualStudentAwardRepository.GetStudentAwardAsync(studentId, studentAwardYear, loanCode, allAwards, allAwardStatuses);
-                loggerMock.Verify(l => l.Info(string.Format("No loan disbursement data for {0} for student {1} {2} award year", loanCode, studentId, studentAwardYear.Code)));
+                loggerMock.Verify(l => l.Debug(string.Format("No loan disbursement data for {0} for student {1} {2} award year", loanCode, studentId, studentAwardYear.Code)));
             }
 
         }

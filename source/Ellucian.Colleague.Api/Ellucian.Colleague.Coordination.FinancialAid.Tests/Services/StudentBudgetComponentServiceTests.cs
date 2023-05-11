@@ -232,7 +232,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualBudgets = await actualService.GetStudentBudgetComponentsAsync(studentId);
 
                 Assert.AreEqual(0, actualBudgets.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years for which to get budget components", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years for which to get budget components", studentId)));
             }
 
             [TestMethod]
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualBudgets = await actualService.GetStudentBudgetComponentsAsync(studentId);
 
                 Assert.AreEqual(0, actualBudgets.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no budget components for any award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no budget components for any award years", studentId)));
             }
 
         }
@@ -418,7 +418,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualBudgets = await actualService.GetStudentBudgetComponentsForYearAsync(studentId, awardYear);
 
                 Assert.AreEqual(0, actualBudgets.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no budget components for {1} year", studentId, awardYear)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no budget components for {1} year", studentId, awardYear)));
             }
 
         }

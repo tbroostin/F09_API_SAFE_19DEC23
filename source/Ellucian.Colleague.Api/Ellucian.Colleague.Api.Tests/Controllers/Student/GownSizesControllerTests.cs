@@ -8,6 +8,7 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -101,12 +102,32 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task GownSizesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(x => x.GetGownSizesAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                await gownSizesController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
+            catch (System.Exception e)
+            {
+                throw e;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task GownSizesController_Exception_ReturnsHttpResponseException_BadRequest()
         {
             try
             {
                 referenceDataRepositoryMock.Setup(x => x.GetGownSizesAsync()).Throws(new ApplicationException());
-                var GownSizes = await gownSizesController.GetAsync();
+                await gownSizesController.GetAsync();
             }
             catch (HttpResponseException ex)
             {

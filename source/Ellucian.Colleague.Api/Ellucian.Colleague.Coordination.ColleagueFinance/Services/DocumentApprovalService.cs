@@ -6,10 +6,10 @@ using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
-using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -27,7 +27,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         private readonly IDocumentApprovalRepository documentApprovalRepository;
         private readonly IStaffRepository staffRepository;
-        public DocumentApproval adjustmentOutputDto;
+
 
         /// <summary>
         /// Initialize the service.
@@ -55,6 +55,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Document Approval DTO</returns>
         public async Task<DocumentApproval> GetAsync()
         {
+            // Initialize the document approval dto.
+            var documentApprovalDto = new DocumentApproval();
+
             // Check the permission code to view the document approval.
             CheckViewDocumentApprovalPermission();
 
@@ -80,30 +83,39 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new PermissionsException("Could not find Staff information for the user.");
             }
 
-            var documentApprovalEntity = await documentApprovalRepository.GetAsync(currentUserStaffLoginId);
-
-            logger.Debug("==> In DocumentApprovalService after GetAsync. <==");
-
-            // Initialize the document approval dto.
-            var documentApprovalDto = new DocumentApproval();
-
-            // Update the dto with the information from the domain entity.
-            if (documentApprovalEntity != null)
+            try
             {
-                logger.Debug("==> about to get adapter for DocumentApproval <==");
+                var documentApprovalEntity = await documentApprovalRepository.GetAsync(currentUserStaffLoginId);
 
-                // Convert the domain entity into a DTO.
-                var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApproval, DocumentApproval>();
-                documentApprovalDto = adapter.MapToType(documentApprovalEntity);
+                logger.Debug("==> In DocumentApprovalService after GetAsync. <==");
 
-                if (documentApprovalDto == null)
+                // Update the dto with the information from the domain entity.
+                if (documentApprovalEntity != null)
                 {
-                    logger.Debug("==> documentApprovalDto is null <==");
+                    logger.Debug("==> about to get adapter for DocumentApproval <==");
+
+                    // Convert the domain entity into a DTO.
+                    var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApproval, DocumentApproval>();
+                    documentApprovalDto = adapter.MapToType(documentApprovalEntity);
+
+                    if (documentApprovalDto == null)
+                    {
+                        logger.Debug("==> documentApprovalDto is null <==");
+                    }
                 }
+                else
+                {
+                    logger.Debug("==> documentApprovalEntity is null <==");
+                }
+
             }
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                logger.Debug("==> documentApprovalEntity is null <==");
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
             }
 
             return documentApprovalDto;
@@ -131,6 +143,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("ApprovalDocumentRequests", "There must be documents pending approval.");
             }
 
+            var returnDocumentFound = documentApprovalUpdateRequest.ApprovalDocumentRequests.Any(x => x.Return);
+            if (returnDocumentFound && documentApprovalUpdateRequest.ApprovalDocumentRequests.Count() > 1)
+            {
+                throw new InvalidOperationException("There must be only one document for return request.");
+            }
+
             // Check the permission code to view/update the document approval.         
             CheckViewDocumentApprovalPermission();
 
@@ -150,13 +168,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var documentApprovalUpdateRequestEntity = ConvertDocumentApprovalUpdateRequestDtoToEntity(documentApprovalUpdateRequest);
 
             // call the repository method that calls the CTX to process the approval documents.
-            var documentApprovalResponseEntity = await documentApprovalRepository.UpdateDocumentApprovalAsync(currentUserStaffLoginId, documentApprovalUpdateRequestEntity.ApprovalDocumentRequests);
-
-            // Define the adapter and if there is an response entity returned from the repository, convert the entity to a DTO.
-            var updateResponseAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApprovalResponse, DocumentApprovalResponse>();
-            if (documentApprovalResponseEntity != null)
+            try
             {
-                response = updateResponseAdapter.MapToType(documentApprovalResponseEntity);
+                var documentApprovalResponseEntity = await documentApprovalRepository.UpdateDocumentApprovalAsync(currentUserStaffLoginId, documentApprovalUpdateRequestEntity.ApprovalDocumentRequests);
+
+                // Define the adapter and if there is an response entity returned from the repository, convert the entity to a DTO.
+                var updateResponseAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApprovalResponse, DocumentApprovalResponse>();
+                if (documentApprovalResponseEntity != null)
+                {
+                    response = updateResponseAdapter.MapToType(documentApprovalResponseEntity);
+                }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
             }
 
             return response;
@@ -169,6 +198,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>List of document approved DTOs.</returns>
         public async Task<IEnumerable<ApprovedDocument>> QueryApprovedDocumentsAsync(ApprovedDocumentFilterCriteria filterCriteria)
         {
+            // Initialize the approved documents dtos.
+            var approvedDocumentDtos = new List<ApprovedDocument>();
+
             // Check the permission code to view the document approval.
             CheckViewDocumentApprovalPermission();
 
@@ -198,35 +230,43 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new PermissionsException("Could not find Staff information for the user.");
             }
 
-            var approvedDocumentEntities = await documentApprovalRepository.QueryApprovedDocumentsAsync(currentUserStaffLoginId, filterCriteriaEntity);
-
-            logger.Debug("==> In DocumentApprovalService after GetApprovedDocumentsAsync <==");
-
-            // Initialize the approved documents dtos.
-            var approvedDocumentDtos = new List<ApprovedDocument>();
-
-            if (approvedDocumentEntities != null)
+            try
             {
-                // Convert the domain entity into a DTO.
-                var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.ApprovedDocument, ApprovedDocument>();
+                var approvedDocumentEntities = await documentApprovalRepository.QueryApprovedDocumentsAsync(currentUserStaffLoginId, filterCriteriaEntity);
 
-                // Map each entity to the DTO.
-                foreach (var appprovedDocumentEntity in approvedDocumentEntities)
+                logger.Debug("==> In DocumentApprovalService after GetApprovedDocumentsAsync <==");
+
+                if (approvedDocumentEntities != null)
                 {
-                    if (appprovedDocumentEntity != null)
+                    // Convert the domain entity into a DTO.
+                    var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.ApprovedDocument, ApprovedDocument>();
+
+                    // Map each entity to the DTO.
+                    foreach (var appprovedDocumentEntity in approvedDocumentEntities)
                     {
-                        logger.Debug("==> appprovedDocumentEntity before using adapter <==");
+                        if (appprovedDocumentEntity != null)
+                        {
+                            logger.Debug("==> appprovedDocumentEntity before using adapter <==");
 
-                        var approvedDocumentDto = adapter.MapToType(appprovedDocumentEntity);
-                        approvedDocumentDtos.Add(approvedDocumentDto);
+                            var approvedDocumentDto = adapter.MapToType(appprovedDocumentEntity);
+                            approvedDocumentDtos.Add(approvedDocumentDto);
 
-                        logger.Debug("==> approvedDocumentDto after using adapter <==");
+                            logger.Debug("==> approvedDocumentDto after using adapter <==");
+                        }
                     }
                 }
+                else
+                {
+                    logger.Debug("==> approvedDocumentEntities is null <==");
+                }
             }
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                logger.Debug("==> approvedDocumentEntities is null <==");
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
             }
 
             return approvedDocumentDtos;

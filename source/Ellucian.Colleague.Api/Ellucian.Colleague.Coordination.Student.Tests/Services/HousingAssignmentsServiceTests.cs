@@ -1031,7 +1031,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AcademicPeriodId_Null()
             {
                 dtoHousingAssingment.AcademicPeriod.Id = null;
@@ -1047,7 +1047,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_StatusDate_Null()
             {
                 dtoHousingAssingment.StatusDate = null;
@@ -1056,7 +1056,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RoomRateId_Null()
             {
                 dtoHousingAssingment.RoomRate.Id = null;
@@ -1076,7 +1076,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
             {
                 dtoHousingAssingment.EndOn = DateTime.Today.AddDays(15);
@@ -1088,7 +1088,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RateOverride_RateValue_Null()
             {
                 rateOverride.HousingAssignmentRate.RateValue = null;
@@ -1098,7 +1098,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RateOverride_RateOverrideReasonId_Null()
             {
                 rateOverride.RateOverrideReason.Id = null;
@@ -1118,7 +1118,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCode_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode = null;
@@ -1128,7 +1128,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCodeId_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = null;
@@ -1138,7 +1138,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate = null;
@@ -1156,7 +1156,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = null;
@@ -1174,7 +1174,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_ResidentTypeId_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = 0;
@@ -1193,7 +1193,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CreateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_ContractNumber_Invalid_Length()
             {
                 dtoHousingAssingment.ContractNumber = "123-456-789-123-456";
@@ -1857,7 +1857,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AcademicPeriodId_Null()
             {
                 dtoHousingAssingment.AcademicPeriod.Id = null;
@@ -1873,7 +1873,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_StatusDate_Null()
             {
                 dtoHousingAssingment.StatusDate = null;
@@ -1882,7 +1882,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RoomRateId_Null()
             {
                 dtoHousingAssingment.RoomRate.Id = null;
@@ -1902,7 +1902,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
             {
                 dtoHousingAssingment.EndOn = DateTime.Today.AddDays(15);
@@ -1914,7 +1914,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RateOverride_RateValue_Null()
             {
                 rateOverride.HousingAssignmentRate.RateValue = null;
@@ -1924,7 +1924,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_RateOverride_RateOverrideReasonId_Null()
             {
                 rateOverride.RateOverrideReason.Id = null;
@@ -1944,7 +1944,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCode_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode = null;
@@ -1954,7 +1954,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCodeId_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = null;
@@ -1964,7 +1964,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate = null;
@@ -1982,7 +1982,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = null;
@@ -2000,7 +2000,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_ResidentTypeId_Null()
             {
                 dtoHousingAssingment.ResidentType.Id = null;
@@ -2018,7 +2018,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateHousingAssignmentAsync_DtoToEntity_InvalidOperationException_ContractNumber_Invalid_Length()
             {
                 dtoHousingAssingment.ContractNumber = "123-456-789-123-456";

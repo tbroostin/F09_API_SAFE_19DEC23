@@ -26,6 +26,7 @@ using System.Web.Http.Routing;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using System.Collections;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -727,6 +728,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionAsync_PermissionsException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.GetRequisitionAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionAsync_ColleagueSessionExpiredException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+            await requisitionsController.GetRequisitionAsync("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitionAsync_KeyNotFoundException()
         {
             requisitionsServiceMock.Setup(r => r.GetRequisitionAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
@@ -1409,6 +1426,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_PermissionsException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_KeyNotFoundException()
         {
             requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
@@ -1649,6 +1674,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionAsync_ColleagueSessionExpiredException()
+        {
+            requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+            await requisitionsController.PostRequisitionAsync(createUpdateRequisitionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_PostRequisitionAsync_Exception()
         {
             requisitionsServiceMock.Setup(r => r.CreateUpdateRequisitionAsync(It.IsAny<RequisitionCreateUpdateRequest>())).ThrowsAsync(new Exception());
@@ -1804,6 +1837,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task RequisitionsController_QueryRequisitionSummariessAsync_PermissionsException()
         {
             requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync_ColleagueSessionExpiredException()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
             await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
         }
 

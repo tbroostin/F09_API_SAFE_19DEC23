@@ -1,9 +1,10 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -123,7 +124,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 preferenceResponse = await transactionInvoker.ExecuteAsync<DeleteSelfservicePreferenceRequest, DeleteSelfservicePreferenceResponse>(deleteSelfservicePreferenceRequest);
             }
-            catch(Exception e)
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception e)
             {
                 logger.Error(e, "Transaction failed");
                 throw;

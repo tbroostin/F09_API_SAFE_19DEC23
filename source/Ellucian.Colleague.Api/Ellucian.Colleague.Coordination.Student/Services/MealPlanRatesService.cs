@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -98,10 +99,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException(string.Concat("Meal plan rate effective date not found, Record title: ", source.Code, ", Record Guid: ", source.Guid));
             }
-            if (!(mealPlansMealPlanRates.MealRates > 0))
-            {
-                throw new Exception(string.Concat("Meal plan rates must have an amount greater than 0, Record title: ", source.Code, ", Record Guid: ", source.Guid));
-            }
 
             mealPlanRates.Id = source.Guid;
 
@@ -119,12 +116,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     else
                     {
-                        throw new Exception(string.Concat("Unable to locate guid for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
+                        throw new ColleagueWebApiException(string.Concat("Unable to locate guid for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
                     }
                 }
                 else
                 {
-                    throw new Exception(string.Concat("Unable to locate guid for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
+                    throw new ColleagueWebApiException(string.Concat("Unable to locate guid for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
                 }
             }
 
@@ -137,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var ratePeriod = ConvertMealPlanRatesRatePeriodDomainEnumToDtoEnum(source.MealRatePeriod);
             if (ratePeriod == MealPlanRatesRatePeriod.NotSet)
             {
-                throw new Exception(string.Concat("Unable to determine rate period for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
+                throw new ColleagueWebApiException(string.Concat("Unable to determine rate period for MealPlan: ", source.Code, ", Record Guid: ", source.Guid));
             }
             mealPlanRates.RatePeriod = ratePeriod;
 
@@ -155,7 +152,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
                 else {
-                    throw new Exception("Unable to get accounting codes.");
+                    throw new ColleagueWebApiException("Unable to get accounting codes.");
                 }
             }
             return mealPlanRates;

@@ -63,5 +63,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria, bool useCache = true);
 
         Task<Ellucian.Colleague.Dtos.Student.AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false);
+        /// <summary>
+        /// Retrieves applicant's academic history
+        /// </summary>
+        /// <param name="applicanTid">ID of the applicant for whom academic history is retrieved</param>
+        /// <param name="filter">(Optional) used to filter to active credit only.</param>
+        /// <returns>The <see cref="ApplicantAcademicCredit">academic history</see> for an applicant</returns>
+        Task<IEnumerable<Dtos.Student.ApplicantAcademicCredit>> GetApplicantAcademicCreditsAsync(string applicantId, bool filter = true, bool includeDrops = false);
     }
 }

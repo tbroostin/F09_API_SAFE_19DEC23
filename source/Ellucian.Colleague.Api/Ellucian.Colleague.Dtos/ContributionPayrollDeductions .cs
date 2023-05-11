@@ -19,7 +19,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// The arrangement details related to the payroll deduction.
         /// </summary>
-        [DataMember(Name = "arrangement")]
+        [JsonProperty("arrangement")]
         [FilterProperty("criteria")]
         [JsonConverter(typeof(GuidObject2FilterConverter))]
         public GuidObject2 Arrangement { get; set; }
@@ -27,14 +27,15 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// The date the payroll deduction was made.
         /// </summary>
+        [JsonProperty("deductedOn")]
         [JsonConverter(typeof(DateOnlyConverter))]
-        [DataMember(Name = "deductedOn")]
-        public DateTime DeductedOn { get; set; }
+        [FilterProperty("criteria", new string[] { "$eq", "$lt", "$gt", "$gte", "$lte" })]
+        public DateTime? DeductedOn { get; set; }
 
         /// <summary>
         /// The amount that was deducted from the payroll.
         /// </summary>
-        [DataMember(Name = "amount")]
+        [JsonProperty("amount")]
         public AmountDtoProperty Amount { get; set; }
     }
 }

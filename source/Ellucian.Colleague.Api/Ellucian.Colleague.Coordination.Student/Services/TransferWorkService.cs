@@ -1,8 +1,9 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student.TransferWork;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -50,32 +51,46 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Returns a list of transfer equivalencies for a student.</returns>
         public async Task<IEnumerable<TransferEquivalencies>> GetStudentTransferWorkAsync(string studentId)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException("studentId", "Student Id must be specified to get Student transfer summary.");
-            }
-
             var transferEquivalencyDtos = new List<TransferEquivalencies>();
-            // Check the person requesting the transfer summary information is the student or advisor
-            if (studentId != CurrentUser.PersonId)
+            try
             {
-                var canAccess = await UserIsAdvisorAsync(studentId);
-                if (!canAccess)
+                if (string.IsNullOrEmpty(studentId))
                 {
-                    var message = "Current user is not the student for the requested transfer summary information and therefore cannot access it.";
-                    logger.Info(message);
-                    throw new PermissionsException(message);
+                    throw new ArgumentNullException("studentId", "Student Id must be specified to get Student transfer summary.");
+                }
+                // Check the person requesting the transfer summary information is the student or advisor
+                if (studentId != CurrentUser.PersonId)
+                {
+                    var canAccess = await UserIsAdvisorAsync(studentId);
+                    if (!canAccess)
+                    {
+                        var message = "Current user is not the student for the requested transfer summary information and therefore cannot access it.";
+                        logger.Info(message);
+                        throw new PermissionsException(message);
+                    }
+                }
+                var transferEquivalencyEntities = await _studentTransferWorkRepository.GetStudentTransferWorkAsync(studentId);
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.TransferWork.TransferEquivalencies, TransferEquivalencies>();
+
+                if (transferEquivalencyEntities != null && transferEquivalencyEntities.Any())
+                {
+                    foreach (var equivalency in transferEquivalencyEntities)
+                    {
+                        transferEquivalencyDtos.Add(adapter.MapToType(equivalency));
+                    }
                 }
             }
-            var transferEquivalencyEntities = await _studentTransferWorkRepository.GetStudentTransferWorkAsync(studentId);
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.TransferWork.TransferEquivalencies, TransferEquivalencies>();
-
-            if (transferEquivalencyEntities != null && transferEquivalencyEntities.Any())
+            catch (ColleagueSessionExpiredException tex)
             {
-                foreach (var equivalency in transferEquivalencyEntities)
-                {
-                    transferEquivalencyDtos.Add(adapter.MapToType(equivalency));
-                }
+                string message = "Session has expired while retrieving student transfer and non course equivelancy work";
+                _logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var message = "Exception occurred while trying to retrieve student transfer and non course equivelancy work";
+                logger.Error(message);
+                throw;
             }
 
             return transferEquivalencyDtos;

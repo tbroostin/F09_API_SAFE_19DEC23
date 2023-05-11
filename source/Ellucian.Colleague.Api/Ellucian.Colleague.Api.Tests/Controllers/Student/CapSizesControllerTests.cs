@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -101,19 +102,40 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task CapSizesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(x => x.GetCapSizesAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                await capSizesController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
+            catch (System.Exception e)
+            {
+                throw e;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task CapSizesController_Exception_ReturnsHttpResponseException_BadRequest()
         {
             try
             {
                 referenceDataRepositoryMock.Setup(x => x.GetCapSizesAsync()).Throws(new ApplicationException());
-                var CapSizes = await capSizesController.GetAsync();
+                await capSizesController.GetAsync();
             }
             catch (HttpResponseException ex)
             {
                 Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
                 throw ex;
             }
-            catch(System.Exception e)
+            catch (System.Exception e)
             {
                 throw e;
             }

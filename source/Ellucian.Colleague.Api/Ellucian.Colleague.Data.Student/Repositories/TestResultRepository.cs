@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,9 +11,11 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -46,7 +48,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access NON.COURSE.CATEGORIES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return categoryTable;
                 }, Level1CacheTimeoutValue);
@@ -76,7 +78,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                          var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                          logger.Info(errorMessage);
                          // If we cannot read the international parameters default to US with a / delimiter.
-                         // throw new Exception(errorMessage);
+                         // throw new ColleagueWebApiException(errorMessage);
                          Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                          newIntlParams.HostShortDateFormat = "MDY";
                          newIntlParams.HostDateDelimiter = "/";
@@ -113,6 +115,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     tests = BuildTestResults(studentNonCoursesData);
                 }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while fetching test results");
+                throw;
             }
             catch (Exception ex)
             {

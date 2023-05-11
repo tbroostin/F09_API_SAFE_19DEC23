@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -24,6 +24,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -63,21 +64,35 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>All <see cref="Dtos.Base.Room">Room building codes, codes, and descriptions.</see></returns>
         public async Task<IEnumerable<Room>> GetRoomsAsync()
         {
-            var bypassCache = false;
-            if ((Request != null) && (Request.Headers.CacheControl != null))
+            try
             {
-                if (Request.Headers.CacheControl.NoCache)
+                var bypassCache = false;
+                if ((Request != null) && (Request.Headers.CacheControl != null))
                 {
-                    bypassCache = true;
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
                 }
+                var roomCollection = await _roomRepository.GetRoomsAsync(bypassCache);
+
+                // Get the right adapter for the type mapping
+                var roomDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.Room, Room>();
+
+                // Map the room entity to the program DTO
+                return roomCollection.Select(room => roomDtoAdapter.MapToType(room)).ToList();
             }
-            var roomCollection = await _roomRepository.GetRoomsAsync(bypassCache);
-
-            // Get the right adapter for the type mapping
-            var roomDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.Room, Room>();
-
-            // Map the room entity to the program DTO
-            return roomCollection.Select(room => roomDtoAdapter.MapToType(room)).ToList();
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -87,6 +102,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>All <see cref="Dtos.Room3">Rooms.</see></returns>
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, EedmResponseFilter]
         public async Task<IHttpActionResult> GetHedmRooms3Async(Paging page)
         {
             var bypassCache = false;
@@ -135,6 +151,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Room3))]
+        [HttpGet, EedmResponseFilter]
         public async Task<IHttpActionResult> GetHedmRooms4Async(Paging page, QueryStringFilter criteria)
         {
             string building = string.Empty;
@@ -199,6 +216,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a room by Id.
         /// </summary>
         /// <returns>A <see cref="Dtos.Room3">Room.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Room3> GetHedmRoomById2Async(string id)
         {
             var bypassCache = false;
@@ -667,6 +685,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 && (request.Recurrence.TimePeriod.StartOn == DateTimeOffset.MinValue))
                 throw new ArgumentNullException("RoomsAvailabilityRequest.Recurrence.TimePeriod",
                     "Must provide a start date");
+            if ((request.Recurrence.TimePeriod != null)
+            && (request.Recurrence.TimePeriod.EndOn == null))
+                throw new ArgumentNullException("RoomsAvailabilityRequest.Recurrence.TimePeriod",
+                    "Must provide an endOn");
             if ((request.Recurrence.TimePeriod.EndOn != DateTimeOffset.MinValue)
                 && (request.Recurrence.TimePeriod.StartOn > request.Recurrence.TimePeriod.EndOn))
                 throw new ArgumentNullException("RoomsAvailabilityRequest.Recurrence.TimePeriod",

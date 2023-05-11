@@ -1,4 +1,4 @@
-﻿/*Copyright 2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2021-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
@@ -12,6 +12,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public List<string> excludeIds;
         public int? leaveRequestLookbackDays;
         public LeaveBalanceConfiguration configuration;
+        public LeaveRequestActionType leaveRequestActionType;
+        public bool allowSupervisorToEditLeaveRequests;
 
         [TestInitialize]
         public void Initialize()
@@ -31,6 +33,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.IsNotNull(configuration.ExcludedLeavePlanIds);
             Assert.IsFalse(configuration.ExcludedLeavePlanIds.Any());
             Assert.IsNull(configuration.LeaveRequestLookbackDays);
+            Assert.IsNotNull(configuration.LeaveRequestActionType);
+            Assert.IsFalse(configuration.AllowSupervisorToEditLeaveRequests);
         }
 
         [TestMethod]
@@ -47,6 +51,22 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             leaveRequestLookbackDays = 5;
             configuration.LeaveRequestLookbackDays = leaveRequestLookbackDays;
             Assert.AreEqual(leaveRequestLookbackDays, configuration.LeaveRequestLookbackDays);
+        }
+
+        [TestMethod]
+        public void LeaveRequestActionType_GetSetTest()
+        {
+            leaveRequestActionType = LeaveRequestActionType.A;
+            configuration.LeaveRequestActionType = leaveRequestActionType;
+            Assert.AreEqual(leaveRequestActionType, configuration.LeaveRequestActionType);
+        }
+
+        [TestMethod]
+        public void AllowSupervisorToEditLeaveRequests_GetSetTest()
+        {
+            allowSupervisorToEditLeaveRequests = false;
+            configuration.AllowSupervisorToEditLeaveRequests = allowSupervisorToEditLeaveRequests;
+            Assert.AreEqual(allowSupervisorToEditLeaveRequests, configuration.AllowSupervisorToEditLeaveRequests);
         }
     }
 }

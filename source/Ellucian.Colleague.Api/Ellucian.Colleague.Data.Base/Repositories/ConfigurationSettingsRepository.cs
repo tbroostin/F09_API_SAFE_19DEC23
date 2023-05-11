@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -24,8 +24,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class ConfigurationSettingsRepository : BaseColleagueRepository, IConfigurationSettingsRepository
     {
-        public RepositoryException exception = new RepositoryException();
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private RepositoryException exception = new RepositoryException();
+        // public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
 
         public ConfigurationSettingsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)

@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 namespace Ellucian.Colleague.Dtos.Base
 {
     /// <summary>
@@ -14,5 +14,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// User-readable phone type description
         /// </summary>
         public string Description { get; set; }
+        
+        /// <summary>
+        /// Phone number is associated to the person rather than a person's address (i.e. cell phone). These types of phones can be authorized for text messages.
+        /// </summary>
+        public bool IsPersonalType { get; set; }
     }
 }

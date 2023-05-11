@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Finance;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Dtos.Finance.AccountActivity;
 using Ellucian.Colleague.Dtos.Finance.AccountDue;
 using Ellucian.Colleague.Dtos.Finance.Configuration;
 using Ellucian.Colleague.Dtos.Finance.Payments;
+using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Utility;
 using Newtonsoft.Json;
 using System;
@@ -71,19 +72,32 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>A DetailedAccountPeriod DTO</returns>
         public DetailedAccountPeriod GetAccountActivityByTermForStudent2(string termId, string personId)
         {
-            var baseUrl = UrlUtility.CombineUrlPath(_accountActivityByTermForStudentPath, personId);
-            var queryString = UrlUtility.BuildEncodedQueryString("TermId", termId);
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_accountActivityByTermForStudentPath, personId);
+                var queryString = UrlUtility.BuildEncodedQueryString("TermId", termId);
 
-            var combinedUrl = UrlUtility.CombineUrlPathAndArguments(baseUrl, queryString);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(baseUrl, queryString);
 
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
 
-            var response = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
+                var response = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
 
-            var activity = JsonConvert.DeserializeObject<DetailedAccountPeriod>(response.Content.ReadAsStringAsync().Result);
+                var activity = JsonConvert.DeserializeObject<DetailedAccountPeriod>(response.Content.ReadAsStringAsync().Result);
 
-            return activity;
+                return activity;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -165,6 +179,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<StudentAwardDisbursementInfo>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve student award disbursement data.");
@@ -202,6 +221,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PotentialD7FinancialAid>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
@@ -220,17 +244,30 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>An AccountDue DTO</returns>
         public AccountDue GetPaymentsDueByTermForStudent(string personId)
         {
-            var baseUrl = UrlUtility.CombineUrlPath(_getPaymentsDueByTermForStudentPath, personId);
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_getPaymentsDueByTermForStudentPath, personId);
 
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
-            var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
+                var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
-            var paymentsDue = JsonConvert.DeserializeObject<AccountDue>(responseString.Content.ReadAsStringAsync().Result);
+                var paymentsDue = JsonConvert.DeserializeObject<AccountDue>(responseString.Content.ReadAsStringAsync().Result);
 
-            return paymentsDue;
+                return paymentsDue;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve student award disbursement data.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -240,17 +277,31 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>An AccountDuePeriod DTO</returns>
         public AccountDuePeriod GetPaymentsDueByPeriodForStudent(string personId)
         {
-            var baseUrl = UrlUtility.CombineUrlPath(_paymentsDueByPeriodForStudentPath, personId);
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_paymentsDueByPeriodForStudentPath, personId);
 
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
-            var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
+                var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
-            var paymentsDue = JsonConvert.DeserializeObject<AccountDuePeriod>(responseString.Content.ReadAsStringAsync().Result);
+                var paymentsDue = JsonConvert.DeserializeObject<AccountDuePeriod>(responseString.Content.ReadAsStringAsync().Result);
 
-            return paymentsDue;
+                return paymentsDue;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw;
+            }
         }
 
         #endregion
@@ -285,6 +336,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = JsonConvert.DeserializeObject<AccountHolder>(responseString.Content.ReadAsStringAsync().Result);
 
                 return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -358,7 +414,7 @@ namespace Ellucian.Colleague.Api.Client
             if (string.IsNullOrEmpty(criteria))
             {
                 throw new ArgumentNullException("criteria", "criteria is required for accountholder retrieval.");
-            }            
+            }
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _receivablesPath, "account-holder");
@@ -483,6 +539,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return response;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while requesting invoices.");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -550,6 +611,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<IEnumerable<InvoicePayment>>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while requesting InvoicePayment objects.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get requested InvoicePayment objects");
@@ -615,6 +681,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<PaymentPlanEligibility>(await responseString.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -643,6 +714,11 @@ namespace Ellucian.Colleague.Api.Client
                 return response;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get charge codes.");
@@ -661,12 +737,25 @@ namespace Ellucian.Colleague.Api.Client
         public FinanceConfiguration GetConfiguration()
         {
             var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            try
+            {
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            var responseString = ExecuteGetRequestWithResponse(_configurationPath, headers: headers);
-            var configuration = JsonConvert.DeserializeObject<FinanceConfiguration>(responseString.Content.ReadAsStringAsync().Result);
+                var responseString = ExecuteGetRequestWithResponse(_configurationPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<FinanceConfiguration>(responseString.Content.ReadAsStringAsync().Result);
 
-            return configuration;
+                return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student finance configuration.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student finance configuration.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -744,16 +833,24 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>An ElectronicCheckProcessingResult</returns>
         public ElectronicCheckProcessingResult ProcessElectronicCheck(Payment paymentDetails)
         {
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
-            var responseString = ExecutePostRequestWithResponse(paymentDetails, _electronicCheckPaymentPath, headers: headers);
+                var responseString = ExecutePostRequestWithResponse(paymentDetails, _electronicCheckPaymentPath, headers: headers);
 
-            var processingResult = JsonConvert.DeserializeObject<ElectronicCheckProcessingResult>(responseString.Content.ReadAsStringAsync().Result);
+                var processingResult = JsonConvert.DeserializeObject<ElectronicCheckProcessingResult>(responseString.Content.ReadAsStringAsync().Result);
 
-            return processingResult;
+                return processingResult;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -763,18 +860,32 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>An ElectronicCheckPayer DTO</returns>
         public ElectronicCheckPayer GetCheckPayerInformation(string personId)
         {
-            var baseUrl = UrlUtility.CombineUrlPath(_electronicCheckPayerPath, personId);
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_electronicCheckPayerPath, personId);
 
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
-            var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
+                var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
-            var paymentRedirect = JsonConvert.DeserializeObject<ElectronicCheckPayer>(responseString.Content.ReadAsStringAsync().Result);
+                var paymentRedirect = JsonConvert.DeserializeObject<ElectronicCheckPayer>(responseString.Content.ReadAsStringAsync().Result);
 
-            return paymentRedirect;
+                return paymentRedirect;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -786,18 +897,32 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>A PaymentConfirmation DTO</returns>
         public PaymentConfirmation ConfirmStudentPayment(string selectedDistribution, string paymentMethodSelection, string totalAmountToPay)
         {
-            var queryString = UrlUtility.BuildEncodedQueryString("Distribution", selectedDistribution, "PaymentMethod", paymentMethodSelection, "AmountToPay", totalAmountToPay);
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("Distribution", selectedDistribution, "PaymentMethod", paymentMethodSelection, "AmountToPay", totalAmountToPay);
 
-            var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_confirmStudentPaymentPath, queryString);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_confirmStudentPaymentPath, queryString);
 
-            var headers = new NameValueCollection();
-            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
-            var responseString = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
+                var responseString = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
 
-            var confirmation = JsonConvert.DeserializeObject<PaymentConfirmation>(responseString.Content.ReadAsStringAsync().Result);
+                var confirmation = JsonConvert.DeserializeObject<PaymentConfirmation>(responseString.Content.ReadAsStringAsync().Result);
 
-            return confirmation;
+                return confirmation;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -857,6 +982,44 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get payment distributions.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<AvailablePaymentMethod> GetRestrictedPaymentMethodsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID is required.");
+            }
+
+            try
+            {
+                //var query = UrlUtility.BuildEncodedQueryString("studentId", studentId);
+                var urlPath = UrlUtility.CombineUrlPath(_restrictedPaymentsPath, studentId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var something = responseString.Content;
+                var response = JsonConvert.DeserializeObject<IEnumerable<AvailablePaymentMethod>>(responseString.Content.ReadAsStringAsync().Result);
+
+                return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
                 throw;
             }
         }
@@ -979,6 +1142,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = JsonConvert.DeserializeObject<PaymentPlanApproval>(responseString.Content.ReadAsStringAsync().Result);
 
                 return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1141,6 +1309,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 return JsonConvert.DeserializeObject<PaymentPlan>(await responseString.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1210,6 +1383,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = JsonConvert.DeserializeObject<IEnumerable<RegistrationPaymentControl>>(responseString.Content.ReadAsStringAsync().Result);
 
                 return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1320,6 +1498,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return response;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to accept registration terms.");
@@ -1351,6 +1534,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = JsonConvert.DeserializeObject<ImmediatePaymentOptions>(responseString.Content.ReadAsStringAsync().Result);
 
                 return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1430,6 +1618,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = JsonConvert.DeserializeObject<IEnumerable<Payment>>(responseString.Content.ReadAsStringAsync().Result);
 
                 return response;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1570,6 +1763,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return response;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get proposed payment plan.");
@@ -1585,7 +1783,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Get an student's accounts receivable report for the given timeframe
         /// </summary>
         /// <param name="accountHolderId">ID of the student for whom the statement will be generated</param>
-        /// <param name="timeframeId">ID of the timeframe for which the statement will be generated</param>
+        /// <param name="timeframeId">ID of the timeframe for which the statement will be generated. For example, for Spring 2022 term this would be 2022/SP</param>
         /// <param name="startDate">Date on which the supplied timeframe starts</param>
         /// <param name="endDate">Date on which the supplied timeframe ends</param>
         /// <param name="fileName">The name of the PDF file returned in the byte array.</param>

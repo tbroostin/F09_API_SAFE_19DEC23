@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +11,7 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             }
             if (studentAwardYears == null || !studentAwardYears.Any())
             {
-                logger.Info(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId));
+                logger.Debug(string.Format("Cannot get budget components for student {0} with no studentAwardYears", studentId));
                 return new List<StudentBudgetComponent>();
             }
 
@@ -69,8 +70,16 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             bool origAmtSuccess = false, overwriteAmtSuccess = false;
 
                             //Sometimes there can be less original or ovewrite amount values in the associated lists than component codes, skip if so
-                            try { origAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOrigAmts[i], out origAmt); } catch { /*just skip*/ }
-                            try { overwriteAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOvrAmts[i], out overwriteAmt); } catch { /*just skip*/ }
+                            try { origAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOrigAmts[i], out origAmt); }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get original amount.");
+                            }
+                            try { overwriteAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOvrAmts[i], out overwriteAmt); }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get overwrite amount.");
+                            }
 
                             try
                             {
@@ -92,6 +101,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             }
                         }
                     }
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch(Exception ex)
                 {

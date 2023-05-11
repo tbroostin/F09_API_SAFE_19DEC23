@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Category of Section Status
         /// </summary>
-        public SectionStatusIntegration Category;
+        public SectionStatusIntegration Category { get; set; }
 
         /// <summary>
         /// Section Status Integration

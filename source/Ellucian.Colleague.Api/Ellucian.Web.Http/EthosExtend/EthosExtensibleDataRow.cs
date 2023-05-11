@@ -21,9 +21,19 @@ namespace Ellucian.Web.Http.EthosExtend
         public string ColleagueFileName { get; set; }
 
         /// <summary>
+        /// Position of the Colleague field within the file, primarily used for keys.
+        /// </summary>
+        public int? ColleaguePropertyPosition { get; set; }
+
+        /// <summary>
         /// Length of the property in Colleague if it has any
         /// </summary>
         public int? ColleaguePropertyLength { get; set; }
+
+        /// <summary>
+        /// Indicates whether this field is required 
+        /// </summary>
+        public bool Required { get; set; }
 
         /// <summary>
         /// Title of the extended property in the Ethos json schema
@@ -49,8 +59,20 @@ namespace Ellucian.Web.Http.EthosExtend
         /// The actual data in the colleague field to return to the API call
         /// </summary>
         public string ExtendedDataValue { get; set; }
+
+        /// <summary>
+        /// Association Controller
+        /// </summary>
         public string AssociationController { get; set; }
+
+        /// <summary>
+        /// Database Usage Type
+        /// </summary>
         public string UsageType { get; set; }
+
+        /// <summary>
+        /// Translation Type
+        /// </summary>
         public string TransType { get; set; }
     }
 

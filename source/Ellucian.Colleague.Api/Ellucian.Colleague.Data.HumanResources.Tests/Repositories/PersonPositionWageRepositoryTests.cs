@@ -171,7 +171,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 inputPersonIds = new List<string>() { "foobar" };
                 var actual = await getActual();
                 Assert.IsFalse(actual.Any());
-                loggerMock.Verify(l => l.Info(It.Is<string>(s => s.Contains("foobar"))));
+                loggerMock.Verify(l => l.Error(It.Is<string>(s => s.Contains("foobar"))));
             }
 
             [TestMethod]

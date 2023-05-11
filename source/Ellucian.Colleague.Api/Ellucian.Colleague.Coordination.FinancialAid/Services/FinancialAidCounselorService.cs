@@ -101,7 +101,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 {
                     if (!counselor.IsActive)
                     {
-                        logger.Warn(string.Format("Counselor {0} is not a valid staff member", counselor.Id));
+                        logger.Debug(string.Format("Counselor {0} is not a valid staff member", counselor.Id));
                     }
                     else
                     {

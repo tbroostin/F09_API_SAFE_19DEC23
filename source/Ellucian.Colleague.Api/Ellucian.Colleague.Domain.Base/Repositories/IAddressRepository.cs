@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -112,6 +112,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="zipCodeIds">collection of zipCode ids</param>
         /// <returns>Dictionary consisting of a zipCodeIds (key) and guids (value)</returns>
         Task<Dictionary<string, string>> GetZipCodeGuidsCollectionAsync(IEnumerable<string> zipCodeIds);
- 
+
+        /// <summary>
+        /// Get the Preferred Address and Preferred Residence for a single Person
+        /// </summary>
+        /// <param name="personId">Person Key</param>
+        /// <returns>Address Objects for preferred address and preferred residence</returns>
+        Task<IEnumerable<Address>> GetPersonAddressesAsync(string personId);
     }
 }

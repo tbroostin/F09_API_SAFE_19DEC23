@@ -78,7 +78,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         {
             var actualsTuple =
                 await
-                    _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>());
+                    _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
 
             Assert.IsNotNull(actualsTuple);
 
@@ -100,7 +100,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         {
             var actualsTuple =
                 await
-                    _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>());
+                    _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
 
             Assert.IsNotNull(actualsTuple);
             int count = actualsTuple.Item1.Count();
@@ -126,8 +126,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
             };
             _contributionPayrollDeductionsEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.PayrollDeduction>, int>(_contributionPayrollDeductionsEntities, 0);
-            _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_contributionPayrollDeductionsEntityTuple);
-            var actualsTuple = await _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>());
+            _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(_contributionPayrollDeductionsEntityTuple);
+            var actualsTuple = await _contributionPayrollDeductionsService.GetContributionPayrollDeductionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
 
             Assert.AreEqual(0, actualsTuple.Item1.Count());
         }
@@ -185,7 +185,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             };
             _contributionPayrollDeductionsEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.PayrollDeduction>, int>(_contributionPayrollDeductionsEntities, _contributionPayrollDeductionsEntities.Count());
-            _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_contributionPayrollDeductionsEntityTuple);
+            _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(_contributionPayrollDeductionsEntityTuple);
             _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionByGuidAsync(It.IsAny<string>())).ReturnsAsync(_contributionPayrollDeductionsEntities.ToList()[0]);
 
             var personGuidCollection = new Dictionary<string, string>();

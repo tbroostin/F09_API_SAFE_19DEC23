@@ -121,6 +121,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                     //else set end date to the day before next start date
                     addressSortedPayableDeposits[i].EndDate = addressSortedPayableDeposits[i + 1].StartDate.AddDays(-1);
                 }
+                //When account is active, end date is null. If we deactivate an account, we give it an end date so that it appears under Past Deposits
+                if(addressSortedPayableDeposits[i+1].EndDate == null && !addressSortedPayableDeposits[i+1].IsElectronicPaymentRequested)
+                {
+                    addressSortedPayableDeposits[i+1].EndDate = addressSortedPayableDeposits[i + 1].Timestamp.ChangeDateTime.DateTime;
+                }
             }
         }
 

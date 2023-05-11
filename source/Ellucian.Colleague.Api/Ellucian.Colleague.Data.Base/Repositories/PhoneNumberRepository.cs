@@ -1,11 +1,13 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -17,7 +19,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class PhoneNumberRepository : BaseColleagueRepository, IPhoneNumberRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public PhoneNumberRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -30,18 +32,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <param name="personId">Person Key</param>
         /// <returns>PhoneNumber Objects for a person</returns>
-        public PhoneNumber GetPersonPhones(string personId)
+        public async Task<PhoneNumber> GetPersonPhonesAsync(string personId)
         {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person Id is required to retrieve the person's phone numbers.");
+            }
             PhoneNumber phoneNumber = new PhoneNumber(personId);
 
-            Ellucian.Colleague.Data.Base.DataContracts.Person person = DataReader.ReadRecord<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personId);
+            Ellucian.Colleague.Data.Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personId);
             if (person == null)
             {
                 throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning any data. Person may be corrupted.");
             }
             string[] addressIds = person.PersonAddresses.ToArray();
-            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = DataReader.BulkReadRecord<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
-            
+            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
+
             if (addressesData == null)
             {
                 throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning address data.  Person or Address may be corrupted.");
@@ -51,9 +57,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 phoneNumber = BuildPhones(addressesData, person);
             }
-            catch (Exception)
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving phone number.");
+                throw;
+            }
+            catch (Exception ex)
             {
                 /// Don't do anything, just skip this address
+                logger.Error(ex.Message, "Unable to build phone number.");
             }
 
             return phoneNumber;
@@ -98,7 +110,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
             }
             if (error && phoneNumbers.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No phone number records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No phone number records returned. Check API error log.");
 
             return phoneNumbers;
         }
@@ -123,7 +135,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         catch (Exception ex)
                         {
                             logger.Error(ex.Message);
-                            //LogDataError("Person personal phone information", personId, phoneData, ex);
+                            
                         }
                     }
                 }
@@ -297,14 +309,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     catch (Exception e)
                     {
                         /// Just skip this person's phone number and log it.
-                        //LogDataError("PERSON", personId, person, e, string.Format("Failed to build phone number.  Person ID {0}", personId));
                         logger.Error(e.Message);
                         error = true;
                     }
                 }
             }
             if (error && phoneNumbers.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No phone number records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No phone number records returned. Check API error log.");
 
             return pilotPhoneNumbers;
         }

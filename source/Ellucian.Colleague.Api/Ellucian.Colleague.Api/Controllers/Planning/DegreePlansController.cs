@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -81,6 +82,13 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _degreePlanService.QueryCurriculumTracksForStudentByProgramAsync(criteria);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message ="Session has expired while querying curriculum tracks";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (ArgumentOutOfRangeException aoure)
             {
                 var exceptionMsg = "No curriculum tracks found for this program.";
@@ -668,8 +676,14 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             DegreePlanPreview7 degreePlanPreviewDto;
             try
-            {
+            { 
                 degreePlanPreviewDto = await _degreePlanService.PreviewSampleDegreePlan8Async(degreePlanId, curriculumTrackCode, firstTermCode, programCode);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while previewing sample degree plan";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentOutOfRangeException aoure)
             {
@@ -899,6 +913,13 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return degreePlanArchive;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving archived plans";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -972,6 +993,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     throw new NotSupportedException();
                 }
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving archived plan";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (NotSupportedException)
             {

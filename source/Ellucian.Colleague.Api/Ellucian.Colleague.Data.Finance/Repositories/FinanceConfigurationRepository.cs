@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,16 +18,21 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
     [RegisterType]
     public class FinanceConfigurationRepository : BaseColleagueRepository, IFinanceConfigurationRepository
     {
-        public FinanceConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
+        private readonly string _colleagueTimeZone;
+
+        public FinanceConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
             CacheTimeout = Level1CacheTimeoutValue;
+            _colleagueTimeZone = settings.ColleagueTimeZone;
         }
 
         /// <summary>
@@ -36,8 +41,23 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// <returns>Financial configuration</returns>
         public FinanceConfiguration GetFinanceConfiguration()
         {
-            return GetOrAddToCache<FinanceConfiguration>("FinanceConfiguration",
-                () => { return BuildConfiguration(); });
+            try
+            {
+                return GetOrAddToCache<FinanceConfiguration>("FinanceConfiguration",
+                        () => { return BuildConfiguration(); });
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Timeout exception has occurred while retrieving student finance configuration.";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message = "Unable to get student finance configuration.";
+                logger.Error(ex, message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -100,93 +120,93 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// <returns>List of financial periods</returns>
         public IEnumerable<FinancialPeriod> GetFinancialPeriods()
         {
-            return GetOrAddToCache<List<FinancialPeriod>>("FinancialPeriods",
-                () =>
-                {
+                return GetOrAddToCache<List<FinancialPeriod>>("FinancialPeriods",
+                    () =>
+                    {
                     // Get the period info from Colleague
                     var response = transactionInvoker.Execute<TxGetCurrentPeriodDatesRequest, TxGetCurrentPeriodDatesResponse>(new TxGetCurrentPeriodDatesRequest());
 
-                    List<FinancialPeriod> periods = new List<FinancialPeriod>();
+                        List<FinancialPeriod> periods = new List<FinancialPeriod>();
                     // If dates were returned, build the periods
                     if (response.OutCurrentPeriodStartDate != null && response.OutCurrentPeriodEndDate != null)
-                    {
+                        {
                         // Build Past period
                         periods.Add(new FinancialPeriod(PeriodType.Past, null, (response.OutCurrentPeriodStartDate.Value.AddDays(-1.0))));
                         // Build Current period
                         periods.Add(new FinancialPeriod(PeriodType.Current, response.OutCurrentPeriodStartDate, response.OutCurrentPeriodEndDate));
                         // Build Future period
                         periods.Add(new FinancialPeriod(PeriodType.Future, response.OutCurrentPeriodEndDate.Value.AddDays(1.0), null));
-                    }
-                    return periods;
-                });
+                        }
+                        return periods;
+                    });
         }
 
         #region Private methods
 
         private SfDefaults GetSfDefaults()
         {
-            SfDefaults sfDefaults = DataReader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS");
-            if (sfDefaults == null)
-            {
-                // SF.DEFAULTS must exist for Student Finance to function properly
-                throw new ConfigurationException("Student Finance setup not complete.");
-            }
-            return sfDefaults;
+                SfDefaults sfDefaults = DataReader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS");
+                if (sfDefaults == null)
+                {
+                    // SF.DEFAULTS must exist for Student Finance to function properly
+                    throw new ConfigurationException("Student Finance setup not complete.");
+                }
+                return sfDefaults;
         }
 
         private Ellucian.Colleague.Data.Finance.DataContracts.StwebDefaults GetStwebDefaults()
         {
-            Ellucian.Colleague.Data.Finance.DataContracts.StwebDefaults stwebDefaults = DataReader.ReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-            if (stwebDefaults == null)
-            {
-                stwebDefaults = new DataContracts.StwebDefaults()
+                Ellucian.Colleague.Data.Finance.DataContracts.StwebDefaults stwebDefaults = DataReader.ReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                if (stwebDefaults == null)
                 {
-                    StwebEpmtImplFlag = String.Empty,
-                    StwebPartialPmtFlag = String.Empty
-                };
-            }
-            return stwebDefaults;
+                    stwebDefaults = new DataContracts.StwebDefaults()
+                    {
+                        StwebEpmtImplFlag = String.Empty,
+                        StwebPartialPmtFlag = String.Empty
+                    };
+                }
+                return stwebDefaults;
         }
 
         private PpwebDefaults GetPpwebDefaults()
         {
-            PpwebDefaults ppwebDefaults = DataReader.ReadRecord<PpwebDefaults>("ST.PARMS", "PPWEB.DEFAULTS");
-            if (ppwebDefaults == null)
-            {
-                ppwebDefaults = new PpwebDefaults()
+                PpwebDefaults ppwebDefaults = DataReader.ReadRecord<PpwebDefaults>("ST.PARMS", "PPWEB.DEFAULTS");
+                if (ppwebDefaults == null)
                 {
-                    PpwebPartialPmtInd = String.Empty
-                };
-            }
-            return ppwebDefaults;
+                    ppwebDefaults = new PpwebDefaults()
+                    {
+                        PpwebPartialPmtInd = String.Empty
+                    };
+                }
+                return ppwebDefaults;
         }
 
         private CrDefaults GetCrDefaults()
         {
-            CrDefaults crDefaults = DataReader.ReadRecord<CrDefaults>("ST.PARMS", "CR.DEFAULTS");
-            if (crDefaults == null)
-            {
-                crDefaults = new CrDefaults()
+                CrDefaults crDefaults = DataReader.ReadRecord<CrDefaults>("ST.PARMS", "CR.DEFAULTS");
+                if (crDefaults == null)
                 {
-                    CrdGuaranteedChecks = String.Empty
-                };
-            }
-            return crDefaults;
+                    crDefaults = new CrDefaults()
+                    {
+                        CrdGuaranteedChecks = String.Empty
+                    };
+                }
+                return crDefaults;
         }
 
         private SfPayPlanParameters GetSfPayPlanParameters()
         {
-            return DataReader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS");
+                return DataReader.ReadRecord<SfPayPlanParameters>("ST.PARMS", "SF.PAY.PLAN.PARAMETERS");
         }
 
         private IEnumerable<SfppRequirements> GetSfppRequirements()
         {
-            return DataReader.BulkReadRecord<SfppRequirements>("SFPP.REQUIREMENTS", "");
+                return DataReader.BulkReadRecord<SfppRequirements>("SFPP.REQUIREMENTS", "");
         }
 
         private IEnumerable<SfssLinks> GetSfssLinks()
         {
-            return DataReader.BulkReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.SfssLinks>("SFSS.LINKS", "").OrderBy(x => x.SfssLinkDisplayOrder);
+                return DataReader.BulkReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.SfssLinks>("SFSS.LINKS", "").OrderBy(x => x.SfssLinkDisplayOrder);
         }
 
         private FinanceConfiguration BuildConfiguration()
@@ -308,6 +328,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             }
 
             configuration.DisplayPotentialD7Amounts = String.IsNullOrEmpty(sfDefaults.SfEnableD7CalcFlag) ? false : sfDefaults.SfEnableD7CalcFlag == "Y";
+            configuration.ColleagueTimezone = _colleagueTimeZone;
 
             return configuration;
         }
@@ -322,32 +343,32 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 criteria += (" WITH PMTH.OFFICE.CODES EQ '' '" + officeCode + "'");
             }
-            Collection<PaymentMethods> payMethods = DataReader.BulkReadRecord<PaymentMethods>("PAYMENT.METHOD", criteria);
+                Collection<PaymentMethods> payMethods = DataReader.BulkReadRecord<PaymentMethods>("PAYMENT.METHOD", criteria);
 
-            var paymentMethods = from p in payMethods
-                                 orderby p.PmthDescription
-                                 select new AvailablePaymentMethod()
-                                 {
-                                     InternalCode = p.Recordkey,
-                                     Description = p.PmthDescription,
-                                     Type = p.PmthCategory
-                                 };
+                var paymentMethods = from p in payMethods
+                                     orderby p.PmthDescription
+                                     select new AvailablePaymentMethod()
+                                     {
+                                         InternalCode = p.Recordkey,
+                                         Description = p.PmthDescription,
+                                         Type = p.PmthCategory
+                                     };
 
-            return paymentMethods;
+                return paymentMethods;
         }
 
         private string GetMiscText(string miscTextId)
         {
-            string text = String.Empty;
-            if (!string.IsNullOrEmpty(miscTextId))
-            {
-                MiscText miscText = DataReader.ReadRecord<MiscText>("MISC.TEXT", miscTextId);
-                if (miscText != null)
+                string text = String.Empty;
+                if (!string.IsNullOrEmpty(miscTextId))
                 {
-                    text = miscText.MtxtText.Replace(DmiString._VM, ' ');
+                    MiscText miscText = DataReader.ReadRecord<MiscText>("MISC.TEXT", miscTextId);
+                    if (miscText != null)
+                    {
+                        text = miscText.MtxtText.Replace(DmiString._VM, ' ');
+                    }
                 }
-            }
-            return text;
+                return text;
         }
 
         private PaymentRequirement BuildPaymentRequirement(SfppRequirements sfppRequirement)

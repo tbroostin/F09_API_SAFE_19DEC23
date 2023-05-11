@@ -267,9 +267,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     personExternalEducationEntityId = await _institutionsAttendRepository.GetInstitutionsAttendIdFromGuidAsync(personExternalEducation.Id);
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     //do a create instead...
+                    logger.Error(ex.Message, "Error retrieving institutions attend.");
                 }
             }
 

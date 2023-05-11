@@ -222,9 +222,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     }
                     
                 }
-                catch (RepositoryException)
+                catch (RepositoryException rex)
                 {
                     // No existing deduction, perform a create instead.
+                    _logger.Error(rex, "Unable to get existing deduction.");
                 }
 
                 if (originalDto != null)

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +13,7 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -49,7 +50,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         AddressTypesController addressTypeController;
         IEnumerable<Ellucian.Colleague.Domain.Base.Entities.AddressType2> addressTypeEntityItems;
 
-        //List<Ellucian.Colleague.Dtos.Base> emailTypeDtoBaseItems = new List<Ellucian.Colleague.Dtos.Base.EmailType>();
         List<Ellucian.Colleague.Dtos.AddressType2> addressTypeDtoItems = new List<Ellucian.Colleague.Dtos.AddressType2>();
 
         [TestInitialize]
@@ -68,7 +68,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             foreach (var addressItem in addressTypeEntityItems)
             {
                 addressTypeDtoItems.Add(new AddressType2() { Id = addressItem.Guid, Code = addressItem.Code, Description = addressItem.Description, Title = addressItem.Description });
-                //emailTypeDtoBaseItems.Add(new Dtos.Base.EmailType() { Code = addressItem.Code, Description = addressItem.Description });
             }
 
             addressTypeController = new AddressTypesController(adapterRegistryMock.Object, addressTypeServiceMock.Object, loggerMock.Object);
@@ -80,7 +79,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [TestCleanup]
         public void Cleanup()
         {
-            //emailTypeDtoBaseItems = null;
             addressTypeEntityItems = null;
             addressTypeDtoItems = null;
             addressTypeController = null;
@@ -127,6 +125,26 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             addressTypeServiceMock.Setup(x => x.GetAddressTypesAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
             //Act
             var result = await addressTypeController.GetAddressTypesAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressTypesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                addressTypeServiceMock.Setup(x => x.GetAddressTypesAsync(It.IsAny<bool>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await addressTypeController.GetAddressTypesAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
+            catch (System.Exception e)
+            {
+                throw e;
+            }
         }
 
         [TestMethod]

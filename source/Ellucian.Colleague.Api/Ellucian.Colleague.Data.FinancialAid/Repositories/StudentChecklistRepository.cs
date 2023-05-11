@@ -180,7 +180,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
                 catch (Exception e)
                 {
-                    logger.Warn(e, string.Format("Unable to get student checklist for studentId {0}, awardYear {1}", studentId, year));
+                    logger.Debug(e, string.Format("Unable to get student checklist for studentId {0}, awardYear {1}", studentId, year));
                 }
             }
 

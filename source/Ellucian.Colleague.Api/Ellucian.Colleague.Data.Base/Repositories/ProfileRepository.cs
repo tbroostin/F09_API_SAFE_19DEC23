@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +10,12 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
@@ -66,7 +68,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access ADREL.TYPES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return relationshipTable;
                 }, Level1CacheTimeoutValue);
@@ -83,7 +85,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access PHONE.TYPES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return phoneTypesTable;
                 }, Level1CacheTimeoutValue);
@@ -106,66 +108,79 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (string.IsNullOrEmpty(personId))
                 throw new ArgumentNullException("personId", "Must provide a personId to get a record.");
 
-            Domain.Base.Entities.Profile profileEntity = await GetBaseAsync<Domain.Base.Entities.Profile>(personId,
-                 person =>
-                 {
-                     Domain.Base.Entities.Profile entity = new Domain.Base.Entities.Profile(person.Recordkey, person.LastName);
-                     return entity;
-                 },
-                 useCache);
-
-            // Always pass "true" to retrieve from the person Cache since we just got the person contract above.
-            // But follow the useCache argument for address information, which has not yet been retrieved.
-            var addresses = await GetPersonAddressesAsync(personId, true, useCache);
-            if (addresses != null)
+            try
             {
-                foreach (var address in addresses)
-                {
-                    profileEntity.AddAddress(address);
-                }
-            }
+                Domain.Base.Entities.Profile profileEntity = await GetBaseAsync<Domain.Base.Entities.Profile>(personId,
+                         person =>
+                         {
+                             Domain.Base.Entities.Profile entity = new Domain.Base.Entities.Profile(person.Recordkey, person.LastName);
+                             return entity;
+                         },
+                         useCache);
 
-            // Always pass "true" to retrieve from the person Cache and address cache since we just got both the person and address above.
-            var phones = await GetPersonPhonesAsync(personId, true, true);
-            if (phones != null && phones.PhoneNumbers != null)
+                // Always pass "true" to retrieve from the person Cache since we just got the person contract above.
+                // But follow the useCache argument for address information, which has not yet been retrieved.
+                var addresses = await GetPersonAddressesAsync(personId, true, useCache);
+                if (addresses != null)
+                {
+                    foreach (var address in addresses)
+                    {
+                        profileEntity.AddAddress(address);
+                    }
+                }
+
+                // Always pass "true" to retrieve from the person Cache and address cache since we just got both the person and address above.
+                var phones = await GetPersonPhonesAsync(personId, true, true);
+                if (phones != null && phones.PhoneNumbers != null)
+                {
+                    foreach (var phone in phones.PhoneNumbers)
+                    {
+                        profileEntity.AddPhone(phone);
+                    }
+                }
+
+                var personConfirmations = await GetPersonConfirmationsAsync(personId);
+                if (personConfirmations != null)
+                {
+                    // If there's a time present, combine it with the date, otherwise just use the date
+                    if (personConfirmations.ConfAddressesConfirmTime != null)
+                    {
+                        profileEntity.AddressConfirmationDateTime = personConfirmations.ConfAddressesConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfAddressesConfirmDate, _colleagueTimeZone);
+                    }
+                    else
+                    {
+                        profileEntity.AddressConfirmationDateTime = personConfirmations.ConfAddressesConfirmDate;
+                    }
+                    if (personConfirmations.ConfEmailsConfirmTime != null)
+                    {
+                        profileEntity.EmailAddressConfirmationDateTime = personConfirmations.ConfEmailsConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfEmailsConfirmDate, _colleagueTimeZone);
+                    }
+                    else
+                    {
+                        profileEntity.EmailAddressConfirmationDateTime = personConfirmations.ConfEmailsConfirmDate;
+                    }
+                    if (personConfirmations.ConfPhonesConfirmTime != null)
+                    {
+                        profileEntity.PhoneConfirmationDateTime = personConfirmations.ConfPhonesConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfPhonesConfirmDate, _colleagueTimeZone);
+                    }
+                    else
+                    {
+                        profileEntity.PhoneConfirmationDateTime = personConfirmations.ConfPhonesConfirmDate;
+                    }
+                }
+
+                return profileEntity;
+            }
+            catch (ColleagueSessionExpiredException csee)
             {
-                foreach (var phone in phones.PhoneNumbers)
-                {
-                    profileEntity.AddPhone(phone);
-                }
+                logger.Error(csee, "Colleague session expired while retrieving person profile information.");
+                throw;
             }
-
-            var personConfirmations = await GetPersonConfirmationsAsync(personId);
-            if (personConfirmations != null)
+            catch (Exception ex)
             {
-                // If there's a time present, combine it with the date, otherwise just use the date
-                if (personConfirmations.ConfAddressesConfirmTime != null)
-                {
-                    profileEntity.AddressConfirmationDateTime = personConfirmations.ConfAddressesConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfAddressesConfirmDate, _colleagueTimeZone);
-                }
-                else
-                {
-                    profileEntity.AddressConfirmationDateTime = personConfirmations.ConfAddressesConfirmDate;
-                }
-                if (personConfirmations.ConfEmailsConfirmTime != null)
-                {
-                    profileEntity.EmailAddressConfirmationDateTime = personConfirmations.ConfEmailsConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfEmailsConfirmDate, _colleagueTimeZone);
-                }
-                else
-                {
-                    profileEntity.EmailAddressConfirmationDateTime = personConfirmations.ConfEmailsConfirmDate;
-                }
-                if (personConfirmations.ConfPhonesConfirmTime != null)
-                {
-                    profileEntity.PhoneConfirmationDateTime = personConfirmations.ConfPhonesConfirmTime.ToPointInTimeDateTimeOffset(personConfirmations.ConfPhonesConfirmDate, _colleagueTimeZone);
-                }
-                else
-                {
-                    profileEntity.PhoneConfirmationDateTime = personConfirmations.ConfPhonesConfirmDate;
-                }
+                logger.Error(ex, "Exception occured while getting person profile information.");
+                throw;
             }
-
-            return profileEntity;
         }
 
         /// <summary>
@@ -276,8 +291,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         AlPersonalPhoneNumbers = phone.Number,
                         AlPersonalPhoneExtensions = phone.Extension,
-                        AlPersonalPhoneTypes = phone.TypeCode
-
+                        AlPersonalPhoneTypes = phone.TypeCode,
+                        AlPersonalPhoneTextAuth = phone.IsAuthorizedForText == true ? "Y" : phone.IsAuthorizedForText == false ?  "N" : string.Empty
                     });
                 }
             }
@@ -522,7 +537,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         try
                         {
-                            Phone personalPhone = new Phone(phoneData.PersonalPhoneNumberAssocMember, phoneData.PersonalPhoneTypeAssocMember, phoneData.PersonalPhoneExtensionAssocMember);
+                            bool? isAuthorizedForText = null;
+                            if (!String.IsNullOrEmpty(phoneData.PersonalPhoneTextAuthAssocMember))
+                            {
+                                if (string.Equals(phoneData.PersonalPhoneTextAuthAssocMember, "Y", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    isAuthorizedForText = true;
+                                }
+                                else
+                                {
+                                    isAuthorizedForText = false;
+                                }
+
+                            }
+                            Phone personalPhone = new Phone(phoneData.PersonalPhoneNumberAssocMember, phoneData.PersonalPhoneTypeAssocMember, phoneData.PersonalPhoneExtensionAssocMember, isAuthorizedForText);
                             phoneNumber.AddPhone(personalPhone);
                         }
                         catch (Exception ex)

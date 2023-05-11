@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 //using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -129,7 +130,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 catch (Exception ex)
                 {
                     // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
-                    // we process the list of room assignments                
+                    // we process the list of room assignments   
+                    logger.Error(ex, "Unable to get guid for room preference.");
                 }
                 if (dict == null || !dict.Any())
                 {
@@ -690,7 +692,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", "ROOM.ASSIGNMENT"), ex);
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "ROOM.ASSIGNMENT"), ex);
             }
 
             return guidCollection;

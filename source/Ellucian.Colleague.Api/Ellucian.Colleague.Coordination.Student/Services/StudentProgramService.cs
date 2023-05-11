@@ -1,9 +1,11 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Dtos.Student.Requirements;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -20,19 +22,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly IStudentProgramRepository _studentProgramRepository;
         private readonly IStudentRepository _studentRepository;
+        private readonly IApplicantRepository _applicantRepository;
         private readonly ITermRepository _termRepository;
         private ILogger _logger;
         private IEnumerable<Term> termList;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IRequirementRepository _requirementRepository;
 
-        public StudentProgramService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IStudentProgramRepository studentProgramRepository, ITermRepository termRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository)
+        public StudentProgramService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IApplicantRepository applicantRepository, IStudentProgramRepository studentProgramRepository, ITermRepository termRepository, IRequirementRepository requirementRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _studentProgramRepository = studentProgramRepository;
             _studentRepository = studentRepository;
+            _applicantRepository = applicantRepository;
             _logger = logger;
             _termRepository = termRepository;
             _configurationRepository = configurationRepository;
+            _requirementRepository = requirementRepository;
         }
 
         /// <summary>
@@ -85,6 +91,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var programDto = studentProgramDtoAdapter.MapToType(studentProgram);
 
                     studentProgramDto.Add(programDto);
+                }
+                catch (ColleagueSessionExpiredException ce)
+                {
+                    string message = "Colleague session expired while retrieving student academic program data.";
+                    logger.Error(ce, message);
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -184,7 +196,64 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             programDto = studentProgramDtoAdapter.MapToType(studentProgram);
             return programDto;
         }
+        /// <summary>
+        /// Retrieve STUDENT.PROGRAMS for an applicant
+        /// Include Inactive programs flag works in conjunctions with currentOnly flag such as:
+        /// when includeInactivePrograms is set to true then only those inactive programs that are not yet ended will be included if currentOnly flag is true otherwise all inactive programs will be included.
+        /// when includeInactivePrograms is set to false but currentOnly is true then it means only those inactive programs will be included that are in past ended
+        /// </summary>
+        /// <param name="applicantId"></param>
+        ///  <param name="includeInactivePrograms">Include Inactive programs</param>
+        /// <param name="currentOnly">Include programs that are not ended yet or end date is in future</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Dtos.Student.ApplicantStudentProgram>> GetApplicantProgramsAsync(string applicantId,bool includeInactivePrograms=false,  bool currentOnly = true)
+        {
+            if (string.IsNullOrEmpty(applicantId))
+            {
+                throw new ArgumentNullException("applicantId", "applicantId must be provided in order to retrieve student's programs");
+            }
+            //user should be self
+            if (!UserIsSelf(applicantId))
+            {
+                var error = "User " + CurrentUser.PersonId + " does not match given applicant ID " + applicantId + " and cannot retrieve programs.";
+                logger.Error(error);
+                throw new PermissionsException(error);
+            }
+            // validate user should be an applicant
+            Domain.Student.Entities.Applicant applicant;
+            applicant = await _applicantRepository.GetApplicantAsync(applicantId);
+            if (applicant == null)
+            {
+                throw new KeyNotFoundException("Applicant with ID " + applicantId + " not found in the repository.");
+            }
 
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentProgram> studentPrograms = await _studentProgramRepository.GetApplicantProgramsAsync(applicantId, includeInactivePrograms, currentOnly);
+
+
+            List<Dtos.Student.ApplicantStudentProgram> studentProgramDtos = new List<Dtos.Student.ApplicantStudentProgram>();
+
+            if (studentPrograms.Count() > 0)
+            {
+                var studentProgramDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentProgram, Dtos.Student.ApplicantStudentProgram>();
+                var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
+                foreach (var prog in studentPrograms)
+                {
+                    var studentProgramDto = studentProgramDtoAdapter.MapToType(prog);
+                    foreach (var additionalReq in studentProgramDto.AdditionalRequirements)
+                    {
+                        if (!String.IsNullOrEmpty(additionalReq.RequirementCode))
+                        {
+                            additionalReq.Requirement = requirementDtoAdapter.MapToType((await _requirementRepository.GetAsync(additionalReq.RequirementCode)));
+                        }
+                    }
+                    studentProgramDtos.Add(studentProgramDto);
+                }
+            }
+
+            return studentProgramDtos;
+
+
+        }
 
         /// <summary>
         /// Find a term for the Student Program Entity

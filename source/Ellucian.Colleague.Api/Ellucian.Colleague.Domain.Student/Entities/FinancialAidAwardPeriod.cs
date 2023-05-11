@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Status of financial aid award period
         /// </summary>
-        public string status;
+        public string status { get; set; }
         /// <summary>
         /// List of Terms associated to an award period.
         /// </summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -9,6 +9,7 @@ using slf4net;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Colleague.Data.Base.DataContracts;
@@ -16,6 +17,7 @@ using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -46,7 +48,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access STUDENT.PROGRAM.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -63,7 +65,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access EDUCATION.GOALS valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return educationGoalsTable;
                 }, Level1CacheTimeoutValue);
@@ -236,6 +238,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 await AddOrUpdateCacheAsync<Domain.Student.Entities.PlanningStudent>((PlanningStudentCache + student.Recordkey), planningStudentEntity, CacheTimeout);
                             }
                         }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             logger.Error(ex, string.Format("Unable to build PlanningStudent object for student {0}", student.Recordkey));
@@ -364,6 +370,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         hierarchy = await GetCachedNameAddressHierarchyAsync(planningDefaults.StwebDisplayNameHierarchy);
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         logger.Error(ex, "Unable to find name address hierarchy with ID " + planningDefaults.StwebDisplayNameHierarchy + ". Not calculating hierarchy name.");
@@ -398,9 +408,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             planningStudent.AddRegistrationPriority(stuRegPriorityId);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Don't bother logging if priority ID is null or this is a duplicate
+                            logger.Error(ex, "Priority ID is null or is a duplicatel.");
                         }
                     }
                 }
@@ -418,6 +428,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         // Translate to the external representation string
                         planningStudent.EducationalGoal = (await GetEducationalGoalsAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == currGoal).Select(v => v.ValExternalRepresentationAssocMember).FirstOrDefault();
                     }
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
@@ -30,6 +30,11 @@ namespace Ellucian.Colleague.Dtos.Planning
         /// Flag to identify the Advising by office configuration.
         /// </summary>
         public bool AdviseByOfficeFlag { get; set; }
+
+        /// <summary>
+        /// Flag to identify the Advising by Assignment configuration.
+        /// </summary>
+        public bool AdviseByAssignmentFlag { get; set; }
 
         /// <summary>
         /// List of Open office advisors

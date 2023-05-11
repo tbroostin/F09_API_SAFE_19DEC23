@@ -14,6 +14,7 @@ using System;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {

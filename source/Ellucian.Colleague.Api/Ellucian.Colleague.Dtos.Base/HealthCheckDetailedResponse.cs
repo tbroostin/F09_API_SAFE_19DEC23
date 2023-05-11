@@ -28,5 +28,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Array of validation operations performed for the health check
         /// </summary>
         public IEnumerable<HealthCheck> Checks { get; set; }
+
+        /// <summary>
+        /// The EACSS status for SaaS deployments
+        /// </summary>
+        public string EACSSResult { get; set; } = "<not evaluated>";
     }
 }

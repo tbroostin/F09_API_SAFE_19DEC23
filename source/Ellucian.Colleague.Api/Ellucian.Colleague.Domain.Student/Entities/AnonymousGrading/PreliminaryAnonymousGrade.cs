@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities.AnonymousGrading
@@ -18,6 +18,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.AnonymousGrading
         /// - (T)erm: a random grading ID assigned for a student for a specific academic term and academic level
         /// </remarks>
         public string AnonymousGradingId { get; private set; }
+        /// <summary>
+        /// Anonymous grading ID for MidTerm grades
+        /// </summary>
+        public string AnonymousMidTermGradingId { get; private set; }
 
         /// <summary>
         /// ID for the final grade for the preliminary anonymous grade
@@ -70,6 +74,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.AnonymousGrading
             CourseSectionId = courseSectionId;
             StudentCourseSectionId = studentCourseSectionId;
             FinalGradeExpirationDate = finalGradeExpirationDate;
+        }
+        //with midterm anonymous grading id
+        public PreliminaryAnonymousGrade(string anonymousGradingId, string anonymousMidTermGradingId,  string finalGradeId, string courseSectionId, string studentCourseSectionId, DateTime? finalGradeExpirationDate):this(anonymousGradingId, finalGradeId, courseSectionId,  studentCourseSectionId,  finalGradeExpirationDate)
+        {
+            this.AnonymousMidTermGradingId = anonymousMidTermGradingId;
         }
     }
 }

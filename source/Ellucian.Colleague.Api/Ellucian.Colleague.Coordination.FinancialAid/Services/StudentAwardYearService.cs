@@ -1,15 +1,17 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Collections.Generic;
+﻿//Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -72,8 +74,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYearDtoList = new List<Dtos.FinancialAid.StudentAwardYear>();
             if (activeStudentAwardYears == null || activeStudentAwardYears.Count() == 0)
             {
-                var message = string.Format("No active studentAwardYears are available");
-                logger.Info(message);
+                var message = string.Format("No active studentAwardYears are available for student {0}", studentId);
+                logger.Debug(message);
                 return studentAwardYearDtoList;
             }
 
@@ -106,25 +108,31 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
-            var allStudentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
-
-            var studentAwardYearDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAwardYear, Dtos.Student.StudentAwardYear2>();
-
-            var studentAwardYearDtoList = new List<Dtos.Student.StudentAwardYear2>();
-            if (allStudentAwardYears == null || allStudentAwardYears.Count() == 0)
+            try
             {
-                logger.Info("No studentAwardYears are available");
+                var allStudentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
+
+                var studentAwardYearDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAwardYear, Dtos.Student.StudentAwardYear2>();
+
+                var studentAwardYearDtoList = new List<Dtos.Student.StudentAwardYear2>();
+                if (allStudentAwardYears == null || allStudentAwardYears.Count() == 0)
+                {
+                    logger.Debug("No studentAwardYears are available for student {0}", studentId);
+                    return studentAwardYearDtoList;
+                }
+
+                foreach (var awardYearEntity in allStudentAwardYears)
+                {
+                    var awardYearDto = studentAwardYearDtoAdapter.MapToType(awardYearEntity);
+                    studentAwardYearDtoList.Add(awardYearDto);
+                }
+
                 return studentAwardYearDtoList;
             }
-
-            foreach (var awardYearEntity in allStudentAwardYears)
+            catch (ColleagueSessionExpiredException)
             {
-                var awardYearDto = studentAwardYearDtoAdapter.MapToType(awardYearEntity);
-                studentAwardYearDtoList.Add(awardYearDto);
+                throw;
             }
-
-            return studentAwardYearDtoList;
         }
 
         /// <summary>
@@ -177,16 +185,23 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new ArgumentNullException("awardYearCode cannot be null or empty");
             }
 
-            var studentAwardYearDto = (await GetStudentAwardYears2Async(studentId, getActiveYearsOnly)).FirstOrDefault(say => say.Code == awardYearCode);
-
-            if (studentAwardYearDto == null)
+            try
             {
-                var message = string.Format("No student award year exists for {0} for student {1}", awardYearCode, studentId);
-                logger.Error(message);
-                throw new KeyNotFoundException(message);
-            }
+                var studentAwardYearDto = (await GetStudentAwardYears2Async(studentId, getActiveYearsOnly)).FirstOrDefault(say => say.Code == awardYearCode);
 
-            return studentAwardYearDto;
+                if (studentAwardYearDto == null)
+                {
+                    var message = string.Format("No student award year exists for {0} for student {1}", awardYearCode, studentId);
+                    logger.Error(message);
+                    throw new KeyNotFoundException(message);
+                }
+
+                return studentAwardYearDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -223,7 +238,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 var message = string.Format("Null student award year object returned by repository update method for student {0} award year {1}", inputStudentAwardYearEntity.StudentId, studentAwardYear.Code);
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             var studentAwardYearEntityAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAwardYear, Dtos.FinancialAid.StudentAwardYear>();
@@ -256,18 +271,24 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             var studentAwardYearDtoToEntityAdapter = _adapterRegistry.GetAdapter<Dtos.Student.StudentAwardYear2, Domain.FinancialAid.Entities.StudentAwardYear>();
             var inputStudentAwardYearEntity = studentAwardYearDtoToEntityAdapter.MapToType(studentAwardYear);
-
-            var updatedStudentAwardYearEntity = await studentAwardYearRepository.UpdateStudentAwardYearAsync(inputStudentAwardYearEntity);
-
-            if (updatedStudentAwardYearEntity == null)
+            try
             {
-                var message = string.Format("Null student award year object returned by repository update method for student {0} award year {1}", inputStudentAwardYearEntity.StudentId, studentAwardYear.Code);
-                logger.Error(message);
-                throw new Exception(message);
-            }
+                var updatedStudentAwardYearEntity = await studentAwardYearRepository.UpdateStudentAwardYearAsync(inputStudentAwardYearEntity);
 
-            var studentAwardYearEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAwardYear, Dtos.Student.StudentAwardYear2>();
-            return studentAwardYearEntityToDtoAdapter.MapToType(updatedStudentAwardYearEntity);
+                if (updatedStudentAwardYearEntity == null)
+                {
+                    var message = string.Format("Null student award year object returned by repository update method for student {0} award year {1}", inputStudentAwardYearEntity.StudentId, studentAwardYear.Code);
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
+
+                var studentAwardYearEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAwardYear, Dtos.Student.StudentAwardYear2>();
+                return studentAwardYearEntityToDtoAdapter.MapToType(updatedStudentAwardYearEntity);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
     }
 }

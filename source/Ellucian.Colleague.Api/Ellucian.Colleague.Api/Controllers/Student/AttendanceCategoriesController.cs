@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -63,6 +64,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await _attendanceCategoriesService.GetAttendanceCategoriesAsync(bypassCache);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, "Session has expired while retrieving attendance categories");
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException e)
             {

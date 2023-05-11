@@ -26,6 +26,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Domain.Planning.Tests;
 using Ellucian.Colleague.Domain.Planning.Services;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 {
@@ -150,6 +151,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
         protected Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
         protected IProgramEvaluationService programEvaluationService;
         protected Mock<IProgramEvaluationService> programEvaluationServiceMock;
+        protected ICoursePlaceholderRepository coursePlaceholderRepository;
+        protected Mock<ICoursePlaceholderRepository> coursePlaceholderRepositoryMock;
 
         protected IAcademicHistoryService academicHistoryService;
         protected Mock<IAcademicHistoryService> academicHistoryServiceMock;
@@ -159,6 +162,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 
         protected ILogger logger;
         protected ICurrentUserFactory currentUserFactory;
+
+        private List<CoursePlaceholder> coursePlaceholders;
 
 
         protected IAcademicCreditRepository academicCreditRepoInstance = new TestAcademicCreditRepository();
@@ -240,6 +245,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
             programEvaluationServiceMock = new Mock<IProgramEvaluationService>();
             programEvaluationService = programEvaluationServiceMock.Object;
+            coursePlaceholderRepositoryMock = new Mock<ICoursePlaceholderRepository>();
+            coursePlaceholderRepository = coursePlaceholderRepositoryMock.Object;
+
+            coursePlaceholders = new List<CoursePlaceholder>()
+            {
+                new CoursePlaceholder("CSPH1", "Placeholder 1", "Description 1", null, null, "3 to 5 credits", new Domain.Student.Entities.Requirements.AcademicRequirementGroup("REQ","SREQ","GRP")),
+                new CoursePlaceholder("CSPH2", "Placeholder 2", "Description 2", null, null, "4", null),
+            };
+            coursePlaceholderRepositoryMock.Setup(repo => repo.GetCoursePlaceholdersByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(coursePlaceholders);
 
             // Set up student 0000894 as the current user.
             currentUserFactory = new CurrentUserSetup.StudentUserFactory();
@@ -358,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -680,8 +694,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
-            }
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
+                }
 
             [TestCleanup]
             public void Cleanup()
@@ -765,7 +779,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan_StudentHasNoPrograms()
             {
                 var programCode = "MATH.BS.BLANKTAKEONE";
@@ -780,7 +794,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan_NoSamplePlanForProgramCode()
             {
                 var programCode = "MATH.BA";
@@ -867,7 +881,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -961,7 +975,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlanAsync_StudentHasNoPrograms()
             {
                 var programCode = "MATH.BS.BLANKTAKEONE";
@@ -978,7 +992,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlanAsync_NoSamplePlanForProgramCode()
             {
                 var programCode = "MATH.BA";
@@ -1084,7 +1098,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1169,7 +1183,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan3Async_StudentHasNoPrograms()
             {
                 var programCode = "MATH.BS.BLANKTAKEONE";
@@ -1184,7 +1198,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan3Async_NoSamplePlanForProgramCode()
             {
                 var programCode = "MATH.BA";
@@ -1282,7 +1296,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1329,7 +1343,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlan);
@@ -1359,7 +1373,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlans.First());
 
@@ -1446,7 +1460,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1507,7 +1521,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
 
@@ -1543,7 +1557,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlanEntity = degreePlans.First();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlanEntity);
@@ -1633,7 +1647,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1700,7 +1714,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
                 // Need to mock get cache for data verification while checking permissions
@@ -1739,7 +1753,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var degreePlanEntity = degreePlans.First();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlanEntity);
@@ -1805,7 +1819,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1842,7 +1856,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
 #pragma warning disable 618
                 var archives = await degreePlanService.GetDegreePlanArchivesAsync(degreePlan.Id);
@@ -1867,7 +1881,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
 #pragma warning disable 618
                 var archives = await degreePlanService.GetDegreePlanArchivesAsync(degreePlan.Id);
@@ -1930,7 +1944,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -1966,7 +1980,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var archives = await degreePlanService.GetDegreePlanArchives2Async(degreePlan.Id);
 
@@ -1990,7 +2004,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 var archives = await degreePlanService.GetDegreePlanArchives2Async(degreePlan.Id);
             }
@@ -2086,7 +2100,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, advisorRepo, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -2232,7 +2246,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -2339,7 +2353,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan4Async_StudentHasNoPrograms()
             {
                 var programCode = "MATH.BS.BLANKTAKEONE";
@@ -2353,7 +2367,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan4Async_NoSamplePlanForProgramCode()
             {
                 var programCode = "MATH.BA";
@@ -2470,7 +2484,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan6Async_StudentHasNoPrograms()
             {
                 var programCode = "MATH.BS.BLANKTAKEONE";
@@ -2484,7 +2498,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan6Async_NoSamplePlanForProgramCode()
             {
                 var programCode = "MATH.BA";
@@ -2727,7 +2741,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task PreviewSamplePlan7Async_NoSamplePlanForCurriculumTrack()
             {
                 var programCode = "MATH.BA";
@@ -2831,7 +2845,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]
@@ -3023,7 +3037,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
 
                 // Act--Apply sample degree plan
 #pragma warning disable 618
@@ -3602,7 +3616,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService, coursePlaceholderRepository);
             }
 
             [TestCleanup]

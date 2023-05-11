@@ -1,14 +1,12 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.using System;
+using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Data;
-using System.Text;
-using System.Xml.Serialization;
+using slf4net;
 using System.IO;
-using Ellucian.Colleague.Dtos.Planning;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
+using System.Linq;
+using System.Xml.Serialization;
 
 namespace Ellucian.Colleague.Coordination.Planning.Reports
 {
@@ -17,6 +15,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
     /// </summary>
     public class DegreePlanArchiveReport
     {
+        ILogger logger;
         /// <summary>
         /// A dataset that contains information about each archived course on the course plan archive.
         /// </summary>
@@ -35,7 +34,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                 }
                 else
                 {
-                    archivedCoursesToSerialize.Add(new Ellucian.Colleague.Coordination.Planning.ArchivedCourse() { Title = "No courses on this plan" });
+                    archivedCoursesToSerialize.Add(new ArchivedCourse() { Title = "No courses or course placeholders on this plan", CoursePlaceholderId = string.Empty });
                 }
                 xmlSerializer.Serialize(writer, archivedCoursesToSerialize);
                 StringReader reader = new StringReader(writer.ToString());
@@ -112,11 +111,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
         /// <summary>
         /// List of archived courses on this course plan archive  
         /// </summary>
-        public List<Ellucian.Colleague.Coordination.Planning.ArchivedCourse> ArchivedCourses { get; set; }
+        public List<ArchivedCourse> ArchivedCourses { get; set; }
         /// <summary>
         /// List of archived degree plan comments for this course plan archive
         /// </summary>
-        public List<Ellucian.Colleague.Coordination.Planning.ArchivedDegreePlanNote> ArchivedNotes { get; set; }
+        public List<ArchivedDegreePlanNote> ArchivedNotes { get; set; }
 
         /// <summary>
         /// Constructor for the course plan archive
@@ -136,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
         /// <param name="programs">List of program domain objects - needed for program descriptions</param>
         /// <param name="advisors">List of advisor domain objects - needed for advisor name translations</param>
         /// <param name="termDtos">List of Term DTOs - used for the term descriptions and ordering</param>
-        public DegreePlanArchiveReport(Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive degreePlanArchive, Ellucian.Colleague.Domain.Student.Entities.Student student, IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Requirements.Program> programs, IEnumerable<Ellucian.Colleague.Domain.Planning.Entities.Advisor> advisors, IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> terms, IEnumerable<StudentProgram> studentPrograms)
+        public DegreePlanArchiveReport(Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive degreePlanArchive, Ellucian.Colleague.Domain.Student.Entities.Student student, IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Requirements.Program> programs, IEnumerable<Ellucian.Colleague.Domain.Planning.Entities.Advisor> advisors, IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> terms, IEnumerable<StudentProgram> studentPrograms, ILogger logger)
         {
             if (degreePlanArchive == null)
             {
@@ -162,7 +161,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
             {
                 throw new ArgumentNullException("studentPrograms", "At least one student program is required.");
             }
-
+            this.logger = logger;
             StudentPrograms = new Dictionary<string, string>();
             ArchivedCourses = new List<ArchivedCourse>();
             ArchivedNotes = new List<ArchivedDegreePlanNote>();
@@ -207,10 +206,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                         StudentPrograms.Add(programName, program.CatalogCode);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Don't bother throwing an exception - keep building the model
-                    //throw new Exception("Unable to add program " + program.ProgramCode + "to degree plan archive.");
+                    logger.Error(ex, "Cannot add student program");
                 }
             }
 
@@ -264,17 +262,17 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
             {
                 sortedArchivedCourses.AddRange(nontermArchivedCourses);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                logger.Error(ex, "Cannot sort archived courses.");
             }
-
 
             foreach (var archivedCourse in sortedArchivedCourses)
             {
                 var archivedCourseModel = new Ellucian.Colleague.Coordination.Planning.ArchivedCourse();
                 archivedCourseModel.CourseId = archivedCourse.CourseId;
                 archivedCourseModel.SectionId = archivedCourse.SectionId;
+                archivedCourseModel.CoursePlaceholderId = string.Empty;
                 archivedCourseModel.Credits = archivedCourse.Credits;
                 // Rounding credits to 2 decimals as agreed
                 archivedCourseModel.FormattedCredits = (archivedCourse.Credits.HasValue) ? archivedCourse.Credits.Value.ToString(".##") : string.Empty;
@@ -365,12 +363,105 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                 {
                     ArchivedCourses.Add(archivedCourseModel);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // If it cannot add the course continue.
+                    logger.Error(ex, "Cannot add course to archive.");
                 }
 
             }
+
+            // Sort the archived course placeholders
+            degreePlanArchive.ArchivedCoursePlaceholders = degreePlanArchive.ArchivedCoursePlaceholders.Where(acp => acp != null).ToList();
+            var sortedArchivedCoursePlaceholders = (from t in terms
+                                                    join c in degreePlanArchive.ArchivedCoursePlaceholders on t.Code equals c.TermCode into joinArchiveCourses
+                                                    orderby t.ReportingYear, t.Sequence
+                                                    from ac in joinArchiveCourses
+                                                    select ac).ToList();
+            var nontermArchivedCoursePlaceholders = degreePlanArchive.ArchivedCoursePlaceholders.Where(a => string.IsNullOrEmpty(a.TermCode));
+            try
+            {
+                sortedArchivedCoursePlaceholders.AddRange(nontermArchivedCoursePlaceholders);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Cannot sort archived course placeholders.");
+            }
+            foreach (var archivedCoursePlaceholder in sortedArchivedCoursePlaceholders)
+            {
+                var archivedCourseModel = new Ellucian.Colleague.Coordination.Planning.ArchivedCourse();
+                archivedCourseModel.CourseId = string.Empty;
+                archivedCourseModel.SectionId = string.Empty;
+                archivedCourseModel.CoursePlaceholderId = archivedCoursePlaceholder.Id;
+                archivedCourseModel.Credits = 0m;
+                // Rounding credits to 2 decimals as agreed
+                archivedCourseModel.FormattedCredits = archivedCoursePlaceholder.CreditInformation;
+                archivedCourseModel.ContinuingEducationUnits = 0m;
+                archivedCourseModel.FormattedCeus = string.Empty;
+                archivedCourseModel.Name = "(Placeholder)";
+                archivedCourseModel.Title = archivedCoursePlaceholder.Title;
+                archivedCourseModel.ApprovalStatus = string.Empty;
+                archivedCourseModel.RegistrationStatus = string.Empty;
+
+                var termDescription = "Non-term Course Placeholders";
+                int termReportingYear = 0;
+                int termSequence = 0;
+                if (!string.IsNullOrEmpty(archivedCoursePlaceholder.TermCode))
+                {
+                    var term = terms.First(t => t.Code == archivedCoursePlaceholder.TermCode);
+                    if (term != null)
+                    {
+                        termDescription = term.Description;
+                        termReportingYear = term.ReportingYear;
+                        termSequence = term.Sequence;
+                    }
+                }
+                archivedCourseModel.TermCode = archivedCoursePlaceholder.TermCode;
+                archivedCourseModel.TermDescription = termDescription;
+                archivedCourseModel.TermReportingYear = termReportingYear;
+                archivedCourseModel.TermSequence = termSequence;
+
+                archivedCourseModel.ApprovedBy = string.Empty;
+                archivedCourseModel.ApprovalDate = string.Empty;
+
+                // If there is added by information, get person's name and format timestamps
+                if (!string.IsNullOrEmpty(archivedCoursePlaceholder.AddedBy))
+                {
+                    // The archive course has IDs, not advisor names, so translate them
+                    // If the person who added the note is the student, get the name for that student, otherwise, get an advisor name
+                    if (StudentId == archivedCoursePlaceholder.AddedBy)
+                    {
+                        archivedCourseModel.AddedBy = "Student";
+                    }
+                    else
+                    {
+                        Ellucian.Colleague.Domain.Planning.Entities.Advisor addedBy = advisors.Where(a => a.Id == archivedCoursePlaceholder.AddedBy).FirstOrDefault();
+
+                        if (addedBy != null && addedBy.PersonDisplayName != null && !string.IsNullOrEmpty(addedBy.PersonDisplayName.FullName))
+                        {
+                            archivedCourseModel.AddedBy = addedBy.PersonDisplayName.FullName;
+                        }
+                        else
+                        {
+                            archivedCourseModel.AddedBy = GetAdvisorStaffName(archivedCoursePlaceholder.AddedBy, addedBy, "Initial");
+                        }
+                    }
+                    // Format the approval timestamp
+                    archivedCourseModel.AddedDate = archivedCoursePlaceholder.AddedOn.HasValue ?
+                        archivedCoursePlaceholder.AddedOn.Value.Date.ToShortDateString() : null;
+                }
+                try
+                {
+                    ArchivedCourses.Add(archivedCourseModel);
+                }
+                catch (Exception ex)
+                {
+                    // If it cannot add the course placeholder, continue.
+                    logger.Error(ex, "Cannot add course placeholder");
+                }
+            }
+
+            // Notes
             var sortedNotes = degreePlanArchive.Notes.OrderByDescending(n => n.Date);
             foreach (var note in sortedNotes)
             {
@@ -405,10 +496,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                 {
                     ArchivedNotes.Add(archivedNoteDto);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // If it can't add a note we will continue.
-
+                    logger.Error(ex, "Cannot add archived note.");
                 }
 
             }

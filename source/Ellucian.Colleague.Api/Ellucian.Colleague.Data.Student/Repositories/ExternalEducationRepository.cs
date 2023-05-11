@@ -263,8 +263,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         acadCredGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // Do not throw error.
+                    logger.Error(ex, "Unable to academic credit key.");
                 }
             }
 

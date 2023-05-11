@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -13,6 +13,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -197,10 +198,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
-                // we process the list of applications                
+                // we process the list of applications  
+                logger.Error(ex, "Unable to get guid for applicant.");
             }
-
-            if (dict == null || !dict.Any())
+                if (dict == null || !dict.Any())
             {
                 exception.AddError(new RepositoryError("Bad.Data", "Guids not found for APPLICATION with APPL.INTG.KEY.IDX."));
                 throw exception;
@@ -957,7 +958,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex);
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex);
             }
 
             return guidCollection;

@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Finance;
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -101,6 +102,12 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
                 _logger.Info(peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving account holder.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Info(ex.ToString());
@@ -128,7 +135,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>An enumeration of <see cref="AccountHolder">AccountHolder</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         [HttpPost]
-        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPostAsync([FromBody]string criteria)
+        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPostAsync([FromBody] string criteria)
         {
             try
             {
@@ -173,7 +180,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         [HttpPost]
         [Obsolete("Obsolete as of API version 1.16, use QueryAccountHoldersByPost3Async instead.")]
-        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPostAsync2([FromBody]string criteria)
+        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPostAsync2([FromBody] string criteria)
         {
             if (string.IsNullOrEmpty(criteria))
             {
@@ -227,7 +234,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// all details except the advisee name are cleared from the specific AccountHolder object.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         [HttpPost]
-        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPost3Async([FromBody]AccountHolderQueryCriteria criteria)
+        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPost3Async([FromBody] AccountHolderQueryCriteria criteria)
         {
             if (criteria == null)
             {
@@ -288,7 +295,13 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
                 _logger.Info(peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
-            catch(Exception ex)
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while requesting invoices.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
             {
                 _logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Cannot retrieve invoices with the specified information. See log for details.");
@@ -305,11 +318,16 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="criteria"><see cref="InvoiceQueryCriteria">Query Criteria</see> including the list of Invoice Ids to use to retrieve invoices.</param>
         /// <returns>List of <see cref="Invoice">Invoices</see> objects. </returns>
         [HttpPost]
-        public async Task<IEnumerable<Invoice>> QueryInvoicesByPostAsync([FromBody]InvoiceQueryCriteria criteria)
+        public async Task<IEnumerable<Invoice>> QueryInvoicesByPostAsync([FromBody] InvoiceQueryCriteria criteria)
         {
             try
             {
                 return await _service.QueryInvoicesAsync(criteria.InvoiceIds);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -339,7 +357,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="criteria"><see cref="InvoiceQueryCriteria">Query Criteria</see> including the list of Invoice Ids. At least 1 invoice Id must be specified.</param>
         /// <returns>List of <see cref="InvoicePayment">InvoicePayments</see> objects. </returns>
         [HttpPost]
-        public async Task<IEnumerable<InvoicePayment>> QueryInvoicePaymentsByPostAsync([FromBody]InvoiceQueryCriteria criteria)
+        public async Task<IEnumerable<InvoicePayment>> QueryInvoicePaymentsByPostAsync([FromBody] InvoiceQueryCriteria criteria)
         {
             try
             {
@@ -354,6 +372,12 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 _logger.Error(aex.Message);
                 throw CreateHttpResponseException(aex.Message, HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Timeout exception has occurred while requesting InvoicePayment objects.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -379,6 +403,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetPayments(ids);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -441,7 +470,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>Valid billing term payment plan information from a proposed billing term payment plan information collection</returns>
         [HttpPost]
         [Obsolete("Obsolete as of API version 1.16, use QueryAccountHolderPaymentPlanOptions2Async instead.")]
-        public async Task<PaymentPlanEligibility> QueryAccountHolderPaymentPlanOptionsAsync([FromBody]IEnumerable<BillingTermPaymentPlanInformation> billingTerms)
+        public async Task<PaymentPlanEligibility> QueryAccountHolderPaymentPlanOptionsAsync([FromBody] IEnumerable<BillingTermPaymentPlanInformation> billingTerms)
         {
             if (billingTerms == null || !billingTerms.Any())
             {
@@ -472,7 +501,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="criteria">payment plan query criteria</param>
         /// <returns>Valid billing term payment plan information from a proposed billing term payment plan information collection</returns>
         [HttpPost]
-        public async Task<PaymentPlanEligibility> QueryAccountHolderPaymentPlanOptions2Async([FromBody]PaymentPlanQueryCriteria criteria)
+        public async Task<PaymentPlanEligibility> QueryAccountHolderPaymentPlanOptions2Async([FromBody] PaymentPlanQueryCriteria criteria)
         {
             if (criteria == null)
             {
@@ -481,6 +510,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return await _payPlanService.GetBillingTermPaymentPlanInformation2Async(criteria);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -507,6 +541,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return await _service.GetChargeCodesAsync();
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

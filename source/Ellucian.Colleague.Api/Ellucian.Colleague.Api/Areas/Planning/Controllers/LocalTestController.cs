@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Areas.Planning.Models.Tests;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Coordination.Planning.Services;
@@ -19,6 +19,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Mvc.Filter;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.IdentityModel.Claims;
 using slf4net;
@@ -62,7 +63,7 @@ namespace Ellucian.Colleague.Api.Areas.Planning.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];
@@ -137,6 +138,7 @@ namespace Ellucian.Colleague.Api.Areas.Planning.Controllers
             var programRepo = new ProgramRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var catalogRepo = new CatalogRepository(cacheProvider, txFactory, logger);
             var planningConfigRepo = new PlanningConfigurationRepository(cacheProvider, txFactory, logger);
+            var applicantRepo = new ApplicantRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var planningStudentRepo = new PlanningStudentRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var referenceDataRepo = new ReferenceDataRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var baseConfigRepo = new ConfigurationRepository(cacheProvider, txFactory, apiSettingsMock, logger, colleagueSettingsMock);
@@ -147,7 +149,7 @@ namespace Ellucian.Colleague.Api.Areas.Planning.Controllers
             //dumper = new Dumper();
             var programEvaluationService = new ProgramEvaluationService(
                 new AdapterRegistry(new HashSet<ITypeAdapter>(), logger), studentDegreePlanRepo, programRequirementsRepo, studentRepo, 
-                planningStudentRepo, studentProgramRepo, requirementRepo, academicCreditRepo, degreePlanRepo, courseRepo, 
+                planningStudentRepo, applicantRepo, studentProgramRepo, requirementRepo, academicCreditRepo, degreePlanRepo, courseRepo, 
                 termRepo, ruleRepo, programRepo, catalogRepo, planningConfigRepo,referenceDataRepo, 
                 currentUserFactory, roleRepository, logger, baseConfigRepo);
 

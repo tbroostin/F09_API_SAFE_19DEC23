@@ -1,4 +1,6 @@
 ﻿using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Data.ColleagueFinance;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -28,6 +30,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         protected ICommodityCodesService commodityCodesService;
         protected Mock<IColleagueFinanceWebConfigurationsRepository> colleagueFinanceWebConfigurationsRepoMock;
         protected IColleagueFinanceWebConfigurationsRepository colleagueFinanceWebConfigurationsRepo;
+        protected Mock<IAttachmentRepository> attachmentRepoMock;
+        protected IAttachmentRepository attachmentRepo;
         protected Mock<IConfigurationRepository> configurationRepoMock;
         protected IConfigurationRepository configurationRepo;
         private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -59,14 +63,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             colleagueFinanceWebConfigurationsRepo = colleagueFinanceWebConfigurationsRepoMock.Object;
             configurationRepoMock = new Mock<IConfigurationRepository>();
             configurationRepo = configurationRepoMock.Object;
-            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            adapterRegistryMock = new Mock<IAdapterRegistry>();            
             adapterRegistry = adapterRegistryMock.Object;
             currentUserFactoryMock = new Mock<ICurrentUserFactory>();
             currentUserFactory = currentUserFactoryMock.Object;
             roleRepoMock = new Mock<IRoleRepository>();
+            attachmentRepoMock = new Mock<IAttachmentRepository>();
+            attachmentRepo = attachmentRepoMock.Object;
             roleRepo = roleRepoMock.Object;
             logger = new Mock<ILogger>().Object;
-            
+
             vendorCommodityEntity = new Domain.ColleagueFinance.Entities.VendorCommodity(vendorId)
             {
                 StdPrice = 1M,
@@ -110,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             commodityCodesServiceMock.Setup(r => r.GetCommodityCodeByCodeAsync(It.IsAny<string>())).Returns(Task.FromResult(procurementCommodityDto));
             vendorsRepositoryMock.Setup(r => r.GetVendorDefaultTaxFormInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.FromResult(vendorDefaultTaxInfoEnitity));
             vendorCommodityRepositoryMock.Setup(r => r.GetVendorCommodityAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.FromResult(vendorCommodityEntity));
-            procurementsUtilityService = new ProcurementsUtilityService(vendorsRepository, configurationRepo, adapterRegistry, currentUserFactory, roleRepo, commodityCodesService, vendorCommodityRepository, colleagueFinanceWebConfigurationsRepo, logger);
+            procurementsUtilityService = new ProcurementsUtilityService(vendorsRepository, configurationRepo, adapterRegistry, currentUserFactory, roleRepo, commodityCodesService, vendorCommodityRepository, colleagueFinanceWebConfigurationsRepo, attachmentRepoMock.Object, logger);
         }
 
         [TestMethod]
@@ -189,7 +195,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task GetNewLineItemDefaultAdditionalInformation_CfWebDefaults_IsNull()
         {
-            ColleagueFinanceWebConfiguration nullColleagueFinanceWebConfiguration  = null;
+            ColleagueFinanceWebConfiguration nullColleagueFinanceWebConfiguration = null;
             colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(nullColleagueFinanceWebConfiguration));
             var result = await procurementsUtilityService.GetNewLineItemDefaultAdditionalInformation(commodityCode, vendorId, apType);
             Assert.IsNotNull(result);
@@ -204,6 +210,52 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var result = await procurementsUtilityService.GetNewLineItemDefaultAdditionalInformation(commodityCode, vendorId, apType);
             Assert.IsNotNull(result);
             Assert.AreEqual(procurementCommodityDto.Price, result.StdPrice);
+        }
+
+        [TestMethod]
+        public async Task GetAttachmentsAsync_CollectionIDNullOrEmpty()
+        {
+            var documentIds = new List<string>() { "123", "1231" };
+            var result = await procurementsUtilityService.GetAttachmentsAsync(null, ColleagueFinanceConstants.RequisitionAttachmentTagOnePrefix, documentIds);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count());
+        }
+
+        [TestMethod]
+        public async Task GetAttachmentsAsync_ValidCollectionID()
+        {
+            var requisitionAttachmentCollectionId = "D01-REQUISITIONS";
+            var purchaseOrderAttachmentCollectionId = "D01-PURCHASEORDERS";
+            var voucherAttachmentCollectionId = "D01-VOUCHERS";
+            var documentId = "123";
+            colleagueFinanceWebConfigurationsEntity = new Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration()
+            {
+                RequisitionAttachmentCollectionId = requisitionAttachmentCollectionId,
+                PurchaseOrderAttachmentCollectionId = purchaseOrderAttachmentCollectionId,
+                VoucherAttachmentCollectionId = voucherAttachmentCollectionId
+            };
+            colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
+
+            List<Attachment> attachmentsList = new List<Attachment>();
+            string attachmentId = "32c2d2ec-d91d-4c86-be0d-6e38b5b0f1b7";
+            string attachmentContentType = "application/pdf";
+            string attachmentOwner = "0003896";
+            string attachmentName = "mypdf.pdf";
+            string attachmentTagOne = string.Format("{0}{1}", ColleagueFinanceConstants.RequisitionAttachmentTagOnePrefix, documentId);
+            Attachment attachmentEntity = new Attachment(attachmentId, requisitionAttachmentCollectionId, attachmentName, attachmentContentType, 100000, attachmentOwner);
+            attachmentEntity.TagOne = attachmentTagOne;
+            attachmentsList.Add(attachmentEntity);
+            
+            attachmentRepoMock.Setup(r => r.QueryAttachmentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Returns(Task.FromResult(attachmentsList.AsEnumerable()));
+            
+            procurementsUtilityService = new ProcurementsUtilityService(vendorsRepository, configurationRepo, adapterRegistry, currentUserFactory, roleRepo, commodityCodesService,
+                vendorCommodityRepository, colleagueFinanceWebConfigurationsRepo, attachmentRepo, logger);
+
+            var documentIds = new List<string>() { documentId, "1231" };
+            var result = await procurementsUtilityService.GetAttachmentsAsync(null, ColleagueFinanceConstants.RequisitionAttachmentTagOnePrefix, documentIds);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.Count());
+            Assert.AreEqual(attachmentId, result.First().Id);
         }
     }
 }

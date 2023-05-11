@@ -1124,7 +1124,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentUnverifiedGradesService_GetId_Midterm7_invalid()
             {
                 var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);

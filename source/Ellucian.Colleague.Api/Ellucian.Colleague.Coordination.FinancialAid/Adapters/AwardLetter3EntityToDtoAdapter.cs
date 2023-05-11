@@ -236,7 +236,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
                 AlhPellEntitlementList = sourceAwardLetter.AlhPellEntitlementList,
 
                 //Total amount for period for PDF
-                AwardPeriodTotals = awardPeriodTotals
+                AwardPeriodTotals = awardPeriodTotals,
+                AlhZeroAwardFlg = sourceAwardLetter.AlhZeroAwardFlg,
+                ZeroAwardPeriods = sourceAwardLetter.AlhZeroAwpds
             };
 
             return awardLetterReportDto;

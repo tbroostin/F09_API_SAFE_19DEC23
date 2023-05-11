@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading;
@@ -24,6 +24,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             private string personId;
             private int degreePlanId;
             private DegreePlan degreePlan;
+            private DegreePlan degreePlan1;
 
             [TestInitialize]
             public void Initialize()
@@ -35,7 +36,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
                 degreePlan.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
-            }
+                degreePlan1 = new DegreePlan(2, "1111", 1);
+                degreePlan1.AdvisingOfficeEmailId = "advisingOffice.gmail.com";
+        }
 
             [TestCleanup]
             public void CleanUp()
@@ -69,6 +72,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             public void Degree_ArchiveNotificationDate()
             {
                 Assert.IsNull(degreePlan.ArchiveNotificationDate);
+            }
+
+            [TestMethod]
+            public void Degree_AdvisingOfficeEmailId_Null()
+            {
+                Assert.IsNull(degreePlan.AdvisingOfficeEmailId);
+            }
+
+
+            public void DegreePlan_AdvisingOfficeEmailId_With_Value()
+            {
+                Assert.AreEqual(degreePlan1.AdvisingOfficeEmailId,"advisingOffice.gmail.com");
             }
 
             [TestMethod]

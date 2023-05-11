@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System.Diagnostics;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -106,10 +107,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public async Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts)
         {
             List<string> activeGlAccounts = new List<string>();
-            string[] activeAccounts;            
+            string[] activeAccounts;
             if (glAccounts != null && glAccounts.Any())
-            {                
-                string [] accountsArray = glAccounts.ToArray();
+            {
+                string[] accountsArray = glAccounts.ToArray();
                 var criteria = "WITH GL.INACTIVE EQ 'A'";
                 activeAccounts = await DataReader.SelectAsync("GL.ACCTS", accountsArray, criteria);
                 activeGlAccounts = activeAccounts.ToList();
@@ -215,7 +216,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (fundComponent != null)
                         {
                             var fundIds = generalLedgerAccountIds.Select(x => x.Substring(fundComponent.StartPosition, fundComponent.ComponentLength)).Distinct().ToList();
-                            if(fundIds != null)
+                            if (fundIds != null)
                             {
                                 logger.Info("Bulk reading " + fundIds.Count + " FdDescs records.");
                                 for (int i = 0; i < fundIds.Count; i += bulkReadSize)
@@ -252,7 +253,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (functionComponent != null)
                         {
                             var functionIds = generalLedgerAccountIds.Select(x => x.Substring(functionComponent.StartPosition, functionComponent.ComponentLength)).Distinct().ToList();
-                            if(functionIds != null)
+                            if (functionIds != null)
                             {
                                 logger.Info("Bulk reading " + functionIds.Count + " FcDescs records.");
                                 for (int i = 0; i < functionIds.Count; i += bulkReadSize)
@@ -289,7 +290,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (objectComponent != null)
                         {
                             var objectIds = generalLedgerAccountIds.Select(x => x.Substring(objectComponent.StartPosition, objectComponent.ComponentLength)).Distinct().ToList();
-                            if(objectIds != null)
+                            if (objectIds != null)
                             {
                                 logger.Info("Bulk reading " + objectIds.Count + " ObDescs records.");
                                 for (int i = 0; i < objectIds.Count; i += bulkReadSize)
@@ -326,7 +327,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (unitComponent != null)
                         {
                             var unitIds = generalLedgerAccountIds.Select(x => x.Substring(unitComponent.StartPosition, unitComponent.ComponentLength)).Distinct().ToList();
-                            if(unitIds != null)
+                            if (unitIds != null)
                             {
                                 logger.Info("Bulk reading " + unitIds.Count + " UnDescs records.");
                                 for (int i = 0; i < unitIds.Count; i += bulkReadSize)
@@ -363,7 +364,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (sourceComponent != null)
                         {
                             var sourceIds = generalLedgerAccountIds.Select(x => x.Substring(sourceComponent.StartPosition, sourceComponent.ComponentLength)).Distinct().ToList();
-                            if(sourceIds != null)
+                            if (sourceIds != null)
                             {
                                 logger.Info("Bulk reading " + sourceIds.Count + " SoDescs records.");
                                 for (int i = 0; i < sourceIds.Count; i += bulkReadSize)
@@ -400,7 +401,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (locationComponent != null)
                         {
                             var locationIds = generalLedgerAccountIds.Select(x => x.Substring(locationComponent.StartPosition, locationComponent.ComponentLength)).Distinct().ToList();
-                            if(locationIds != null)
+                            if (locationIds != null)
                             {
                                 logger.Info("Bulk reading " + locationIds.Count + " LoDescs records.");
                                 for (int i = 0; i < locationIds.Count; i += bulkReadSize)
@@ -471,11 +472,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         glDescription = glAccountDescriptionResponse.GlDescriptions[glIndex];
                     }
                 }
+                else
+                {
+                    logger.Error("==> GetGlAccountDescriptionRequest returned nulls <==");
+                }
 
                 return new GeneralLedgerAccount(generalLedgerAccountId, majorComponentStartPositions)
                 {
                     Description = glDescription
                 };
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> GetGlAccountDescriptionRequest session expired <==");
+                throw;
             }
             catch (Exception ex)
             {

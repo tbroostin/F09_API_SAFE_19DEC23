@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -35,43 +35,43 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <summary>
         /// The preferred name of the employer.
         /// </summary>
-        public string PreferredName;
-       
+        public string PreferredName { get; set; }
+
         /// <summary>
         /// The address lines of the employer.
         /// </summary>
-        public List<string> AddressLines;
-       
+        public List<string> AddressLines { get; set; }
+
         /// <summary>
         /// The city of the employer.
         /// </summary>
-        public string City;
-        
+        public string City { get; set; }
+
         /// <summary>
         /// The state of the employer.
         /// </summary>
-        public string State;
-        
+        public string State { get; set; }
+
         /// <summary>
         /// The country of the employer.
         /// </summary>
-        public string Country;
-        
+        public string Country { get; set; }
+
         /// <summary>
         /// The postal code of the employer.
         /// </summary>
-        public string PostalCode;
-        
+        public string PostalCode { get; set; }
+
         /// <summary>
         /// The phone number of the employer.
         /// </summary>
-        public string PhoneNumber;
+        public string PhoneNumber { get; set; }
 
         /// <summary>
         /// A code that may be used to identify the institution employer.
         /// (not currently used by Colleague)
         /// </summary>
-        public string Code;
+        public string Code { get; set; }
 
         /// <summary>
         /// Institution Employer constructor 

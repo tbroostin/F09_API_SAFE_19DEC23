@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -28,7 +29,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         private Mock<IGradeSchemeService> gradeSchemeServiceMock;
         private Mock<ILogger> loggerMock;
-        private GradeSchemesController gradeSchemesController;      
+        private GradeSchemesController gradeSchemesController;
         private IEnumerable<GradeScheme> allGradeScheme;
         private List<Dtos.GradeScheme2> gradeSchemeCollection;
 
@@ -43,7 +44,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             gradeSchemeCollection = new List<Dtos.GradeScheme2>();
 
             allGradeScheme = (await new TestStudentReferenceDataRepository().GetGradeSchemesAsync()).ToList();
-            
+
             foreach (var source in allGradeScheme)
             {
                 var gradeScheme = new Ellucian.Colleague.Dtos.GradeScheme2
@@ -78,9 +79,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             gradeSchemesController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            
+
             gradeSchemeServiceMock.Setup(x => x.GetGradeSchemes2Async(false)).ReturnsAsync(gradeSchemeCollection);
-       
+
             var sourceContexts = (await gradeSchemesController.GetGradeSchemes2Async()).ToList();
             Assert.AreEqual(gradeSchemeCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
@@ -97,7 +98,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task GradeSchemeController_GetGradeScheme_ValidateFields_Cache()
         {
             gradeSchemesController.Request.Headers.CacheControl =
-                new System.Net.Http.Headers.CacheControlHeaderValue {NoCache = true};
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
             gradeSchemeServiceMock.Setup(x => x.GetGradeSchemes2Async(true)).ReturnsAsync(gradeSchemeCollection);
 
@@ -131,7 +132,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task GradeSchemeController_GetGradeScheme_Exception()
         {
             gradeSchemeServiceMock.Setup(x => x.GetGradeSchemes2Async(false)).Throws<Exception>();
-            await gradeSchemesController.GetGradeSchemes2Async();       
+            await gradeSchemesController.GetGradeSchemes2Async();
         }
 
         [TestMethod]
@@ -178,6 +179,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             gradeSchemeServiceMock.Setup(x => x.GetNonEthosGradeSchemeByIdAsync(It.IsAny<string>())).Throws<ArgumentNullException>();
             await gradeSchemesController.GetNonEthosGradeSchemeByIdAsync("UG");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GradeSchemesController_GetNonEthosGradeSchemeByIdAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                gradeSchemeServiceMock.Setup(x => x.GetNonEthosGradeSchemeByIdAsync(It.IsAny<string>()))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await gradeSchemesController.GetNonEthosGradeSchemeByIdAsync("UG");
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
         }
 
         [TestMethod]

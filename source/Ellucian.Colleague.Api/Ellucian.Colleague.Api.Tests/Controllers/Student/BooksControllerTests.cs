@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
@@ -17,6 +17,7 @@ using System;
 using System.Net.Http;
 using System.Web.Http.Hosting;
 using System.Net.Http.Headers;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -114,6 +115,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 catch (HttpResponseException ex)
                 {
                     Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+                catch (System.Exception e)
+                {
+                    throw e;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task BooksController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    BookRepositoryMock.Setup(x => x.GetAsync("1000"))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await booksController.GetAsync("1000");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
                     throw ex;
                 }
                 catch (System.Exception e)

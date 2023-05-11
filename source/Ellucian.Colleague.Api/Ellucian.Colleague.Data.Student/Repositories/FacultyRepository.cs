@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -13,6 +14,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -74,6 +76,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 facultyEntity = (await GetAllFacultyAsync())[id];
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to retrieve faculty information for ID {0}.", id));
@@ -99,6 +105,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     try
                     {
                         facultyEntities.Add(allFaculty[id]);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
                     }
                     catch (Exception)
                     {
@@ -269,6 +279,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             OfficeHours = officeHours
                         };
                         facultyofficeHoursList.Add(facOfficeHours);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
                     }
                     catch (Exception)
                     {
@@ -468,11 +482,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         facultyIds = await DataReader.SelectAsync("FACULTY", "");
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         logger.Debug(ex, "An error occurred in DataReader.SelectAsync for the FACULTY file");
                     }
-
+                    
                     // Bulk read the faculty PERSON records in chunks from the database.
                     var personData = new List<Ellucian.Colleague.Data.Base.DataContracts.Person>();
                     for (int i = 0; i < facultyIds.Count(); i += readSize)
@@ -494,6 +512,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 personData.AddRange(bulkData.BulkRecordsRead);
                             }
+                        }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
@@ -534,6 +556,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 facultyAddressData.AddRange(bulkData.BulkRecordsRead);
                             }
+                        }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
@@ -621,6 +647,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 hierarchy = await GetCachedNameAddressHierarchyAsync(facultyNameHierarchy);
                             }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
                             catch (Exception ex)
                             {
                                 logger.Error(ex, "Unable to find name address hierarchy with ID " + facultyNameHierarchy + ". Not calculating hierarchy name.");
@@ -647,9 +677,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     if (!string.IsNullOrEmpty(personAddressData.AddrLocalPhoneAssocMember))
                                     {
                                         // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                        string[] localPhones = personAddressData.AddrLocalPhoneAssocMember.Split(_SM);
-                                        string[] localPhoneExts = personAddressData.AddrLocalExtAssocMember.Split(_SM);
-                                        string[] localPhoneTypes = personAddressData.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                                        string[] localPhones = personAddressData.AddrLocalPhoneAssocMember.Split(SubValueMark);
+                                        string[] localPhoneExts = personAddressData.AddrLocalExtAssocMember.Split(SubValueMark);
+                                        string[] localPhoneTypes = personAddressData.AddrLocalPhoneTypeAssocMember.Split(SubValueMark);
                                         for (int i = 0; i < localPhones.Length; i++)
                                         {
                                             try
@@ -742,6 +772,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 fac.AddAddress(facultyAddress);
                                             }
                                         }
+                                        catch (ColleagueSessionExpiredException)
+                                        {
+                                            throw;
+                                        }
                                         catch (Exception ex)
                                         {
                                             logger.Debug(ex, "Error occurred while adding address for faculty member.");
@@ -751,6 +785,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                         }
                         facultyResults[fac.Id] = fac;
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -840,7 +878,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Get the Faculty Name Hierarchy
         /// </summary>
         /// <returns>The Name hierarchy value</returns>
-        private async Task<string> GetFacultyNameHierarchy()
+        public async Task<string> GetFacultyNameHierarchy()
         {
             string result = string.Empty;
             string configuration = await GetOrAddToCacheAsync<string>("FacultyNameHierarchy",
@@ -861,6 +899,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                return result;
            });
             return configuration;
+        }
+
+        /// <summary>
+        /// Finds students given a last, first, middle name. First selects PERSON by comparing values against
+        /// PERSON.SORT.NAME and first name against nickname. Then limits by selecting person list of ids against STUDENTS.
+        /// </summary>
+        /// <param name="lastName"></param>
+        /// <param name="firstName"></param>
+        /// <param name="middleName"></param>
+        /// <returns>list of Student Ids</returns>
+        public async Task<IEnumerable<string>> SearchFacultyByNameAsync(string lastName, string firstName = null, string middleName = null)
+        {
+            if (string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) && string.IsNullOrEmpty(middleName))
+            {
+                return new List<string>();
+            }
+            var watch = new Stopwatch();
+            watch.Start();
+            // Search PERSON using the given last, first, middle names
+            var facultyIds = await base.SearchByNameAsync(lastName, firstName, middleName);
+            watch.Stop();
+            logger.Info("SearchByName(base)... completed in " + watch.ElapsedMilliseconds.ToString());
+            watch.Restart();
+            return facultyIds;
+        }
+
+        /// <summary>
+        /// Get PID2 padded Faculty Id
+        /// </summary>
+        /// <param name="facultyId"></param>
+        /// <returns></returns>
+        public async Task<string> GetPID2FacultyIdAsync(string facultyId)
+        {
+            if (string.IsNullOrEmpty(facultyId))
+            {
+                throw new ArgumentNullException("facultyId", "faculty Id may not be null or empty");
+            }
+            else
+            {
+                string paddedFacultyId = await PadIdPerPid2ParamsAsync(facultyId);
+                return paddedFacultyId;
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2018-2022 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +54,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public decimal ForwardingBalance { get; private set; }
 
         /// <summary>
+        /// The balance of the employee leave plan before this transaction is applied.
+        /// </summary>
+        public decimal CurrentBalance { get; private set; }
+
+        /// <summary>
         /// Create a new EmployeeLeaveTransaction
         /// </summary>
         public EmployeeLeaveTransaction(int id,
@@ -62,7 +67,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal transactionHours,
             DateTimeOffset date,
             LeaveTransactionType type,
-            decimal forwardingBalance)
+            decimal forwardingBalance,
+            decimal currentBalance = 0)
         {
             
             if (string.IsNullOrWhiteSpace(leavePlanDefinitionId))
@@ -81,7 +87,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             Date = date;
             Type = type;
             ForwardingBalance = forwardingBalance;
-
+            CurrentBalance = currentBalance;
         }
 
         public override bool Equals(object obj)

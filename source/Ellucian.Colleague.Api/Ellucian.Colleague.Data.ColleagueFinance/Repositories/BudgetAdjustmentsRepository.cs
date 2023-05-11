@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -76,10 +77,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
+            logger.Debug("==> BudgetAdjustmentsRepository TR date: " + budgetAdjustmentInput.TransactionDate + " <==");
+
             // Assign an empty list of string to the approver CTX argument and an empty list of dates to the
             // approver dates CTX argument.
             var approverIds = new List<String>();
             var approverDates = new List<DateTime?>();
+            BudgetAdjustment budgetAdjustmentOutput = null;
 
             // Pass a blank string as the budget entry ID to make sure it gets initialized properly when the CTX executes.
             // Normally (i.e. on GLBE) the FROM amount is the DEBIT and TO the CREDIT. However, we "swap the columns" since
@@ -100,41 +104,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 AlApprovalDates = approverDates
             };
 
-            var response = await transactionInvoker.ExecuteAsync<TxUpdateBudgetAdjustmentRequest, TxUpdateBudgetAdjustmentResponse>(request);
-
-            // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
-            BudgetAdjustment budgetAdjustmentOutput = null;
-            if (!string.IsNullOrEmpty(response.ABudgetEntryId))
+            try
             {
-                budgetAdjustmentOutput = await GetBudgetAdjustmentAsync(response.ABudgetEntryId);
+                var response = await transactionInvoker.ExecuteAsync<TxUpdateBudgetAdjustmentRequest, TxUpdateBudgetAdjustmentResponse>(request);
 
-                // If this budget adjustment is being created from a draft budget adjustment, delete the draft budget adjustment.
-                // Just log any errors that occur with deleting the budget adjustment.
-                if (!string.IsNullOrEmpty(budgetAdjustmentInput.DraftBudgetAdjustmentId))
+                // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
+
+                if (!string.IsNullOrEmpty(response.ABudgetEntryId))
                 {
-                    TxDeleteDraftBudgetAdjustmentRequest draftRequest = new TxDeleteDraftBudgetAdjustmentRequest()
-                    {
-                        ADraftBeId = budgetAdjustmentInput.DraftBudgetAdjustmentId
-                    };
-
-                    TxDeleteDraftBudgetAdjustmentResponse draftResponse = await transactionInvoker.ExecuteAsync<TxDeleteDraftBudgetAdjustmentRequest, TxDeleteDraftBudgetAdjustmentResponse>(draftRequest);
-
-                    if (!string.IsNullOrEmpty(draftResponse.AErrorCode))
-                    {
-                        logger.Error(draftResponse.AErrorMessage);
-                        budgetAdjustmentOutput.DraftDeletionSuccessfulOrUnnecessary = false;
-                    }
+                    budgetAdjustmentOutput = await GetBudgetAdjustmentAsync(response.ABudgetEntryId);
+                    logger.Debug("==> BudgetAdjustmentsRepository OUT TR date: " + budgetAdjustmentOutput.TransactionDate + " <==");
+                }
+                else
+                {
+                    budgetAdjustmentInput.ErrorMessages = response.AlMessage;
+                    budgetAdjustmentOutput = budgetAdjustmentInput;
                 }
             }
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                budgetAdjustmentInput.ErrorMessages = response.AlMessage;
-                budgetAdjustmentOutput = budgetAdjustmentInput;
+                logger.Error(csee, "==> TxUpdateBudgetAdjustmentRequest session expired <==");
+                throw;
             }
 
             return budgetAdjustmentOutput;
         }
-
+        
         /// <summary>
         /// Update an existing budget adjustment.
         /// </summary>
@@ -235,21 +230,30 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 AlApprovalDates = approverDates
             };
 
-            var response = await transactionInvoker.ExecuteAsync<TxUpdateBudgetAdjustmentRequest, TxUpdateBudgetAdjustmentResponse>(request);
-
-            // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
-            BudgetAdjustment budgetAdjustmentOutput = null;
-            if (response.AlMessage == null || response.AlMessage.Count == 0)
+            try
             {
-                budgetAdjustmentOutput = await GetBudgetAdjustmentAsync(response.ABudgetEntryId);
-            }
-            else
-            {
-                budgetAdjustmentInput.ErrorMessages = response.AlMessage;
-                budgetAdjustmentOutput = budgetAdjustmentInput;
-            }
+                var response = await transactionInvoker.ExecuteAsync<TxUpdateBudgetAdjustmentRequest, TxUpdateBudgetAdjustmentResponse>(request);
 
-            return budgetAdjustmentOutput;
+                // If the adjustment was created and posted then create a new instance of the budget adjustment, otherwise add the error message supplied by the CTX.
+                BudgetAdjustment budgetAdjustmentOutput = null;
+
+                if (response.AlMessage == null || response.AlMessage.Count == 0)
+                {
+                    budgetAdjustmentOutput = await GetBudgetAdjustmentAsync(response.ABudgetEntryId);
+                }
+                else
+                {
+                    budgetAdjustmentInput.ErrorMessages = response.AlMessage;
+                    budgetAdjustmentOutput = budgetAdjustmentInput;
+                }
+
+                return budgetAdjustmentOutput;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> TxUpdateBudgetAdjustmentRequest session expired <==");
+                throw;
+            }
         }
 
         /// <summary>
@@ -710,14 +714,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var staffRecord = await DataReader.ReadRecordAsync<Staff>("STAFF", personId);
             if (staffRecord == null)
             {
-                LogDataError("The user", personId, "does not have a STAFF record.");
+                logger.Error("==> The user " + personId + " does not have a STAFF record <==");
                 throw new ApplicationException("The user " + personId + " does not have a STAFF record.");
             }
 
             string personLogin = staffRecord.StaffLoginId;
             if (string.IsNullOrEmpty(staffRecord.StaffLoginId))
             {
-                LogDataError("The user", personId, "does not have a login in their STAFF record.");
+                logger.Error("==> The user " + personId + " does not have a login in their STAFF record <==");
                 throw new ApplicationException("The user " + personId + " does not have a login in their STAFF record.");
             }
 
@@ -875,36 +879,44 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         };
                         GetHierarchyNamesForIdsResponse response = await transactionInvoker.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
 
-                        // The transaction returns the hierarchy names. If the name is multivalued, 
-                        // the transaction only returns the first value of the name.
-                        if (response != null)
+                        try
                         {
-                            if (!((response.OutPersonNames == null) || (response.OutPersonNames.Count < 1)))
+
+                            // The transaction returns the hierarchy names. If the name is multivalued, 
+                            // the transaction only returns the first value of the name.
+                            if (response != null)
                             {
-                                for (int x = 0; x < response.IoPersonIds.Count(); x++)
+                                if (!((response.OutPersonNames == null) || (response.OutPersonNames.Count < 1)))
                                 {
-                                    var ioPersonId = response.IoPersonIds[x];
-                                    var hierarchy = response.IoHierarchies[x];
-                                    var name = response.OutPersonNames[x];
-                                    if (!string.IsNullOrEmpty(name))
+                                    for (int x = 0; x < response.IoPersonIds.Count(); x++)
                                     {
-                                        var samePersonIdEntities = budgetAdjustmentSummaryEntities.Where(i => i.InitiatorId == ioPersonId).ToList();
-                                        foreach (var domainEntity in samePersonIdEntities)
+                                        var ioPersonId = response.IoPersonIds[x];
+                                        var hierarchy = response.IoHierarchies[x];
+                                        var name = response.OutPersonNames[x];
+                                        if (!string.IsNullOrEmpty(name))
                                         {
-                                            domainEntity.InitiatorName = name;
+                                            var samePersonIdEntities = budgetAdjustmentSummaryEntities.Where(i => i.InitiatorId == ioPersonId).ToList();
+                                            foreach (var domainEntity in samePersonIdEntities)
+                                            {
+                                                domainEntity.InitiatorName = name;
+                                            }
                                         }
                                     }
                                 }
                             }
+                        }
+                        catch (ColleagueSessionExpiredException csee)
+                        {
+                            logger.Error(csee, "==> GetHierarchyNamesForIdsRequest session expired <==");
+                            throw;
                         }
                     }
                 }
             }
             else
             {
-                LogDataError("BudgetEntries", personId, "No BUDGET.ENTRIES records selected");
+                logger.Error("BudgetEntries " + personId + " No BUDGET.ENTRIES records selected <==");
             }
-
             return budgetAdjustmentSummaryEntities;
         }
 
@@ -971,18 +983,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             request.AlDebits = debits;
             request.AlGlAccounts = glAccounts;
 
-            var response = await transactionInvoker.ExecuteAsync<TxValidateBudgetAdjustmentRequest, TxValidateBudgetAdjustmentResponse>(request);
+            try
+            {
+                var response = await transactionInvoker.ExecuteAsync<TxValidateBudgetAdjustmentRequest, TxValidateBudgetAdjustmentResponse>(request);
 
-            if (response == null)
-            {
-                logger.Error(ValidationCTXFailedErrorMessage);
-                throw new ApplicationException(ValidationCTXFailedErrorMessage);
+                if (response == null)
+                {
+                    logger.Error(ValidationCTXFailedErrorMessage);
+                    throw new ApplicationException(ValidationCTXFailedErrorMessage);
+                }
+                if (response.AlMessage == null)
+                {
+                    response.AlMessage = new List<string>();
+                }
+                return response.AlMessage;
             }
-            if (response.AlMessage == null)
+            catch (ApplicationException apex)
             {
-                response.AlMessage = new List<string>();
+                logger.Error(apex, "==> TxValidateBudgetAdjustmentRequest returned null <==");
+                throw;
             }
-            return response.AlMessage;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "==> TxValidateBudgetAdjustmentRequest session expired <==");
+                throw;
+            }
         }
     }
 }

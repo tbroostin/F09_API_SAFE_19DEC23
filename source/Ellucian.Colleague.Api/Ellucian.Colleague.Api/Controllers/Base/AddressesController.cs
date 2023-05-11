@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -26,6 +25,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
         private readonly IAddressService _addressService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the AddressesController class.
@@ -63,34 +64,36 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personId">Person to get addresses for</param>
         /// <returns>List of Address Objects <see cref="Ellucian.Colleague.Dtos.Base.Address">Address</see></returns>
-        public IEnumerable<Ellucian.Colleague.Dtos.Base.Address> GetPersonAddresses(string personId)
+        /// <accessComments>Authenticated users can retrieve their own address information; authenticated users with the VIEW.PERSON.INFORMATION or EDIT.VENDOR.BANKING.INFORMATION permission code can retrieve address information for others.</accessComments>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>> GetPersonAddresses2Async(string personId)
         {
             if (string.IsNullOrEmpty(personId))
             {
-                _logger.Error("Invalid personId parameter");
-                throw CreateHttpResponseException("The personId is required.", HttpStatusCode.BadRequest);
+                _logger.Error("Invalid personId parameter while retrieving person's addresses");
+                throw CreateHttpResponseException("The personId is required to retrieve person's addresses.", HttpStatusCode.BadRequest);
             }
             try
             {
-                var addressDtoCollection = new List<Ellucian.Colleague.Dtos.Base.Address>();
-                var addressCollection = _addressRepository.GetPersonAddresses(personId);
-                // Get the right adapter for the type mapping
-                var addressDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Address, Ellucian.Colleague.Dtos.Base.Address>();
-                // Map the Address entity to the Address DTO
-                foreach (var address in addressCollection)
-                {
-                    addressDtoCollection.Add(addressDtoAdapter.MapToType(address));
-                }
-
+                var addressDtoCollection = await _addressService.GetPersonAddresses2Async(personId);
                 return addressDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = string.Format("Timeout exception occurred while retrieving addresses for the person {0}", personId);
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                string message = "Either user is not self or does not have appropriate permissions to retrieve addresses for given person";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                throw CreateHttpResponseException(e.Message);
+                string message = "An exception occurred while retrieving addresses for the given person Id";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message);
             }
         }
 

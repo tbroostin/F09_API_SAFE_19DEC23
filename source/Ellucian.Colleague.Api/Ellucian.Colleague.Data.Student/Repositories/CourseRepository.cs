@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System;
@@ -17,11 +17,13 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -103,6 +105,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             idsNotFound += " " + id;
                         }
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch
                     {
                         idsNotFound += " " + id;
@@ -131,6 +137,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     course = await GetNewCourseAsync(courseId);
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception)
             {
@@ -810,7 +820,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             foreach (var approval in crs.ApprovalStatusEntityAssociation)
                             {
                                 if (string.IsNullOrEmpty(approval.CrsStatusAssocMember))
-                                {                                   
+                                {
                                     logger.Info("Course Approvals exists for Course Id '" + crs.Recordkey + "' that do not have a status provided.");
                                     continue;
                                 }
@@ -928,223 +938,234 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             var msg = string.Format("Unable to create course for record ID {0} with guid {1}.  Exception: {2}", crs.Recordkey, crs.RecordGuid, e.Message);
                             logger.Error(msg);
                             LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
-                           
+
                             // throw new RepositoryException(msg);
                             // Removed because breaking self service.  Will revisit with new error standards in 1.25
                         }
 
-                        // v20 changes add Instructional method details object
-                        if (crs.CourseContactEntityAssociation != null && crs.CourseContactEntityAssociation.Count > 0)
+                        if (course != null)
                         {
-                            foreach (var crsContact in crs.CourseContactEntityAssociation)
+
+                            // v20 changes add Instructional method details object
+                            if (crs.CourseContactEntityAssociation != null && crs.CourseContactEntityAssociation.Count > 0)
                             {
-                                try
+                                foreach (var crsContact in crs.CourseContactEntityAssociation)
                                 {
-                                    var isAdded = course.AddInstructionalMethodCode(crsContact.CrsInstrMethodsAssocMember);
-                                    if (isAdded)
+                                    try
                                     {
-                                        course.AddInstructionalMethodHours(crsContact.CrsContactHoursAssocMember);
-                                        course.AddInstructionalMethodPeriod(crsContact.CrsContactMeasuresAssocMember);
+                                        var isAdded = course.AddInstructionalMethodCode(crsContact.CrsInstrMethodsAssocMember);
+                                        if (isAdded)
+                                        {
+                                            course.AddInstructionalMethodHours(crsContact.CrsContactHoursAssocMember);
+                                            course.AddInstructionalMethodPeriod(crsContact.CrsContactMeasuresAssocMember);
+                                        }
                                     }
-                                }
-                                catch (Exception ex)
-                                {
-                                    var msg = "Exception occurred while processing Instructional Method codes for Course Id";
-                                    logger.Info(msg + " " + crs.Recordkey);
-                                    logger.Info(ex.Message);
-                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
-                                }
-                            }
-                        }
-
-                        if (crs.CrsInstrMethods != null && crs.CrsInstrMethods.Any())
-                        {
-                            foreach (var instrMethod in crs.CrsInstrMethods)
-                            {
-                                try
-                                {
-                                    course.AddInstructionalMethodCode(instrMethod);
-                                }
-                                catch (Exception ex)
-                                {
-                                    var msg = "Exception occurred while processing Instructional Method codes for Course Id";
-                                    logger.Info(msg + " " + crs.Recordkey);
-                                    logger.Info(ex.Message);
-                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
-                                }
-                            }
-                        }
-
-                        if (crs.CrsCourseTypes != null)
-                        {
-                            foreach (var type in crs.CrsCourseTypes)
-                            {
-                                try
-                                {
-                                    course.AddType(type);
-                                }
-                                catch (Exception ex)
-                                {
-                                    var msg = "Exception occurred while processing Type values for Course Id";
-                                    logger.Info(msg + " " + crs.Recordkey);
-                                    logger.Info(ex.Message);
-                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
-                                }
-                            }
-                        }
-
-                        if (courseParameters.CdReqsConvertedFlag != "Y")
-                        {
-                            // Update the requisite list using the course coreq list and prereq code fields from the Colleague course.
-                            var requisites = new List<Requisite>();
-
-                            if (crs.CourseCoreqsEntityAssociation != null)
-                            {
-                                foreach (var item in crs.CourseCoreqsEntityAssociation)
-                                {
-                                    // The data accessor may create a single association member with empty values. 
-                                    // Therefore, checking for null or empty course id, as well as catching any other possibilities.
-                                    if (!(string.IsNullOrEmpty(item.CrsCoreqCoursesAssocMember)))
+                                    catch (Exception ex)
                                     {
-                                        try
-                                        {
-                                            // For the old style corequisites we will default the completion order to concurrent and fill in the course id.
-                                            requisites.Add(new Requisite(item.CrsCoreqCoursesAssocMember, item.CrsCoreqCoursesReqdFlagAssocMember == "Y" ? true : false));
-                                        }
-                                        catch
-                                        {
-                                            // Don't do anything if an exception occurs, just move on. Corequisite course missing or invalid.
-                                        }
-
+                                        var msg = "Exception occurred while processing Instructional Method codes for Course Id";
+                                        logger.Info(msg + " " + crs.Recordkey);
+                                        logger.Info(ex.Message);
+                                        LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
                                     }
                                 }
                             }
-                            if (!string.IsNullOrEmpty(crs.CrsPrereqs))
-                            {
-                                try
-                                {
-                                    // for the old style single prerequisite we will default it to required, not protected, and make completion order "previous".
-                                    requisites.Add(new Requisite(crs.CrsPrereqs, true, RequisiteCompletionOrder.Previous, false));
 
-                                }
-                                catch (Exception)
+                            if (crs.CrsInstrMethods != null && crs.CrsInstrMethods.Any())
+                            {
+                                foreach (var instrMethod in crs.CrsInstrMethods)
                                 {
-                                    // Don't do anything. Skip this prereq and move on.
+                                    try
+                                    {
+                                        course.AddInstructionalMethodCode(instrMethod);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        var msg = "Exception occurred while processing Instructional Method codes for Course Id";
+                                        logger.Info(msg + " " + crs.Recordkey);
+                                        logger.Info(ex.Message);
+                                        LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
+                                    }
                                 }
+                            }
 
-                            }
-                            if (requisites.Any())
+                            if (crs.CrsCourseTypes != null)
                             {
-                                course.Requisites = requisites;
+                                foreach (var type in crs.CrsCourseTypes)
+                                {
+                                    try
+                                    {
+                                        course.AddType(type);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        var msg = "Exception occurred while processing Type values for Course Id";
+                                        logger.Info(msg + " " + crs.Recordkey);
+                                        logger.Info(ex.Message);
+                                        LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
+                                    }
+                                }
                             }
-                        }
-                        else
-                        {
-                            // If the Colleague data is now in the new format update requisites using the new Requisite field from the Colleague course.
-                            if (crs.CrsReqs != null && crs.CrsReqs.Any())
+
+                            if (courseParameters.CdReqsConvertedFlag != "Y")
                             {
+                                // Update the requisite list using the course coreq list and prereq code fields from the Colleague course.
                                 var requisites = new List<Requisite>();
-                                foreach (var req in crs.CrsReqs)
+
+                                if (crs.CourseCoreqsEntityAssociation != null)
                                 {
-                                    if (!string.IsNullOrEmpty(req))
+                                    foreach (var item in crs.CourseCoreqsEntityAssociation)
                                     {
-                                        var requirement = requirementData.Where(r => r.Recordkey == req).FirstOrDefault();
-                                        if (requirement != null)
+                                        // The data accessor may create a single association member with empty values. 
+                                        // Therefore, checking for null or empty course id, as well as catching any other possibilities.
+                                        if (!(string.IsNullOrEmpty(item.CrsCoreqCoursesAssocMember)))
                                         {
-                                            bool isRequired = requirement.AcrReqsEnforcement == "RQ" ? true : false;
-                                            bool isProtected = requirement.AcrReqsProtectFlag == "Y" ? true : false;
-                                            // If the ACR.REQS.TIMING field is other than C or E we will default to Previous.
-                                            RequisiteCompletionOrder completionOrder = RequisiteCompletionOrder.Previous;
-                                            if (requirement.AcrReqsTiming == "C")
+                                            try
                                             {
-                                                completionOrder = RequisiteCompletionOrder.Concurrent;
+                                                // For the old style corequisites we will default the completion order to concurrent and fill in the course id.
+                                                requisites.Add(new Requisite(item.CrsCoreqCoursesAssocMember, item.CrsCoreqCoursesReqdFlagAssocMember == "Y" ? true : false));
                                             }
-                                            if (requirement.AcrReqsTiming == "E")
+                                            catch (Exception ex)
                                             {
-                                                completionOrder = RequisiteCompletionOrder.PreviousOrConcurrent;
+                                                // Don't do anything if an exception occurs, just move on. Corequisite course missing or invalid.
+                                                logger.Error(ex, "Corequisite course missing or invalid.");
                                             }
-                                            requisites.Add(new Requisite(req, isRequired, completionOrder, isProtected));
-                                        }
-                                        else
-                                        {
-                                            // Could not find the requirement for this requisite. Discard and log error.
-                                            var requisiteError = "Course requisite item points to non-existent requirement";
-                                            LogDataError("Course requisite", crs.Recordkey, crs, null, requisiteError);
-                                            LogRepoError(requisiteError, crs.RecordGuid, crs.Recordkey);
+
                                         }
                                     }
+                                }
+                                if (!string.IsNullOrEmpty(crs.CrsPrereqs))
+                                {
+                                    try
+                                    {
+                                        // for the old style single prerequisite we will default it to required, not protected, and make completion order "previous".
+                                        requisites.Add(new Requisite(crs.CrsPrereqs, true, RequisiteCompletionOrder.Previous, false));
+
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        // Don't do anything. Skip this prereq and move on.
+                                        logger.Error(ex, "Unable to get prerequisite.");
+                                    }
+
                                 }
                                 if (requisites.Any())
                                 {
                                     course.Requisites = requisites;
                                 }
                             }
-                        }
-                        // Find all the equated courses
-                        var equatedCourseIds = await FindEquatesAsync(course.Id, crs.CrsEquateCodes);
-                        foreach (var courseId in equatedCourseIds)
-                        {
-                            try
+                            else
                             {
-                                course.AddEquatedCourseId(courseId);
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.Info("Could not add equated course id for course " + crs.Recordkey);
-                                logger.Info(ex.Message);
-                                LogRepoError(ex.Message, crs.RecordGuid, crs.Recordkey);
-                            }
-                        }
-                        courses[course.Id] = course;
-
-                        // set pseudo course flag - based off of a special processing code (P) on the course type valcode.
-                        if (crs.CrsCourseTypes != null)
-                        {
-                            try
-                            {
-                                var courseTypeValcodeMatches = crs.CrsCourseTypes.SelectMany(x => courseTypes.ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == x)).Distinct().ToList();
-                                if (courseTypeValcodeMatches != null && courseTypeValcodeMatches.Any())
+                                // If the Colleague data is now in the new format update requisites using the new Requisite field from the Colleague course.
+                                if (crs.CrsReqs != null && crs.CrsReqs.Any())
                                 {
-                                    if (courseTypeValcodeMatches.Where(a => a.ValActionCode1AssocMember != null && a.ValActionCode1AssocMember.ToUpper() == "P").FirstOrDefault() != null)
+                                    var requisites = new List<Requisite>();
+                                    foreach (var req in crs.CrsReqs)
                                     {
-                                        course.IsPseudoCourse = true;
+                                        if (!string.IsNullOrEmpty(req))
+                                        {
+                                            var requirement = requirementData.Where(r => r.Recordkey == req).FirstOrDefault();
+                                            if (requirement != null)
+                                            {
+                                                bool isRequired = requirement.AcrReqsEnforcement == "RQ" ? true : false;
+                                                bool isProtected = requirement.AcrReqsProtectFlag == "Y" ? true : false;
+                                                // If the ACR.REQS.TIMING field is other than C or E we will default to Previous.
+                                                RequisiteCompletionOrder completionOrder = RequisiteCompletionOrder.Previous;
+                                                if (requirement.AcrReqsTiming == "C")
+                                                {
+                                                    completionOrder = RequisiteCompletionOrder.Concurrent;
+                                                }
+                                                if (requirement.AcrReqsTiming == "E")
+                                                {
+                                                    completionOrder = RequisiteCompletionOrder.PreviousOrConcurrent;
+                                                }
+                                                requisites.Add(new Requisite(req, isRequired, completionOrder, isProtected));
+                                            }
+                                            else
+                                            {
+                                                // Could not find the requirement for this requisite. Discard and log error.
+                                                var requisiteError = "Course requisite item points to non-existent requirement";
+                                                LogDataError("Course requisite", crs.Recordkey, crs, null, requisiteError);
+                                                LogRepoError(requisiteError, crs.RecordGuid, crs.Recordkey);
+                                            }
+                                        }
+                                    }
+                                    if (requisites.Any())
+                                    {
+                                        course.Requisites = requisites;
                                     }
                                 }
                             }
-                            catch
+                            // Find all the equated courses
+                            var equatedCourseIds = await FindEquatesAsync(course.Id, crs.CrsEquateCodes);
+                            foreach (var courseId in equatedCourseIds)
                             {
-                            }
-                        }
-
-                        // Set indicator flags
-                        course.AllowAudit = crs.CrsAllowAuditFlag == "Y";
-                        course.AllowPassNoPass = crs.CrsAllowPassNopassFlag == "Y";
-                        course.OnlyPassNoPass = crs.CrsOnlyPassNopassFlag == "Y";
-                        course.AllowWaitlist = crs.CrsAllowWaitlistFlag == "Y";
-                        course.AllowToCountCourseRetakeCredits = crs.CrsCountRetakeCredFlag == "Y";
-                        //course.AllowWaitlistMultipleSections = crs.CrsWaitlistMultSectFlag == "Y";
-
-                        // Set the cycle restrictions by location
-                        if (crs.CourseLocationCyclesEntityAssociation != null)
-                        {
-                            foreach (var locCycle in crs.CourseLocationCyclesEntityAssociation)
-                            {
-                                // The data accessor may create a single association member with empty values. 
-                                if (!(string.IsNullOrEmpty(locCycle.CrsClcLocationAssocMember)))
+                                try
                                 {
-                                    try
-                                    {
-                                        course.AddLocationCycleRestriction(new LocationCycleRestriction(locCycle.CrsClcLocationAssocMember, locCycle.CrsClcSessionCycleAssocMember, locCycle.CrsClcYearlyCycleAssocMember));
-                                    }
-                                    catch
-                                    {
+                                    course.AddEquatedCourseId(courseId);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Info("Could not add equated course id for course " + crs.Recordkey);
+                                    logger.Info(ex.Message);
+                                    LogRepoError(ex.Message, crs.RecordGuid, crs.Recordkey);
+                                }
+                            }
+                            courses[course.Id] = course;
 
-                                        // Don't do anything if an exception occurs, just move on. Indicates a null restriction or one with a null or empty location which is invalid.
+                            // set pseudo course flag - based off of a special processing code (P) on the course type valcode.
+                            if (crs.CrsCourseTypes != null)
+                            {
+                                try
+                                {
+                                    var courseTypeValcodeMatches = crs.CrsCourseTypes.SelectMany(x => courseTypes.ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == x)).Distinct().ToList();
+                                    if (courseTypeValcodeMatches != null && courseTypeValcodeMatches.Any())
+                                    {
+                                        if (courseTypeValcodeMatches.Where(a => a.ValActionCode1AssocMember != null && a.ValActionCode1AssocMember.ToUpper() == "P").FirstOrDefault() != null)
+                                        {
+                                            course.IsPseudoCourse = true;
+                                        }
                                     }
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex, "Unable to set course flag from special processing code (P) on the course type valcode.");
+                                }
+                            }
 
+                            // Set indicator flags
+                            course.AllowAudit = crs.CrsAllowAuditFlag == "Y";
+                            course.AllowPassNoPass = crs.CrsAllowPassNopassFlag == "Y";
+                            course.OnlyPassNoPass = crs.CrsOnlyPassNopassFlag == "Y";
+                            course.AllowWaitlist = crs.CrsAllowWaitlistFlag == "Y";
+                            course.AllowToCountCourseRetakeCredits = crs.CrsCountRetakeCredFlag == "Y";
+                            //course.AllowWaitlistMultipleSections = crs.CrsWaitlistMultSectFlag == "Y";
+
+                            // Set the cycle restrictions by location
+                            if (crs.CourseLocationCyclesEntityAssociation != null)
+                            {
+                                foreach (var locCycle in crs.CourseLocationCyclesEntityAssociation)
+                                {
+                                    // The data accessor may create a single association member with empty values. 
+                                    if (!(string.IsNullOrEmpty(locCycle.CrsClcLocationAssocMember)))
+                                    {
+                                        try
+                                        {
+                                            course.AddLocationCycleRestriction(new LocationCycleRestriction(locCycle.CrsClcLocationAssocMember, locCycle.CrsClcSessionCycleAssocMember, locCycle.CrsClcYearlyCycleAssocMember));
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            // Don't do anything if an exception occurs, just move on. Indicates a null restriction or one with a null or empty location which is invalid.
+                                            logger.Error(ex, "Invalid restriction.");
+                                        }
+
+                                    }
                                 }
                             }
                         }
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
                     }
                     catch (RepositoryException rex)
                     {
@@ -1302,7 +1323,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access COURSE.STATUSES valcode table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    return courseStatusesValcode;
                }
@@ -1387,13 +1408,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             // get the equates for this possibly equated course
                             var otherCourseEquates = courseEquates.Where(c => c.Value.Contains(equateCourseId));
-                            // make a list of the equate codes they have in common
-                            var equateIntersection = thisCourseEquates.Select(eq => eq.Key).Intersect<string>(otherCourseEquates.Select(eq => eq.Key));
-                            // make sure the number in common is also exactly the count of equates each has--that's how we know the two lists are the same
-                            // and that one course does not have equate codes the other course doesn't have and vice versa.
-                            if (equateIntersection.Count() == thisCourseEquates.Count() && equateIntersection.Count() == otherCourseEquates.Count())
+
+                            //need to find if  equatedCoursId will be added as equated course to current courseId
+                            //it is only possible when current courseId equates contains other course equates then other course equates course id is equated course
+                            //or we can say otherCouseEquates is subset of thisCourseEquates then course is added as equated course id
+                            HashSet<string> thisCourseEquatesSet = new HashSet<string>(thisCourseEquates.Select(eq => eq.Key));
+                            HashSet<string> otherCourseEquatesSet = new HashSet<string>(otherCourseEquates.Select(eq => eq.Key));
+                            if (thisCourseEquatesSet != null && otherCourseEquatesSet != null)
                             {
-                                equatedCourses.Add(equateCourseId);
+                                bool isSubset = otherCourseEquatesSet.IsSubsetOf(thisCourseEquatesSet);
+                                if (isSubset == true)
+                                {
+                                    equatedCourses.Add(equateCourseId);
+                                }
                             }
                         }
                     }
@@ -1418,7 +1445,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access COURSE.TYPES valcode table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    return courseTypesValcode;
                }
@@ -1442,7 +1469,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        var errorMessage = "Unable to access course parameters CD.DEFAULTS to determine CoreqPrereq convertion flag. Defaulting to unconverted.";
                        logger.Info(errorMessage);
                        // If we cannot read the course parameters - default to "unconverted".
-                       // throw new Exception(errorMessage);
+                       // throw new ColleagueWebApiException(errorMessage);
                        Data.Student.DataContracts.CdDefaults newCourseParams = new Data.Student.DataContracts.CdDefaults();
                        newCourseParams.CdReqsConvertedFlag = "N";
                        courseParams = newCourseParams;
@@ -1510,7 +1537,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 else
                 {
-                    throw new Exception("Transaction failed to return credit types");
+                    throw new ColleagueWebApiException("Transaction failed to return credit types");
                 }
             }
 

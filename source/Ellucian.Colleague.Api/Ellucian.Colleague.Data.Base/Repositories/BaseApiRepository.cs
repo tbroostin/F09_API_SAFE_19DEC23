@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Cache;
 using slf4net;
 using System;
@@ -60,6 +60,11 @@ namespace Ellucian.Data.Colleague.Repositories
                     }
                 }
             }
+            catch (Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "An exception occurred while reading the {0} file.");

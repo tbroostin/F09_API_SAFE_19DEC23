@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -1312,7 +1313,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     bpoDataContract.BpoStatus.Add("V");
                     break;
                 default:
-                    throw new Exception("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
+                    throw new ColleagueWebApiException("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
             }
 
             // Build the blanket purchase order status date
@@ -2276,7 +2277,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         bpoDataContract.BpoStatus.Add("V");
                         break;
                     default:
-                        throw new Exception("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
+                        throw new ColleagueWebApiException("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
                 }
 
                 // Build the blanket purchase order status date
@@ -2985,7 +2986,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                             bpoDataContract.BpoStatus.Add("V");
                             break;
                         default:
-                            throw new Exception("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
+                            throw new ColleagueWebApiException("Invalid status specified in BlanketPurchaseOrderRepositoryTests");
                     }
 
                     // Build the blanket purchase order status date

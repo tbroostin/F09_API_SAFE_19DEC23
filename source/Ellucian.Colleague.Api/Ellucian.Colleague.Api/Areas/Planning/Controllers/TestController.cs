@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,6 +15,7 @@ using slf4net;
 using System.Net;
 using Ellucian.Web.Mvc.Filter;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Ellucian.Logging;
 
@@ -140,7 +141,7 @@ namespace Ellucian.Colleague.Api.Areas.Planning.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];

@@ -91,5 +91,10 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// </summary>
         public bool IsIgnoredOnChecklist { get; set; }
 
+        /// <summary>
+        /// True/False flag indicating whether a loan can only be decreased or not
+        /// </summary>
+        public bool IsDecreaseOnly { get; set; }
+
     }
 }

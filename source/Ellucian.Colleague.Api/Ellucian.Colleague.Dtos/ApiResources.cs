@@ -44,6 +44,13 @@ namespace Ellucian.Colleague.Dtos
         public List<string> Methods { get; set; }
 
         /// <summary>
+        /// Array of any supported get all patterns, paging and batch.
+        /// </summary>
+        [JsonProperty("customizations", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public Customizations Customizations { get; set; }
+
+
+        /// <summary>
         /// Array of any supported filters by the API in json dot notation. This is not included if no filters are supported
         /// </summary>
         [JsonProperty("filters", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
@@ -90,6 +97,31 @@ namespace Ellucian.Colleague.Dtos
         public bool MajorVersionAdded { get; set; }
 
     }
+
+    /// <summary>
+    /// Information about extensibility and data privacy configuration
+    /// </summary>
+    public class Customizations
+    {
+        /// <summary>
+        /// If data privacy rules have been defined
+        /// </summary>
+        [JsonProperty("hasPrivacyRules", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool HasPrivacyRules { get; set; }
+
+        /// <summary>
+        /// If the resource representation is a full custom/extended/spec driven resource
+        /// </summary>
+        [JsonProperty("isCustomResource", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool IsCustomResource { get; set; }
+
+        /// <summary>
+        /// If extended properties have been added
+        /// </summary>
+        [JsonProperty("hasExtendedProperties", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool HasExtendedProperties { get; set; }
+    }
+
 
     /// <summary>
     /// Patterns for GetAll support, Paging or Batch.

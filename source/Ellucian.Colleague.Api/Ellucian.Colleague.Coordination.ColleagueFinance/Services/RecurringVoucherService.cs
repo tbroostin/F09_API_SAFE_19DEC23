@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -11,6 +11,9 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -23,11 +26,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private IRecurringVoucherRepository recurringVoucherRepository;
         private IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository;
         private IGeneralLedgerUserRepository generalLedgerUserRepository;
+        private IApprovalConfigurationRepository approvalConfigurationRepository;
 
         // This constructor initializes the private attributes
         public RecurringVoucherService(IRecurringVoucherRepository recurringVoucherRepository,
             IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository,
             IGeneralLedgerUserRepository generalLedgerUserRepository,
+            IApprovalConfigurationRepository approvalConfigurationRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -37,6 +42,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.recurringVoucherRepository = recurringVoucherRepository;
             this.generalLedgerConfigurationRepository = generalLedgerConfigurationRepository;
             this.generalLedgerUserRepository = generalLedgerUserRepository;
+            this.approvalConfigurationRepository = approvalConfigurationRepository;
         }
 
         /// <summary>
@@ -71,8 +77,43 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
             }
 
+            // If the user has access to all the GL accounts through the GL access role,
+            // don't bother adding any additional GL accounts they may have access through
+            // approval roles.
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>();
+            if (generalLedgerUser.GlAccessLevel != GlAccessLevel.Full_Access)
+            {
+                ApprovalConfiguration approvalConfiguration = null;
+                try
+                {
+                    approvalConfiguration = await approvalConfigurationRepository.GetApprovalConfigurationAsync();
+                }
+                catch (Exception e)
+                {
+                    logger.Debug(e, "Approval Roles are not configured.");
+                }
+
+                // Check if recurring vouchers use approval roles.
+                if (approvalConfiguration != null && approvalConfiguration.RecurringVouchersUseApprovalRoles)
+                {
+                    // Use the approval roles to see if they have access to additional GL accounts.
+                    allAccessAndApprovalAccounts = await generalLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(CurrentUser.PersonId, generalLedgerUser.AllAccounts);
+                }
+                else
+                {
+                    // If approval roles aren't being used, just use the GL Access
+                    allAccessAndApprovalAccounts = generalLedgerUser.AllAccounts;
+                }
+
+                // If the user has access to some GL accounts via approval 
+                // roles, change the GL access level to possible access.
+                if (allAccessAndApprovalAccounts != null && allAccessAndApprovalAccounts.Any())
+                {
+                    generalLedgerUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+                }
+            }
             // Get the recurring voucher domain entity from the repository
-            var recurringVoucherDomainEntity = await recurringVoucherRepository.GetRecurringVoucherAsync(id, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts);
+            var recurringVoucherDomainEntity = await recurringVoucherRepository.GetRecurringVoucherAsync(id, generalLedgerUser.GlAccessLevel, allAccessAndApprovalAccounts);
 
             if (recurringVoucherDomainEntity == null)
             {

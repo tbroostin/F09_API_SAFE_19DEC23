@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return section == null ? null : section.Id;
         }
 
-        public async Task<Section> GetSectionAsync(string id)
+        public async Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false)
         {
             return (await GetAsync()).FirstOrDefault(x => x.Id == id);
         }
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<Section> GetSectionByGuidAsync(string guid)
+        public async Task<Section> GetSectionByGuidAsync(string guid, bool ignoreFaculty = false)
         {
             return (await GetAsync()).FirstOrDefault(x => x.Guid == guid);
         }
@@ -1351,6 +1351,21 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         /// <param name="sectionId">Unique identifier for the course section</param>
         /// <returns>Grading status for the specified course section</returns>
         public Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<DeptOversightSearchResult>> GetDeptOversightSectionDetails(string keyword,IEnumerable<Term> terms, IEnumerable<string> depts)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Section>> GetFacultySectionsAsync(IEnumerable<string> facultyIds, bool bestFit = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<List<Section>> GetSectionsDatesByIds(List<string> guids)
         {
             throw new NotImplementedException();
         }

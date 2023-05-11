@@ -101,6 +101,8 @@ namespace Ellucian.Colleague.Data.Base.Tests
                 {
                     ValInternalCodeAssocMember = "HO",
                     ValActionCode1AssocMember = "HO",
+                    ValActionCode2AssocMember = "HO",
+                    ValActionCode3AssocMember = "HO"
                 },
                 new ApplValcodesVals()
                 {

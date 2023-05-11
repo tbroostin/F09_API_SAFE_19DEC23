@@ -3,6 +3,7 @@
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -63,6 +64,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(argex, "Unable to get the document approval.");
                 throw CreateHttpResponseException("Unable to get the document approval.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session timeout to get the document approval.");
+                throw CreateHttpResponseException("Unable to get the document approval.", HttpStatusCode.Unauthorized);
+            }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
@@ -108,6 +114,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument to update a document approval.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session timeout to update a document approval.");
+                throw CreateHttpResponseException("Unable to update a document approval.", HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
@@ -139,6 +150,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(argex, "Unable to get approved documents.");
                 throw CreateHttpResponseException("Unable to get approved documents.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session timeout to get approved documents.");
+                throw CreateHttpResponseException("Unable to get approved documents.", HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

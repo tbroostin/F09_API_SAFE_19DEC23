@@ -3,6 +3,7 @@
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -38,23 +39,30 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         public async Task<IEnumerable<Dtos.FinancialAid.FinancialAidOffice3>> GetFinancialAidOffices3Async()
         {
             var officeDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.FinancialAidOffice, Dtos.FinancialAid.FinancialAidOffice3>();
-
-            var officeEntityList = await financialAidOfficeRepository.GetFinancialAidOfficesAsync();
-
-            if (officeEntityList == null)
+            try
             {
-                var message = "Null FinancialAidOffice object returned by repository";
-                logger.Error(message);
-                throw new KeyNotFoundException(message);
-            }
+                var officeEntityList = await financialAidOfficeRepository.GetFinancialAidOfficesAsync();
 
-            var officeDtoList = new List<Dtos.FinancialAid.FinancialAidOffice3>();
-            foreach (var officeEntity in officeEntityList)
+
+                if (officeEntityList == null)
+                {
+                    var message = "Null FinancialAidOffice object returned by repository";
+                    logger.Error(message);
+                    throw new KeyNotFoundException(message);
+                }
+
+                var officeDtoList = new List<Dtos.FinancialAid.FinancialAidOffice3>();
+                foreach (var officeEntity in officeEntityList)
+                {
+                    officeDtoList.Add(officeDtoAdapter.MapToType(officeEntity));
+                }
+
+                return officeDtoList;
+            }
+            catch(ColleagueSessionExpiredException csee)
             {
-                officeDtoList.Add(officeDtoAdapter.MapToType(officeEntity));
+                throw;
             }
-
-            return officeDtoList;
         }
 
         /// <summary>

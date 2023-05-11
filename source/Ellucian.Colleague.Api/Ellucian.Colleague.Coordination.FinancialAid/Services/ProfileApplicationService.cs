@@ -69,14 +69,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years", studentId));
+                logger.Debug(string.Format("Student {0} has no award years", studentId));
                 return new List<ProfileApplication>();
             }
 
             var profileApplicationEntities = await profileApplicationRepository.GetProfileApplicationsAsync(studentId, studentAwardYears);
             if (profileApplicationEntities == null || profileApplicationEntities.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no profile applications", studentId));
+                logger.Debug(string.Format("Student {0} has no profile applications", studentId));
                 return new List<ProfileApplication>();
             }
 

@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class VendorsRepository : BaseColleagueRepository, IVendorsRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         private readonly int readSize;
         protected const int AllVendorsCacheTimeout = 20; // Clear from cache every 20 minutes
@@ -1732,8 +1732,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         vendorGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // do not throw error
+                    logger.Error(ex, "Unable to get vendor by guid.");
                 }
             }
 

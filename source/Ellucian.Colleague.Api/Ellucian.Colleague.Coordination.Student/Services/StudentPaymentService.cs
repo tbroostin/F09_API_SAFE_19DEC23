@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Threading.Tasks;
@@ -315,9 +315,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 studentPaymentEntity.PaymentID = (studentPaymentDto.Id != null && !string.IsNullOrEmpty(studentPaymentDto.Id)) ? (await referenceDataRepository.GetGuidLookupResultFromGuidAsync(studentPaymentDto.Id)).PrimaryKey : string.Empty;
             }
-            catch
+            catch (Exception ex)
             {
                 // Do nothing if the GUID doesn't already exist, just leave the payment item id blank.
+                logger.Error(ex, "Unable to get payment item id.");
             }
             return studentPaymentEntity;
         }
@@ -883,9 +884,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 paymentID = (studentPaymentDto.Id != null && !string.IsNullOrEmpty(studentPaymentDto.Id)) ?
                     (await referenceDataRepository.GetGuidLookupResultFromGuidAsync(studentPaymentDto.Id)).PrimaryKey : string.Empty;
             }
-            catch
+            catch (Exception ex)
             {
                 // Do nothing if the GUID doesn't already exist, just leave the payment item id blank.
+                logger.Error(ex, "Unable to get payment item id.");
             }
 
             Ellucian.Colleague.Domain.Student.Entities.StudentPayment studentPaymentEntity = null;
@@ -1477,9 +1479,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 paymentID = (studentPaymentDto.Id != null && !string.IsNullOrEmpty(studentPaymentDto.Id)) ?
                     (await referenceDataRepository.GetGuidLookupResultFromGuidAsync(studentPaymentDto.Id)).PrimaryKey : string.Empty;
             }
-            catch
+            catch (Exception ex)
             {
                 // Do nothing if the GUID doesn't already exist, just leave the payment item id blank.
+                logger.Error(ex, "Unable to get payment item id.");
             }
 
             Ellucian.Colleague.Domain.Student.Entities.StudentPayment studentPaymentEntity = null;

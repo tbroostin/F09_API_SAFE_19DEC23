@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -58,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
-                throw new Exception(string.Format("No instructional-delivery-methods was found for guid {0}.", guid));
+                throw new ColleagueWebApiException(string.Format("No instructional-delivery-methods was found for guid {0}.", guid));
             }
             catch (Exception e)
             {

@@ -14,6 +14,7 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -76,6 +77,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the journal entry.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public string supervisorId;
         public string superviseeId;
         public DateTime? lookbackDate;
+        public string[] positionIds;
 
         // mocks
         public SupervisorsRepository BuildRepository()
@@ -100,7 +101,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                             PerposHrpId = rec.PerposHrpId,
                             PerposEndDate = rec.PerposEndDate,
                         }).ToList()
-                    )));
+                    )));            
 
             // read from perpos with selection critiera
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perpos>(It.Is<string>(c => c.Contains("WITH PERPOS.HRP.ID EQ")), It.IsAny<bool>()))
@@ -299,7 +300,25 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task ExecuteTest()
             {
-                var result = await actualRepository.GetSupervisorIdsForPositionsAsync(new string[1] { "TMA001" });
+                positionIds = new string[1] { "TMA001" };
+
+                //select perpos by position id
+                dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(c => c.Contains("AND WITH PERPOS.POSITION.INDEX EQ ?")), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+                    .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                        Task.FromResult((testRepository.PerposRecords == null) ? null :
+                            testRepository.PerposRecords
+                            .Where(rec => positionIds.Contains(rec.PerposPositionId))
+                            .Select(rec => rec.RecordKey).ToArray()
+                        ));
+
+                var expected = await testRepository.GetSupervisorIdsForPositionsAsync(positionIds);
+                var actual = await actualRepository.GetSupervisorIdsForPositionsAsync(positionIds);
+
+                Assert.AreEqual(expected.Keys.First(), actual.Keys.First());
+                for (int i = 0; i < actual.Values.First().Count; i++)
+                {
+                    Assert.AreEqual(expected.Values.First()[i], actual.Values.First()[i]);
+                }
             }
 
             [TestMethod]
@@ -318,6 +337,44 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 var expected = await testRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
                 var actual = await actualRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
                 CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
+            }
+
+            [TestMethod]
+            public async Task ExecuteTestForNonEmpSupervisor()
+            {
+                positionIds = new string[1] { "ZPRTSTPOS" };
+
+                //Select HRPER Records based on Non Employee Position IDs.
+                dataReaderMock.Setup(d => d.SelectAsync("HRPER", It.Is<string>(c => c.Contains("WITH HRP.NONEMP.POSITION EQ ?")), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+                     .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
+                        Task.FromResult((testRepository.HrPerRecords == null) ? null :
+                            testRepository.HrPerRecords
+                            .Where(rec => positionIds.Contains(rec.HrpNonempPosition))
+                            .Select(rec => rec.RecordKey).ToArray()
+                        ));
+
+                // read HrPer with list of keys
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Hrper>(It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .Returns<string[], bool>((ids, b) => Task.FromResult(testRepository.HrPerRecords == null ? null :
+                        new Collection<Hrper>(
+                            testRepository.HrPerRecords
+                            .Where(rec => ids.Contains(rec.RecordKey))
+                            .Select(rec => new Hrper()
+                            {
+                                Recordkey = rec.RecordKey,
+                                HrpNonempPosition = rec.HrpNonempPosition
+                            }).ToList()
+                        )));
+
+                var expected = await testRepository.GetSupervisorIdsForPositionsAsync(positionIds);
+                var actual = await actualRepository.GetSupervisorIdsForPositionsAsync(positionIds);
+
+                Assert.AreEqual(expected.Keys.First(), actual.Keys.First());
+
+                for (int i = 0; i < actual.Values.First().Count; i++)
+                {
+                    Assert.AreEqual(expected.Values.First()[i], actual.Values.First()[i]);
+                }
             }
         }
 

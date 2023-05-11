@@ -105,5 +105,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.AnonymousGrading
             entity.AddError(error);
             Assert.AreEqual(1, entity.Errors.Count);
         }
+        [TestMethod]
+        public void SectionPreliminaryAnonymousGrading_AddAnonymousGradeForSectionWithMidtermGradeId_valid()
+        {
+            gradeForSection = new PreliminaryAnonymousGrade("11223","23456", "1", "12345", "12345", null);
+
+            var entity = new SectionPreliminaryAnonymousGrading(courseSectionId);
+            entity.AddAnonymousGradeForSection(gradeForSection);
+            Assert.AreEqual(1, entity.AnonymousGradesForSection.Count);
+            Assert.AreEqual("11223",entity.AnonymousGradesForSection[0].AnonymousGradingId);
+            Assert.AreEqual("23456",entity.AnonymousGradesForSection[0].AnonymousMidTermGradingId);
+        }
     }
 }

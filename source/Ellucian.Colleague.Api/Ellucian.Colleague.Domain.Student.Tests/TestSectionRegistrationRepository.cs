@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -211,11 +211,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
         #endregion
 
-        public Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode)
+        public Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode, bool updateRegistration = true)
         {
             throw new NotImplementedException();
         }
 
+        public Task<SectionRegistrationResponse> CheckSectionRegistrations(SectionRegistrationsRequest request, string personId, Dictionary<string, string> sectionIdCollection)
+        {
+            throw new NotImplementedException();
+        }
+            
         public async Task<bool> CheckStuAcadCredRecord(string id)
         {
             throw new NotImplementedException();

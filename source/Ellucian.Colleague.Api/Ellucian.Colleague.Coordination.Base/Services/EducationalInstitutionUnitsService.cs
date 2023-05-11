@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 
@@ -136,7 +137,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var departmentEntities = await GetAllDepartmentsAsync(ignoreCache);
                 if (departmentEntities == null)
                 {
-                    throw new Exception("An error occurred retrieving Departments");
+                    throw new ColleagueWebApiException("An error occurred retrieving Departments");
                 }
 
                 var academicDepartments = departmentEntities.Where(x => x.DepartmentType != "H");
@@ -164,7 +165,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var divisionEntities = await GetAllDivisionsAsync(ignoreCache);
                 if (divisionEntities == null)
                 {
-                    throw new Exception("An error occurred retrieving Divisions");
+                    throw new ColleagueWebApiException("An error occurred retrieving Divisions");
                 }
                 foreach (var division in divisionEntities)
                 {
@@ -180,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var schoolEntities = await GetAllSchoolsAsync(ignoreCache);
                 if (schoolEntities == null)
                 {
-                    throw new Exception("An error occurred retrieving Schools");
+                    throw new ColleagueWebApiException("An error occurred retrieving Schools");
                 }
 
                 foreach (var school in schoolEntities)

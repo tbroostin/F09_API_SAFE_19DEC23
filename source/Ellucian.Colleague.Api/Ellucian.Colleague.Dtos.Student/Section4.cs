@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -125,6 +125,12 @@ namespace Ellucian.Colleague.Dtos.Student
         public int? Available { get; set; }
 
         /// <summary>
+        /// Number of enrolled students for the course section. This is the sum of all active students, reserved seats, and waitlisted students with permission to register; 
+        /// if the course section has a global capacity, this includes those numbers from all crosslisted sections as well.
+        /// </summary>
+        public int? Enrolled { get; set; }
+
+        /// <summary>
         /// If a student is permitted to request being added to the waitlist, this is true.
         /// If the section is not active, if the section doesn't allow placement on a waiting list, or if waitlist is closed, this is false.
         /// </summary>
@@ -242,6 +248,26 @@ namespace Ellucian.Colleague.Dtos.Student
         public bool ShowSpecialIcon { get; set; }
 
         /// <summary>
+        /// Indicates whether this section should display client-specified icon 2 (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon2 { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display client-specified icon 3 (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon3 { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display client-specified icon 4 (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon4 { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display client-specified icon 5 (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon5 { get; set; }
+
+        /// <summary>
         /// This indicates status of the section 
         /// It is Open when there are seats available.
         /// It is Waitlisted when there are students in waitlist. 
@@ -276,5 +302,14 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public bool GradeByRandomId { get; set; }
 
+        /// <summary>
+        /// List of department codes that offer this course section
+        /// </summary>
+        public IEnumerable<string> DepartmentCodes { get; set; }
+
+        /// <summary>
+        /// Indicates whether Self-Service attendance entry for a section has been temporarily re-opened and the close attendance parameters on FCWP are to be bypassed
+        /// </summary>
+        public bool ReopenSectionAttendance { get; set; }
     }
 }

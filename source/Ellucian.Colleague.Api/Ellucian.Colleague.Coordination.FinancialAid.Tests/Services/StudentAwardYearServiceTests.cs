@@ -17,6 +17,7 @@ using Ellucian.Colleague.Coordination.FinancialAid.Adapters;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
@@ -185,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 actualStudentAwardYears = StudentAwardYearService.GetStudentAwardYears(studentId);
 #pragma warning restore 618
-                loggerMock.Verify(l => l.Info(It.IsAny<string>()));
+                loggerMock.Verify(l => l.Debug(It.IsAny<string>()));
             }
 
             [TestMethod]
@@ -437,7 +438,11 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 actualStudentAwardYears = await StudentAwardYearService.GetStudentAwardYears2Async(studentId);
 
-                loggerMock.Verify(l => l.Info(It.IsAny<string>()));
+                var message = string.Format("No studentAwardYears are available for student {0}", studentId);
+
+                //loggerMock.Verify(l => l.Debug(It.IsAny<string>()));
+                Assert.IsTrue(actualStudentAwardYears.Count() == 0);
+                loggerMock.Verify(l => l.Debug("No studentAwardYears are available for student {0}", It.IsAny<string>()));
             }
 
             /// <summary>
@@ -899,7 +904,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             /// Tests if Exception is thrown when null is received from the update
             /// </summary>
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void UpdatedAwardYearIsNull_ExceptionThrownTest()
             {
                 StudentAwardYear updatedStudentAwardYearEntity = null;
@@ -1051,7 +1056,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             /// Tests if Exception is thrown when null is received from the update
             /// </summary>
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdatedAwardYearIsNull_ExceptionThrownTest()
             {
                 StudentAwardYear updatedStudentAwardYearEntity = null;

@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -22,7 +23,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         private DraftBudgetAdjustmentsRepository actualRepository;
         private DraftBudgetEntries draftBudgetEntryRecord;
-        private DraftBudgetAdjustment draftBudgetAdjustmentEntity;
+        private DraftBudgetAdjustment draftBudgetAdjustmentInput;
         private TxUpdateDraftBudgetAdjustmentResponse draftBudgetAdjustmentResponse;
         private TxDeleteDraftBudgetAdjustmentResponse deleteDraftResponse;
         private string draftNumber = "B1234567";
@@ -141,7 +142,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             actualRepository = null;
             draftBudgetEntryRecord = null;
-            draftBudgetAdjustmentEntity = null;
+            draftBudgetAdjustmentInput = null;
             deleteDraftResponse = null;
         }
         #endregion
@@ -506,6 +507,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         #endregion
 
+        #region SaveAsync
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task SaveAsync_ColleagueSessionExpiredTest()
+        {
+            draftBudgetAdjustmentInput = new DraftBudgetAdjustment("reason");
+            draftBudgetAdjustmentInput.NextApprovers = new List<NextApprover>();
+            draftBudgetAdjustmentInput.TransactionDate = DateTime.Now;
+            transManagerMock.Setup(tio => tio.ExecuteAsync<TxUpdateDraftBudgetAdjustmentRequest, TxUpdateDraftBudgetAdjustmentResponse>(It.IsAny<TxUpdateDraftBudgetAdjustmentRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+            await actualRepository.SaveAsync(draftBudgetAdjustmentInput, new List<string>());
+        }
+
+        #endregion
+
         #region DeleteAsync Tests
 
         [TestMethod]
@@ -541,6 +557,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             deleteDraftResponse.AErrorCode = "any code";
             await actualRepository.DeleteAsync(draftNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task DeleteAsync_ColleagueSessionExpiredTest()
+        {
+            transManagerMock.Setup(tm => tm.ExecuteAsync<TxDeleteDraftBudgetAdjustmentRequest, TxDeleteDraftBudgetAdjustmentResponse>(It.IsAny<TxDeleteDraftBudgetAdjustmentRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+            await actualRepository.DeleteAsync("1");
         }
 
         #endregion

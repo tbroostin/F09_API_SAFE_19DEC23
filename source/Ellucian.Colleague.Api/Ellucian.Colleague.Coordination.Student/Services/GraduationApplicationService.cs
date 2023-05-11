@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -371,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     var errorMessage = string.Format("Unable to update Graduates record with student Id {0} and program Code {1}, Term {2} is closed", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode, application.GraduationTerm);
                     logger.Error(errorMessage);
-                    throw new Exception(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
                 }
                 //if there are no diploma address provided, save preferred address in graduation file
                 //this is done by updating diploma mail address with preferred address

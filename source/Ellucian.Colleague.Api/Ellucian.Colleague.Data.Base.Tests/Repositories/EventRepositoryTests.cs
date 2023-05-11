@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -579,6 +579,36 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task SpecialDayIsPayrollHolidayTest()
+            {
+                //modify all special day records to that type equals "HO" which has a corresponding valcode entry with specail action code 1 = "HO"
+                foreach (var rec in specialDaysTestData.specialDayRecords)
+                {
+                    rec.CmsdType = "HO";
+                }
+
+                var actual = await eventsRepo.GetCalendarsAsync();
+
+                //assert all special days are holidays
+                Assert.IsTrue(actual.SelectMany(a => a.SpecialDays).All(s => s.IsPayrollHoliday));
+            }
+
+            [TestMethod]
+            public async Task SpecialDayIsNotPayrollHolidayTest()
+            {
+                //modify all special day records to that type equals "SNOW" which has a corresponding valcode entry with no special action code
+                foreach (var rec in specialDaysTestData.specialDayRecords)
+                {
+                    rec.CmsdType = "SNOW";
+                }
+
+                var actual = await eventsRepo.GetCalendarsAsync();
+
+                //assert all special days are not holidays
+                Assert.IsTrue(actual.SelectMany(a => a.SpecialDays).All(s => !s.IsPayrollHoliday));
+            }
+
+            [TestMethod]
             public async Task SpecialDayIsNotHolidayTest()
             {
                 //modify all special day records to that type equals "SNOW" which has a corresponding valcode entry with no special action code
@@ -728,7 +758,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup<Data.Base.DataContracts.IntlParams>(acc => acc.ReadRecord<Data.Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", It.IsAny<bool>())).Returns(new DataContracts.IntlParams() { Recordkey = "INTP", HostShortDateFormat = "MDY", HostDateDelimiter = "/" });
 
    
-            apiSettings = new ApiSettings("API") { ColleagueTimeZone = "Eastern Standard Time" };
+            apiSettings = new ApiSettings("API") { ColleagueTimeZone = TimeZoneInfo.Local.Id };
 
             //these mocks were added on 5/3/18 after updating the repository to expand the campusCalendar object
             dataReaderMock.Setup(r => r.ReadRecord<DataContracts.CampusCalendar>(It.IsAny<string>(), true))

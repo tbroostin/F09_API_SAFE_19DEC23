@@ -1,8 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Planning.Repositories;
 using Ellucian.Colleague.Dtos.Planning;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -55,6 +56,13 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
                 configurationDto = adapter.MapToType(configurationEntity);
                 return configurationDto;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving planning configuration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());

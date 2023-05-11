@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Domain.Entities;
+﻿/*Copyright 2021 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// Status of financial aid year
         /// </summary>
-        public string status;
+        public string status { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidYear

@@ -238,7 +238,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualFafsas = await fafsaService.GetStudentFafsasAsync(studentId);
 
                 Assert.AreEqual(0, actualFafsas.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years", studentId)));
             }
 
             [TestMethod]
@@ -249,7 +249,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualFafsas = await fafsaService.GetStudentFafsasAsync(studentId);
 
                 Assert.AreEqual(0, actualFafsas.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years", studentId)));
             }
 
             [TestMethod]
@@ -261,7 +261,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualFafsas = await fafsaService.GetStudentFafsasAsync(studentId);
 
                 Assert.AreEqual(0, actualFafsas.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no fafsas", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no fafsas", studentId)));
             }
 
             [TestMethod]
@@ -273,7 +273,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualFafsas = await fafsaService.GetStudentFafsasAsync(studentId);
 
                 Assert.AreEqual(0, actualFafsas.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no fafsas", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no fafsas", studentId)));
             }
 
 

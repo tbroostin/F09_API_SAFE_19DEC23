@@ -13,6 +13,7 @@ using Ellucian.Colleague.Domain.FinancialAid.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -173,7 +174,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualLoanRequest = await actualRepository.GetLoanRequestAsync(inputId);
                 Assert.AreEqual(LoanRequestStatus.Pending, actualLoanRequest.Status);
 
-                loggerMock.Verify(l => l.Info(string.Format("LoanRequestStatus does not exist for NewLoanRequest record id {0}, status {1}. Setting to Pending.", inputId, unknownStatus)));
+                loggerMock.Verify(l => l.Error(string.Format("LoanRequestStatus does not exist for NewLoanRequest record id {0}, status {1}. Setting to Pending.", inputId, unknownStatus)));
             }
 
             [TestMethod]
@@ -333,7 +334,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GenericExceptionTest()
             {
                 var errorMessage = "Some unknown error occurred";

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Dtos;
@@ -48,33 +48,6 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to get Addresses");
-                throw;
-            }
-        }
-        /// </summary>
-        /// <returns>Returns a list of addresses</returns>
-        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
-        public IEnumerable<Ellucian.Colleague.Dtos.Base.Address> GetPersonAddresses(string id)
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new ArgumentNullException("id", "ID cannot be empty/null for Address retrieval.");
-            }
-            try
-            {
-                string urlPath = UrlUtility.CombineUrlPath(_addressPath, id);
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
-                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
-                var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(response.Content.ReadAsStringAsync().Result);
-                return resource;
-            }
-            // Log any exception, then rethrow it and let calling code determine how to handle it.
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Unable to get Address");
                 throw;
             }
         }
@@ -320,6 +293,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving communication codes");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get communication codes>");
@@ -1001,9 +979,14 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving staff");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to get Staff.");
+                logger.Error(ex, "Unable to get staff.");
                 throw;
             }
         }
@@ -1097,6 +1080,11 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 return afs;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Debug(e, "Unable to get person photo for id '{0}'", id);
@@ -1151,6 +1139,10 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 return afs;
             }
+            catch (LoginException lex)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Debug(e, "Unable to get person photo for id '{0}'", id);
@@ -1175,6 +1167,10 @@ namespace Ellucian.Colleague.Api.Client
                     PhotosConfigured = JsonConvert.DeserializeObject<bool>(await response.Content.ReadAsStringAsync())
                 };
                 return photoConfig;
+            }
+            catch (LoginException lex)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -1254,16 +1250,21 @@ namespace Ellucian.Colleague.Api.Client
             {
                 string urlPath = UrlUtility.CombineUrlPath(_addressPath, personId);
                 var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
                 AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.Address>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Unable to get Addresses");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to get Address");
+                logger.Error(ex, "Unable to get Addresses");
                 throw;
             }
         }
@@ -1283,6 +1284,12 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get departments");
@@ -1341,6 +1348,12 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get IEnumerable<Location>");
@@ -1375,6 +1388,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get IEnumerable<Building>");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Building>");
@@ -1404,6 +1422,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get IEnumerable<ConvenienceFee>");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<ConvenienceFee>");
@@ -1431,6 +1454,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get IEnumerable<Room>");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
                 throw;
             }
             catch (Exception ex)
@@ -1509,6 +1537,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get communication codes>");
@@ -1758,6 +1791,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get office codes");
@@ -1843,6 +1881,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get prefixes");
@@ -1871,6 +1914,12 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get suffixes");
@@ -1899,6 +1948,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Race>");
@@ -1922,6 +1976,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Ethnicity>");
@@ -1948,6 +2007,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get FrequencyCodes");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
                 throw;
             }
             catch (Exception ex)
@@ -2011,6 +2075,10 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to get phone numbers.");
@@ -2037,6 +2105,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PhoneNumber>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving phone numbers");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -2065,6 +2138,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get institutions");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting Institutions from the database");
                 throw;
             }
             catch (Exception ex)
@@ -2194,6 +2272,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving person profile information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Profile for this person");
@@ -2217,6 +2300,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<PersonProxyDetails>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception then throw it and let the calling code determine how to handle
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get information for this person");
@@ -2237,6 +2325,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(_phoneTypesPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.PhoneType>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve Phone Types");
@@ -2256,6 +2349,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(_emailTypesPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.EmailType>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -2336,6 +2434,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PayableDepositDirective>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve Payable Deposit Directives.");
@@ -2400,6 +2503,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<PayableDepositDirective>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to create new Payable Deposit Directive.");
@@ -2436,6 +2544,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<PayableDepositDirective>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to update person's Payable Deposit Directive.");
@@ -2470,6 +2583,11 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
                 return;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -2508,6 +2626,11 @@ namespace Ellucian.Colleague.Api.Client
                 var result = JsonConvert.DeserializeObject<BankingAuthenticationToken>(await response.Content.ReadAsStringAsync());
                 return result;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to authenticate payable deposit directive");
@@ -2530,6 +2653,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<BankingInformationConfiguration>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -2560,6 +2688,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Ellucian.Colleague.Dtos.Base.Bank>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (ResourceNotFoundException rnfe)
             {
@@ -2656,6 +2789,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = ExecutePutRequestWithResponse<EmergencyInformation>(emergencyInformation, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmergencyInformation>(response.Content.ReadAsStringAsync().Result);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -2688,6 +2826,12 @@ namespace Ellucian.Colleague.Api.Client
                 return relationships;
 
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the person's relationships");
@@ -2709,6 +2853,11 @@ namespace Ellucian.Colleague.Api.Client
                 var relationshipTypes = JsonConvert.DeserializeObject<IEnumerable<RelationshipType>>(await responseString.Content.ReadAsStringAsync());
 
                 return relationshipTypes;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -2738,6 +2887,11 @@ namespace Ellucian.Colleague.Api.Client
                 return config;
 
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the proxy configuration.");
@@ -2751,7 +2905,6 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>The requested <see cref="CommencementSite">Commencement Site</see> objects</returns>
         public async Task<IEnumerable<CommencementSite>> GetCommencementSitesAsync()
         {
-
             try
             {
                 var headers = new NameValueCollection();
@@ -2760,6 +2913,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<IEnumerable<CommencementSite>>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving commencement site list.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -2783,6 +2941,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving the country codes.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the country codes.");
@@ -2804,6 +2967,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<IEnumerable<State>>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving the state codes.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -2852,6 +3020,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<UserProfileConfiguration2>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -2905,6 +3078,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to update Profile.");
@@ -2931,6 +3109,11 @@ namespace Ellucian.Colleague.Api.Client
                 AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<Profile>(profile, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating profile");
+                throw;
             }
             catch (Exception ex)
             {
@@ -3050,6 +3233,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonMatchResult>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve person-matching results.");
@@ -3090,6 +3278,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.Base.Person>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve person name search results.");
@@ -3114,6 +3307,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<Ellucian.Colleague.Dtos.Base.Relationship>(relationship, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Ellucian.Colleague.Dtos.Base.Relationship>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -3169,6 +3367,11 @@ namespace Ellucian.Colleague.Api.Client
                 var preference = JsonConvert.DeserializeObject<SelfservicePreference>(await response.Content.ReadAsStringAsync());
                 return preference;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Error retrieving SelfservicePreference");
@@ -3195,6 +3398,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync<SelfservicePreference>(preference, urlPath, headers: headers);
                 var updatedPreference = JsonConvert.DeserializeObject<SelfservicePreference>(await response.Content.ReadAsStringAsync());
                 return updatedPreference;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -3226,6 +3434,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
                 return true;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -3350,6 +3563,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving privacy statuses");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get privacy statuses.");
@@ -3371,6 +3589,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<PrivacyConfiguration>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving privacy configuration");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get privacy configuration");
@@ -3390,6 +3613,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _hedtechIntegrationMediaTypeFormatVersion6);
                 var response = await ExecuteGetRequestWithResponseAsync(_addressTypesPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.AddressType2>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving address types.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -3565,9 +3793,14 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(_personalPronounTypesPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.PersonalPronounType>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving personal pronoun types");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to retrieve Personal Pronoun Types");
+                logger.Error(ex, "Unable to retrieve personal pronoun types");
                 throw;
             }
         }
@@ -3714,6 +3947,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get PayrollDepositDirectives");
@@ -3821,6 +4059,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to update PayrollDepositDirectives");
@@ -3858,6 +4101,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to create PayrollDepositDirective");
@@ -3894,6 +4142,12 @@ namespace Ellucian.Colleague.Api.Client
 
                 return;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to delete PayrollDepositDirectives");
@@ -3933,6 +4187,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to delete PayrollDepositDirective");
@@ -3968,6 +4227,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get BankingAuthenticationToken for PayrollDepositDirective");
@@ -3991,6 +4255,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<BankingAuthenticationToken>(await response.Content.ReadAsStringAsync());
 
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -4033,6 +4302,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.Base.Person>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve person name search results.");
@@ -4074,6 +4348,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.Base.Person>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve person name search results.");
@@ -4097,6 +4376,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<FacultyContract>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -4123,6 +4407,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<LoadPeriod>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve load period results.");
@@ -4145,6 +4434,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<CampusCalendar>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get campus calendars");
@@ -4194,6 +4489,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<CorrespondenceRequest>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -4257,6 +4557,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<RequiredDocumentConfiguration>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -4324,6 +4629,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Attachment>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -4596,6 +4906,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<AttachmentCollection>(response.Content.ReadAsStringAsync().Result);
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get attachment collection by ID.");
@@ -4619,6 +4934,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AttachmentCollection>>(response.Content.ReadAsStringAsync().Result);
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -4714,6 +5034,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 return JsonConvert.DeserializeObject<AttachmentCollectionEffectivePermissions>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -4847,6 +5172,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync(agreement, _personAgreementsPath, headers: headers);
                 return JsonConvert.DeserializeObject<Ellucian.Colleague.Dtos.Base.PersonAgreement>(response.Content.ReadAsStringAsync().Result);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 string message = string.Format("An error occurred while updating person agreement {0} for person {1}.", agreement.Id, agreement.PersonId);
@@ -4958,6 +5288,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the counties.");
@@ -5044,6 +5379,23 @@ namespace Ellucian.Colleague.Api.Client
 
         }
 
+        public async Task<IEnumerable<AuditLogConfiguration>> GetAuditLoggingConfigurationAsync()
+        {
+            try
+            {
+                var urlPath = "configuration/audit-logs/events";
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, "application/vnd.hedtech.integration.v1.0.0+json");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<List<AuditLogConfiguration>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get audit logging configuration data.");
+                throw;
+            }
+        }
+
         ///////////////////////////////////////////////////////////////////////////////////
         ///                                                                             ///
         ///                               CF Team                                       ///                                                                             
@@ -5080,6 +5432,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<TaxFormConfiguration2>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception e)
             {
@@ -5111,6 +5468,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<TaxFormConsent2>(consent, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<TaxFormConsent2>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -5146,6 +5508,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<List<TaxFormConsent2>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException ex)
             {
@@ -5173,7 +5540,6 @@ namespace Ellucian.Colleague.Api.Client
         {
             if (string.IsNullOrEmpty(personId))
                 throw new ArgumentNullException("personId", "personId is required.");
-
 
             if (string.IsNullOrWhiteSpace(taxForm))
                 throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
@@ -5206,6 +5572,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = JsonConvert.DeserializeObject<List<TaxFormStatement3>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -5246,6 +5617,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve W-2 tax form pdf.");
@@ -5281,6 +5657,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve W-2c tax form pdf.");
@@ -5315,6 +5696,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -5386,6 +5772,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve T4A tax form pdf.");
@@ -5420,6 +5811,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -5456,6 +5852,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve 1099-NEC tax form pdf.");
@@ -5491,6 +5892,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve 1098-T tax form pdf.");
@@ -5525,6 +5931,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {

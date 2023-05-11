@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using slf4net;
 using System.Linq;
@@ -14,10 +14,12 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Dmi.Runtime;
 using System.Diagnostics;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System.Collections.ObjectModel;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -95,17 +97,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         Category = item.AlCategory,
                         CategoryId = item.AlCategoryId,
-                        ThirtyDaysOld = (item.AlThirtyDaysOld != null && item.AlThirtyDaysOld.Any()) ? item.AlThirtyDaysOld.Split(_SM).ToList() : new List<string>(),
-                        SixtyDaysOld = (item.AlSixtyDaysOld != null && item.AlSixtyDaysOld.Any()) ? item.AlSixtyDaysOld.Split(_SM).ToList() : new List<string>(),
-                        NinetyDaysOld = (item.AlNinetyDaysOld != null && item.AlNinetyDaysOld.Any()) ? item.AlNinetyDaysOld.Split(_SM).ToList() : new List<string>(),
-                        OverNinetyDaysOld = (item.AlOverNinetyDaysOld != null && item.AlOverNinetyDaysOld.Any()) ? item.AlOverNinetyDaysOld.Split(_SM).ToList() : new List<string>(),
-                        TotalOpenCases = (item.AlTotalOpenCases != null && item.AlTotalOpenCases.Any()) ? item.AlTotalOpenCases.Split(_SM).ToList() : new List<string>()
+                        ThirtyDaysOld = (item.AlThirtyDaysOld != null && item.AlThirtyDaysOld.Any()) ? item.AlThirtyDaysOld.Split(SubValueMark).ToList() : new List<string>(),
+                        SixtyDaysOld = (item.AlSixtyDaysOld != null && item.AlSixtyDaysOld.Any()) ? item.AlSixtyDaysOld.Split(SubValueMark).ToList() : new List<string>(),
+                        NinetyDaysOld = (item.AlNinetyDaysOld != null && item.AlNinetyDaysOld.Any()) ? item.AlNinetyDaysOld.Split(SubValueMark).ToList() : new List<string>(),
+                        OverNinetyDaysOld = (item.AlOverNinetyDaysOld != null && item.AlOverNinetyDaysOld.Any()) ? item.AlOverNinetyDaysOld.Split(SubValueMark).ToList() : new List<string>(),
+                        TotalOpenCases = (item.AlTotalOpenCases != null && item.AlTotalOpenCases.Any()) ? item.AlTotalOpenCases.Split(SubValueMark).ToList() : new List<string>()
                     };
 
                     openCases.Add(openCase);
                 }
 
                 return openCases;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting open cases");
+                throw;
             }
             catch (RepositoryException re)
             {
@@ -149,8 +156,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 foreach (var item in getResponse.RAClosureReasons)
                 {
-                    var caseIds = item.AlCases.Split(_SM).ToList();
-                    var lastActionDates = item.AlLastActionDates.Split(_SM).ToList();
+                    var caseIds = item.AlCases.Split(SubValueMark).ToList();
+                    var lastActionDates = item.AlLastActionDates.Split(SubValueMark).ToList();
                     var cases = new List<RetentionAlertClosedCase>();
 
                     for (var i = 0; i < caseIds.Count; i++)
@@ -172,6 +179,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 return closedCasesByReason;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting Closed Cases grouped by Closure Reason");
+                throw;
             }
             catch (RepositoryException re)
             {
@@ -219,7 +231,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             Id = item.AlOrgEntityIds,
                             Name = item.AlOrgEntities,
-                            CaseIds = item.AlOrgEntityCases.Split(_SM).ToList()
+                            CaseIds = item.AlOrgEntityCases.Split(SubValueMark).ToList()
                         });
                     }
                 }
@@ -232,12 +244,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             Id = item.AlOrgRoleIds,
                             Name = item.AlOrgRoleTitles,
-                            CaseIds = item.AlOrgRoleCases.Split(_SM).ToList()
+                            CaseIds = item.AlOrgRoleCases.Split(SubValueMark).ToList()
                         });
                     }
                 }
 
                 return cases;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting open cases");
+                throw;
             }
             catch (RepositoryException re)
             {
@@ -284,11 +301,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     List<RetentionAlertCaseCategoryOrgRole> caseCategoryOrgRoles = new List<RetentionAlertCaseCategoryOrgRole>();
 
-                    var Ids = item.AlOrgRoleIds.Split(_SM).ToList();
-                    var Names = item.AlOrgRoleNames.Split(_SM).ToList();
-                    var InitialAssignment = item.AlInitialAssignment.Split(_SM).ToList();
-                    var AvailableForReassignment = item.AlReassignment.Split(_SM).ToList();
-                    var ReportingAndAdministrative = item.AlReporting.Split(_SM).ToList();
+                    var Ids = item.AlOrgRoleIds.Split(SubValueMark).ToList();
+                    var Names = item.AlOrgRoleNames.Split(SubValueMark).ToList();
+                    var InitialAssignment = item.AlInitialAssignment.Split(SubValueMark).ToList();
+                    var AvailableForReassignment = item.AlReassignment.Split(SubValueMark).ToList();
+                    var ReportingAndAdministrative = item.AlReporting.Split(SubValueMark).ToList();
 
                     for (int i =0; i < Ids.Count(); i++)
                     {
@@ -308,6 +325,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         CaseCategoryOrgRoles = caseCategoryOrgRoles
                     });
                 }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting Org Role settings");
+                throw;
             }
             catch (Exception ex)
             {
@@ -397,6 +419,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(re, string.Format("Unable to get contributions for Advisor: {0}.", advisorId));
                 throw;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving contributions for Advisor: {0}.", advisorId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get contributions for Advisor: {0}.", advisorId));
@@ -472,7 +499,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             CaseOwnerIds = item.AlCaseOwnerIds,
                             MethodOfContact = item.AlCaseMethodOfContacts,
                             ActionCount = item.AlCaseActionCounts,
-                            CaseTypeIds = (item.AlCaseTypes != null && item.AlCaseTypes.Any()) ? item.AlCaseTypes.Split(_SM).ToList() : new List<string>(),
+                            CaseTypeIds = (item.AlCaseTypes != null && item.AlCaseTypes.Any()) ? item.AlCaseTypes.Split(SubValueMark).ToList() : new List<string>(),
                             DaysOpen = item.AlCaseDaysOpen,
                             LastActionDate = item.AlCaseLastActionDates,
                             ReminderDate = item.AlReminderDates
@@ -701,9 +728,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 return workItems;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving retention alert cases 2 for Advisor");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, string.Format("Unable to get Retention Alert Cases 2 for Advisor "));
+                logger.Error(ex, string.Format("Unable to get retention alert cases 2 for Advisor "));
                 throw;
             }
         }
@@ -787,7 +819,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         logger.Error(error);
                         errorMessage += error + Environment.NewLine;
                     }
-                    throw new Exception(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
                 }
 
                 List<RetentionAlertCaseRecipEmail> caseRecipEmails = new List<RetentionAlertCaseRecipEmail>();
@@ -831,7 +863,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         ContactMethod = item.AlContactMethods,
                         DateCreated = dateCreated.HasValue ? dateCreated.ToLocalDateTime(colleagueTimeZone): null,
                         TimeCreated = item.AlTimes,
-                        DetailedNote = item.AlDetailedNotes.Split(_SM).ToList(), // Split the list of @SM-delimited detailed notes
+                        DetailedNote = item.AlDetailedNotes.Split(SubValueMark).ToList(), // Split the list of @SM-delimited detailed notes
                         Summary = item.AlSummaries,
                         UpdatedBy = item.AlUpdatedBy,
                         CaseType = item.AlCaseItemContributionTypes,
@@ -858,6 +890,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     CaseReassignmentList = caseReassignmentList
                 };
                 return caseDetail;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving retention alert case detail for the case: '{0}'.", caseId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -890,7 +927,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (createResponse.AlErrorMessages != null && createResponse.AlErrorMessages.Count > 0)
                 {
                     logger.Info("Unable to add retention alert case for student");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 else
                 {
@@ -908,6 +945,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 return retentionAlertCaseCreateResponse;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding retention alert case for student: '{0}'.", retentionAlertCase.StudentId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -940,7 +982,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (createResponse.AlErrorMessages != null && createResponse.AlErrorMessages.Count > 0)
                 {
                     logger.Info("Unable to update retention alert case for student");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 else
                 {
@@ -998,6 +1040,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding note to the retention alert case: '{0}'.", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to add note to the retention alert case: '{0}'.", caseId));
@@ -1039,6 +1086,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding followup note to the retention alert case: '{0}'.", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to add followup note to the retention alert case: '{0}'.", caseId));
@@ -1074,6 +1126,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding a communication code to the retention alert case: '{0}'.", caseId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1117,6 +1174,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding a case type to the retention alert case: '{0}'.", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to add a case type to the retention alert case: '{0}'.", caseId));
@@ -1159,6 +1221,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while setting reminder for the retention alert case: '{0}'.", caseId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1207,6 +1274,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(request, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while setting reminder for the retention alert case: '{0}'.", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to set reminder for the retention alert case: '{0}'.", caseId));
@@ -1242,6 +1314,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while changing the priority of the retention alert case: '{0}'.", caseId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1286,6 +1363,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while closing the retention alert case: '{0}'.", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to close the retention alert case: '{0}'.", caseId));
@@ -1312,7 +1394,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Error(error);
                     errorMessage += error + Environment.NewLine;
                 }
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
             else
             {
@@ -1387,6 +1469,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while sending mail for the retention alert case: '{0}'. ", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to send mail for the retention alert case: '{0}'. ", caseId));
@@ -1433,6 +1520,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 return await ProcessUpdtRaCaseResponse(updtRaCaseRequest, caseId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while reassigning the retention alert case: '{0}'. ", caseId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to reassign the retention alert case: '{0}'. ", caseId));
@@ -1467,7 +1559,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 var response = await transactionInvoker.ExecuteAsync<ManageRaEmailPreferenceRequest, ManageRaEmailPreferenceResponse>(request);
                 return new RetentionAlertSendEmailPreference(response.ASendPref, response.AMessage);
-            } catch (Exception ex){
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while setting the retention alert case worker email preference for {0}", orgEntityId);
+                throw;
+            }
+            catch (Exception ex)
+            {
                 logger.Error(ex, string.Format("Unable to set the retention alert case worker email preference for {0}", orgEntityId));
                 throw;
             }
@@ -1495,7 +1594,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 var response = await transactionInvoker.ExecuteAsync<ManageRaEmailPreferenceRequest, ManageRaEmailPreferenceResponse>(request);
                 return new RetentionAlertSendEmailPreference(response.ASendPref, response.AMessage);
-            } catch (Exception ex)
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving retention alert case worker email preference for {0}", orgEntityId);
+                throw;
+            }
+            catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get the retention alert case worker email preference for {0}", orgEntityId));
                 throw;

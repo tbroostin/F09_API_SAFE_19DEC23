@@ -1,8 +1,9 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -33,6 +34,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly ILogger logger;
         private readonly IPayStatementService payStatementService;
         private readonly ApiSettings apiSettings;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Constructor
@@ -63,8 +65,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="endDate">optional: end date to filter pay statements by</param>
         /// <returns>An array of PayStatementSummary objects for the requested parameters</returns>
         public async Task<IEnumerable<PayStatementSummary>> GetPayStatementSummariesAsync(
-            [FromUri(Name = "employeeId")]string employeeId = null,
-            [FromUri(Name = "hasOnlineConsent")]bool? hasOnlineConsent = null,
+            [FromUri(Name = "employeeId")] string employeeId = null,
+            [FromUri(Name = "hasOnlineConsent")] bool? hasOnlineConsent = null,
             [FromUri(Name = "payDate")] DateTime? payDate = null,
             [FromUri(Name = "payCycleId")] string payCycleId = null,
             [FromUri(Name = "startDate")] DateTime? startDate = null,
@@ -72,7 +74,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await payStatementService.GetPayStatementSummariesAsync(
+                logger.Debug("************Start- Process to get pay statement summary - Start************");
+                var paystatementsummary= await payStatementService.GetPayStatementSummariesAsync(
                     string.IsNullOrEmpty(employeeId) ? null : new List<string>() { employeeId },
                     hasOnlineConsent,
                     payDate,
@@ -80,21 +83,29 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     startDate,
                     endDate
                 );
+                logger.Debug("************End- Process to pay statement summary - End************");
+
+                return paystatementsummary;
             }
             catch (ArgumentNullException ane)
             {
-                logger.Error(ane, "Invalid arguments at some level of the request");
-                throw CreateHttpResponseException(ane.Message, HttpStatusCode.BadRequest);
+                logger.Error(ane, ane.Message);
+                throw CreateHttpResponseException("Invalid arguments at some level of the request", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
-                logger.Error(pe, "Current user does not have permission to view requested data");
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("Current user does not have permission to view requested data", HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error occurred");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
             }
         }
 
@@ -104,7 +115,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="ids">a list of Pay Statement ids to generate into a single PDF</param>
         /// <returns>a single PDF containing the pay statements specified in the list of ids</returns>
         [HttpPost]
-        public async Task<HttpResponseMessage> QueryPayStatementPdfs([FromBody]IEnumerable<string> ids)
+        public async Task<HttpResponseMessage> QueryPayStatementPdfs([FromBody] IEnumerable<string> ids)
         {
             if (ids == null || !ids.Any())
             {
@@ -113,6 +124,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                logger.Debug("************Start- Process to generate multiple PDF statement - Start************");
                 var pathToReportTemplate = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/PayStatement.rdlc");
 
                 //get the path of the school's logo
@@ -138,22 +150,28 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     FileName = "Multiple",
                 };
                 response.Content.Headers.ContentLength = reportBytes.LongLength;
+                logger.Debug("************End - Process to generate multiple PDF statement - End************");
                 return response;
             }
             catch (ArgumentNullException ane)
             {
-                logger.Error(ane, "Invalid arguments at some level of the request");
-                throw CreateHttpResponseException(ane.Message, HttpStatusCode.BadRequest);
+                logger.Error(ane, ane.Message);
+                throw CreateHttpResponseException("Invalid arguments at some level of the request", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
-                logger.Error(pe, "Current user does not have permission to view requested data");
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("Current user does not have permission to view requested data", HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error occurred");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
             }
         }
 
@@ -167,10 +185,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (string.IsNullOrEmpty(id))
             {
+                logger.Debug("************The id of the requested Pay Statement is null or empty************");
                 throw CreateHttpResponseException("id is required in request");
             }
             try
             {
+                logger.Debug("************Start - Paystatement PDF process - Start************");
                 var pathToReportTemplate = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/PayStatement.rdlc");
 
                 //get the path of the school's logo
@@ -185,11 +205,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                     reportLogoPath = HttpContext.Current.Server.MapPath(reportLogoPath);
                 }
-
-
+                
                 var reportTuple = await payStatementService.GetPayStatementPdf(id, pathToReportTemplate, reportLogoPath);
                 var response = new HttpResponseMessage();
-                response.StatusCode = HttpStatusCode.OK;      
+                response.StatusCode = HttpStatusCode.OK;
                 response.Content = new ByteArrayContent(reportTuple.Item2);
                 response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
                 response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
@@ -197,23 +216,29 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     FileName = reportTuple.Item1
                 };
                 response.Content.Headers.ContentLength = reportTuple.Item2.LongLength;
+                logger.Debug("************End -Paystatement PDF process ends successfully - End ************");
                 return response;
             }
             catch (ArgumentNullException ane)
             {
-                logger.Error(ane, "Invalid arguments at some level of the request");
-                throw CreateHttpResponseException(ane.Message, HttpStatusCode.BadRequest);
+                logger.Error(ane, ane.Message);
+                throw CreateHttpResponseException("Invalid arguments at some level of the request", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
-                logger.Error(pe, "Current user does not have permission to view requested data");
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("Current user does not have permission to view requested data", HttpStatusCode.Forbidden);
             }
             catch (LocalProcessingException lpe)
             {
                 var message = "Exception occurred rendering the PDF: " + lpe.Message;
                 logger.Error(lpe, "Exception occurred rendering the PDF");
-                if(lpe.InnerException != null)
+                if (lpe.InnerException != null)
                 {
                     message += " :: " + lpe.InnerException.Message;
                     logger.Error(lpe.InnerException, "Inner exception of PDF Render");
@@ -222,8 +247,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error occurred");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
             }
         }
     }

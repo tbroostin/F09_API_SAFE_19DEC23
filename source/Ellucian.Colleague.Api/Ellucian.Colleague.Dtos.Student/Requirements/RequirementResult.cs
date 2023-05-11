@@ -1,7 +1,5 @@
-﻿using System;
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Dtos.Student.Requirements
 {
@@ -14,11 +12,11 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// <summary>
         /// Id of requirement evaluated
         /// </summary>
-        public string RequirementId;
+        public string RequirementId { get; set; }
         /// <summary>
         /// List of results for each subrequirement attached to this requirement
         /// <see cref="SubrequirementResult"/>
         /// </summary>
-        public List<SubrequirementResult> SubrequirementResults;
+        public List<SubrequirementResult> SubrequirementResults { get; set; }
     }
 }

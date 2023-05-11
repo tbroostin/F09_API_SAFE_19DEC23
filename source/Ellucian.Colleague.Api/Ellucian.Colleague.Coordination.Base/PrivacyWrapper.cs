@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +15,12 @@ namespace Ellucian.Colleague.Coordination.Base
         /// <summary>
         /// The DTO to return
         /// </summary>
-        public T Dto;
+        public T Dto { get; set; }
 
         /// <summary>
         /// If true, the Dto has been limited by the existence of privacy restrictions
         /// </summary>
-        public bool HasPrivacyRestrictions;
+        public bool HasPrivacyRestrictions { get; set; }
 
         /// <summary>
         /// Default constructor needed for generic class

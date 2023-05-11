@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -16,6 +16,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly ILogger logger;
         private readonly IAdapterRegistry adapterRegistry;
         private readonly IBankingInformationConfigurationService bankingInformationConfigurationService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Constructor
@@ -55,6 +57,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 var bankingInformationConfiguration = await bankingInformationConfigurationService.GetBankingInformationConfigurationAsync();
                 return bankingInformationConfiguration;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {

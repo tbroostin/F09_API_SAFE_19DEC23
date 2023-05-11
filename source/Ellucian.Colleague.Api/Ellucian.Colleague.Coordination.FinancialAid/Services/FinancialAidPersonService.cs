@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -73,15 +74,21 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             bool hasPrivacyRestriction = false;
             IEnumerable<Domain.Base.Entities.PersonBase> financialAidPersons = new List<Domain.Base.Entities.PersonBase>();
-            if (criteria.FinancialAidPersonIds != null && criteria.FinancialAidPersonIds.Any())
+            try
             {
-                financialAidPersons = await financialAidPersonRepository.SearchFinancialAidPersonsByIdsAsync(criteria.FinancialAidPersonIds);
+                if (criteria.FinancialAidPersonIds != null && criteria.FinancialAidPersonIds.Any())
+                {
+                    financialAidPersons = await financialAidPersonRepository.SearchFinancialAidPersonsByIdsAsync(criteria.FinancialAidPersonIds);
+                }
+                else if (!string.IsNullOrEmpty(criteria.FinancialAidPersonQueryKeyword))
+                {
+                    financialAidPersons = await financialAidPersonRepository.SearchFinancialAidPersonsByKeywordAsync(criteria.FinancialAidPersonQueryKeyword);
+                }
             }
-            else if (!string.IsNullOrEmpty(criteria.FinancialAidPersonQueryKeyword))
+            catch (ColleagueSessionExpiredException)
             {
-                financialAidPersons = await financialAidPersonRepository.SearchFinancialAidPersonsByKeywordAsync(criteria.FinancialAidPersonQueryKeyword);
+                throw;
             }
-
             var financialAidPersonDtoToEntityAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.Base.Person>();
             var personDtos = new List<Dtos.Base.Person>();
             foreach (var personEntity in financialAidPersons)

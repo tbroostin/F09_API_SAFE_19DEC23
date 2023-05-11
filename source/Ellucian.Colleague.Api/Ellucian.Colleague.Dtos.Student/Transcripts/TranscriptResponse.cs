@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Student.Transcripts
 {
@@ -14,7 +11,7 @@ namespace Ellucian.Colleague.Dtos.Student.Transcripts
         /// <summary>
         /// Base-64 encoded string of XML response data
         /// </summary>
-        public string ResponseData;
+        public string ResponseData { get; set; }
     }
     
 }

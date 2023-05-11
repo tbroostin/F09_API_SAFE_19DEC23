@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -128,9 +128,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             //if the guid does not exist, the method above will throw KeyNotFoundException, which we are going to ignore but if they sent GUID belongs to different entity then
             // it throws repo exception that we want to catch and throw. 
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
-
+                logger.Error(knfex, "Unable to get accounts payable invoice by guid");
             }
 
 
@@ -145,12 +145,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if ((!string.IsNullOrEmpty(accountsPayableInvoicesDto.InvoiceNumber))
                     && (!accountsPayableInvoicesDto.InvoiceNumber.Equals(accountsPayableInvoicesId, StringComparison.OrdinalIgnoreCase)))
                     {
-                        throw new Exception(string.Format("InvoiceNumber does not match voucher ID associated with GUID {0}.", guid));
+                        throw new ColleagueWebApiException(string.Format("InvoiceNumber does not match voucher ID associated with GUID {0}.", guid));
                     }
                     _accountsPayableInvoicesRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-                    //Fund checking.
-                    overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
+                    
 
                     var glConfiguration = await GetGeneralLedgerAccountStructure();
                     if (glConfiguration == null)
@@ -176,6 +175,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     // map the DTO to entities
                     var accountsPayableInvoicesEntity
                     = await ConvertAccountsPayableInvoices2DtoToEntityAsync(accountsPayableInvoicesId, accountsPayableInvoicesDto, glConfiguration.MajorComponents.Count());
+
+                    //Fund checking.
+                    overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
 
                     // update the entity in the database
                     var updatedAccountsPayableInvoicesEntity =
@@ -234,7 +236,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                         var submittedByGuid = await _personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
                                         if (string.IsNullOrEmpty(submittedByGuid))
                                         {
-                                            throw new Exception(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoAccountsPayableInvoice.Id, " Submitted By: ", findOvr.SubmittedBy));
+                                            throw new ColleagueWebApiException(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoAccountsPayableInvoice.Id, " Submitted By: ", findOvr.SubmittedBy));
                                         }
                                         detail.SubmittedBy = new GuidObject2(submittedByGuid);
                                     }
@@ -266,7 +268,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -302,9 +304,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             try
             {
-                //Fund checking.
-                overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
-
                 var glConfiguration = await GetGeneralLedgerAccountStructure();
                 if (glConfiguration == null)
                 {
@@ -327,6 +326,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
                 var accountsPayableInvoicesEntity = await ConvertAccountsPayableInvoices2DtoToEntityAsync(accountsPayableInvoicesDto.Id, accountsPayableInvoicesDto, glConfiguration.MajorComponents.Count);
+                //Fund checking.
+                overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
                 // create a AccountsPayableInvoices entity in the database
                 createdAccountsPayableInvoices =
                     await _accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoicesEntity);
@@ -382,7 +383,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                     var submittedByGuid = await _personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
                                     if (string.IsNullOrEmpty(submittedByGuid))
                                     {
-                                        throw new Exception(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoAccountsPayableInvoice.Id, " Submitted By: ", findOvr.SubmittedBy));
+                                        throw new ColleagueWebApiException(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoAccountsPayableInvoice.Id, " Submitted By: ", findOvr.SubmittedBy));
                                     }
                                     detail.SubmittedBy = new GuidObject2(submittedByGuid);
                                 }
@@ -414,7 +415,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -623,7 +624,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("No accounts-payable-invoices was found for GUID '" + guid + "'.", ex);
+                    throw new ColleagueWebApiException("No accounts-payable-invoices was found for GUID '" + guid + "'.", ex);
                 }
                 if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
                 {
@@ -693,7 +694,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 voucherId = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesIdFromGuidAsync(guid);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get accounts payable invoice by guid");
+            }
             //voucherId cannot be null as it will throw entity exception. This value is nulled in repo before the ctx is called. 
             if (string.IsNullOrEmpty(voucherId))
             {
@@ -856,7 +860,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var submittedById = await _personRepository.GetPersonIdFromGuidAsync(accountsPayableInvoices.SubmittedBy.Id);
                 if (string.IsNullOrEmpty(submittedById))
                 {
-                    throw new Exception(string.Concat("SubmittedBy is not found. Guid: ", accountsPayableInvoices.SubmittedBy.Id));
+                    throw new ColleagueWebApiException(string.Concat("SubmittedBy is not found. Guid: ", accountsPayableInvoices.SubmittedBy.Id));
                 }
                 accountsPayableInvoicesEntity.SubmittedBy = submittedById;
             }
@@ -900,7 +904,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         mainCurrency = accountsPayableInvoices.InvoiceDiscountAmount.Currency.ToString();
                     else
                         if (!mainCurrency.Equals(accountsPayableInvoices.InvoiceDiscountAmount.Currency.ToString()))
-                        throw new Exception(string.Concat("Only one type of currency is supported. Invalid currency", accountsPayableInvoices.InvoiceDiscountAmount.Currency.ToString()));
+                        throw new ColleagueWebApiException(string.Concat("Only one type of currency is supported. Invalid currency", accountsPayableInvoices.InvoiceDiscountAmount.Currency.ToString()));
                 }
 
             }
@@ -911,7 +915,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var taxCodesEntities = await GetAllCommerceTaxCodesAsync(false);
                 if (taxCodesEntities == null)
                 {
-                    throw new Exception("Unable to retrieve commerce tax codes.");
+                    throw new ColleagueWebApiException("Unable to retrieve commerce tax codes.");
                 }
                 var uniqueValues = new List<string>();
                 foreach (var itemTax in accountsPayableInvoices.Taxes)
@@ -921,7 +925,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Guid == itemTax.TaxCode.Id);
                         if (taxCode == null)
                         {
-                            throw new Exception(string.Concat("Tax code  not found for guid:'", itemTax.TaxCode.Id, "'"));
+                            throw new ColleagueWebApiException(string.Concat("Tax code  not found for guid:'", itemTax.TaxCode.Id, "'"));
                         }
                         if (taxCode.AppurEntryFlag == false)
                         {
@@ -947,7 +951,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var taxRate = allTaxCodeRates.FirstOrDefault(r => r.Guid == rate.Rate.Id);
                                 if (taxRate == null)
                                 {
-                                    throw new Exception(string.Concat("Tax rate not found for guid:'", rate.Rate.Id, "'"));
+                                    throw new ColleagueWebApiException(string.Concat("Tax rate not found for guid:'", rate.Rate.Id, "'"));
                                 }
                             }                            
                         }
@@ -1002,7 +1006,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 mainCurrency = lineItem.UnitPrice.Currency.ToString();
                             else
                                 if (!mainCurrency.Equals(lineItem.UnitPrice.Currency.ToString()))
-                                throw new Exception(string.Concat("Only one type of currency is supported. Invalid currency", lineItem.UnitPrice.Currency.ToString()));
+                                throw new ColleagueWebApiException(string.Concat("Only one type of currency is supported. Invalid currency", lineItem.UnitPrice.Currency.ToString()));
                         }
                     }
                     decimal extendedPrice = 0;
@@ -1029,7 +1033,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             //if there is a PO, then there needs to be a line item number
                             if (string.IsNullOrEmpty(lineItem.ReferenceDocumentLineItemNumber))
                             {
-                                throw new Exception("referenceDocumentLineItemNumber is required if referenceDocument is in the payload.");
+                                throw new ColleagueWebApiException("referenceDocumentLineItemNumber is required if referenceDocument is in the payload.");
                             }
                         }
                         if (lineItem.ReferenceDocument.BlanketPurchaseOrder != null && (!string.IsNullOrWhiteSpace(lineItem.ReferenceDocument.BlanketPurchaseOrder.Id)))
@@ -1044,7 +1048,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             //if there is a BPO, then there cannot be a reference line number
                             if (!string.IsNullOrEmpty(lineItem.ReferenceDocumentLineItemNumber))
                             {
-                                throw new Exception("A reference document line item number is not permitted when paying a Blanket Purchase Order");
+                                throw new ColleagueWebApiException("A reference document line item number is not permitted when paying a Blanket Purchase Order");
                             }
                         }
                     }
@@ -1052,7 +1056,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                     if (string.IsNullOrEmpty(apLineItem.PurchaseOrderId) && apLineItem.FinalPaymentFlag == true)
                     {
-                        throw new Exception("The encumbrance status of finalPayment is only valid for the line item with the reference document type of PurchaseOrder.");
+                        throw new ColleagueWebApiException("The encumbrance status of finalPayment is only valid for the line item with the reference document type of PurchaseOrder.");
                     }
 
                     apLineItem.DocLineItemId = lineItem.ReferenceDocumentLineItemNumber != null ? lineItem.ReferenceDocumentLineItemNumber : new Guid().ToString();
@@ -1062,12 +1066,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         var allCommodityCodes = await GetAllCommodityCodesAsync(false);
                         if ((allCommodityCodes == null) || (!allCommodityCodes.Any()))
                         {
-                            throw new Exception("An error occurred extracting all commodity codes");
+                            throw new ColleagueWebApiException("An error occurred extracting all commodity codes");
                         }
                         var commodityCode = allCommodityCodes.FirstOrDefault(c => c.Guid == lineItem.CommodityCode.Id);
                         if (commodityCode == null)
                         {
-                            throw new Exception("Unable to determine commodity code represented by guid: " + lineItem.CommodityCode.Id);
+                            throw new ColleagueWebApiException("Unable to determine commodity code represented by guid: " + lineItem.CommodityCode.Id);
                         }
                         apLineItem.CommodityCode = commodityCode.Code;
                     }
@@ -1077,12 +1081,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         var allFixedAssesDesigns = (await GetFixedAssetDesignationsAsync(false));
                         if ((allFixedAssesDesigns == null) || (!allFixedAssesDesigns.Any()))
                         {
-                            throw new Exception("An error occurred extracting all fixed asset designations");
+                            throw new ColleagueWebApiException("An error occurred extracting all fixed asset designations");
                         }
                         var fixedAssetDesignation = allFixedAssesDesigns.FirstOrDefault(c => c.Guid == lineItem.FixedAssetDesignation.Id);
                         if (fixedAssetDesignation == null)
                         {
-                            throw new Exception("Unable to determine fixed asset designations represented by guid: " + lineItem.FixedAssetDesignation.Id);
+                            throw new ColleagueWebApiException("Unable to determine fixed asset designations represented by guid: " + lineItem.FixedAssetDesignation.Id);
                         }
                         apLineItem.FixedAssetsFlag = fixedAssetDesignation.Code;
                     }
@@ -1092,12 +1096,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         var allCommodityUnitTypes = await this.GetAllCommodityUnitTypesAsync(false);
                         if ((allCommodityUnitTypes == null) || (!allCommodityUnitTypes.Any()))
                         {
-                            throw new Exception("An error occurred extracting all commodity unit types");
+                            throw new ColleagueWebApiException("An error occurred extracting all commodity unit types");
                         }
                         var commodityUnitType = allCommodityUnitTypes.FirstOrDefault(c => c.Guid == lineItem.UnitofMeasure.Id);
                         if (commodityUnitType == null)
                         {
-                            throw new Exception("Unable to determine unit of measure represented by guid: " + lineItem.UnitofMeasure.Id);
+                            throw new ColleagueWebApiException("Unable to determine unit of measure represented by guid: " + lineItem.UnitofMeasure.Id);
                         }
                         apLineItem.UnitOfMeasure = commodityUnitType.Code;
 
@@ -1116,7 +1120,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                     mainCurrency = lineItem.Discount.Amount.Currency.ToString();
                                 else
                                     if (!mainCurrency.Equals(lineItem.Discount.Amount.Currency.ToString()))
-                                    throw new Exception(string.Concat("Only one type of currency is supported. Invalid currency", lineItem.Discount.Amount.Currency.ToString()));
+                                    throw new ColleagueWebApiException(string.Concat("Only one type of currency is supported. Invalid currency", lineItem.Discount.Amount.Currency.ToString()));
                             }
                         }
                         else if (lineItem.Discount.Percent != null && lineItem.Discount.Percent.HasValue)
@@ -1138,12 +1142,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var taxCodesEntities = await GetAllCommerceTaxCodesAsync(false);
                                 if (taxCodesEntities == null)
                                 {
-                                    throw new Exception("An error occurred extracting all commerce tax codes");
+                                    throw new ColleagueWebApiException("An error occurred extracting all commerce tax codes");
                                 }
                                 var taxCode = taxCodesEntities.FirstOrDefault(tax => tax.Guid == lineItemTax.TaxCode.Id);
                                 if (taxCode == null)
                                 {
-                                    throw new Exception(string.Concat("Tax code not found for guid:'", lineItemTax.TaxCode.Id, "'"));
+                                    throw new ColleagueWebApiException(string.Concat("Tax code not found for guid:'", lineItemTax.TaxCode.Id, "'"));
                                 }
                                 if (taxCode.AppurEntryFlag == false)
                                 {
@@ -1197,7 +1201,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                             mainCurrency = allocated.Amount.Currency.ToString();
                                         else
                                             if (!mainCurrency.Equals(allocated.Amount.Currency.ToString()))
-                                            throw new Exception(string.Concat("Only one type of currency is supported. Invalid currency", allocated.Amount.Currency.ToString()));
+                                            throw new ColleagueWebApiException(string.Concat("Only one type of currency is supported. Invalid currency", allocated.Amount.Currency.ToString()));
                                     }                              
                                 }
                                 if (allocated.Percentage.HasValue)
@@ -1230,12 +1234,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var apTypesEntities = await GetAllAccountsPayableSourcesAsync(false);
                                 if (apTypesEntities == null)
                                 {
-                                    throw new Exception("An error occurred extracting all accounts-payable-sources");
+                                    throw new ColleagueWebApiException("An error occurred extracting all accounts-payable-sources");
                                 }
                                 var payableSources = apTypesEntities.FirstOrDefault(c => c.Guid == accountDetails.Source.Id);
                                 if (payableSources == null)
                                 {
-                                    throw new Exception("Unable to determine accounts-payable-sources represented by guid: " + accountDetails.Source.Id);
+                                    throw new ColleagueWebApiException("Unable to determine accounts-payable-sources represented by guid: " + accountDetails.Source.Id);
                                 }                                
                             }
 
@@ -1245,12 +1249,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var taxBoxEntities = await GetAllBoxCodesAsync(false);
                                 if (taxBoxEntities == null)
                                 {
-                                    throw new Exception("An error occurred extracting all tax-form-components");
+                                    throw new ColleagueWebApiException("An error occurred extracting all tax-form-components");
                                 }
                                 var taxBox = taxBoxEntities.FirstOrDefault(c => c.Guid == accountDetails.TaxFormComponent.Id);
                                 if (taxBox == null)
                                 {
-                                    throw new Exception("Unable to determine tax form components represented by guid: " + accountDetails.TaxFormComponent.Id);
+                                    throw new ColleagueWebApiException("Unable to determine tax form components represented by guid: " + accountDetails.TaxFormComponent.Id);
                                 }
                                 else
                                 {
@@ -1356,9 +1360,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 existingVendor.AlternativeVendorAddress = new GuidObject2(addressGuid);
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Do nothing if invalid address ID.  Just leave address ID off the results.
+                            logger.Error(ex, "Unable to get vendor address.");
                         }
                     }
                     accountsPayableInvoices.Vendor.ExistingVendor = existingVendor;
@@ -2029,7 +2034,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, "For the Country: '", source.VoucherMiscCountry, "' .ISOCode Not found: ", country.IsoAlpha3Code));
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, "For the Country: '", source.VoucherMiscCountry, "' .ISOCode Not found: ", country.IsoAlpha3Code));
                     }
 
                     addressCountry.PostalTitle = country.Description.ToUpper();
@@ -2197,6 +2202,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             foreach (var lineItems in api.LineItems)
             {
                 int detailCount = 0;
+                decimal? budgetAmount = 0;
                 lineCount++;
                 List<string> accountingStringList = new List<string>();
                 foreach (var details in lineItems.AccountDetails)
@@ -2210,6 +2216,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             details.Allocation.Allocated.Amount != null && details.Allocation.Allocated.Amount.Value != null
                             && details.Allocation.Allocated.Amount.Value.HasValue)
                     {
+                        budgetAmount = details.Allocation.Allocated.Amount.Value.Value;
+                    }
+                    //if there is no allocated.amount, we see if there is percent and we calculate the amount
+                    else if (details.Allocation != null && details.Allocation.Allocated != null &&
+                            details.Allocation.Allocated.Percentage != null && details.Allocation.Allocated.Percentage.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Value != null && lineItems.UnitPrice.Value.HasValue)
+                    {
+                        budgetAmount = lineItems.UnitPrice.Value.Value * details.Allocation.Allocated.Percentage / 100;
+                    }
+                    // if there is no allocated amount or percentage, then use the quantity to calculate the amount for budget check
+                    else if (details.Allocation != null && details.Allocation.Allocated != null &&
+                            details.Allocation.Allocated.Quantity != null && details.Allocation.Allocated.Quantity.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Value != null && lineItems.UnitPrice.Value.HasValue && lineItems.Quantity != null && lineItems.Quantity.HasValue)
+                    {
+                        budgetAmount = lineItems.UnitPrice.Value.Value * details.Allocation.Allocated.Quantity / lineItems.Quantity;
+                    }
+                    if (budgetAmount != null && budgetAmount.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Currency != null)
+                    {
                         string PosID = lineCount.ToString() + "." + detailCount.ToString();
                         if (details.SubmittedBy != null)
                             PosID = PosID + ".DS";
@@ -2219,10 +2241,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         {
                             Sequence = PosID,
                             SubmittedBy = submittedById,
-                            Amount = details.Allocation.Allocated.Amount.Value.Value,
+                            Amount = (decimal)budgetAmount,
                             ItemId = lineItems.LineItemNumber ?? lineItems.LineItemNumber,
                             TransactionDate = api.TransactionDate,
-                            CurrencyCode = details.Allocation.Allocated.Amount.Currency.ToString()
+                            CurrencyCode = lineItems.UnitPrice.Currency.ToString()
                         });
                     }
                     
@@ -2234,7 +2256,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     else
                     {
-                        throw new Exception("A line item has two account details with the same GL number " + accountingString + " this is not allowed");
+                        throw new ColleagueWebApiException("A line item has two account details with the same GL number " + accountingString + " this is not allowed");
                     }
                 }
             }
@@ -2248,11 +2270,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var availableFunds = await _accountFundAvailableRepository.CheckAvailableFundsAsync(fundsAvailable, "", ApiId,"", docSubmittedById);
                 if (availableFunds != null)
                 {
+                    //introducing a new var to concat all the error messages from budget check process so that rather than just showing the first error message, we will show them all
+                    string budgetMessages = string.Empty;
                     foreach (var availableFund in availableFunds)
                     {
                         if (availableFund.AvailableStatus == FundsAvailableStatus.NotAvailable)
                         {
-                            throw new ArgumentException(string.Format("The accounting string " + availableFund.AccountString + " does not have funds available. {0}", availableFund.OverrideMessage));
+                            budgetMessages = string.Concat(budgetMessages, string.Format("The accounting string " + availableFund.AccountString + " does not have funds available. {0}. ", availableFund.OverrideMessage));
                         }
                         //if we get a override and if the budgetcheck flag is not set to override then thrown an exception
                         if (availableFund.AvailableStatus == FundsAvailableStatus.Override)
@@ -2260,13 +2284,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             var budOverCheck = budgetOvrCheckTuple.FirstOrDefault(acct => acct.Item1 == availableFund.AccountString);
                             if (budOverCheck != null && budOverCheck.Item2 == false)
                             {
-                                throw new ArgumentException(string.Format("The accounting string " + availableFund.AccountString + " does not have funds available. BudgetCheck flag not set to override. {0}", availableFund.OverrideMessage));
-                            } 
+                                budgetMessages = string.Concat(budgetMessages, string.Format("The accounting string " + availableFund.AccountString + " does not have funds available. BudgetCheck flag not set to override. {0}. ", availableFund.OverrideMessage));
+                            }
                             else
                             {
                                 overrideAvailable.Add(availableFund);
                             }
                         }                  
+                    }
+                    if (!string.IsNullOrEmpty(budgetMessages))
+                    {
+                        throw new ArgumentException(budgetMessages);
                     }
                 }
             }

@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Credit Type Category (Institutional, Transfer, Continuing Ed, Other)
         /// </summary>
-        public CreditType Category;
+        public CreditType Category { get; set; }
 
         public CredType(string code, string desc)
             : base(code, desc)

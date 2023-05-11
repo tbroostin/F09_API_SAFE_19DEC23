@@ -13,6 +13,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -251,13 +252,19 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         logger.Warn(string.Format("StudentAwardPeriod {0} does not exist", pendingPeriodChangeRequest.AwardPeriodId));
                     }
                 }
-                
-                var response = await transactionInvoker.ExecuteAsync<CreateAmountChangeRequestRequest, CreateAmountChangeRequestResponse>(request);
-                
-                awardPackageChangeRequest.Id = response.ChangeRequestId;
-                awardPackageChangeRequest.CreateDateTime = DateTimeOffset.Now;
+                try
+                {
+                    var response = await transactionInvoker.ExecuteAsync<CreateAmountChangeRequestRequest, CreateAmountChangeRequestResponse>(request);
 
-                return awardPackageChangeRequest;
+                    awardPackageChangeRequest.Id = response.ChangeRequestId;
+                    awardPackageChangeRequest.CreateDateTime = DateTimeOffset.Now;
+
+                    return awardPackageChangeRequest;
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    throw;
+                }
             }
 
             var pendingPeriodStatusChangeRequests = awardPackageChangeRequest.AwardPeriodChangeRequests.Where(pcr => !string.IsNullOrEmpty(pcr.NewAwardStatusId) && pcr.Status == AwardPackageChangeRequestStatus.Pending).ToList();

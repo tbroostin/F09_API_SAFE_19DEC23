@@ -1,7 +1,8 @@
-﻿// Copyright 2013-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Mvc.Filter;
 using slf4net;
 using System;
@@ -83,7 +84,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];
@@ -103,7 +104,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];

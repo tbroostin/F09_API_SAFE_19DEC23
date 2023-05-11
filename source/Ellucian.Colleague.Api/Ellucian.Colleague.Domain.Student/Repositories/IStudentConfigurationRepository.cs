@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using System;
@@ -39,7 +39,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// Retrieves the faculty grading configuration asynchronously
         /// </summary>
         /// <returns></returns>
+        [Obsolete("Obsolete as of API version 1.36. Use GetFacultyGradingConfiguration2Async.")]
         Task<FacultyGradingConfiguration> GetFacultyGradingConfigurationAsync();
+
+        /// <summary>
+        /// Retrieves the faculty grading configuration asynchronously
+        /// </summary>
+        /// <returns></returns>
+        Task<FacultyGradingConfiguration2> GetFacultyGradingConfiguration2Async();
 
         /// <summary>
         /// Retrieves the course catalog configuration asynchronously
@@ -97,7 +104,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// Get the section census configuration information
         /// </summary>
         ///  <returns>The SectionCensusConfiguration entity</returns>
+        [Obsolete("Obsolete as of API version 1.36. Use GetSectionCensusConfiguration2Async.")]
         Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync();
+
+        /// <summary>
+        /// Get the section census configuration2 information
+        /// </summary>
+        ///  <returns>The SectionCensusConfiguration2 entity</returns>
+        Task<SectionCensusConfiguration2> GetSectionCensusConfiguration2Async();
 
         /// <summary>
         /// Retrieves Course Delimiter
@@ -110,5 +124,20 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <returns>The AcademicRecordConfiguration entity</returns>
         Task<AcademicRecordConfiguration> GetAcademicRecordConfigurationAsync();
+
+        /// <summary>
+        /// Retrieves course section availability information configuration
+        /// </summary>
+        Task<SectionAvailabilityInformationConfiguration> GetSectionAvailabilityInformationConfigurationAsync();
+
+        /// <summary>
+        /// Get the faculty attendance configuration information
+        /// </summary>
+        Task<FacultyAttendanceConfiguration> GetFacultyAttendanceConfigurationAsync();
+
+        /// <summary>
+        /// Get the student records release configuration information
+        /// </summary>
+        Task<StudentRecordsReleaseConfig> GetStudentRecordsReleaseConfigAsync();
     }
 }

@@ -1,8 +1,9 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student.QuickRegistration;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -80,12 +81,32 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentQuickRegistrationControllerTests_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    _serviceMock.Setup(x => x.GetStudentQuickRegistrationAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await _controller.GetStudentQuickRegistrationSectionsAsync("0001234");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+                catch (System.Exception e)
+                {
+                    throw e;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentQuickRegistrationControllerTests_GetStudentQuickRegistrationSectionsAsync_service_PermissionsException()
             {
                 try
                 {
                     _serviceMock.Setup(x => x.GetStudentQuickRegistrationAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
-                    var data = await _controller.GetStudentQuickRegistrationSectionsAsync("0001234");
+                    await _controller.GetStudentQuickRegistrationSectionsAsync("0001234");
                 }
                 catch (HttpResponseException ex)
                 {
@@ -102,7 +123,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     _serviceMock.Setup(x => x.GetStudentQuickRegistrationAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
-                    var data = await _controller.GetStudentQuickRegistrationSectionsAsync("0001234");
+                    await _controller.GetStudentQuickRegistrationSectionsAsync("0001234");
                 }
                 catch (HttpResponseException ex)
                 {

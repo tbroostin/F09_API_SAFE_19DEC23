@@ -1,4 +1,4 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Http.Configuration;
 using System;
@@ -79,6 +79,7 @@ namespace Ellucian.Web.Http.Routes
             catch (Exception ex)
             {
                 //do nothing for now..  
+                matches = false; // avoid empty catch block
             }
             return matches;
 

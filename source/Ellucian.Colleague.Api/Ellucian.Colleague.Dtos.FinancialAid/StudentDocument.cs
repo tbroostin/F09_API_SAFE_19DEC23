@@ -38,6 +38,11 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         public string StatusDescription { get; set; }
 
         /// <summary>
+        /// Flag indicating that this code is under review after receiving an attachment
+        /// </summary>
+        public bool UnderReviewFlag { get; set; }
+
+        /// <summary>
         /// The date that the status of this StudentDocument was updated.
         /// </summary>
         public DateTime? StatusDate { get; set; }

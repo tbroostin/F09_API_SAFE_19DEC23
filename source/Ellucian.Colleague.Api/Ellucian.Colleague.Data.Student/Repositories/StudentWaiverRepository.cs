@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,8 +14,10 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -54,12 +56,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         Collection<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers> reqWaiverData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers>(criteria);
                         return BuildWaivers(reqWaiverData);
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         string errorMessage = "Error selecting and building waivers";
                         logger.Error(errorMessage);
                         logger.Error(ex.ToString());
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                 }, CacheTimeout);
                 return waivers;
@@ -212,11 +218,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 createResponse = await transactionInvoker.ExecuteAsync<CreateStudentReqWaiverRequest, CreateStudentReqWaiverResponse>(createRequest);
             }
-            catch
+            catch (ColleagueSessionExpiredException)
             {
-                logger.Error("Error occurred during CreateStudentReqWaiver transaction execution.");
-                throw new Exception();
+                throw;
             }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Error occurred during CreateStudentReqWaiver transaction execution.");
+                throw new ColleagueWebApiException();
+            }
+
             if (createResponse != null && createResponse.AErrorOccurred != "1" && !string.IsNullOrEmpty(createResponse.AStudentReqWaiversId))
             {
                 StudentWaiver createdWaiver = null;
@@ -227,13 +238,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (createdWaiver.StudentId != waiver.StudentId || createdWaiver.SectionId != waiver.SectionId)
                     {
                         logger.Error("Student req waiver for student " + waiver.StudentId + " section " + waiver.SectionId + " appeared successful but new waiver could not be retrieved");
-                        throw new Exception();
+                        throw new ColleagueWebApiException();
                     }
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (KeyNotFoundException)
                 {
                     logger.Error("Could not retrieve the newly created waiver specified by id " + createResponse.AStudentReqWaiversId);
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 catch (Exception)
                 {
@@ -242,11 +257,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 return createdWaiver;
             }
+
             // Update failed, return an appropriate exception
             if (createResponse == null)
             {
                 logger.Error("Null response returned by create waiver transaction.");
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
 
             if (!string.IsNullOrEmpty(createResponse.AExistingId))
@@ -260,7 +276,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // - Invalid data in request
                 // - transaction appeared successful but no waiver id returned
                 logger.Error("Error creating a waiver for Student " + waiver.StudentId + " Section " + waiver.SectionId + ". Transaction Message: " + createResponse.AMsg);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
         }
 
@@ -271,24 +287,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>List of waiver objects found for this section</returns>
         public async Task<List<StudentWaiver>> GetStudentWaiversAsync(string studentId)
         {
-             if (string.IsNullOrEmpty(studentId))
-             {
-                  var message = "Student Id must be provided";
-                  logger.Info(message);
-                  throw new ArgumentNullException(message);
-             }
-                    try
-                    {
-                        string criteria = "SRWV.STUDENT EQ '" + studentId + "'";
-                        Collection<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers> reqWaiverData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers>(criteria);
-                        return BuildWaivers(reqWaiverData);
-                    }
-                    catch (Exception ex)
-                    {
-                        string errorMessage = "Error selecting and building waivers";
-                        logger.Error(ex,errorMessage);
-                        throw ;
-                    }
+            if (string.IsNullOrEmpty(studentId))
+            {
+                var message = "Student Id must be provided";
+                logger.Info(message);
+                throw new ArgumentNullException(message);
             }
+            try
+            {
+                string criteria = "SRWV.STUDENT EQ '" + studentId + "'";
+                Collection<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers> reqWaiverData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentReqWaivers>(criteria);
+                return BuildWaivers(reqWaiverData);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
+            catch (Exception ex)
+            {
+                string errorMessage = "Error selecting and building waivers";
+                logger.Error(ex, errorMessage);
+                throw;
+            }
+        }
     }
 }

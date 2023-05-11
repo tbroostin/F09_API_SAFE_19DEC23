@@ -1,8 +1,9 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Web.Http.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -121,7 +122,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         status = BudgetEntryStatus.Unfinished;
                         break;
                     default:
-                        throw new Exception("Invalid status specified in TestBudgetAdjustmentRepository.");
+                        throw new ColleagueWebApiException("Invalid status specified in TestBudgetAdjustmentRepository.");
                 }
 
                 reason = " ";

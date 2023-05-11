@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -153,7 +154,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await roomTypesService.GetRoomTypesByGuidAsync("9ae3a175-1dfd-4937-b97b-3c9ad596e023");
             }
 
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             [TestMethod]
             public async Task GetRoomTypesByGuidAsync_ThrowsExc()
             {

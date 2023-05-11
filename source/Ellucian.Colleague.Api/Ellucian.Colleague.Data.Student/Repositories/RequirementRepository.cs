@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -55,6 +56,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 IEnumerable<string> codelist = new List<string>() { requirementCode };
                 return (await GetAsync(codelist)).First();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -674,12 +679,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            return new DegreeAuditParameters(extraCourses, !string.IsNullOrEmpty(daDefaults.DaRelatedCoursesFlag) && daDefaults.DaRelatedCoursesFlag.ToUpper() == "Y" ? true : false,
                                !string.IsNullOrEmpty(daDefaults.DaIncludeFailures) && daDefaults.DaIncludeFailures.ToUpper() == "N" ? false : true,
                                !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false, 
-                               !string.IsNullOrEmpty(daDefaults.DaExcludeCmplRplGpaFlag) && daDefaults.DaExcludeCmplRplGpaFlag.ToUpper()=="Y" ? true:false);
+                               !string.IsNullOrEmpty(daDefaults.DaExcludeCmplRplGpaFlag) && daDefaults.DaExcludeCmplRplGpaFlag.ToUpper()=="Y" ? true:false,
+                               !string.IsNullOrEmpty(daDefaults.DaRptdCrdtsOvrPlcrsFlag) && daDefaults.DaRptdCrdtsOvrPlcrsFlag.ToUpper() == "Y" ? true : false,
+                               !string.IsNullOrEmpty(daDefaults.DaDisableOptmzCrseSelect) && daDefaults.DaDisableOptmzCrseSelect.ToUpper() == "Y"? true:false);
                        }
                        else
                        {
                            // Create parameters using the defaults
-                           return new DegreeAuditParameters(ExtraCourses.Apply, false, true, false, false);
+                           return new DegreeAuditParameters(ExtraCourses.Apply, false, true, false, false, false, false);
                        }
                    }, Level1CacheTimeoutValue);
 
@@ -749,13 +756,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     requirementType = new RequirementType("NONE", "Empty Requirement Type", null);
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 if (logger.IsErrorEnabled)
                 {
                     logger.Error(ex.Message);
                     logger.Info("Error occurred when attempting to process valcode ACAD.REQMT.TYPES");
-                    throw ex;
+                    throw;
                 }
             }
             return requirementType;

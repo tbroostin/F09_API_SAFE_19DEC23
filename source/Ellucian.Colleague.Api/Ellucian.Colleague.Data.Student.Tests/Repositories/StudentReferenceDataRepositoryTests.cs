@@ -24,6 +24,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -4396,7 +4397,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var courseTypes = await referenceDataRepo.GetCourseTypesAsync(false);
                 cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("ST_COURSE.TYPES"), null)).Returns(courseTypes);
                 // Verify that courseTypes were returned, which means they came from the "repository".
-                Assert.IsTrue(courseTypes.Count() == 6);
+                Assert.IsTrue(courseTypes.Count() == 10);
 
                 // Verify that the courseType item was added to the cache after it was read from the repository
                 cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<CourseType>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
@@ -4416,7 +4417,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "COURSE.TYPES", true)).ReturnsAsync(new ApplValcodes());
 
                 // Assert the CourseTypes are returned
-                Assert.IsTrue((await referenceDataRepo.GetCourseTypesAsync(false)).Count() == 6);
+                Assert.IsTrue((await referenceDataRepo.GetCourseTypesAsync(false)).Count() == 10);
                 // Verify that the sectionRegistrationStatuses were retrieved from cache
                 cacheProviderMock.Verify(m => m.Get(valcodeName, null));
             }
@@ -6160,7 +6161,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentReferenceDataRepo_GetsGetMealPlanRates_Exception()
             {
                 dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
@@ -7520,7 +7521,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             //}
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentReferenceDataRepo_GetsGetRoomRates_Exception()
             {
                 dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
@@ -11488,6 +11489,68 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     educationalGoalsResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
                 }
                 return educationalGoalsResponse;
+            }
+        }
+
+        [TestClass]
+        public class GetIntentToWithdrawCodesAsync_Tests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            ApiSettings apiSettings;
+            BulkReadOutput<IntToWdrlCodes> bulkReadOutput;
+
+            StudentReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void GetIntentToWithdrawCodesAsync_Tests_Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST")
+                {
+                    BulkReadSize = 5000
+                };
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to educationalGoals domainEntityName read
+                string[] intwIds = new string[] { "1", "2", "3" };
+                dataAccessorMock.Setup(acc => acc.SelectAsync("INT.TO.WDRL.CODES", string.Empty)).ReturnsAsync(intwIds);
+                bulkReadOutput = new BulkReadOutput<IntToWdrlCodes>()
+                {
+                    BulkRecordsRead = new Collection<IntToWdrlCodes>()
+                    {
+                        new IntToWdrlCodes() { Recordkey = "1", ItwcCode = "Yes", ItwcDescription = "I intent to withdraw." },
+                        new IntToWdrlCodes() { Recordkey = "2", ItwcCode = "No", ItwcDescription = "I do not intent to withdraw." },
+                        new IntToWdrlCodes() { Recordkey = "3", ItwcCode = "Maybe", ItwcDescription = "I am undecided." }
+                    }
+                };
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<IntToWdrlCodes>("INT.TO.WDRL.CODES", intwIds, true)).ReturnsAsync(bulkReadOutput);
+
+                cacheProviderMock = new Mock<ICacheProvider>();
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                referenceDataRepo = new StudentReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            public async Task GetIntentToWithdrawCodesAsync_bypassCache_true()
+            {
+                var codes = await referenceDataRepo.GetIntentToWithdrawCodesAsync(true);
+                Assert.AreEqual(3, codes.Count());
+            }
+
+            [TestMethod]
+            public async Task GetIntentToWithdrawCodesAsync_bypassCache_false()
+            {
+                var codes = await referenceDataRepo.GetIntentToWithdrawCodesAsync();
+                Assert.AreEqual(3, codes.Count());
             }
         }
     }

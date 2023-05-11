@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -9,6 +10,7 @@ using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
 {
@@ -242,14 +244,14 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void CreateReceipt_CTXError()
             {
                 transManagerMock.Setup<CreateCashReceiptResponse>(
                     trans => trans.Execute<CreateCashReceiptRequest, CreateCashReceiptResponse>(It.IsAny<CreateCashReceiptRequest>()))
                         .Returns<CreateCashReceiptRequest>(request =>
                         {
-                            throw new Exception();
+                            throw new ColleagueWebApiException();
                         });
                 repository = new ReceiptRepository(cacheProvider, transFactory, logger, apiSettings);
                 var result = repository.CreateReceipt(inReceipt, new List<ReceiptPayment>(), inDeposits);

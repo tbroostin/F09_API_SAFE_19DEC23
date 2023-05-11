@@ -7,6 +7,10 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Collections.Generic;
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -26,13 +30,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
         public Ellucian.Colleague.Dtos.Finance.Payments.PaymentConfirmation GetPaymentConfirmation(string distribution, string paymentMethod, string amountToPay)
         {
-            var paymentConfirmationEntity = _paymentRepository.GetConfirmation(distribution, paymentMethod, amountToPay);
+            try
+            {
+                var paymentConfirmationEntity = _paymentRepository.GetConfirmation(distribution, paymentMethod, amountToPay);
 
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.PaymentConfirmation, Ellucian.Colleague.Dtos.Finance.Payments.PaymentConfirmation>();
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.PaymentConfirmation, Ellucian.Colleague.Dtos.Finance.Payments.PaymentConfirmation>();
 
-            var paymentConfirmationDto = adapter.MapToType(paymentConfirmationEntity);
+                var paymentConfirmationDto = adapter.MapToType(paymentConfirmationEntity);
 
-            return paymentConfirmationDto;
+                return paymentConfirmationDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         private void CheckPayOwnAccountPermission(string personId)
@@ -107,29 +119,73 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         public Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckProcessingResult PostProcessElectronicCheck(Ellucian.Colleague.Dtos.Finance.Payments.Payment paymentDetails)
         {
             CheckPayOwnAccountPermission(paymentDetails.PersonId);
-            var paymentAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.Finance.Payments.Payment, Ellucian.Colleague.Domain.Finance.Entities.Payments.Payment>();
+            try
+            {
+                var paymentAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.Finance.Payments.Payment, Ellucian.Colleague.Domain.Finance.Entities.Payments.Payment>();
 
-            var paymentEntity = paymentAdapter.MapToType(paymentDetails);
+                var paymentEntity = paymentAdapter.MapToType(paymentDetails);
 
-            var checkProcessingResultEntity = _accountRepository.ProcessCheck(paymentEntity);
+                var checkProcessingResultEntity = _accountRepository.ProcessCheck(paymentEntity);
 
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.ElectronicCheckProcessingResult, Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckProcessingResult>();
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.ElectronicCheckProcessingResult, Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckProcessingResult>();
 
-            var checkProcessingResultDto = adapter.MapToType(checkProcessingResultEntity);
+                var checkProcessingResultDto = adapter.MapToType(checkProcessingResultEntity);
 
-            return checkProcessingResultDto;
+                return checkProcessingResultDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
+
         }
 
         public Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckPayer GetCheckPayerInformation(string personId)
         {
             CheckPayOwnAccountPermission(personId);
-            var checkPayerInformationEntity = _accountRepository.GetCheckPayerInformation(personId);
+            try
+            {
+                var checkPayerInformationEntity = _accountRepository.GetCheckPayerInformation(personId);
 
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.ElectronicCheckPayer, Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckPayer>();
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.Payments.ElectronicCheckPayer, Ellucian.Colleague.Dtos.Finance.Payments.ElectronicCheckPayer>();
 
-            var checkPayerInformationDto = adapter.MapToType(checkPayerInformationEntity);
+                var checkPayerInformationDto = adapter.MapToType(checkPayerInformationEntity);
 
-            return checkPayerInformationDto;
+                return checkPayerInformationDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="allPaymentMethods"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Finance.Configuration.AvailablePaymentMethod>> GetRestrictedPaymentMethodsAsync(string studentId, IEnumerable<AvailablePaymentMethod> allPaymentMethods)
+        {
+            try
+            {
+                var restrictedPaymentMethodEntities = await _paymentRepository.GetRestrictedPaymentMethodsAsync(studentId, allPaymentMethods);
+                var restrictedPaymentMethodDtos = new List<Dtos.Finance.Configuration.AvailablePaymentMethod>();
+                var adapter = new AutoMapperAdapter<Domain.Finance.Entities.Configuration.AvailablePaymentMethod, Dtos.Finance.Configuration.AvailablePaymentMethod>(_adapterRegistry, logger);
+                foreach (var restrictedPaymentMethodEntity in restrictedPaymentMethodEntities)
+                {
+                    restrictedPaymentMethodDtos.Add(adapter.MapToType(restrictedPaymentMethodEntity));
+                }
+                return restrictedPaymentMethodDtos;
+            }
+            // add catches
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
     }
 }

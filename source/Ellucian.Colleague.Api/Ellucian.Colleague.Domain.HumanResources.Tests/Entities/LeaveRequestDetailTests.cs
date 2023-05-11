@@ -16,6 +16,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public DateTime leaveDate;
         public decimal? leaveHours;
         public bool processedFlag;
+        public string leaveRequestDetailChgopr;
 
         public LeaveRequestDetail leaveRequestDetail;
 
@@ -30,11 +31,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 leaveDate = DateTime.Today;
                 leaveHours = 8.00m;
                 processedFlag = false;
+                leaveRequestDetailChgopr = "0011560";
             }
 
             public LeaveRequestDetail CreateLeaveRequestDetail()
             {
-                return new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                return new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, "0011560");
             }
 
             [TestMethod]
@@ -45,6 +47,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.AreEqual(leaveRequestId, leaveRequestDetail.LeaveRequestId);
                 Assert.AreEqual(leaveDate, leaveRequestDetail.LeaveDate);
                 Assert.AreEqual(leaveHours, leaveRequestDetail.LeaveHours);
+                Assert.AreEqual(leaveRequestDetailChgopr, leaveRequestDetail.LeaveRequestDetailChgopr);
             }
 
             [TestMethod]
@@ -66,8 +69,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 leaveRequestId = "13";
                 leaveDate = DateTime.Today;
                 leaveHours = 8.00m;
+                leaveRequestDetailChgopr = "0011560";
 
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
             }
 
             [TestMethod]
@@ -81,7 +85,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void IdCanBeNullTest()
             {
                 id = null;
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(id, leaveRequestDetail.Id);
             }
 
@@ -89,7 +93,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void IdCanBeEmptyTest()
             {
                 id = "";
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(id, leaveRequestDetail.Id);
             }
 
@@ -104,7 +108,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void LeaveRequestIdCanBeNullTest()
             {
                 leaveRequestId = null;
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(leaveRequestId, leaveRequestDetail.LeaveRequestId);
             }
 
@@ -112,7 +116,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void LeaveRequestIdCanBeEmptyTest()
             {
                 leaveRequestId = "";
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(leaveRequestId, leaveRequestDetail.LeaveRequestId);
             }
 
@@ -120,7 +124,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void LeaveHoursTest()
             {
                 var leaveHours = 8.00m;
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(leaveHours, leaveRequestDetail.LeaveHours);
             }
 
@@ -128,8 +132,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void LeaveHoursCanBeNullTest()
             {
                 decimal? leaveHours = null;
-                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag);
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
                 Assert.AreEqual(leaveHours, leaveRequestDetail.LeaveHours);
+            }
+            [TestMethod]
+            public void LeaveRequestDetailChgoprCanBeNullTest()
+            {
+                string leaveRequestDetailChgopr = null;
+                leaveRequestDetail = new LeaveRequestDetail(id, leaveRequestId, leaveDate, leaveHours, processedFlag, leaveRequestDetailChgopr);
+                Assert.AreEqual(leaveRequestDetailChgopr, leaveRequestDetail.LeaveRequestDetailChgopr);
             }
         }
     }

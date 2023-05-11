@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +23,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -60,19 +61,35 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="AdvisorType">AdvisorTypes</see></returns>
         public async Task<IEnumerable<AdvisorType>> GetAsync()
         {
-            var advisorTypeCollection = await _referenceDataRepository.GetAdvisorTypesAsync();
-
-            // Get the right adapter for the type mapping
-            var advisorTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AdvisorType, AdvisorType>();
-
-            // Map the AdvisorType entity to the program DTO
-            var advisorTypeDtoCollection = new List<AdvisorType>();
-            foreach (var advisorType in advisorTypeCollection)
+            try
             {
-                advisorTypeDtoCollection.Add(advisorTypeDtoAdapter.MapToType(advisorType));
+                var advisorTypeCollection = await _referenceDataRepository.GetAdvisorTypesAsync();
+
+                // Get the right adapter for the type mapping
+                var advisorTypeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AdvisorType, AdvisorType>();
+
+                // Map the AdvisorType entity to the program DTO
+                var advisorTypeDtoCollection = new List<AdvisorType>();
+                foreach (var advisorType in advisorTypeCollection)
+                {
+                    advisorTypeDtoCollection.Add(advisorTypeDtoAdapter.MapToType(advisorType));
+                }
+
+                return advisorTypeDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving advisor types";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occurred while retrieving advisor types";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
 
-            return advisorTypeDtoCollection;
         }
 
         /// <summary>

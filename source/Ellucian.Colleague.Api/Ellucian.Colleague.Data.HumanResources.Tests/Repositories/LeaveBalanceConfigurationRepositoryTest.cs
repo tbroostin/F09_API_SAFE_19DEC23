@@ -1,6 +1,7 @@
-﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -56,7 +57,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             List<string> list = new List<string>();
             list.Add("INAC");
             list.Add("CMPS");
-            HrssDefaults value = new HrssDefaults() { HrssExcludeLeavePlanIds = list, HrssLeaveLkbk = testLeaveBalanceConfigurationItems.LeaveRequestLookbackDays };
+            HrssDefaults value = new HrssDefaults()
+            {
+                HrssExcludeLeavePlanIds = list,
+                HrssLeaveLkbk = testLeaveBalanceConfigurationItems.LeaveRequestLookbackDays,
+                HrssLrUnsubmitWdrw = Convert.ToString(testLeaveBalanceConfigurationItems.LeaveRequestActionType),
+                HrssLrAllowSuprvsrEdit = Convert.ToString(testLeaveBalanceConfigurationItems.AllowSupervisorToEditLeaveRequests)
+            };
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", true)).ReturnsAsync(value);
 
             leaveBalanceConfigurationRepository = new LeaveBalanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
@@ -108,6 +115,38 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             Assert.IsNotNull(leaveBalanceConfiguration.ExcludedLeavePlanIds);
             Assert.IsTrue(leaveBalanceConfiguration.ExcludedLeavePlanIds.Count==0);
 
+        }
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_LeaveRequestActionTypeIsSetCorrectlyTest()
+        {
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            var expectedDefaultValue = LeaveRequestActionType.R;
+            Assert.AreEqual(expectedDefaultValue, leaveBalanceConfiguration.LeaveRequestActionType);
+        }
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_LeaveRequestActionTypeSetToNotNullTest()
+        {
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", true)).ReturnsAsync(new HrssDefaults());
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            Assert.IsNotNull(leaveBalanceConfiguration.LeaveRequestActionType);
+        }
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_AllowSupervisorToEditLeaveRequestsSetToFalseTest()
+        {
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", true)).ReturnsAsync(new HrssDefaults());
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            Assert.IsFalse(leaveBalanceConfiguration.AllowSupervisorToEditLeaveRequests);
+        }        
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_AllowSupervisorToEditLeaveRequestsAreSetCorrectlyTest()
+        {
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            var expectedDefaultValue = false;
+            Assert.AreEqual(expectedDefaultValue, leaveBalanceConfiguration.AllowSupervisorToEditLeaveRequests);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -57,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
-                throw new Exception(string.Format("No administrative period was found for guid {0}.", guid));
+                throw new ColleagueWebApiException(string.Format("No administrative period was found for guid {0}.", guid));
             }
             catch (Exception e)
             {

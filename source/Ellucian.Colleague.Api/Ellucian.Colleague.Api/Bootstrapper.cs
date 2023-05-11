@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -12,6 +12,7 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Bootstrapping;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Resource;
 using Ellucian.Web.Resource.Repositories;
 using Ellucian.Web.Security;
@@ -264,7 +265,7 @@ namespace Ellucian.Colleague.Api
                     sb.AppendLine();
                 }
                 string errorMessage = sb.ToString();
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
 
             foreach (var type in concreteTypeList)

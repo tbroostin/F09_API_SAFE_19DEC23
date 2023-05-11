@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -7,6 +7,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -257,7 +258,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var adapter = ruleAdapterRegistry.Get(typeof(T));
             if (adapter == null)
             {
-                throw new Exception("No rule adapter found for context type " + typeof(T));
+                throw new ColleagueWebApiException("No rule adapter found for context type " + typeof(T));
             }
 
             //group rules by file suite
@@ -326,7 +327,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var adapter = ruleAdapterRegistry.Get(typeof(T));
             if (adapter == null)
             {
-                throw new Exception("No rule adapter found for context type " + typeof(T));
+                throw new ColleagueWebApiException("No rule adapter found for context type " + typeof(T));
             }
 
 
@@ -400,7 +401,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";

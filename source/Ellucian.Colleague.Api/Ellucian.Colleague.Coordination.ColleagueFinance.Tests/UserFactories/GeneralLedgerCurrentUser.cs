@@ -26,7 +26,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER", "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS", "DELETE.REQUISITION", "VOUCHER.CREATER" },
+                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER",
+                            "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS", "DELETE.REQUISITION", "VOUCHER.CREATER" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -74,7 +75,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                 }
             }
         }
-              
+
         public class UserFactoryNone : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser
@@ -215,7 +216,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { "VIEW.ACCOUNT.FUNDS.AVAILABLE", "VIEW.AP.INVOICES", "UPDATE.AP.INVOICES", "VIEW.FISCAL.PERIODS.INTG"},
+                        Roles = new List<string>() { "VIEW.ACCOUNT.FUNDS.AVAILABLE", "VIEW.AP.INVOICES", "UPDATE.AP.INVOICES", "VIEW.FISCAL.PERIODS.INTG" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -340,7 +341,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "StudentPO",
-                        Roles = new List<string>() { "VIEW.GRANTS"},
+                        Roles = new List<string>() { "VIEW.GRANTS" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -403,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "StudentPO",
-                        Roles = new List<string>() { "UPDATE.RECEIVING"},
+                        Roles = new List<string>() { "UPDATE.RECEIVING" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -467,6 +468,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SessionTimeout = 30,
                         UserName = "Student",
                         Roles = new List<string>() { "VIEW.ACCOUNT.FUNDS.AVAILABLE", "VIEW.AP.INVOICES", "UPDATE.AP.INVOICES", "VIEW.LEDGER.ACTIVITIES", "PROCUREMENT.USER" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
+        public class ApprovalRoleUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "3333333",
+                        ControlId = "123",
+                        Name = "ApprovalRoleUser",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "Approver",
+                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER",
+                            "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS", "DELETE.REQUISITION",
+                            "VOUCHER.CREATER" },
                         SessionFixationId = "abc123"
                     });
                 }

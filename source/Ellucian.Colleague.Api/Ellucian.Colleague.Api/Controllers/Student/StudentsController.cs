@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -96,7 +95,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="criteria">Query criteria for retrieving students.</param>
         /// <returns>StudentBatch3 DTO Objects</returns>
         /// <accessComments>
-        /// Authenticated users with the VIEW.PERSON.INFORMATION permission can query students.
+        /// Authenticated users with the VIEW.PERSON.INFORMATION and VIEW.STUDENT.INFORMATION permission can query students.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
@@ -125,6 +124,12 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving students from a list of Ids";
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -371,11 +376,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
         /// </accessComments>
+        [Obsolete("Obsolete as of API version 1.30, use GetAcademicHistory5Async instead")]
         public async Task<AcademicHistory4> GetAcademicHistory4Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
         {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "studentId must be provided in order to retrieve student's academic history");
+            }
             try
             {
                 return await _academicHistoryService.GetAcademicHistory4Async(studentId, bestFit, filter, term, includeDrops);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving academic history for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -419,13 +435,19 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </accessComments>
         public async Task<AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
         {
-            if(string.IsNullOrEmpty(studentId))
+            if (string.IsNullOrEmpty(studentId))
             {
                 throw new ArgumentNullException("studentId", "studentId must be provided in order to retrieve student's academic history");
             }
             try
             {
                 return await _academicHistoryService.GetAcademicHistory5Async(studentId, bestFit, filter, term, includeDrops);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving academic history version 5 for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -435,7 +457,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (Exception ex)
             {
-                string message = "An exception occurred while retrieving student's academic history";
+                string message = "An exception occurred while retrieving academic history for student: " + studentId;
                 _logger.Error(ex, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
@@ -671,6 +693,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// UPDATE.ANY.ADVISEE
         /// ALL.ACCESS.ANY.ADVISEE
         /// </accessComments>
+        [Obsolete("Obsolete as of API version 1.34, use version 3 of this API")]
         public async Task<Dtos.Student.RegistrationEligibility> GetRegistrationEligibility2Async(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -692,6 +715,56 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Info(peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+        }
+
+        /// <summary>
+        /// Checks to see if the student is eligible to register.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility </see> information containing messages, which, if present, indicate the student
+        /// is ineligible, in addition to a boolean HasOverride, set to true if the current user has the ability to override ineligibility.</returns>
+        /// <accessComments>
+        /// A person may retrieve their own registration eligibility.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
+        public async Task<Dtos.Student.RegistrationEligibility> GetRegistrationEligibility3Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                _logger.Error("Invalid studentId");
+                throw CreateHttpResponseException("Invalid studentId", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await _studentService.CheckRegistrationEligibility3Async(studentId);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout have occurred while retrieving registration eligibility for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException("An error occurred during request processing: " + e.Message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -726,6 +799,17 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 // Student not found.  Error already logged in repository
                 throw CreateNotFoundException("student", studentId);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving transcript restrictions for a student";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -938,7 +1022,6 @@ namespace Ellucian.Colleague.Api.Controllers
 
             var httpResponse = Request.CreateResponse(HttpStatusCode.OK, jsonResponseContainer);
             return httpResponse;
-
         }
 
         /// <summary>
@@ -960,8 +1043,18 @@ namespace Ellucian.Colleague.Api.Controllers
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// </accessComments>
-        public async Task<HttpResponseMessage> GetUnofficialTranscriptAsync(string studentId, string transcriptGrouping = null)
+        public async Task<HttpResponseMessage> GetUnofficialTranscriptAsync(string studentId, string transcriptGrouping)
         {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw CreateHttpResponseException("Student ID cannot be empty/null for unofficial transcript retrieval.", HttpStatusCode.BadRequest);
+            }
+
+            if (string.IsNullOrEmpty(transcriptGrouping))
+            {
+                throw CreateHttpResponseException("Transcript Grouping cannot be empty/null for unofficial transcript retrieval.", HttpStatusCode.BadRequest);
+            }
+
             try
             {
                 // Only service requests for pdf.  Don't want to return JSON, plain-text, or anything else by design.
@@ -1005,6 +1098,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException("Only application/pdf and application/json are served from this endpoint", HttpStatusCode.NotAcceptable);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student's unofficial transcript";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
@@ -1019,7 +1118,6 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
-
 
         /// <summary>
         /// Get all the emergency information for a person.
@@ -1110,7 +1208,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 return response;
             }
 
-            catch(ColleagueSessionExpiredException tex)
+            catch (ColleagueSessionExpiredException tex)
             {
                 string message = string.Format("Timeout have occurred while registering for the student {0}", studentId);
                 _logger.Error(tex, message);
@@ -1135,7 +1233,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="sectionDropRegistration">Section Drop Registration request to process</param>
         /// <returns>A registration response which includes any messages from drop registration</returns>
         /// <accessComments>
-        /// Faculty with DROP.SECTION may perform drop section action for students.
+        /// Faculty with DROP.STUDENT or a departmental oversight person with CREATE.SECTION.DROP.STUDENT may perform drop section action for students.
         /// </accessComments>
         [HttpPut]
         public async Task<RegistrationResponse> DropRegistrationAsync(string studentId, [FromBody] SectionDropRegistration sectionDropRegistration)
@@ -1164,9 +1262,15 @@ namespace Ellucian.Colleague.Api.Controllers
                 RegistrationResponse response = await _studentService.DropRegistrationAsync(studentId, sectionDropRegistration);
                 return response;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                var message = "Session has expired while dropping student section registration.";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
-                _logger.Error(peex.ToString());
+                _logger.Error(peex, peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
@@ -1195,7 +1299,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 5. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
+        /// 5. A user with permissions of VIEW.PERSON.INFORMATION and VIEW.STUDENT.INFORMATION is accessing the student's data.
         /// 
         ///  Privacy is enforced by this response. If any student has an assigned privacy code that the advisor or faculty is not authorized to access, the Student response object is returned with a
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned. In this situation, 
@@ -1222,9 +1326,15 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateNotFoundException("student", studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving student information for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception exception)
             {
-                throw CreateHttpResponseException(exception.Message, HttpStatusCode.InternalServerError);
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -1236,13 +1346,13 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="pageIndex">Page number</param>
         /// <returns>Information about the queried student(s)</returns>
         /// <accessComments>
-        /// Authenticated users with the VIEW.PERSON.INFORMATION permission can query students.
+        /// Authenticated users with the VIEW.PERSON.INFORMATION and VIEW.STUDENT.INFORMATION permissions can query students.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
         /// In this situation, all details except the student name are cleared from the specific student object.
         /// </accessComments>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Student>> QueryStudentByPost2Async([FromBody]StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1)
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Student>> QueryStudentByPost2Async([FromBody] StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1)
         {
             _logger.Info("Entering QueryStudentByPost2Async");
             var watch = new Stopwatch();
@@ -1266,6 +1376,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving information for the searched student";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -1298,47 +1414,61 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </accessComments>
         public async Task<IEnumerable<StudentProgram2>> GetStudentPrograms2Async(string studentId, bool currentOnly = true)
         {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "studentId must be provided in order to retrieve student's programs");
+            }
             try
             {
                 await _studentService.CheckStudentAccessAsync(studentId);
+
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentProgram> studentPrograms = await _studentProgramRepository.GetAsync(studentId);
+
+                // Limit set of student programs to current programs if requested
+                if (currentOnly == true)
+                {
+                    studentPrograms = studentPrograms.Where(x => x.EndDate == null || x.EndDate >= DateTime.Today);
+                }
+
+                List<StudentProgram2> studentProgramDtos = new List<StudentProgram2>();
+
+                if (studentPrograms.Count() > 0)
+                {
+                    var studentProgramDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentProgram, StudentProgram2>();
+                    var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
+                    foreach (var prog in studentPrograms)
+                    {
+                        var studentProgramDto = studentProgramDtoAdapter.MapToType(prog);
+                        foreach (var additionalReq in studentProgramDto.AdditionalRequirements)
+                        {
+                            if (!String.IsNullOrEmpty(additionalReq.RequirementCode))
+                            {
+                                additionalReq.Requirement = requirementDtoAdapter.MapToType((await _requirementRepository.GetAsync(additionalReq.RequirementCode)));
+                            }
+                        }
+                        studentProgramDtos.Add(studentProgramDto);
+                    }
+                }
+
+                return studentProgramDtos;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving programs for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw CreateNotFoundException("student", studentId);
+                string message = "An exception occurred while retrieving programs for student: " + studentId;
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentProgram> studentPrograms = await _studentProgramRepository.GetAsync(studentId);
-
-            // Limit set of student programs to current programs if requested
-            if (currentOnly == true)
-            {
-                studentPrograms = studentPrograms.Where(x => x.EndDate == null || x.EndDate >= DateTime.Today);
-            }
-
-            List<StudentProgram2> studentProgramDtos = new List<StudentProgram2>();
-
-            if (studentPrograms.Count() > 0)
-            {
-                var studentProgramDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentProgram, StudentProgram2>();
-                var requirementDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Requirement, Requirement>();
-                foreach (var prog in studentPrograms)
-                {
-                    var studentProgramDto = studentProgramDtoAdapter.MapToType(prog);
-                    foreach (var additionalReq in studentProgramDto.AdditionalRequirements)
-                    {
-                        if (!String.IsNullOrEmpty(additionalReq.RequirementCode))
-                        {
-                            additionalReq.Requirement = requirementDtoAdapter.MapToType((await _requirementRepository.GetAsync(additionalReq.RequirementCode)));
-                        }
-                    }
-                    studentProgramDtos.Add(studentProgramDto);
-                }
-            }
-            return studentProgramDtos;
         }
 
         /// <summary>
@@ -1711,7 +1841,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 5. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
+        /// 5. A user with permissions of VIEW.PERSON.INFORMATION and VIEW.STUDENT.INFORMATION is accessing the student's data.
         /// 
         ///  Privacy is enforced by this response. If any student has an assigned privacy code that the advisor or faculty is not authorized to access, the PlanningStudent response object is returned with a
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned. In this situation, 
@@ -1730,6 +1860,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return planningStudent;
 
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving planning student for {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -1764,15 +1900,21 @@ namespace Ellucian.Colleague.Api.Controllers
         ///</accessComments>
         public async Task<IEnumerable<StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId)
         {
-            if(string.IsNullOrWhiteSpace(studentId))
+            if (string.IsNullOrWhiteSpace(studentId))
             {
-                throw new ArgumentNullException("studentId","Student Id passed to retrieve student's academic level cannot be null or empty");
+                throw new ArgumentNullException("studentId", "Student Id passed to retrieve student's academic level cannot be null or empty");
             }
-          
+
             try
             {
                 IEnumerable<StudentAcademicLevel> studentAcademicLevels = await _studentService.GetStudentAcademicLevelsAsync(studentId);
                 return studentAcademicLevels;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving academic levels for student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {

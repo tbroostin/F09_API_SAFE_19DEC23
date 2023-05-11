@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -25,7 +26,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class DocumentApprovalRepository : BaseColleagueRepository, IDocumentApprovalRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public DocumentApprovalRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -56,116 +57,129 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             };
 
             // Execute the CTX request.
-            var response = await transactionInvoker.ExecuteAsync<TxGetApprovalDocumentsRequest, TxGetApprovalDocumentsResponse>(request);
-
-            // Build the document approval entity from the CTX response.
-            if (response != null)
+            try
             {
-                documentApproval.CanOverrideFundsAvailability = response.AFundsOverride;
-                documentApproval.FundsAvailabilityOn = response.AFaRequired;
+                var response = await transactionInvoker.ExecuteAsync<TxGetApprovalDocumentsRequest, TxGetApprovalDocumentsResponse>(request);
 
-                if (response.AlDocumentApprovals == null || !response.AlDocumentApprovals.Any())
+                // Build the document approval entity from the CTX response.
+                if (response != null)
                 {
-                    logger.Debug("There are no approver/next approver information in any document.");
-                }
+                    documentApproval.CanOverrideFundsAvailability = response.AFundsOverride;
+                    documentApproval.FundsAvailabilityOn = response.AFaRequired;
+                    documentApproval.AllowReturns = response.AAllowReturns;
 
-                if (response.AlApprovalDocuments != null && response.AlApprovalDocuments.Any())
-                {
-                    documentApproval.ApprovalDocuments = new List<ApprovalDocument>();
-                    foreach (var approvalDocument in response.AlApprovalDocuments)
+                    if (response.AlDocumentApprovals == null || !response.AlDocumentApprovals.Any())
                     {
-                        if (approvalDocument != null)
+                        logger.Debug("There are no approver/next approver information in any document.");
+                    }
+
+                    if (response.AlApprovalDocuments != null && response.AlApprovalDocuments.Any())
+                    {
+                        documentApproval.ApprovalDocuments = new List<ApprovalDocument>();
+                        foreach (var approvalDocument in response.AlApprovalDocuments)
                         {
-                            ApprovalDocument document = new ApprovalDocument();
-                            document.Id = approvalDocument.AlDocId;
-                            document.Number = approvalDocument.AlDocNumber;
-                            document.DocumentType = approvalDocument.AlDocType;
-                            document.VendorName = approvalDocument.AlDocVendorName;
-                            document.Date = approvalDocument.AlDocDate.HasValue ? approvalDocument.AlDocDate.Value : DateTime.Now;
-                            document.NetAmount = approvalDocument.AlDocNetAmt.HasValue ? approvalDocument.AlDocNetAmt.Value : 0m;
-                            document.OverBudgetAmount = approvalDocument.AlDocOverAmt.HasValue ? approvalDocument.AlDocOverAmt.Value : 0m;
-                            document.ChangeDate = approvalDocument.AlDocChangeDate;
-                            document.ChangeTime = approvalDocument.AlDocChangeTime;
-                            document.DocumentItems = new List<ApprovalItem>();
-                            document.DocumentApprovers = new List<Approver>();
-                            document.AssociatedDocuments = new List<AssociatedDocument>();
-                            if (response.AlDocumentItems != null && response.AlDocumentItems.Any())
+                            if (approvalDocument != null)
                             {
-                                List<AlDocumentItems> documentItemsContracts = new List<AlDocumentItems>();
-                                documentItemsContracts = response.AlDocumentItems.Where(x => x.AlItemDocType == approvalDocument.AlDocType && x.AlItemDocId == approvalDocument.AlDocId).ToList();
-
-                                foreach (var itemContract in documentItemsContracts)
+                                ApprovalDocument document = new ApprovalDocument();
+                                document.Id = approvalDocument.AlDocId;
+                                document.Number = approvalDocument.AlDocNumber;
+                                document.DocumentType = approvalDocument.AlDocType;
+                                document.VendorName = approvalDocument.AlDocVendorName;
+                                document.Date = approvalDocument.AlDocDate.HasValue ? approvalDocument.AlDocDate.Value : DateTime.Now;
+                                document.NetAmount = approvalDocument.AlDocNetAmt.HasValue ? approvalDocument.AlDocNetAmt.Value : 0m;
+                                document.OverBudgetAmount = approvalDocument.AlDocOverAmt.HasValue ? approvalDocument.AlDocOverAmt.Value : 0m;
+                                document.ChangeDate = approvalDocument.AlDocChangeDate;
+                                document.ChangeTime = approvalDocument.AlDocChangeTime;
+                                document.DocumentItems = new List<ApprovalItem>();
+                                document.DocumentApprovers = new List<Approver>();
+                                document.AssociatedDocuments = new List<AssociatedDocument>();
+                                if (response.AlDocumentItems != null && response.AlDocumentItems.Any())
                                 {
-                                    ApprovalItem approvalDocumentItem = new ApprovalItem();
-                                    approvalDocumentItem.DocumentType = itemContract.AlItemDocType;
-                                    approvalDocumentItem.DocumentId = itemContract.AlItemDocId;
-                                    approvalDocumentItem.ItemId = itemContract.AlItemId;
-                                    approvalDocumentItem.ChangeDate = itemContract.AlItemChangeDate;
-                                    approvalDocumentItem.ChangeTime = itemContract.AlItemChangeTime;
-                                    document.DocumentItems.Add(approvalDocumentItem);
-                                }
-                            }
-                            else
-                            {
-                                logger.Debug("There are no items information in any document.");
-                            }
+                                    List<AlDocumentItems> documentItemsContracts = new List<AlDocumentItems>();
+                                    documentItemsContracts = response.AlDocumentItems.Where(x => x.AlItemDocType == approvalDocument.AlDocType && x.AlItemDocId == approvalDocument.AlDocId).ToList();
 
-                            if (response.AlDocumentApprovals != null && response.AlDocumentApprovals.Any())
-                            {
-                                List<AlDocumentApprovals> documentApprovalContracts = new List<AlDocumentApprovals>();
-                                documentApprovalContracts = response.AlDocumentApprovals.Where(x => x.AlApprDocType == approvalDocument.AlDocType && x.AlApprDocId == approvalDocument.AlDocId).ToList();
-
-                                if (documentApprovalContracts != null && documentApprovalContracts.Any())
-
-                                    foreach (var approvalContract in documentApprovalContracts)
+                                    foreach (var itemContract in documentItemsContracts)
                                     {
-                                        Approver approvalDocumentApprovalInformation = new Approver(approvalContract.AlApprId);
-                                        approvalDocumentApprovalInformation.SetApprovalName(approvalContract.AlApprName);
-                                        approvalDocumentApprovalInformation.ApprovalDate = approvalContract.AlApprDate.HasValue ? approvalContract.AlApprDate.Value : default(DateTime?);
-                                        document.DocumentApprovers.Add(approvalDocumentApprovalInformation);
+                                        ApprovalItem approvalDocumentItem = new ApprovalItem();
+                                        approvalDocumentItem.DocumentType = itemContract.AlItemDocType;
+                                        approvalDocumentItem.DocumentId = itemContract.AlItemDocId;
+                                        approvalDocumentItem.ItemId = itemContract.AlItemId;
+                                        approvalDocumentItem.ChangeDate = itemContract.AlItemChangeDate;
+                                        approvalDocumentItem.ChangeTime = itemContract.AlItemChangeTime;
+                                        document.DocumentItems.Add(approvalDocumentItem);
                                     }
+                                }
                                 else
                                 {
-                                    logger.Debug("There are no approver/next approver information in document {0}.", document.Id);
+                                    logger.Debug("There are no items information in any document.");
                                 }
-                            }
 
-                            if (response.AlAssociatedDocuments != null && response.AlAssociatedDocuments.Any())
-                            {
-                                List<AlAssociatedDocuments> associatedDocumentContracts = new List<AlAssociatedDocuments>();
-                                associatedDocumentContracts = response.AlAssociatedDocuments.Where(x => x.AlAssocDocDocType == approvalDocument.AlDocType && x.AlAssocDocDocId == approvalDocument.AlDocId).ToList();
+                                if (response.AlDocumentApprovals != null && response.AlDocumentApprovals.Any())
+                                {
+                                    List<AlDocumentApprovals> documentApprovalContracts = new List<AlDocumentApprovals>();
+                                    documentApprovalContracts = response.AlDocumentApprovals.Where(x => x.AlApprDocType == approvalDocument.AlDocType && x.AlApprDocId == approvalDocument.AlDocId).ToList();
 
-                                if (associatedDocumentContracts != null && associatedDocumentContracts.Any())
+                                    if (documentApprovalContracts != null && documentApprovalContracts.Any())
 
-                                    foreach (var documentContract in associatedDocumentContracts)
-                                    {
-                                        if (documentContract != null)
+                                        foreach (var approvalContract in documentApprovalContracts)
                                         {
-                                            AssociatedDocument approvalDocumentAssociatedDocument = new AssociatedDocument();
-                                            approvalDocumentAssociatedDocument.Type = documentContract.AlAssocDocType;
-                                            approvalDocumentAssociatedDocument.Id = documentContract.AlAssocDocId;
-                                            approvalDocumentAssociatedDocument.Number = documentContract.AlAssocDocNumber;
-                                            document.AssociatedDocuments.Add(approvalDocumentAssociatedDocument);
+                                            Approver approvalDocumentApprovalInformation = new Approver(approvalContract.AlApprId);
+                                            approvalDocumentApprovalInformation.SetApprovalName(approvalContract.AlApprName);
+                                            approvalDocumentApprovalInformation.ApprovalDate = approvalContract.AlApprDate.HasValue ? approvalContract.AlApprDate.Value : default(DateTime?);
+                                            document.DocumentApprovers.Add(approvalDocumentApprovalInformation);
                                         }
+                                    else
+                                    {
+                                        logger.Debug("There are no approver/next approver information in document {0}.", document.Id);
                                     }
-                                else
-                                {
-                                    logger.Debug("There are no associated document information in document {0}.", document.Id);
                                 }
-                            }
 
-                            documentApproval.ApprovalDocuments.Add(document);
+                                if (response.AlAssociatedDocuments != null && response.AlAssociatedDocuments.Any())
+                                {
+                                    List<AlAssociatedDocuments> associatedDocumentContracts = new List<AlAssociatedDocuments>();
+                                    associatedDocumentContracts = response.AlAssociatedDocuments.Where(x => x.AlAssocDocDocType == approvalDocument.AlDocType && x.AlAssocDocDocId == approvalDocument.AlDocId).ToList();
+
+                                    if (associatedDocumentContracts != null && associatedDocumentContracts.Any())
+
+                                        foreach (var documentContract in associatedDocumentContracts)
+                                        {
+                                            if (documentContract != null)
+                                            {
+                                                AssociatedDocument approvalDocumentAssociatedDocument = new AssociatedDocument();
+                                                approvalDocumentAssociatedDocument.Type = documentContract.AlAssocDocType;
+                                                approvalDocumentAssociatedDocument.Id = documentContract.AlAssocDocId;
+                                                approvalDocumentAssociatedDocument.Number = documentContract.AlAssocDocNumber;
+                                                document.AssociatedDocuments.Add(approvalDocumentAssociatedDocument);
+                                            }
+                                        }
+                                    else
+                                    {
+                                        logger.Debug("There are no associated document information in document {0}.", document.Id);
+                                    }
+                                }
+
+                                documentApproval.ApprovalDocuments.Add(document);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    logger.Debug("response object from the CTX is null.");
+                }
+
             }
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                logger.Debug("response object from the CTX is null.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
             }
 
             return documentApproval;
-        }
+        } 
 
         /// <summary>
         /// Update approval information on a group of documents.
@@ -185,6 +199,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (approvalDocumentRequests == null || !(approvalDocumentRequests.Any()))
             {
                 throw new ArgumentNullException("There must be at least one document approval request.");
+            }
+
+            var returnDocumentFound = approvalDocumentRequests.Any(x => x.Return);
+            if(returnDocumentFound)
+            {
+                if(approvalDocumentRequests.Count() > 1)
+                {
+                    throw new InvalidOperationException("There must be only one document for return request.");
+                }
+                var allowApprovalReturns = false;
+                var purchasingDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
+                if (purchasingDefaults != null)
+                {
+                    allowApprovalReturns = purchasingDefaults.PurApprAllowReturnFlag.ToUpper() == "Y"; 
+                }
+
+                if(!allowApprovalReturns)
+                {
+                    throw new InvalidOperationException("Approval returns not enabled.");
+                }
+
             }
 
             // determine if funds availability is turned on for GL numbers or for projects
@@ -228,62 +263,81 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             List<decimal?> documentOverAmounts = new List<decimal?>();
             List<string> documentTimestamps = new List<string>();
             List<string> documentItems = new List<string>();
-            List<string> itemTimestamps = new List<string>();
-
-            foreach (var approvalDocument in approvalDocumentRequests)
+            List<string> itemTimestamps = new List<string>();            
+            List<string> returnComments = new List<string>();
+            if (returnDocumentFound)
             {
-                // if the document is marked to be approved by the user, add the information about
-                // the document to the CTX request. Otherwise, add the document information to the 
-                // response for non-updated documents.
-                if (approvalDocument != null)
+                var returnDocument = approvalDocumentRequests.First();                
+                returnComments.Add(returnDocument.ReturnComments);
+                documentTypes.Add(returnDocument.DocumentType);
+                documentIds.Add(returnDocument.DocumentId);
+                documentNumbers.Add(returnDocument.DocumentNumber);                
+                documentNextApprovers.Add(returnDocument.NextApprover);
+                documentOverAmounts.Add(returnDocument.OverBudgetAmount);
+                documentTimestamps.Add(returnDocument.ChangeDate + "*" + returnDocument.ChangeTime);
+                foreach (var documentItem in returnDocument.DocumentItems)
                 {
-                    if (approvalDocument.Approve == true)
+                    documentItems.Add(documentItem.DocumentType + "*" + documentItem.DocumentId + "*" + documentItem.ItemId);
+                    itemTimestamps.Add(documentItem.ChangeDate + "*" + documentItem.ChangeTime);
+                }
+            }
+            else
+            {
+                foreach (var approvalDocument in approvalDocumentRequests)
+                {
+                    // if the document is marked to be approved by the user, add the information about
+                    // the document to the CTX request. Otherwise, add the document information to the 
+                    // response for non-updated documents.
+                    if (approvalDocument != null)
                     {
-                        // if the document does not have an over budget amount, or they have over budget amount and
-                        // an override has been supplied or funds availability is turned off, add the document to the transaction.
-                        if (approvalDocument.OverBudgetAmount == null || approvalDocument.OverBudgetAmount == 0
-                            || (approvalDocument.OverBudgetAmount > 0 && approvalDocument.OverrideBudget && fundsAvailability)
-                            || !fundsAvailability)
+                        if (approvalDocument.Approve == true)
                         {
-                            documentTypes.Add(approvalDocument.DocumentType);
-                            documentIds.Add(approvalDocument.DocumentId);
-                            documentNumbers.Add(approvalDocument.DocumentNumber);
-                            documentNextApprovers.Add(approvalDocument.NextApprover);
-                            documentOverAmounts.Add(approvalDocument.OverBudgetAmount);
-                            documentTimestamps.Add(approvalDocument.ChangeDate + "*" + approvalDocument.ChangeTime);
-                            foreach (var documentItem in approvalDocument.DocumentItems)
+                            // if the document does not have an over budget amount, or they have over budget amount and
+                            // an override has been supplied or funds availability is turned off, add the document to the transaction.
+                            if (approvalDocument.OverBudgetAmount == null || approvalDocument.OverBudgetAmount == 0
+                                || (approvalDocument.OverBudgetAmount > 0 && approvalDocument.OverrideBudget && fundsAvailability)
+                                || !fundsAvailability)
                             {
-                                documentItems.Add(documentItem.DocumentType + "*" + documentItem.DocumentId + "*" + documentItem.ItemId);
-                                itemTimestamps.Add(documentItem.ChangeDate + "*" + documentItem.ChangeTime);
+                                documentTypes.Add(approvalDocument.DocumentType);
+                                documentIds.Add(approvalDocument.DocumentId);
+                                documentNumbers.Add(approvalDocument.DocumentNumber);
+                                documentNextApprovers.Add(approvalDocument.NextApprover);
+                                documentOverAmounts.Add(approvalDocument.OverBudgetAmount);
+                                documentTimestamps.Add(approvalDocument.ChangeDate + "*" + approvalDocument.ChangeTime);
+                                foreach (var documentItem in approvalDocument.DocumentItems)
+                                {
+                                    documentItems.Add(documentItem.DocumentType + "*" + documentItem.DocumentId + "*" + documentItem.ItemId);
+                                    itemTimestamps.Add(documentItem.ChangeDate + "*" + documentItem.ChangeTime);
+                                }
+                            }
+                            else
+                            {
+                                if (approvalDocument.OverBudgetAmount > 0 && !approvalDocument.OverrideBudget && fundsAvailability)
+                                {
+                                    ApprovalDocumentResponse document = new ApprovalDocumentResponse();
+                                    document.DocumentType = approvalDocument.DocumentType;
+                                    document.DocumentId = approvalDocument.DocumentId;
+                                    document.DocumentNumber = approvalDocument.DocumentNumber;
+                                    List<string> messages = new List<string>();
+                                    string message = "The document requires an over budget amount override for approval.";
+                                    messages.Add(message);
+                                    document.DocumentMessages = messages;
+                                    documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
+                                }
                             }
                         }
                         else
                         {
-                            if (approvalDocument.OverBudgetAmount > 0 && !approvalDocument.OverrideBudget && fundsAvailability)
-                            {
-                                ApprovalDocumentResponse document = new ApprovalDocumentResponse();
-                                document.DocumentType = approvalDocument.DocumentType;
-                                document.DocumentId = approvalDocument.DocumentId;
-                                document.DocumentNumber = approvalDocument.DocumentNumber;
-                                List<string> messages = new List<string>();
-                                string message = "The document requires an over budget amount override for approval.";
-                                messages.Add(message);
-                                document.DocumentMessages = messages;
-                                documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
-                            }
+                            ApprovalDocumentResponse document = new ApprovalDocumentResponse();
+                            document.DocumentType = approvalDocument.DocumentType;
+                            document.DocumentId = approvalDocument.DocumentId;
+                            document.DocumentNumber = approvalDocument.DocumentNumber;
+                            List<string> messages = new List<string>();
+                            string message = "The document is not marked for approval.";
+                            messages.Add(message);
+                            document.DocumentMessages = messages;
+                            documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
                         }
-                    }
-                    else
-                    {
-                        ApprovalDocumentResponse document = new ApprovalDocumentResponse();
-                        document.DocumentType = approvalDocument.DocumentType;
-                        document.DocumentId = approvalDocument.DocumentId;
-                        document.DocumentNumber = approvalDocument.DocumentNumber;
-                        List<string> messages = new List<string>();
-                        string message = "The document is not marked for approval.";
-                        messages.Add(message);
-                        document.DocumentMessages = messages;
-                        documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
                     }
                 }
             }
@@ -299,68 +353,82 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 AlDocOverAmts = documentOverAmounts,
                 AlDocTimestamps = documentTimestamps,
                 AlDocItems = documentItems,
-                AlItemTimestamps = itemTimestamps
+                AlItemTimestamps = itemTimestamps,
+                AReturnFlag = returnDocumentFound,
+                AlReturnComments = returnComments
             };
 
             // Execute the CTX request.
-            var response = await transactionInvoker.ExecuteAsync<TxUpdateDocumentApprovalsRequest, TxUpdateDocumentApprovalsResponse>(request);
-
-            // if the response is not null, build the list of approved document objects and 
-            // the list of non-updated document objects.
-            if (response != null)
+            try
             {
-                // get the information about the documents that have been approved.
-                if (response.AlUpdatedDocuments != null && response.AlUpdatedDocuments.Any())
-                {
-                    foreach (var approvedDocument in response.AlUpdatedDocuments)
-                    {
-                        if (approvedDocument != null)
-                        {
-                            ApprovalDocumentResponse document = new ApprovalDocumentResponse();
-                            document.DocumentType = approvedDocument.AlApprDocTypes;
-                            document.DocumentId = approvedDocument.AlApprDocIds;
-                            document.DocumentNumber = approvedDocument.AlApprDocNumbers;
-                            document.DocumentStatus = approvedDocument.AlApprDocStatuses;
+                var response = await transactionInvoker.ExecuteAsync<TxUpdateDocumentApprovalsRequest, TxUpdateDocumentApprovalsResponse>(request);
 
-                            // there may be multiple (sub-valued) messages for each approved document.
-                            if (approvedDocument.AlApprDocMsgs != null)
+                // if the response is not null, build the list of approved document objects and 
+                // the list of non-updated document objects.
+                if (response != null)
+                {
+                    // get the information about the documents that have been approved.
+                    if (response.AlUpdatedDocuments != null && response.AlUpdatedDocuments.Any())
+                    {
+                        foreach (var approvedDocument in response.AlUpdatedDocuments)
+                        {
+                            if (approvedDocument != null)
                             {
-                                string[] subvalues = approvedDocument.AlApprDocMsgs.Split(_SM);
-                                List<string> messages = new List<string>();
-                                messages.AddRange(subvalues);
-                                document.DocumentMessages = messages;
+                                ApprovalDocumentResponse document = new ApprovalDocumentResponse();
+                                document.DocumentType = approvedDocument.AlApprDocTypes;
+                                document.DocumentId = approvedDocument.AlApprDocIds;
+                                document.DocumentNumber = approvedDocument.AlApprDocNumbers;
+                                document.DocumentStatus = approvedDocument.AlApprDocStatuses;
+
+                                // there may be multiple (sub-valued) messages for each approved document.
+                                if (approvedDocument.AlApprDocMsgs != null)
+                                {
+                                    string[] subvalues = approvedDocument.AlApprDocMsgs.Split(_SM);
+                                    List<string> messages = new List<string>();
+                                    messages.AddRange(subvalues);
+                                    document.DocumentMessages = messages;
+                                }
+                                documentApprovalResponse.UpdatedApprovalDocumentResponses.Add(document);
                             }
-                            documentApprovalResponse.UpdatedApprovalDocumentResponses.Add(document);
                         }
                     }
-                }
 
-                // get the information about the documents that have not been approved. The document status
-                // is not populated for non-updated documents.
-                if (response.AlNonUpdatedDocuments != null && response.AlNonUpdatedDocuments.Any())
-                {
-                    foreach (var notApprovedDocument in response.AlNonUpdatedDocuments)
+                    // get the information about the documents that have not been approved. The document status
+                    // is not populated for non-updated documents.
+                    if (response.AlNonUpdatedDocuments != null && response.AlNonUpdatedDocuments.Any())
                     {
-                        if (notApprovedDocument != null)
+                        foreach (var notApprovedDocument in response.AlNonUpdatedDocuments)
                         {
-                            ApprovalDocumentResponse document = new ApprovalDocumentResponse();
-                            document.DocumentType = notApprovedDocument.AlNoupdtTypes;
-                            document.DocumentId = notApprovedDocument.AlNoupdtIds;
-                            document.DocumentNumber = notApprovedDocument.AlNoupdtNumbers;
-
-                            // there may be multiple (sub-valued) messages for each non-updated document.
-                            if (notApprovedDocument.AlNoupdtReasons != null)
+                            if (notApprovedDocument != null)
                             {
-                                string[] subvalues = notApprovedDocument.AlNoupdtReasons.Split(_SM);
-                                List<string> messages = new List<string>();
-                                messages.AddRange(subvalues);
-                                document.DocumentMessages = messages;
+                                ApprovalDocumentResponse document = new ApprovalDocumentResponse();
+                                document.DocumentType = notApprovedDocument.AlNoupdtTypes;
+                                document.DocumentId = notApprovedDocument.AlNoupdtIds;
+                                document.DocumentNumber = notApprovedDocument.AlNoupdtNumbers;
+
+                                // there may be multiple (sub-valued) messages for each non-updated document.
+                                if (notApprovedDocument.AlNoupdtReasons != null)
+                                {
+                                    string[] subvalues = notApprovedDocument.AlNoupdtReasons.Split(_SM);
+                                    List<string> messages = new List<string>();
+                                    messages.AddRange(subvalues);
+                                    document.DocumentMessages = messages;
+                                }
+                                documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
                             }
-                            documentApprovalResponse.NotUpdatedApprovalDocumentResponses.Add(document);
                         }
                     }
                 }
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
+
             return documentApprovalResponse;
         }
 
@@ -416,67 +484,78 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             logger.Debug("AlDocumentType " + string.Join(", ", documentTypes));
             logger.Debug("AlVendorIds " + string.Join(", ", vendorIds));
-            logger.Debug("ADocumentDateFrom " +  filterCriteria.DocumentDateFrom.ToString());
+            logger.Debug("ADocumentDateFrom " + filterCriteria.DocumentDateFrom.ToString());
             logger.Debug("ADocumentDateTo " + filterCriteria.DocumentDateTo.ToString());
             logger.Debug("AApprovalDateFrom " + filterCriteria.ApprovalDateFrom.ToString());
             logger.Debug("AApprovalDateTo " + filterCriteria.ApprovalDateTo.ToString());
 
             // Execute the CTX request.
-            var response = await transactionInvoker.ExecuteAsync<TxGetApprovedDocumentsRequest, TxGetApprovedDocumentsResponse>(request);
-
-            // Build the document approval entity from the CTX response.
-            if (response != null)
+            try
             {
-                if (response.AlApprovedDocuments == null || !response.AlApprovedDocuments.Any())
-                {
-                    logger.Debug("There are no approved documents for the user for the timeframe.");
-                }
+                var response = await transactionInvoker.ExecuteAsync<TxGetApprovedDocumentsRequest, TxGetApprovedDocumentsResponse>(request);
 
-                else
+                // Build the document approval entity from the CTX response.
+                if (response != null)
                 {
-                    approvedDocuments = new List<ApprovedDocument>();
-                    foreach (var approvedDocument in response.AlApprovedDocuments)
+                    if (response.AlApprovedDocuments == null || !response.AlApprovedDocuments.Any())
                     {
-                        if (approvedDocument != null)
+                        logger.Debug("There are no approved documents for the user for the timeframe.");
+                    }
+
+                    else
+                    {
+                        approvedDocuments = new List<ApprovedDocument>();
+                        foreach (var approvedDocument in response.AlApprovedDocuments)
                         {
-                            ApprovedDocument document = new ApprovedDocument(approvedDocument.AlDocId);
-
-                            document.Number = approvedDocument.AlDocNumber;
-                            document.DocumentType = approvedDocument.AlDocType;
-                            document.Status = approvedDocument.AlDocStatus;
-                            document.VendorName = approvedDocument.AlDocVendorName;
-                            document.Date = approvedDocument.AlDocDate.HasValue ? approvedDocument.AlDocDate.Value : DateTime.Now;
-                            document.NetAmount = approvedDocument.AlDocNetAmt.HasValue ? approvedDocument.AlDocNetAmt.Value : 0m;
-                            document.DocumentApprovers = new List<Approver>();
-
-                            if (response.AlDocumentApprovers != null && response.AlDocumentApprovers.Any())
+                            if (approvedDocument != null)
                             {
-                                List<AlDocumentApprovers> documentApprovalContracts = new List<AlDocumentApprovers>();
-                                documentApprovalContracts = response.AlDocumentApprovers.Where(x => x.AlApprDocType == approvedDocument.AlDocType && x.AlApprDocId == approvedDocument.AlDocId).ToList();
+                                ApprovedDocument document = new ApprovedDocument(approvedDocument.AlDocId);
 
-                                if (documentApprovalContracts != null && documentApprovalContracts.Any())
+                                document.Number = approvedDocument.AlDocNumber;
+                                document.DocumentType = approvedDocument.AlDocType;
+                                document.Status = approvedDocument.AlDocStatus;
+                                document.VendorName = approvedDocument.AlDocVendorName;
+                                document.Date = approvedDocument.AlDocDate.HasValue ? approvedDocument.AlDocDate.Value : DateTime.Now;
+                                document.NetAmount = approvedDocument.AlDocNetAmt.HasValue ? approvedDocument.AlDocNetAmt.Value : 0m;
+                                document.DocumentApprovers = new List<Approver>();
 
-                                    foreach (var approvalContract in documentApprovalContracts)
-                                    {
-                                        Approver approvedDocumentApprovalInformation = new Approver(approvalContract.AlApprId);
-                                        approvedDocumentApprovalInformation.SetApprovalName(approvalContract.AlApprName);
-                                        approvedDocumentApprovalInformation.ApprovalDate = approvalContract.AlApprDate.HasValue ? approvalContract.AlApprDate.Value : default(DateTime?);
-                                        document.DocumentApprovers.Add(approvedDocumentApprovalInformation);
-                                    }
-                                else
+                                if (response.AlDocumentApprovers != null && response.AlDocumentApprovers.Any())
                                 {
-                                    logger.Debug("There are no approver/next approver information in document {0}.", document.Id);
-                                }
-                            }
+                                    List<AlDocumentApprovers> documentApprovalContracts = new List<AlDocumentApprovers>();
+                                    documentApprovalContracts = response.AlDocumentApprovers.Where(x => x.AlApprDocType == approvedDocument.AlDocType && x.AlApprDocId == approvedDocument.AlDocId).ToList();
 
-                            approvedDocuments.Add(document);
+                                    if (documentApprovalContracts != null && documentApprovalContracts.Any())
+
+                                        foreach (var approvalContract in documentApprovalContracts)
+                                        {
+                                            Approver approvedDocumentApprovalInformation = new Approver(approvalContract.AlApprId);
+                                            approvedDocumentApprovalInformation.SetApprovalName(approvalContract.AlApprName);
+                                            approvedDocumentApprovalInformation.ApprovalDate = approvalContract.AlApprDate.HasValue ? approvalContract.AlApprDate.Value : default(DateTime?);
+                                            document.DocumentApprovers.Add(approvedDocumentApprovalInformation);
+                                        }
+                                    else
+                                    {
+                                        logger.Debug("There are no approver/next approver information in document {0}.", document.Id);
+                                    }
+                                }
+
+                                approvedDocuments.Add(document);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    logger.Debug("response object from the CTX is null.");
+                }
             }
-            else
+            catch (ColleagueSessionExpiredException csee)
             {
-                logger.Debug("response object from the CTX is null.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
             }
 
             return approvedDocuments;

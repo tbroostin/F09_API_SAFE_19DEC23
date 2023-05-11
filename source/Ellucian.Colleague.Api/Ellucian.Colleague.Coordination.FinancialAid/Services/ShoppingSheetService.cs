@@ -1,9 +1,11 @@
 ﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.FinancialAid.Services;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -80,7 +82,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
+                logger.Debug(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
                 return new List<Dtos.FinancialAid.ShoppingSheet>();
             }
 
@@ -131,7 +133,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 }
                 catch (Exception e)
                 {
-                    logger.Info(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
+                    logger.Debug(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
                 }
             }
 
@@ -164,7 +166,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
+                logger.Debug(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
                 return new List<Dtos.FinancialAid.ShoppingSheet2>();
             }
 
@@ -217,7 +219,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 }
                 catch (Exception e)
                 {
-                    logger.Info(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
+                    logger.Debug(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
                 }
             }
 
@@ -250,14 +252,21 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYears = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
+                logger.Debug(string.Format("Student {0} has no award years for which to get shopping sheets", studentId));
                 return new List<Dtos.FinancialAid.ShoppingSheet3>();
             }
 
             //its ok if budgetComponents and studentBudgetComponents are null
             var budgetComponents = financialAidReferenceDataRepository.BudgetComponents;
-            var studentBudgetComponents = await studentBudgetComponentRepository.GetStudentBudgetComponentsAsync(studentId, studentAwardYears);
-
+            var studentBudgetComponents = new List <StudentBudgetComponent>();
+            try
+            {
+                studentBudgetComponents = (List<StudentBudgetComponent>)await studentBudgetComponentRepository.GetStudentBudgetComponentsAsync(studentId, studentAwardYears);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             //its ok if studentAwards are null
             var studentAwards = await studentAwardRepository.GetAllStudentAwardsAsync(studentId, studentAwardYears, financialAidReferenceDataRepository.Awards, financialAidReferenceDataRepository.AwardStatuses);
 
@@ -286,11 +295,25 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
                 foreach (var ruleTable in shoppingSheetRuleTables)
                 {
-                    ruleTable.RuleProcessor = new Func<IEnumerable<RuleRequest<Domain.FinancialAid.Entities.StudentAwardYear>>, Task<IEnumerable<RuleResult>>>(
-                        async (ruleRequests) =>
-                            (await ruleRepository.ExecuteAsync(ruleRequests)));
+                    if (string.IsNullOrEmpty(ruleTable.RtSubrName))
+                    {
+                        ruleTable.RuleProcessor = new Func<IEnumerable<RuleRequest<Domain.FinancialAid.Entities.StudentAwardYear>>, Task<IEnumerable<RuleResult>>>(
+                            async (ruleRequests) =>
+                                (await ruleRepository.ExecuteAsync(ruleRequests)));
 
-                    ruleTable.LinkRuleObjects(rules);
+                        ruleTable.LinkRuleObjects(rules);
+                    } else if (!string.IsNullOrEmpty(ruleTable.RtSubrName))
+                    {
+                        logger.Info(string.Format("Custom verbiage subroutine found for rule table {0}", ruleTable.Code));
+                        try
+                        {
+                            await ruleTableRepository.GetCustomVerbiageAsync(ruleTable, studentId);
+                        }
+                        catch(ColleagueSessionExpiredException) 
+                        { 
+                            throw; 
+                        }
+                    }
                 }
             }
 
@@ -302,12 +325,27 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
                 try
                 {
-                    shoppingSheets.Add(
-                        await ShoppingSheetDomainService.BuildShoppingSheet3Async(studentAwardYear, studentAwards, budgetComponents, studentBudgetComponents, financialAidApplications, shoppingSheetRuleTables, cfpVersion, profileEfc, fafsaEfc));
+                    if (Convert.ToInt32(awardYearString) <= 2021)
+                    {
+                        shoppingSheets.Add(
+                            await ShoppingSheetDomainService.BuildShoppingSheet3Async(studentAwardYear, studentAwards, budgetComponents, studentBudgetComponents, financialAidApplications, shoppingSheetRuleTables, cfpVersion, profileEfc, fafsaEfc));
+                    }
+                    else
+                    {
+                        //If the year is 2022 and the flag on CFPP3 is set to use VETS information, attempt to retrieve any VETS amounts for this student/year to pass into the shopping sheet creation
+                        var vetBenVar = studentAwardYear.CurrentConfiguration.ShoppingSheetConfiguration.UseVetsData;
+                        int? vetBenAmt = null;
+                        if (!string.IsNullOrEmpty(vetBenVar) && vetBenVar.ToUpper() == "Y")
+                        {
+                            vetBenAmt = studentAwardRepository.GetVetBenAmount(studentId, awardYearString, cfpVersion);
+                        }
+                        shoppingSheets.Add(
+                            await ShoppingSheetDomainService.BuildShoppingSheet4Async(studentAwardYear, studentAwards, budgetComponents, studentBudgetComponents, financialAidApplications, shoppingSheetRuleTables, cfpVersion, profileEfc, fafsaEfc, vetBenAmt));
+                    }
                 }
                 catch (Exception e)
                 {
-                    logger.Info(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
+                    logger.Debug(e, "Unable to create shopping sheet for studentId {0} and awardYear {1}", studentId, studentAwardYear.Code);
                 }
             }
 

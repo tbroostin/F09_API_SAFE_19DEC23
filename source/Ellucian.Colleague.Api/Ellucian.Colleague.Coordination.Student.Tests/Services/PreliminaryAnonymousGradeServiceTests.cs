@@ -51,6 +51,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public Mock<IStudentRepository> studentRepositoryMock;
         public Mock<IConfigurationRepository> configurationRepositoryMock;
         public Mock<ISectionRepository> sectionRepositoryMock;
+        public Mock<IReferenceDataRepository> referenceDataRepositoryMock;
         public Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
         public Mock<IPreliminaryAnonymousGradeRepository> preliminaryAnonymousGradeRepositoryMock;
 
@@ -61,6 +62,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public IStudentRepository studentRepository;
         public IConfigurationRepository configurationRepository;
         public ISectionRepository sectionRepository;
+        public IReferenceDataRepository referenceDataRepository;
         public IStudentConfigurationRepository studentConfigurationRepository;
         public IPreliminaryAnonymousGradeRepository preliminaryAnonymousGradeRepository;
 
@@ -91,6 +93,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             sectionRepositoryMock = new Mock<ISectionRepository>();
             sectionRepository = sectionRepositoryMock.Object;
 
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            referenceDataRepository = referenceDataRepositoryMock.Object;
+
             sectionId = "12345";
             sectionEntity = new Section(sectionId, "100", "01", DateTime.Today.AddDays(-60), 3m, null, "Section to be Graded", "IN",
                 new List<OfferingDepartment>()
@@ -101,7 +106,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 GradeByRandomId = true
             };
             sectionEntity.AddFaculty(currentUserFactory.CurrentUser.PersonId);
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
 
             studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
             studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
@@ -113,7 +118,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             preliminaryAnonymousGradeRepository = preliminaryAnonymousGradeRepositoryMock.Object;
 
             service = new PreliminaryAnonymousGradeService(adapterRegistry, currentUserFactory, roleRepository, logger,
-                studentRepository, configurationRepository, sectionRepository, studentConfigurationRepository, preliminaryAnonymousGradeRepository);
+                studentRepository, configurationRepository, sectionRepository, referenceDataRepository, studentConfigurationRepository, preliminaryAnonymousGradeRepository);
         }
     }
 
@@ -132,8 +137,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 "12346"
             };
             sectionPreliminaryAnonymousGradingEntity = new Domain.Student.Entities.AnonymousGrading.SectionPreliminaryAnonymousGrading(sectionId);
-            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12345", "1", sectionId, "23456", null));
-            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForCrosslistedSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12346", "2", crossListedSectionIds[0], "23457", DateTime.Today.AddDays(90)));
+            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12345","m12345" ,"1", sectionId, "23456", null));
+            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForCrosslistedSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12346","12346", "2", crossListedSectionIds[0], "23457", DateTime.Today.AddDays(90)));
             sectionPreliminaryAnonymousGradingEntity.AddError(new Domain.Student.Entities.AnonymousGrading.AnonymousGradeError("23458", "34567", "23458", "0001234*2020/FA*UG", "No random ID assigned."));
             preliminaryAnonymousGradeRepositoryMock.Setup(repo => repo.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId, It.IsAny<IEnumerable<string>>())).ReturnsAsync(sectionPreliminaryAnonymousGradingEntity);
 
@@ -171,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GetPreliminaryAnonymousGradesBySectionIdAsync_null_Section_entity_KeyNotFoundException()
         {
             sectionEntity = null;
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
         }
 
@@ -184,7 +189,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                                 new OfferingDepartment("UG", 100)
                 }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-90)) });
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
         }
 
@@ -193,7 +198,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GetPreliminaryAnonymousGradesBySectionIdAsync_Section_entity_GradeByRandomId_false_ConfigurationException()
         {
             sectionEntity.GradeByRandomId = false;
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
         }
 
@@ -201,12 +206,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GetPreliminaryAnonymousGradesBySectionIdAsync_valid_no_crosslist()
         {
             sectionPreliminaryAnonymousGradingEntity = new Domain.Student.Entities.AnonymousGrading.SectionPreliminaryAnonymousGrading(sectionId);
-            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12345", "1", sectionId, "23456", null));
+            sectionPreliminaryAnonymousGradingEntity.AddAnonymousGradeForSection(new Domain.Student.Entities.AnonymousGrading.PreliminaryAnonymousGrade("12345", "m12345","1", sectionId, "23456", null));
             sectionPreliminaryAnonymousGradingEntity.AddError(new Domain.Student.Entities.AnonymousGrading.AnonymousGradeError("23458", "34567", "23458", "0001234*2020/FA*UG", "No random ID assigned."));
             preliminaryAnonymousGradeRepositoryMock.Setup(repo => repo.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId, It.IsAny<IEnumerable<string>>())).ReturnsAsync(sectionPreliminaryAnonymousGradingEntity);
 
             var dtos = await service.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
             Assert.AreEqual(1, dtos.AnonymousGradesForSection.Count());
+            Assert.AreEqual("12345", dtos.AnonymousGradesForSection.ToList()[0].AnonymousGradingId);
+            Assert.AreEqual("m12345", dtos.AnonymousGradesForSection.ToList()[0].AnonymousMidTermGradingId);
             Assert.AreEqual(0, dtos.AnonymousGradesForCrosslistedSections.Count());
             Assert.AreEqual(1, dtos.Errors.Count());
             Assert.AreEqual(sectionId, dtos.SectionId);
@@ -215,7 +222,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task GetPreliminaryAnonymousGradesBySectionIdAsync_valid_with_crosslist()
         {
-            studentConfigurationRepositoryMock.Setup(repo => repo.GetFacultyGradingConfigurationAsync()).ReturnsAsync(new FacultyGradingConfiguration()
+            studentConfigurationRepositoryMock.Setup(repo => repo.GetFacultyGradingConfiguration2Async()).ReturnsAsync(new FacultyGradingConfiguration2()
             {
                 IncludeCrosslistedStudents = true
             });
@@ -225,11 +232,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new OfferingDepartment("UG", 100)
                 }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-90)) });
             sectionEntity2.GradeByRandomId = true;
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(crossListedSectionIds[0])).ReturnsAsync(sectionEntity2);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(crossListedSectionIds[0], false)).ReturnsAsync(sectionEntity2);
 
             var dtos = await service.GetPreliminaryAnonymousGradesBySectionIdAsync(sectionId);
             Assert.AreEqual(1, dtos.AnonymousGradesForSection.Count());
             Assert.AreEqual(1, dtos.AnonymousGradesForCrosslistedSections.Count());
+            Assert.AreEqual("12346", dtos.AnonymousGradesForCrosslistedSections.ToList()[0].AnonymousGradingId);
+            Assert.AreEqual("12346", dtos.AnonymousGradesForCrosslistedSections.ToList()[0].AnonymousMidTermGradingId);
             Assert.AreEqual(1, dtos.Errors.Count());
             Assert.AreEqual(sectionId, dtos.SectionId);
         }
@@ -309,7 +318,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task UpdatePreliminaryAnonymousGradesBySectionIdAsync_null_Section_entity_KeyNotFoundException()
         {
             sectionEntity = null;
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades);
         }
 
@@ -322,7 +331,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                                 new OfferingDepartment("UG", 100)
                 }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-90)) });
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades);
         }
 
@@ -331,7 +340,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task UpdatePreliminaryAnonymousGradesBySectionIdAsync_Section_entity_GradeByRandomId_false_ConfigurationException()
         {
             sectionEntity.GradeByRandomId = false;
-            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId)).ReturnsAsync(sectionEntity);
+            sectionRepositoryMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).ReturnsAsync(sectionEntity);
             var dtos = await service.UpdatePreliminaryAnonymousGradesBySectionIdAsync(sectionId, preliminaryAnonymousGrades);
         }
 

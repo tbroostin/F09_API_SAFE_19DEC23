@@ -1,10 +1,11 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -28,6 +29,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly ILogger _logger;
         private readonly IStudentSectionAttendancesService _studentSectionAttendancesService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// constructor
@@ -39,10 +41,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             _studentSectionAttendancesService = studentSectionAttendancesService;
             _logger = logger;
         }
-
-
-
-
 
         /// <summary>
         /// Query by post method used to get student attendance information based on criteria.
@@ -67,6 +65,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _studentSectionAttendancesService.QueryStudentSectionAttendancesAsync(criteria);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 _logger.Info(pe.ToString());
@@ -77,8 +80,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Info(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
-
         }
     }
-
 }

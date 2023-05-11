@@ -3605,9 +3605,6 @@
             <Height>0.20833in</Height>
             <Width>1.66224in</Width>
             <ZIndex>2</ZIndex>
-            <Visibility>
-              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
-            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>
@@ -3644,9 +3641,6 @@
             <Height>0.20833in</Height>
             <Width>0.76383in</Width>
             <ZIndex>3</ZIndex>
-            <Visibility>
-              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
-            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>

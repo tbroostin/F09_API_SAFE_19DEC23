@@ -1,8 +1,9 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,7 @@ using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -145,10 +147,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(ex.ToString());
                 throw new ArgumentNullException(ex.Message);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
-                throw new Exception("Unable to build Employee Compensation Domain Entity");
+                throw new ColleagueWebApiException("Unable to build Employee Compensation Domain Entity");
             }
             return EmployeeCompensationEntity;
         }

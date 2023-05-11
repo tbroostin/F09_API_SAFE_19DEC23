@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -15,6 +15,7 @@ using Ellucian.Web.Security;
 using System.Threading.Tasks;
 using System;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -183,32 +184,45 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Test results</returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TestResult2>> Get2Async(string studentId, string type)
         {
-            // First, make sure user has access to this student-- If not, method throws exception
-            await CheckStudentAdvisorUserAccessAsync(studentId);
-
             ICollection<Dtos.Student.TestResult2> testResultsDto = new List<Dtos.Student.TestResult2>();
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.TestResult> testResults = await _testResultRepository.GetAsync(studentId);
-            if (type == "admissions")
+            try
             {
-                testResults = testResults.Where(tr => tr.Category == TestType.Admissions);
-            }
-            if (type == "placement")
-            {
-                testResults = testResults.Where(tr => tr.Category == TestType.Placement);
-            }
-            if (type == "other")
-            {
-                testResults = testResults.Where(tr => tr.Category == TestType.Other);
-            }
-            // Get the right adapter for the type mapping
-            var testResultDtoAdapter = _adapterRegistry.GetAdapter<TestResult, Ellucian.Colleague.Dtos.Student.TestResult2>();
-            foreach (var testResult in testResults)
-            {
-                // Map the degree plan entity to the degree plan DTO
-                var testResultDto = testResultDtoAdapter.MapToType(testResult);
-                testResultsDto.Add(testResultDto);
+                // First, make sure user has access to this student-- If not, method throws exception
+                await CheckStudentAdvisorUserAccessAsync(studentId);               
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.TestResult> testResults = await _testResultRepository.GetAsync(studentId);
+                if (type == "admissions")
+                {
+                    testResults = testResults.Where(tr => tr.Category == TestType.Admissions);
+                }
+                if (type == "placement")
+                {
+                    testResults = testResults.Where(tr => tr.Category == TestType.Placement);
+                }
+                if (type == "other")
+                {
+                    testResults = testResults.Where(tr => tr.Category == TestType.Other);
+                }
+                // Get the right adapter for the type mapping
+                var testResultDtoAdapter = _adapterRegistry.GetAdapter<TestResult, Ellucian.Colleague.Dtos.Student.TestResult2>();
+                foreach (var testResult in testResults)
+                {
+                    // Map the degree plan entity to the degree plan DTO
+                    var testResultDto = testResultDtoAdapter.MapToType(testResult);
+                    testResultsDto.Add(testResultDto);
+                }
             }
 
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while fetching test scores for the student";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message);
+                throw;
+            }
             return testResultsDto;
         }
     }

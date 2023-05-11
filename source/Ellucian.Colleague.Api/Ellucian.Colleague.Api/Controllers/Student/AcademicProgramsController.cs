@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +21,7 @@ using Ellucian.Web.Security;
 using System.Net;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -58,6 +59,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _academicProgramService.GetAsync();
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving academic programs.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

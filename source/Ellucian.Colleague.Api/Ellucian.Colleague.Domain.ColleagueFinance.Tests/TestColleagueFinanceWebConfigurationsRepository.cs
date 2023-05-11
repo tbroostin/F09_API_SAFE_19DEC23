@@ -39,7 +39,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                    {
                        DefaultShipToCode= "MC",
                        IsPOApprovalNeeded = true,
-                       IsRequisitionApprovalNeeded = false
+                       IsRequisitionApprovalNeeded = false,
+                       IsApprovalReturnsEnabled = true
                    },
                 VoucherAttachmentCollectionId = "VOUCHERS",
                 PurchaseOrderAttachmentCollectionId = "PORDERS",

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -1392,6 +1392,244 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 await _addressesService.QueryAddressPermissionAsync(addressQueryCriteria.PersonIds);
             }
+        }
+
+        [TestClass]
+        public class GetPersonAddresses2Async : GenericUserFactory
+        {
+            private IAddressRepository _addressRepository;
+            private Mock<IAddressRepository> _addressRepositoryMock;
+            private ILogger _logger;
+            private AddressService _addressesService;
+            private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
+            private IReferenceDataRepository _referenceDataRepository;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private IEnumerable<Domain.Base.Entities.Address> allAddresses;
+
+            private string[,] CleanAddressData = {
+                                       {"0000001", "052 ", "PO Box 14428", "PO Box 14428", null, null, "8001", "AU", "Australia", null, "d44135f9-0924-45d4-8b91-be9531aa7773", null, "Home", "H"},
+                                       {"0000001", "101 ", "65498 Ft. Belvoir Hwy;Mount Vernon;Alexandria, VA 21348", "65498 Ft. Belvoir Hwy;Mount Vernon", "Alexandria", "VA", "21348", "US", "United States of America", "Father of our Country", "d44134f9-0924-45d4-8b91-be9531aa7773", "FFX", "Home", "H"},
+                                       {"0000304", "102 ", null, "235 Beacon Hill Dr.", "Boston", "MA", "03549", "US", null, null, "081ae7a2-f7b3-45f4-808b-a35f50c5c418", null, "Home", "H"},
+                                       {"0000304", "103 ", "1 Champs d'Elyssie;U.S. Embassy;Paris;FRANCE", "1 Champs d'Elyssie", "Paris", null, null, "FR", "France", "Ambassador to France", "da5905c9-d607-4788-996a-f0f2567b0bd4", null, "Mailing", "MA"},
+                                       {"0000404", "104", null, "1812 Dolly Madison Dr.", "Arlington", "VA", "22146", "US", null, null, "ec9da88c-b14a-4a8e-a9d0-4760b31816aa", null, "Home", "H"},
+                                       {"0000404", "105", null, "1787 Constitution Ave.", "Franklin", "VA", "34567", "US", null, null, "9482c660-cbe1-4c4a-9ee1-10818a7c7f27", null, "Home", "H"},
+                                       {"0000504", "106", null, "1600 Pennsylvania Ave.;The White House", "Washington", "DC", "12345", "US", null, "POTUS", "ebdd0871-54aa-4237-8a66-ddb7cbb15753", null, "Home", "H"},
+                                       {"0000504", "107", null, "7413 Clifton Quarry Dr.", "Clifton", "VA", "20121", "US", null, null, "2ec57bef-8a13-4a6a-8a79-ea99d062fd27", null, "Mailing", "MA"},
+                                       {"9999999", "108 ", null, null, null, null, null, null, null, null, "d43bbf09-bbdc-4b17-86cc-4a183b1ec6d6", null, "Home", "H"},
+                                       {"9999998", "109 ", null, null, null, null, null, null, null, null, "3ba6b4ba-8668-42e0-a4aa-319410aff7cb", null, "Home", "H"}
+                                   };
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _logger = new Mock<ILogger>().Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                _addressRepositoryMock = new Mock<IAddressRepository>();
+                _addressRepository = _addressRepositoryMock.Object;
+                _referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                _referenceDataRepository = _referenceDataRepositoryMock.Object;
+                var AddressDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Address, Ellucian.Colleague.Dtos.Base.Address>(adapterRegistry, _logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Address, Ellucian.Colleague.Dtos.Base.Address>()).Returns(AddressDtoAdapter);
+
+                allAddresses = new List<Domain.Base.Entities.Address>();
+                allAddresses = CreateAddresses();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                _addressesService = null;
+                _logger = null;
+                _referenceDataRepositoryMock = null;
+                _addressRepositoryMock = null;
+            }
+
+            [TestMethod]
+            public async Task GetPersonAddresses2Async_Self()
+            {
+                string personId = "0000001";
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.ADDRESS");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.ADDRESS"));
+                currentUserFactory = new AddressUser();
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+
+                List<Domain.Base.Entities.Address> addressesCollection = CreateAddresses(personId).ToList();
+                _addressRepositoryMock.Setup(i =>
+                    i.GetPersonAddressesAsync(It.IsAny<string>()))
+                    .ReturnsAsync(addressesCollection);
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+                var actuals = await _addressesService.GetPersonAddresses2Async(personId);
+                Assert.IsNotNull(actuals);
+                foreach (var actual in actuals)
+                {
+                    var expected = addressesCollection.FirstOrDefault(i => i.AddressId.Equals(actual.AddressId));
+                    Assert.AreEqual(expected.AddressId, actual.AddressId);
+                    Assert.AreEqual(expected.AddressLines[0], actual.AddressLines[0]);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetPersonAddresses2Async_ViewPersonInformation_Permission()
+            {
+                string personId = "0000001";
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.PERSON.INFORMATION");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.PERSON.INFORMATION"));
+                currentUserFactory = new AddressUserToViewPersonInformation();
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+
+                List<Domain.Base.Entities.Address> addressesCollection = CreateAddresses(personId).ToList();
+                _addressRepositoryMock.Setup(i =>
+                            i.GetPersonAddressesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(addressesCollection);
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+                var actuals = await _addressesService.GetPersonAddresses2Async(personId);
+                Assert.IsNotNull(actuals);
+                foreach (var actual in actuals)
+                {
+                    var expected = addressesCollection.FirstOrDefault(i => i.AddressId.Equals(actual.AddressId));
+                    Assert.AreEqual(expected.AddressId, actual.AddressId);
+                    Assert.AreEqual(expected.AddressLines[0], actual.AddressLines[0]);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetPersonAddresses2Async_EditVendorBankingInformation_Permission()
+            {
+
+                string personId = "0000001";
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "EDIT.VENDOR.BANKING.INFORMATION");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("EDIT.VENDOR.BANKING.INFORMATION"));
+                currentUserFactory = new AddressUserToEditVendorInformation();
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+
+                List<Domain.Base.Entities.Address> addressesCollection = CreateAddresses(personId).ToList();
+                _addressRepositoryMock.Setup(i =>
+                            i.GetPersonAddressesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(addressesCollection);
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+                var actuals = await _addressesService.GetPersonAddresses2Async(personId);
+                Assert.IsNotNull(actuals);
+                foreach (var actual in actuals)
+                {
+                    var expected = addressesCollection.FirstOrDefault(i => i.AddressId.Equals(actual.AddressId));
+                    Assert.AreEqual(expected.AddressId, actual.AddressId);
+                    Assert.AreEqual(expected.AddressLines[0], actual.AddressLines[0]);
+                }
+
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+
+            public async Task GetPersonAddresses2Async_NotAppropriatePermission_NotSelf()
+            {
+                string personId = "9999998";
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.ADDRESS");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.ADDRESS"));
+                currentUserFactory = new AddressUser();
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+
+                List<Domain.Base.Entities.Address> addressesCollection = CreateAddresses(personId).ToList();
+                _addressRepositoryMock.Setup(i =>
+                            i.GetPersonAddressesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(addressesCollection);
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+                var actuals = await _addressesService.GetPersonAddresses2Async(personId);
+                Assert.IsNull(actuals);
+            }
+
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPersonAddresses2Async_ArgumentNullException()
+            {
+                string personId = "9999998";
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.ADDRESS");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.ADDRESS"));
+                currentUserFactory = new AddressUser();
+
+                roleRepoMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+
+                List<Domain.Base.Entities.Address> addressesCollection = CreateAddresses(personId).ToList();
+                _addressRepositoryMock.Setup(i =>
+                            i.GetPersonAddressesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(addressesCollection);
+                _addressesService = new AddressService(adapterRegistry, _addressRepository, baseConfigurationRepository, _referenceDataRepository, currentUserFactory, roleRepo, _logger);
+                var actuals = await _addressesService.GetPersonAddresses2Async(null);
+            }
+
+
+            private IEnumerable<Domain.Base.Entities.Address> CreateAddresses(string personId = null)
+            {
+                string[,] recordData = CleanAddressData;
+
+                int recordCount = recordData.Length / 13;
+                var results = new List<Domain.Base.Entities.Address>();
+                for (int i = 0; i < recordCount; i++)
+                {
+
+                    string key = recordData[i, 0].TrimEnd();
+                    if (personId == null || personId == key)
+                    {
+                        string addressId = (recordData[i, 1] == null) ? String.Empty : recordData[i, 1].TrimEnd();
+                        var response = new Domain.Base.Entities.Address(addressId, key);
+                        List<string> label = (recordData[i, 2] == null) ? null : recordData[i, 2].TrimEnd().Split(';').ToList<string>();
+                        List<string> lines = (recordData[i, 3] == null) ? null : recordData[i, 3].TrimEnd().Split(';').ToList<string>();
+                        string city = (recordData[i, 4] == null) ? null : recordData[i, 4].TrimEnd();
+                        string state = (recordData[i, 5] == null) ? null : recordData[i, 5].TrimEnd();
+                        string zip = (recordData[i, 6] == null) ? null : recordData[i, 6].TrimEnd();
+                        string country = (recordData[i, 7] == null) ? null : recordData[i, 7].TrimEnd();
+                        string countryDesc = (recordData[i, 8] == null) ? null : recordData[i, 8].TrimEnd();
+                        string modifier = (recordData[i, 9] == null) ? null : recordData[i, 9].TrimEnd();
+                        string guid = (recordData[i, 10] == null) ? new Guid().ToString() : recordData[i, 10].TrimEnd();
+                        string county = (recordData[i, 11] == null) ? null : recordData[i, 11].TrimEnd();
+                        string type = recordData[i, 12];
+                        string typeCode = recordData[i, 13];
+
+                        response.Guid = guid;
+                        response.AddressLines = lines;
+                        response.City = city;
+                        response.State = state;
+                        response.PostalCode = zip;
+                        response.Country = country;
+                        response.County = county;
+                        response.Type = type;
+                        response.TypeCode = typeCode;
+                        results.Add(response);
+                    }
+                }
+                return results;
+            }
+
         }
     }
 }

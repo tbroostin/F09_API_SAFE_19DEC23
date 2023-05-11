@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -321,7 +321,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception e)
             {                
-                throw e;
+                throw;
             }
 
         }
@@ -363,7 +363,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
         }
 
@@ -392,6 +392,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 // Allow an exception if we couldn't find a record.  ConvertDtoToEntity can be called on creation of a new
                 // record from Post/Put.
+                logger.Info(ex, "Unable to retrieve housing request.");
             }
             Ellucian.Colleague.Domain.Student.Entities.HousingRequest housingRequestEntity = string.IsNullOrEmpty(recordKey) ?
                 new Domain.Student.Entities.HousingRequest(housingRequestDto.Id, housingRequestDto.StartOn, status) :

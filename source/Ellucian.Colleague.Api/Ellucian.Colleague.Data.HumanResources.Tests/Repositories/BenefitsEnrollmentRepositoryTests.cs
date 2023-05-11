@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -722,7 +723,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task CTXReturnsNullTest()
             {
                 transManagerMock.Setup(t => t.ExecuteAsync<ReopenBenefitSelectionRequest, ReopenBenefitSelectionResponse>(It.IsAny<ReopenBenefitSelectionRequest>()))

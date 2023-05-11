@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -91,7 +91,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ResourceName = "person-health",
                     HttpMethods = new List<EthosApiSupportedMethods>()
                     {
-                        new EthosApiSupportedMethods("GET", "")
+                        new EthosApiSupportedMethods("GET", "", "", "")
                     },
                     SelectionCriteria = new List<EthosApiSelectCriteria>(),
                     SelectParagraph = new List<string>(),
@@ -398,7 +398,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ResourceName = "person-health",
                     HttpMethods = new List<EthosApiSupportedMethods>()
                     {
-                        new EthosApiSupportedMethods("GET", "")
+                        new EthosApiSupportedMethods("GET", "", "", "")
                     },
                     SelectionCriteria = new List<EthosApiSelectCriteria>(),
                     SelectParagraph = new List<string>(),
@@ -531,7 +531,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ResourceName = "person-health",
                     HttpMethods = new List<EthosApiSupportedMethods>()
                     {
-                        new EthosApiSupportedMethods("GET", "")
+                        new EthosApiSupportedMethods("GET", "", "", "")
                     },
                     SelectionCriteria = new List<EthosApiSelectCriteria>(),
                     SelectParagraph = new List<string>(),

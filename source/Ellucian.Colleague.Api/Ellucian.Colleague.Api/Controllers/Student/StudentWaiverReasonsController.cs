@@ -13,6 +13,8 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -66,10 +68,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 return waiverDtos;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving student section waiver reasons.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to retrieve StudentWaiverReasons.");
+                var message = "Unable to retrieve StudentWaiverReasons.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿/*Copyright 2018-2019 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2018-2022 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -172,7 +173,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var stwebDefaults = await GetStwebDefaultsAsync();
             if (stwebDefaults == null)
             {
-                throw new Exception("Unable to access STWEB.DEFAULTS values");
+                throw new ColleagueWebApiException("Unable to access STWEB.DEFAULTS values");
 
             }
             var stwebTranAltcumFlag = !string.IsNullOrEmpty(stwebDefaults.StwebTranAltcumFlag) && stwebDefaults.StwebTranAltcumFlag == "Y" ? true : false;
@@ -301,7 +302,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;
@@ -345,7 +346,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;
@@ -364,7 +365,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
            
             if (stwebDefaults == null)
             {
-                throw new Exception("Unable to access STWEB.DEFAULTS values");
+                throw new ColleagueWebApiException("Unable to access STWEB.DEFAULTS values");
 
             }
             var stwebTranAltcumFlag = !string.IsNullOrEmpty(stwebDefaults.StwebTranAltcumFlag) && stwebDefaults.StwebTranAltcumFlag == "Y" ? true : false;

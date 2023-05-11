@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 {
@@ -375,7 +376,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task RethrowsRepositoryException()
             {
                 advisorRepoMock.Setup(repo => repo.GetAdvisorsAsync(It.IsAny<List<string>>(), It.IsAny<AdviseeInclusionType>())).ThrowsAsync(new Exception());
@@ -840,7 +841,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdvisorNotCurrentUser_ThrowsException()
             {
                 // Current User Id must match the Advisor Id in the request
@@ -2233,7 +2234,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AdvisorNotCurrentUser_ThrowsException()
             {
                 // Current User Id must match the Advisor Id in the request

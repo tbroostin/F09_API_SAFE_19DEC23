@@ -3,6 +3,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -46,7 +47,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="textbook">The textbook whose assignment to a specific section is being updated.</param>
         /// <returns>An updated <see cref="Section3"/> object.</returns>
         /// <accessComments>
-        /// Only an assigned faculty user may update book assignments for a course section.
+        /// 1. Only an assigned faculty user may update book assignments for a course section.
+        /// 2. A departmental oversight member assigned to the section may update book assignments for a course section with the following permission code
+        /// CREATE.SECTION.BOOKS
         /// </accessComments>
         [HttpPut]
         public async Task<Section3> UpdateSectionBookAsync(SectionTextbook textbook)
@@ -55,15 +58,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _sectionCoordinationService.UpdateSectionBookAsync(textbook);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while updating section textbook information.";
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException e)
             {
-                _logger.Error(e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+                var message = "User does not have appropriate permissions to update section textbook information.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while updating section textbook information.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

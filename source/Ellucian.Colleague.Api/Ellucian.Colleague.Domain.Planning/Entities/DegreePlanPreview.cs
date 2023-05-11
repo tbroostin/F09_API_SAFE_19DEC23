@@ -1,10 +1,11 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
 using Ellucian.Colleague.Domain.Planning.Services;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Domain.Planning.Entities
@@ -81,7 +82,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
 
             // Create the limited preview using the merged degree plan as a basis 
@@ -184,7 +185,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 {
                     string message = string.Format("The starting term {0} provided is not either in future terms or one of the student's planned term as well as student's current term is not in future and there are no future terms properly setup", firstTermCode);
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
                 //if the term passed is in preview plan terms, then find the position of it otherwise take the position of current term or first future term
                 firstTermIndex = firstTerm == null ? prospectivePreviewPlanTerms.ToList().IndexOf(currentOrFirstFutureTerm) : prospectivePreviewPlanTerms.ToList().IndexOf(firstTerm);
@@ -195,7 +196,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 {
                     string message = "There was no starting term provided and there are no future terms available or student's degree plan current term is not in future in order to load sample plan from; either setup future terms or select the past term from student's degree plan";
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
                 //if no term code is passed to load sample plan from then we are going to load from the start of current term or first future term.
                 var firstTermFuture = prospectivePreviewPlanTerms.FirstOrDefault(t => t.Code == currentOrFirstFutureTerm.Code);
@@ -219,6 +220,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 catch
                 {
                     // Ignore any exception thrown when trying to add a term to the degree plan
+                    var DoNothing = true; // avoid empty catch block
                 }
             }
 
@@ -380,7 +382,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                         degreePlan.PersonId,
                         firstTermCode);
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
                 //if the term passed is in preview plan terms, then find the position of it otherwise take the position of current term or first future term
                 firstTermIndex = firstTerm == null ? prospectivePreviewPlanTerms.ToList().IndexOf(currentOrFirstFutureTerm) : prospectivePreviewPlanTerms.ToList().IndexOf(firstTerm);
@@ -392,7 +394,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                     string message = string.Format("Student {0}: There was no starting term provided and there are no future terms available or student's degree plan current term is not in future in order to load sample plan from; either setup future terms or select the past term from student's degree plan",
                         degreePlan.PersonId);
                     logger.Error(message);
-                    throw new Exception(message);
+                    throw new ColleagueWebApiException(message);
                 }
                 //if no term code is passed to load sample plan from then we are going to load from the start of current term or first future term.
                 var firstTermFuture = prospectivePreviewPlanTerms.FirstOrDefault(t => t.Code == currentOrFirstFutureTerm.Code);
@@ -416,6 +418,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 catch
                 {
                     // Ignore any exception thrown when trying to add a term to the degree plan
+                    var DoNothing = true; // avoid empty catch block
                 }
             }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,9 +90,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                .Returns<List<string>>((ids) =>
                testEmployeeLeaveRequestRepository.GetLeaveRequestsAsync(ids));
 
-            employeeLeaveRequestRepositoryMock.Setup(elr => elr.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>()))
-               .Returns<string>((id) =>
-               testEmployeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(id));
+            employeeLeaveRequestRepositoryMock.Setup(elr => elr.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>(), It.IsAny<string>()))
+               .Returns<string, string>((id, currentUserId) =>
+               testEmployeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(id, currentUserId));
 
             employeeLeaveRequestRepositoryMock.Setup(elr => elr.UpdateLeaveRequestAsync(It.IsAny<LeaveRequestHelper>()))
              .Returns<LeaveRequestHelper>((helper) =>
@@ -203,8 +203,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [ExpectedException(typeof(ApplicationException))]
             public async Task RepositoryReturnedNullTest()
             {
-                employeeLeaveRequestRepositoryMock.Setup(r => r.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>()))
-                    .Returns<string>((id) => Task.FromResult<Domain.HumanResources.Entities.LeaveRequest>(null));
+                employeeLeaveRequestRepositoryMock.Setup(r => r.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>(),It.IsAny<string>()))
+                    .Returns<string, string>((id, currentUserId) => Task.FromResult<Domain.HumanResources.Entities.LeaveRequest>(null));
 
                 try
                 {
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     EmployeeId = "0011560",
                     StartDate = new DateTime(2019, 06, 06),
                     EndDate = new DateTime(2019, 06, 06),
-                    ApproverId = "0010351",
+                    ApproverId = "0011560",
                     ApproverName = "Hadrian O. Racz",
                     Status = Dtos.HumanResources.LeaveStatusAction.Submitted,
                     LeaveRequestDetails = new List<Dtos.HumanResources.LeaveRequestDetail>()
@@ -527,14 +527,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task NoExistingTimecardThrowsErrorTest()
             {
-                employeeLeaveRequestRepositoryMock.Setup(m => m.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+                employeeLeaveRequestRepositoryMock.Setup(m => m.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
-                var lrToUpdate = leaveRequestEntityToDtoAdapter.MapToType(await testEmployeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(testEmployeeLeaveRequestRepository.leaveRequestRecords[0].Id));
+                var lrToUpdate = leaveRequestEntityToDtoAdapter.MapToType(await testEmployeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(testEmployeeLeaveRequestRepository.leaveRequestRecords[0].Id, null));
                 await employeeLeaveRequestService.UpdateLeaveRequestAsync(lrToUpdate);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(PermissionsException))]
             public async Task InputLeaveRequestEmployeeIdDoesNotMatchDatabaseLeaveRequestTest()
             {
                 var inputDto = await getLeaveRequestDto();

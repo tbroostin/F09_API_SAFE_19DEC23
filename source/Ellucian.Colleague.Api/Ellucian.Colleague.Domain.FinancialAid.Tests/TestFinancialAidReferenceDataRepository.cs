@@ -1021,8 +1021,6 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 foreach (var appealRecord in SapAppealInfoRecords)
                 {
                     var appeal = new AcademicProgressAppealCode(appealRecord.Code, appealRecord.Description);
-                    appeal.Code = appealRecord.Code;
-                    appeal.Description = appealRecord.Description;
                     appealList.Add(appeal);
                 }
                 return Task.FromResult(appealList.AsEnumerable());

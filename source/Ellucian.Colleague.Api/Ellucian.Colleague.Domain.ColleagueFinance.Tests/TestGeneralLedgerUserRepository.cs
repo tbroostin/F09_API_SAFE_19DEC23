@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +21,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         string classificationName = "GL.CLASS";
         IEnumerable<string> expenseValues = new List<string>() { "5", "7" };
         private TestGlAccountRepository testGlAccountRepository = null;
+        private IEnumerable<string> glAccessAndApprovalAccounts = null;
 
         public TestGeneralLedgerUserRepository()
         {
@@ -227,6 +228,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             glUser.AddAllAccounts(revenueIds);
             GeneralLedgerUsers.Add(glUser);
 
+            // User with GL access and GL approval roles.
+            GeneralLedgerUsers.Add(new GeneralLedgerUser("3333333", "Longerbeam"));
+            allIds = new List<string>()
+            {
+                "11_00_02_01_33333_51111",
+                "11_00_02_01_33333_55555",
+            };
+            var userWithAccessApprovalRoles = GeneralLedgerUsers.Where(x => x.Id == "3333333").FirstOrDefault();
+            userWithAccessApprovalRoles.AddAllAccounts(allIds);
+            userWithAccessApprovalRoles.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+
             // User with no GL access
             GeneralLedgerUsers.Add(new GeneralLedgerUser("9999999", "Kleehammer"));
 
@@ -248,6 +260,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public async Task<bool> CheckOverride(string id)
         {
             return await Task.Run(() => true);
+        }
+
+        public async Task<IEnumerable<string>> GetGlUserApprovalAndGlAccessAccountsAsync(string id, IEnumerable<string> glAccessAccounts)
+        {
+            glAccessAndApprovalAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555", "11_00_02_01_33333_52222",
+                "11_00_02_01_33333_53333", "11_00_02_01_33333_54444" };
+            if (id == "0000009")
+            {
+                glAccessAndApprovalAccounts = new List<string>();
+            }
+            return await Task.Run(() => glAccessAndApprovalAccounts);
         }
     }
 }

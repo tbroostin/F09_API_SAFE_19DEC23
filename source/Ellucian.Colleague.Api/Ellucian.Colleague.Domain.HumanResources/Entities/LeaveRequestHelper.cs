@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +30,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// List of leave request detail records to delete.
         /// </summary>
         public List<LeaveRequestDetail> LeaveRequestDetailsToDelete { get; set; }
+
+        /// <summary>
+        /// Flag which determines if the Leave Request is updated by Supervisor or Proxy and not by the Employee.
+        /// </summary>
+        public bool IsLeaveRequestFromSupervisorOrProxy { get; set; }
 
         /// <summary>
         /// Constructor

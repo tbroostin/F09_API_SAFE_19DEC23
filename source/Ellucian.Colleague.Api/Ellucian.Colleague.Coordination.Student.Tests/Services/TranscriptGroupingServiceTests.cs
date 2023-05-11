@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
@@ -48,7 +48,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 transcriptGroupingRepositoryMock.Setup(x => x.GetAsync()).Returns(Task.FromResult<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.TranscriptGrouping>>(allTranscriptGroupings));
                 
-                transcriptGroupingService = new TranscriptGroupingService(adapterRegistryMock.Object, transcriptGroupingRepositoryMock.Object);
+                transcriptGroupingService = new TranscriptGroupingService(adapterRegistryMock.Object, transcriptGroupingRepositoryMock.Object,logger);
             }
 
             [TestCleanup]

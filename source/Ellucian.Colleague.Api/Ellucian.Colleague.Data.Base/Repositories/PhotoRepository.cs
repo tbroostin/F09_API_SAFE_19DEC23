@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Net;
@@ -10,6 +10,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
@@ -42,7 +43,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (!IsPhotoConfigurationValid)
             {
-                throw new Exception("Photos have not been configured");
+                throw new ColleagueWebApiException("Photos have not been configured");
             }
 
             var personPhotograph = RetrievePhotoFromRemoteServer(id);
@@ -52,7 +53,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             else
             {
-                throw new Exception(string.Format("Photo not found for person id '{0}'", id));
+                throw new ColleagueWebApiException(string.Format("Photo not found for person id '{0}'", id));
             }
 
         }
@@ -137,7 +138,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access IMAGE.MIME.TYPE valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return imageMimeTypesValcode;
                 }

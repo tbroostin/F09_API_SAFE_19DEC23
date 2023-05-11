@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -520,6 +520,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
         }
 
+        /// <summary>
+        /// Return all sections-registrations-checking
+        /// </summary>
+        [HttpGet]
+        //public async Task<IHttpActionResult> GetSectionRegistrationsChecking(Paging page)
+        public async Task<IHttpActionResult> GetSectionRegistrationsChecking()
+        {
+            //Get is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// Return sections-registrations-checking
+        /// </summary>
+        [HttpGet]
+        //public async Task<IHttpActionResult> GetSectionRegistrationsCheckingById(Paging page)
+        public async Task<IHttpActionResult> GetSectionRegistrationsCheckingById()
+        {
+            //Get is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
         #endregion
 
         #region Put Methods
@@ -816,6 +838,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
         }
 
+        /// <summary>
+        /// Update (PUT) section-registrations-checking
+        /// </summary>
+        [HttpPut]
+        public async Task<IHttpActionResult> PutSectionRegistrationsCheckingById()
+        {
+            //Put is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
         #endregion
 
         #region Post Methods
@@ -908,7 +939,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-
 
         /// <summary>
         /// Create (POST) section registrations
@@ -1087,6 +1117,98 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
         }
 
+        /// <summary>
+        /// Create (POST) section registrations checking
+        /// </summary>
+        /// <param name="sectionRegistrations">A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</param>
+        /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistrations"/> object</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.PerformRegistrationChecks)]        
+        public async Task PostSectionsRegistrationsCheckingAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistrations sectionRegistrations)
+        {
+            try
+            {
+                try
+                {
+                    _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
+                }
+                catch (PermissionsException ex)
+                {
+                    // Swap "create" with "perform" in the error message so it returns: 
+                    // "...does not have permission to perform sections-registrations-checking."       
+                    if (!string.IsNullOrEmpty(ex.Message))
+                    {
+                        var message = ex.Message.Replace("create", "perform");
+                        throw new PermissionsException(message);
+                    }
+                    throw;
+                }
+                if (sectionRegistrations == null)
+                {
+                    throw new ArgumentNullException("Null sectionRegistrations argument", "The request body is required.");
+                }
+                
+                var sectionRegistrationReturn = await _sectionRegistrationService.CheckSectionRegistrations(sectionRegistrations);
+
+                // nothing to return if no errors.  Will issue a 204 No Content
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (FormatException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
         #endregion
 
         #region Delete Methods
@@ -1102,6 +1224,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
 
+        /// <summary>
+        /// Delete (DELETE) an existing sections-registrations-checking
+        /// </summary>
+        [HttpDelete]
+        //public async Task DeleteSectionsRegistrationsCheckingAsync([FromUri] string guid)
+        public async Task DeleteSectionsRegistrationsCheckingAsync()
+        {
+            //Delete is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
         #endregion
+  
     }
 }

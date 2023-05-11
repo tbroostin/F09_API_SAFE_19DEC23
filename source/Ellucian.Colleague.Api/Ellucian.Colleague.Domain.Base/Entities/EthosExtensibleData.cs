@@ -1,4 +1,4 @@
-﻿// Copyright 2017 - 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017 - 2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,16 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string ApiVersionNumber { get; private set; }
 
         /// <summary>
+        /// Release Status of the Version
+        /// </summary>
+        public string VersionReleaseStatus { get; set; }
+
+        /// <summary>
+        /// The API Type of E, T, A, or S (Extension, Transaction (BPA), Spec Based API, or Subroutine Call)
+        /// </summary>
+        public string ApiType { get; set; }
+
+        /// <summary>
         /// Extended Schema Type Identifier
         /// </summary>
         public string ExtendedSchemaType { get; private set; }
@@ -38,19 +48,80 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public TimeZoneInfo ColleagueTimeZone { get; set; }
 
         /// <summary>
+        /// List of file used by an API
+        /// </summary>
+        public List<string> ColleagueFileNames { get; set; }
+
+        /// <summary>
+        /// List of record keys required for a Business Process API call (ApiType of "T")
+        /// </summary>
+        public IList<string> ColleagueKeyNames { get; set; }
+
+        /// <summary>
         /// List of the extended data for this resource and version 
         /// </summary>
-        public IList<EthosExtensibleDataRow> ExtendedDataList { get; private set; }
+        public IList<EthosExtensibleDataRow> ExtendedDataList { get; set; }
+
+        /// <summary>
+        /// List of the inquiry fields
+        /// </summary>
+        public IList<string> InquiryFields { get; set; }
 
         /// <summary>
         /// List of the filter criteria for this resource and version 
         /// </summary>
         public IList<EthosExtensibleDataFilter> ExtendedDataFilterList { get; private set; }
+
+        /// <summary>
+        /// The date that the API will no longer be supported
+        /// </summary>
         public DateTime? DeprecationDate { get; set; }
+
+        /// <summary>
+        /// Notice of deprecation for documentation with the resources API
+        /// </summary>
         public string DeprecationNotice { get; set; }
+
+        /// <summary>
+        /// The date that the API will no longer be available
+        /// </summary>
         public DateTime? SunsetDate { get; set; }
+
+        /// <summary>
+        /// The HTTP methods supported by this API
+        /// </summary>
         public List<string> HttpMethodsSupported { get; set; }
+
+        /// <summary>
+        /// The Parent API for alternate views
+        /// </summary>
         public string ParentApi { get; set; }
+
+        /// <summary>
+        /// The overall description of the API for documentation with schemas API
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Current User ID path for getting records that match current API user only.
+        /// </summary>
+        public string CurrentUserIdPath { get; set; }
+
+        /// <summary>
+        /// Current User from API user required to pass data into repository
+        /// </summary>
+        public string CurrentUserId { get; set; }
+
+        /// <summary>
+        /// Unused at this time.
+        /// </summary>
+        public string Conversion { get; set; }
+
+        /// <summary>
+        /// Set to true if this is a custom resource
+        /// </summary>
+        public bool IsCustomResource { get; set; }
+
 
         /// <summary>
         /// Constructor for Ethos Extended Data
@@ -93,6 +164,13 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                     ColleagueTimeZone = TimeZoneInfo.Local;
                 }
                 
+            }
+            if (string.IsNullOrEmpty(ExtendedSchemaType))
+            {
+                if (!string.IsNullOrEmpty(ApiVersionNumber))
+                {
+                    ExtendedSchemaType = string.Format("application/vnd.hedtech.integration.v{0}+json", ApiVersionNumber);
+                }
             }
 
         }/// <summary>

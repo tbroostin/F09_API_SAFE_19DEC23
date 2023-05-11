@@ -2219,7 +2219,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_Multiple_AccountDetails_With_Same_AccountingString()
         {
             var accountDetail = accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault();
@@ -2229,7 +2229,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         //invalid process state is ignored
         //[TestMethod]
-        //[ExpectedException(typeof(Exception))]
+        //[ExpectedException(typeof(ColleagueWebApiException))]
         //public async Task ActPayInvService_POST_DtoToEntity_Invalid_ProcessState()
         //{
         //    accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
@@ -2263,7 +2263,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_PaymentSource_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Paid;
@@ -2272,7 +2272,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_PaymentTerms_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Reconciled;
@@ -2316,7 +2316,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityCodes_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2324,7 +2324,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_FixedAssetDesignationId_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2332,7 +2332,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityCodes_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.CommodityCode>());
@@ -2340,7 +2340,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_FixedAssetDesignationId_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>());
@@ -2348,7 +2348,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.CommodityUnitType>());
@@ -2356,7 +2356,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -2606,7 +2606,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_POST_InvalidTaxCodeRate()
         {
             var taxCodesApPur = new List<Domain.Base.Entities.CommerceTaxCodeRate>()
@@ -2631,7 +2631,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_Post_glConfiguration_ConfigurationException()
         {
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ThrowsAsync(new ConfigurationException());
@@ -3217,7 +3217,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_Dto_AllTaxCodeId_Is_Null()
         {
             accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = "123";
@@ -3226,7 +3226,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_Dto_TaxCodeId_Is_Invalid()
         {
             accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = "123";
@@ -3546,7 +3546,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_Dto_LineItem__PO_No_RefLineNumber()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = null;
@@ -3554,7 +3554,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_Dto_LineItem__FinalPaymentFlag()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().EncumbranceStatus = AccountsPayableInvoicesEncumbranceStatus.FinalPayment;
@@ -3589,7 +3589,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_Multiple_AccountDetails_With_Same_AccountingString()
         {
             var accountDetail = accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault();
@@ -3598,7 +3598,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Invalid_InvoiceNumber()
         {
             accountsPayableInvoice.InvoiceNumber = "Invalid";
@@ -3607,7 +3607,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         //invalid processState is ignored.
         //[TestMethod]
-        //[ExpectedException(typeof(Exception))]
+        //[ExpectedException(typeof(ColleagueWebApiException))]
         //public async Task ActPayInvService_PUT_DtoToEntity_Invalid_ProcessState()
         //{
         //    accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
@@ -3641,7 +3641,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_PaymentSource_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Paid;
@@ -3659,7 +3659,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_PaymentTerms_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Reconciled;
@@ -3668,7 +3668,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_SubmittedBy_NotFound()
         {
             accountsPayableInvoice.SubmittedBy = new GuidObject2() {Id = "123"};
@@ -3677,7 +3677,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityCodes_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -3685,7 +3685,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_FxaTransferFlag_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -3693,7 +3693,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_FxaTransferFlag_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.FxaTransferFlags>());
@@ -3701,7 +3701,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Empty()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(new List<Domain.ColleagueFinance.Entities.CommodityUnitType>());
@@ -3709,7 +3709,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Null()
         {
             colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -3747,7 +3747,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         //  //if there is a BPO, then there cannot be a reference line number
         public async Task ActPayInvService_PUT_DtoToEntity_LineItem_BPO_ReferenceDocumentLineItemNumber()
         {
@@ -3816,7 +3816,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ActPayInvService_PUT_glConfiguration_ConfigurationException()
         {
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ThrowsAsync(new ConfigurationException());

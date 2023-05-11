@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System.Threading;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {

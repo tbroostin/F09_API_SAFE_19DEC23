@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -57,6 +57,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                             SessionTimeout = 30,
                             UserName = "Faculty",
                             Roles = new List<string> { },
+                            SessionFixationId = "abc123"
+                        });
+                    }
+                }
+            }
+
+            public class PhoneNumberUserToViewPersonInformation : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            PersonId = "0000015",
+                            ControlId = "123",
+                            Name = "George",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "PhoneNumberUserToViewPersonInformation",
+                            Roles = new List<string>() { "VIEW.PERSON.INFORMATION" },
                             SessionFixationId = "abc123"
                         });
                     }
@@ -307,5 +328,113 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
         }
 
+        [TestClass]
+        public class GetPersonPhones2Async_Tests : PhoneNumberServiceTests
+        {          
+            private PhoneNumber phoneNumber;
+   
+            [TestMethod]
+            public async Task GetPersonPhones2Async_ViewPersonInformation_Permission()
+            {
+                string personId = "0000015";
+                phoneNumber = new PhoneNumber(personId);
+                phoneNumber.AddPhone(new Phone("703-815-4221", "HO", ""));
+                phoneNumber.AddPhone(new Phone("304-577-9951", "BU", "123"));
+
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.PERSON.INFORMATION");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.PERSON.INFORMATION"));
+                currentUserFactory = new CurrentUserSetup.PhoneNumberUserToViewPersonInformation();
+
+                roleRepositoryMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+               
+                phoneNumberRepositoryMock.Setup(i =>
+                            i.GetPersonPhonesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(phoneNumber);
+                var phoneNumberAdapter = new AutoMapperAdapter<Domain.Base.Entities.PhoneNumber, Dtos.Base.PhoneNumber>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.PhoneNumber, Colleague.Dtos.Base.PhoneNumber>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.PhoneNumber,
+                    Colleague.Dtos.Base.PhoneNumber>()).Returns(phoneNumberAdapter);
+                var phoneAdapter = new AutoMapperAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.Phone, Colleague.Dtos.Base.Phone>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.Phone,
+                    Colleague.Dtos.Base.Phone>()).Returns(phoneAdapter);
+                service = new PhoneNumberService(phoneNumberRepository, configurationRepository, currentUserFactory, roleRepository, adapterRegistry, logger);
+                var actuals = await service.GetPersonPhones2Async(personId);
+                Assert.IsNotNull(actuals);
+                var expected = phoneNumber;
+                Assert.AreEqual(expected.PersonId, actuals.PersonId);
+                Assert.AreEqual(expected.PhoneNumbers.Count(), actuals.PhoneNumbers.Count());
+                foreach (var expectedPhone in expected.PhoneNumbers)
+                {
+                    var actualPhone = actuals.PhoneNumbers.Where(p => p.Number == expectedPhone.Number).First();
+                    Assert.AreEqual(expectedPhone.TypeCode, actualPhone.TypeCode);
+                    Assert.AreEqual(expectedPhone.Extension, actualPhone.Extension);
+                    Assert.AreEqual(expectedPhone.Number, actualPhone.Number);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetPersonPhones2Async_NotAppropriatePermission_NotSelf()
+            {
+                string personId = "9999998";
+                phoneNumber = new PhoneNumber(personId);
+                phoneNumber.AddPhone(new Phone("703-815-4221", "HO", ""));
+                phoneNumber.AddPhone(new Phone("304-577-9951", "BU", "123"));
+
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "QUERY.PHONE.NUMBERS");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("QUERY.PHONE.NUMBERS"));
+                currentUserFactory = new CurrentUserSetup.NonQueryPhoneNumbersUserFactory();
+
+                roleRepositoryMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+                phoneNumberRepositoryMock.Setup(i =>
+                            i.GetPersonPhonesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(phoneNumber);
+                var phoneNumberAdapter = new AutoMapperAdapter<Domain.Base.Entities.PhoneNumber, Dtos.Base.PhoneNumber>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.PhoneNumber, Colleague.Dtos.Base.PhoneNumber>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.PhoneNumber,
+                    Colleague.Dtos.Base.PhoneNumber>()).Returns(phoneNumberAdapter);
+                var phoneAdapter = new AutoMapperAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.Phone, Colleague.Dtos.Base.Phone>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.Phone,
+                    Colleague.Dtos.Base.Phone>()).Returns(phoneAdapter);
+                service = new PhoneNumberService(phoneNumberRepository, configurationRepository, currentUserFactory, roleRepository, adapterRegistry, logger);
+                var actuals = await service.GetPersonPhones2Async(personId);
+                Assert.IsNull(actuals);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetPersonAddresses2Async_ArgumentNullException()
+            {
+
+                string personId = "9999998";
+                phoneNumber = new PhoneNumber(personId);
+                phoneNumber.AddPhone(new Phone("703-815-4221", "HO", ""));
+                phoneNumber.AddPhone(new Phone("304-577-9951", "BU", "123"));
+
+                var viewPersonInformationRole = new Domain.Entities.Role(1, "VIEW.PERSON.INFORMATION");
+                viewPersonInformationRole.AddPermission(new Domain.Entities.Permission("VIEW.PERSON.INFORMATION"));
+                currentUserFactory = new CurrentUserSetup.NonQueryPhoneNumbersUserFactory();
+
+                roleRepositoryMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+                {
+                    viewPersonInformationRole
+                });
+                phoneNumberRepositoryMock.Setup(i =>
+                            i.GetPersonPhonesAsync(It.IsAny<string>()))
+                            .ReturnsAsync(phoneNumber);
+                var phoneNumberAdapter = new AutoMapperAdapter<Domain.Base.Entities.PhoneNumber, Dtos.Base.PhoneNumber>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.PhoneNumber, Colleague.Dtos.Base.PhoneNumber>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.PhoneNumber,
+                    Colleague.Dtos.Base.PhoneNumber>()).Returns(phoneNumberAdapter);
+                var phoneAdapter = new AutoMapperAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup<ITypeAdapter<Colleague.Domain.Base.Entities.Phone, Colleague.Dtos.Base.Phone>>(a => a.GetAdapter<Colleague.Domain.Base.Entities.Phone,
+                    Colleague.Dtos.Base.Phone>()).Returns(phoneAdapter);
+                service = new PhoneNumberService(phoneNumberRepository, configurationRepository, currentUserFactory, roleRepository, adapterRegistry, logger);
+                var actuals = await service.GetPersonPhones2Async(null);
+            }
+        }
     }
 }

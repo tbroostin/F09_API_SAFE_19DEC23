@@ -14,6 +14,7 @@ using Ellucian.Colleague.Coordination.FinancialAid.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
@@ -175,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NullCreatedOutsideAward_ExceptionThrownTest()
             {
                 outsideAwardsRepositoryMock.Setup(r => r.CreateOutsideAwardAsync(It.IsAny<Domain.FinancialAid.Entities.OutsideAward>())).ReturnsAsync(() => null);
@@ -648,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
             [Ignore]
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NullUpdatedOutsideAward_ExceptionThrownTest()
             {
                 outsideAwardsRepositoryMock.Setup(r => r.UpdateOutsideAwardAsync(It.IsAny<Domain.FinancialAid.Entities.OutsideAward>())).ReturnsAsync(() => null);

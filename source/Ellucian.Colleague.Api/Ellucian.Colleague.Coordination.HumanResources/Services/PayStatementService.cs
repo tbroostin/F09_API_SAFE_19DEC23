@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -12,6 +12,7 @@ using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
+using PdfSharp.Pdf.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -138,6 +139,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var hostCountry = await studentReferenceDataRepository.GetHostCountryAsync();
             var configuration = await hrReferenceDataRepository.GetPayStatementConfigurationAsync();
+            logger.Debug("************Pay Statement Configuration fetched from the database************");
             var reportParameters = new List<ReportParameter>();
             var shouldDisplaySocialSecurityNumber = configuration.SocialSecurityNumberDisplay != Domain.HumanResources.Entities.SSNDisplay.Hidden;
             reportParameters.Add(new ReportParameter("ShouldDisplaySocialSecurityNumber", shouldDisplaySocialSecurityNumber.ToString(), false));
@@ -147,12 +149,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var referenceDataUtility = await getReferenceDataUtility();
 
+            logger.Debug("************Pay Statement Reference data(Benefit Deduction,Earnings Differenetials,Earnings Type,Tax Codes,Leave Types,Position Information) fetched************ ");
+
             var stopWatch = new Stopwatch();
             var timingList = new List<string>();
 
             if (logger.IsErrorEnabled) { stopWatch.Start(); }
 
             var payStatementEntities = await payStatementRepository.GetPayStatementSourceDataAsync(payStatementIds);
+            logger.Debug("************Pay Statement Source data retrieved************");
 
             if (logger.IsErrorEnabled)
             {
@@ -177,6 +182,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
             var employeePayStatements = await payStatementRepository.GetPayStatementSourceDataByPersonIdAsync(employeeIds);
+            logger.Debug("************Pay Statements data retrieved based on persodn id(s)************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -186,6 +192,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
             var payrollRegister = await payrollRegisterRepository.GetPayrollRegisterByEmployeeIdsAsync(employeeIds);
+            logger.Debug("************Pay Register Entries retrieved************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -195,6 +202,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
             var personBenefitDeductions = await personBenefitDeductionRepository.GetPersonBenefitDeductionsAsync(employeeIds);
+            logger.Debug("************Benefit & Deductions data retrieved************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -204,6 +212,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
             var personStatuses = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(employeeIds);
+            logger.Debug("************Person Employment Statuses retrieved************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -213,6 +222,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
             payStatementDomainService.SetContext(employeePayStatements, payrollRegister, personBenefitDeductions, personStatuses, referenceDataUtility);
+            logger.Debug("************Pay statements domain service context set successfully************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -221,7 +231,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var reportEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.PayStatementReport, PayStatementReport>();
 
             var outputDocument = new PdfDocument();
-
+            PdfSecuritySettings securitySettings = outputDocument.SecuritySettings;
+            
+            securitySettings.OwnerPassword = "payStatement" + new Random().Next(10000000, 99999999);
+            securitySettings.PermitAccessibilityExtractContent = false;
+            securitySettings.PermitAnnotations = false;
+            securitySettings.PermitExtractContent = false;
+            securitySettings.PermitFormsFill = false;
+            securitySettings.PermitModifyDocument = false;
+            
             var internalStopWatch = new Stopwatch();
             var internalTimingList = new List<string>();
 
@@ -231,7 +249,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
 
-
+            logger.Debug("************Report Preparation process started************");
             foreach (var payStatementSource in payStatementEntities)
             {
                 try
@@ -265,6 +283,65 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     reportService.AddDataSource(new ReportDataSource("PayStatementLeave", reportDto.Leave));
                     reportService.AddDataSource(new ReportDataSource("PayStatementTaxableBenefits", reportDto.TaxableBenefits));
 
+                    #region Log Report data 
+                    /*Log Report data here*/
+                    if (logger.IsDebugEnabled)
+                    {
+                        logger.Debug("************PayStatement Information in the PDF************");
+                        logger.Debug("-----EmployeeID = " + reportDto.EmployeeId + "-----");
+                        logger.Debug("-----Period Start = " + reportDto.PeriodStartDate + "-----");
+                        logger.Debug("-----Period End = " + reportDto.PeriodEndDate + "-----");
+                        logger.Debug("-----Paydate = " + reportDto.PayDate + "-----");
+                        logger.Debug("-----Federal Withholding status = " + reportDto.FederalWithholdingStatus + "-----");
+                        logger.Debug("-----State Withholding status = " + reportDto.StateWithholdingStatus + "-----");
+                       
+                        if (reportDto.Earnings != null && reportDto.Earnings.Any())
+                        {
+                            logger.Debug("-----EARNINGS TYPE INFORMATION----");
+                            foreach (var earningtype in reportDto.Earnings)
+                            { 
+                                logger.Debug(string.Format("#Earnings Type = {0},Hours Worked = {1}",earningtype.EarningsTypeDescription,earningtype.UnitsWorked));
+                            }
+                        }
+
+                        if (reportDto.TaxableBenefits != null && reportDto.TaxableBenefits.Any())
+                        {
+                            logger.Debug("-----TAXES INFORMATION----");
+                            foreach (var taxablebenefit in reportDto.TaxableBenefits)
+                            {
+                                logger.Debug(string.Format("#Tax Code = {0}", taxablebenefit.TaxableBenefitId));
+                            }
+                        }
+
+                        if (reportDto.Deductions != null && reportDto.Deductions.Any())
+                        {
+                            logger.Debug("-----DEDUCTIONS INFORMATION----");
+                            foreach (var deduction in reportDto.Deductions)
+                            {
+                                logger.Debug(string.Format("#Deduction Code = {0}", deduction.Code));
+                            }
+                        }
+
+                        if (reportDto.Deposits != null && reportDto.Deposits.Any())
+                        {
+                            logger.Debug("-----DEPOSIT INFORMATION----");
+                            foreach (var deposit in reportDto.Deposits)
+                            {
+                                logger.Debug(string.Format("#Bank Name = {0} , Account Number(last 4 digits) = {1}", deposit.BankName,deposit.AccountIdLastFour));
+                            }
+                        }
+                        if (reportDto.Leave != null && reportDto.Leave.Any())
+                        {
+                            logger.Debug("-----LEAVE INFORMATION----");
+                            foreach (var leave in reportDto.Leave)
+                            {
+                                logger.Debug(string.Format("#Leave Type Id = {0}", leave.LeaveTypeId));
+                            }
+                        }
+
+                    }
+                    #endregion
+
                     if (logger.IsErrorEnabled)
                     {
                         internalStopWatch.Reset();
@@ -294,7 +371,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     reportService.ResetReport();
                 }
+
             }
+            logger.Debug("************Report Preparation process end************");
             if (logger.IsErrorEnabled)
             {
                 stopWatch.Stop();
@@ -320,14 +399,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            
 
             using (var outputStream = new MemoryStream())
             {
-                outputDocument.Save(outputStream);
+                outputDocument.Save(outputStream);               
 
                 var reportByteArray = outputStream.ToArray();
                 outputStream.Close();
+                logger.Debug("************PDF generated successfully************");
                 return reportByteArray;
             }
 
@@ -350,6 +430,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             DateTime? startDateFilter = null,
             DateTime? endDateFilter = null)
         {
+            logger.Debug("Process to fetch Paystatement summary begins");
             //check for permissions 
             if (employeeIdsFilter == null || !employeeIdsFilter.Any() || employeeIdsFilter.Any(id => id != CurrentUser.PersonId))
             {
@@ -383,7 +464,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var summaryEntities = await payStatementRepository.GetPayStatementSourceDataByPersonIdAsync(personIds, startDateFilter, endDateFilter);
             if (summaryEntities == null || !summaryEntities.Any())
             {
-                logger.Info("no summaryEntities selected from repository");
+                logger.Debug("no summaryEntities selected from repository");
                 return new List<PayStatementSummary>();
             }
 
@@ -401,7 +482,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 summaryEntities = summaryEntities.Where(s => s.PayDate == payDateFilter.Value).ToList();
                 if (summaryEntities == null || !summaryEntities.Any())
                 {
-                    logger.Info("no summaryEntities for the selected pay date");
+                    logger.Debug("no summaryEntities for the selected pay date");
                     return new List<PayStatementSummary>();
                 }
             }
@@ -410,7 +491,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             personIds = summaryEntities.Select(s => s.EmployeeId).Distinct().ToList();
             if (!personIds.Any())
             {
-                logger.Info("no statement summaries for the selected employee ids");
+                logger.Debug("no statement summaries for the selected employee ids");
                 return new List<PayStatementSummary>();
             }
 
@@ -420,7 +501,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var payrollRegister = await payrollRegisterRepository.GetPayrollRegisterByEmployeeIdsAsync(personIds, startDateFilter, endDateFilter);
             if (payrollRegister == null || !payrollRegister.Any())
             {
-                logger.Info("no payroll register entries selected from repository");
+                logger.Debug("no payroll register entries selected from repository");
                 return new List<PayStatementSummary>();
             }
 
@@ -468,6 +549,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     logger.Error(logString);
                 }
             }
+
+            logger.Debug("Process to fetch Paystatement summary ended successfully");
             return payStatementSummaryDtos;
         }
 

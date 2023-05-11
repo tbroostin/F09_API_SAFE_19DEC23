@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -25,6 +26,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     {
         #region Initialize and Cleanup
         private GeneralLedgerAccountService service = null;
+        private Mock<IGeneralLedgerAccountRepository> expiredRepositoryMock = new Mock<IGeneralLedgerAccountRepository>();
         private GeneralLedgerCurrentUser.GeneralLedgerUserAllAccounts currentUserFactory = new GeneralLedgerCurrentUser.GeneralLedgerUserAllAccounts();
         private GeneralLedgerCurrentUser.UserFactoryAll userFactory_InsufficientAccess = new GeneralLedgerCurrentUser.UserFactoryAll();
         private TestGeneralLedgerAccountRepository testGlAccountRepository = new TestGeneralLedgerAccountRepository();
@@ -37,6 +39,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public void Initialize()
         {
             BuildService(testGlUserRepository, testGlConfigurationRepository, testGlAccountRepository, currentUserFactory);
+            expiredRepositoryMock = new Mock<IGeneralLedgerAccountRepository>();
         }
 
         [TestCleanup]
@@ -391,7 +394,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 }
             };
             var glAccountValidationResponseDto = await service.ValidateGlAccountAsync(glAccountId, fiscalYear);
-            
+
 
             Assert.AreEqual("11_00_02_01_20601_40000", glAccountValidationResponseDto.Id);
             Assert.AreEqual("failure", glAccountValidationResponseDto.Status);
@@ -480,6 +483,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual("11_00_01_02_INCTV_59999", glAccountValidationResponseDto.Id);
             Assert.AreEqual("failure", glAccountValidationResponseDto.Status);
             Assert.AreEqual(glAccountValidationResponse.ErrorMessage, glAccountValidationResponseDto.ErrorMessage);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task ValidateGlAccountAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            var expenseIds = new List<string>();
+            var allIds = new List<string>();
+            expenseIds.Add("11_00_01_02_ACTIV_50000");
+            testGlUserRepository.GeneralLedgerUsers[32].AddExpenseAccounts(expenseIds);
+            allIds.Add("11_00_01_02_ACTIV_50000");
+            testGlUserRepository.GeneralLedgerUsers[32].AddAllAccounts(allIds);
+
+            // Build a service for a Colleague expired session.
+            expiredRepositoryMock.Setup(exs => exs.ValidateGlAccountAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
+            {
+                throw new ColleagueSessionExpiredException("timeout");
+            });
+
+            BuildService(testGlUserRepository, testGlConfigurationRepository, expiredRepositoryMock.Object, currentUserFactory);
+
+            await service.ValidateGlAccountAsync("11_00_01_02_ACTIV_50000", DateTime.Now.Year.ToString());
         }
 
         #endregion

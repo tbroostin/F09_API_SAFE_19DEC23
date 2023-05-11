@@ -1,10 +1,11 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
@@ -69,12 +70,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
             catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
 
         }
@@ -124,12 +125,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
             catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
-                throw new Exception();
+                throw new ColleagueWebApiException();
             }
 
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -66,7 +67,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access NON.COURSE.CATEGORIES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return categoryTable;
                 }, Level1CacheTimeoutValue);
@@ -88,7 +89,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access STUDENT.NON.COURSE.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return categoryTable;
                 }, Level1CacheTimeoutValue);
@@ -110,7 +111,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access APPL.TEST.SOURCES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return categoryTable;
                 }, Level1CacheTimeoutValue);
@@ -586,11 +587,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating studentTestScores '{0}':", studentTestScoresEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(
-                        new RepositoryError("Create.Update.Exception", 
-                        string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
-
-                    logger.Error(errorMessage);
+                    foreach (var error in updateResponse.UpdateStudentAptitudeAsessmentErrors)
+                    {
+                        if (!string.IsNullOrEmpty(error.ErrorCodes))
+                        {
+                            exception.AddError(new RepositoryError(error.ErrorCodes, error.ErrorMessages));
+                            logger.Error(error.ErrorMessages);
+                        }
+                        else
+                        {
+                            exception.AddError(new RepositoryError(error.ErrorMessages));
+                            logger.Error(error.ErrorMessages);
+                        }
+                    }
                     throw exception;
                 }
                 // get the updated entity from the database

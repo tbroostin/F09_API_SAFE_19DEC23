@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -13,6 +13,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Data.Colleague.DataContracts;
 using System.Collections.ObjectModel;
 
@@ -188,7 +189,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error occurred while getting budget records: " + ex.Message, ex);
+                throw new ColleagueWebApiException("Error occurred while getting budget records: " + ex.Message, ex);
             }
 
             return new Tuple<IEnumerable<Budget>, int>(budgets, totalRecords);
@@ -229,7 +230,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("Error occurred while getting budget records.  ",ex.Message), ex);
+                throw new ColleagueWebApiException(string.Concat("Error occurred while getting budget records.  ",ex.Message), ex);
             }
 
 

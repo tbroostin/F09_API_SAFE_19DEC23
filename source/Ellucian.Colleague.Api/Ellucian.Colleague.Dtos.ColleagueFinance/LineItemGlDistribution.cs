@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -36,6 +36,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// This is the GL quantity for the line item GL distribution.
         /// </summary>
         public decimal Quantity { get; set; }
+
+        /// <summary>
+        /// This is the GL percent for the line item GL distribution.
+        /// </summary>
+        public decimal Percent { get; set; }
 
         /// <summary>
         /// This is the GL amount for the line item GL distribution.

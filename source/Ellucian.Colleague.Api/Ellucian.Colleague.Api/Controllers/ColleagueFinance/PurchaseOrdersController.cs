@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -25,6 +25,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -87,6 +88,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the purchase order.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)
@@ -425,6 +431,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to create/update the purchase order.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to create/update the purchase order.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -512,6 +523,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to void the purchase order.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to void the purchase order.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -553,6 +569,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found to search purchase order.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to search purchase order.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -1014,7 +1014,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
               //graduation term not retrived after reading
               [TestMethod]
-              [ExpectedException(typeof(Exception))]
+              [ExpectedException(typeof(ColleagueWebApiException))]
               public async Task UpdateGraduationApplication_GraduationTermRetrievedIsNull()
               {
                   //mock term repo to have term entity returned with same term as provided in graduation dto
@@ -1037,7 +1037,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
               //graduation term not exist in list
               [TestMethod]
-              [ExpectedException(typeof(Exception))]
+              [ExpectedException(typeof(ColleagueWebApiException))]
               public async Task UpdateGraduationApplication_GraduationTermRetrievedIsClosed()
               {
                   //mock term repo to have term entity returned with same term as provided in graduation dto
@@ -1059,7 +1059,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
               //terms collections is empty
               [TestMethod]
-              [ExpectedException(typeof(Exception))]
+              [ExpectedException(typeof(ColleagueWebApiException))]
               public async Task UpdateGraduationApplication_AllTermsClosed()
               {
                   //mock term repo to have term entity returned with same term as provided in graduation dto

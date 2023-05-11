@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,6 +21,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
 using System.Threading.Tasks;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -34,6 +35,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
     {
         private readonly IEmailTypeService _emailTypeService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// Initializes a new instance of the EmailTypesController class.
@@ -121,10 +124,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _emailTypeService.GetBaseEmailTypesAsync();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
         #region Delete Methods

@@ -32,5 +32,8 @@ namespace Ellucian.Colleague.Domain.Student
         // and do all registration functions such as register, add/drop, and waitlist courses for the student.
         public const string AllAccessAnyAdvisee = "ALL.ACCESS.ANY.ADVISEE";
         public const string AllAccessAssignedAdvisees = "ALL.ACCESS.ASSIGNED.ADVISEES";
+
+        //permission given to an applicant to run program evalautions and what-if
+        public const string ApplicantEvaluateWhatIf = "EVALUATE.WHAT.IF";
     }
 }

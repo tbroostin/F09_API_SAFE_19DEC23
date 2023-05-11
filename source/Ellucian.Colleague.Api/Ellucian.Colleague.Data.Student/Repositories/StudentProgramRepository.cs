@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,8 +16,10 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -56,7 +58,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access STUDENT.PROGRAM.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -84,7 +86,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";
@@ -103,51 +105,65 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<IEnumerable<StudentProgram>> GetAsync(string studentId)
         {
-            // Don't cache the STUDENTS read so we get the latest list of programs in case 
-            // it was changed recently.
-            Students students = await DataReader.ReadRecordAsync<Students>("STUDENTS", studentId);
-
-            if (students == null)
+            try
             {
-                var errorMessage = string.Format("Unable to access STUDENTS table, record not found for student {0}", studentId);
-                logger.Error(errorMessage);
-                return new List<StudentProgram>();
-            }
+                // Don't cache the STUDENTS read so we get the latest list of programs in case 
+                // it was changed recently.
+                Students students = await DataReader.ReadRecordAsync<Students>("STUDENTS", studentId);
 
-            var stprIds = new List<string>();
-            if (students.StuAcadPrograms != null)
-            {
-                foreach (var acadProgramId in students.StuAcadPrograms)
+                if (students == null)
                 {
-                    stprIds.Add(studentId + "*" + acadProgramId);
+                    var errorMessage = string.Format("Unable to access STUDENTS table, record not found for student {0}", studentId);
+                    logger.Error(errorMessage);
+                    return new List<StudentProgram>();
                 }
-            }
 
-            string cachekey = string.Join(".", stprIds);
-
-
-
-            var programsdata = await GetOrAddToCacheAsync<Collection<StudentPrograms>>("StudentPrograms" + cachekey,
-                async () =>
+                var stprIds = new List<string>();
+                if (students.StuAcadPrograms != null)
                 {
-
-                    Collection<StudentPrograms> programData = await DataReader.BulkReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", stprIds.ToArray());
-                    if (programData == null)
+                    foreach (var acadProgramId in students.StuAcadPrograms)
                     {
-                        var errorMessage = "Unable to access STUDENT.PROGRAMS table.";
-                        logger.Info(errorMessage);
-                        //throw new Exception(errorMessage);
+                        stprIds.Add(studentId + "*" + acadProgramId);
                     }
-                    if (programData.Count == 1 && programData.FirstOrDefault() == null)
-                    {
-                        var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", stprIds));
-                        logger.Error(errorMessage);
-                    }
-                    return programData;
-                });
+                }
 
-            var programs = await BuildStudentProgramsAsync(programsdata, new List<string>() { studentId }, true);
-            return programs;
+                string cachekey = string.Join(".", stprIds);
+
+
+
+                var programsdata = await GetOrAddToCacheAsync<Collection<StudentPrograms>>("StudentPrograms" + cachekey,
+                    async () =>
+                    {
+
+                        Collection<StudentPrograms> programData = await DataReader.BulkReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", stprIds.ToArray());
+                        if (programData == null)
+                        {
+                            var errorMessage = "Unable to access STUDENT.PROGRAMS table.";
+                            logger.Info(errorMessage);
+                            //throw new ColleagueWebApiException(errorMessage);
+                        }
+                        if (programData.Count == 1 && programData.FirstOrDefault() == null)
+                        {
+                            var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", stprIds));
+                            logger.Error(errorMessage);
+                        }
+                        return programData;
+                    });
+
+                var programs = await BuildStudentProgramsAsync(programsdata, new List<string>() { studentId }, true);
+                return programs;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving programs for student {0}", studentId);
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -201,7 +217,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var errorMessage = "Unable to access STUDENT.PROGRAMS table.";
                     logger.Info(errorMessage);
-                    //throw new Exception(errorMessage);
+                    //throw new ColleagueWebApiException(errorMessage);
                 }
                 if (programsData.Count == 1 && programsData.FirstOrDefault() == null)
                 {
@@ -232,7 +248,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 ADept = studentAcademicProgram.DepartmentCode,
                 ALocation = studentAcademicProgram.Location,
                 AActivePrograms = activePrograms,
-                AAction = "C", 
+                AAction = "C",
                 ACopyEdPlan = "N",
                 ACreateApplFlag = "N"
             };
@@ -242,7 +258,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (!string.IsNullOrEmpty(createResponse.AErrorMessage))
                 {
                     logger.Info(createResponse.AErrorMessage);
-                    throw new Exception(string.Format("Unable to create student academic program. Message: '{0}'", createResponse.AErrorMessage));
+                    throw new ColleagueWebApiException(string.Format("Unable to create student academic program. Message: '{0}'", createResponse.AErrorMessage));
                 }
 
                 // If add is success, Clear Student Programs Cache....
@@ -258,7 +274,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             stprIds.Add(studentAcademicProgram.StudentId + "*" + acadProgramId);
                         }
                     }
-                    
+
                     string cachekey = string.Join(".", stprIds);
                     string planningStudentCacheKey = "PlanningStudent" + studentAcademicProgram.StudentId;
                     ClearCache(new List<string> { "StudentPrograms" + cachekey, planningStudentCacheKey });
@@ -271,11 +287,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 return studentProgram;
             }
-            catch(Exception ex)
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session expired while adding new program for the student {0}", studentAcademicProgram.StudentId);
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to add academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
                 logger.Error(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
 
@@ -308,7 +330,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (!string.IsNullOrEmpty(updateResponse.AErrorMessage))
                 {
                     logger.Info(updateResponse.AErrorMessage);
-                    throw new Exception(string.Format("Unable to update student academic program. Message: '{0}'", updateResponse.AErrorMessage));
+                    throw new ColleagueWebApiException(string.Format("Unable to update student academic program. Message: '{0}'", updateResponse.AErrorMessage));
                 }
 
                 // If update is success, clear Student Programs Cache....
@@ -336,11 +358,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 return studentProgram;
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session expired while updating program for the student {0}", studentAcademicProgram.StudentId);
+                logger.Error(ce, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to update academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
                 logger.Error(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
 
@@ -362,6 +390,89 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var errorMessage = string.Format("Unable to locate STUDENT.PROGRAMS record for student: '{0}' and program: '{1}'", studentid, programid);
                 logger.Error(errorMessage);
                 return null;
+            }
+        }
+
+
+        /// <summary>
+        /// Get Student Programs for an applicant ID. 
+        /// Include Inactive programs flag works in conjunctions with currentOnly flag such as:
+        /// when includeInactivePrograms is set to true then only those inactive programs that are not yet ended will be included if currentOnly flag is true otherwise all inactive programs will be included.
+        /// when includeInactivePrograms is set to false but currentOnly is true then it means only those inactive programs will be included that are in past ended
+        /// </summary>
+        /// <param name="applicantId">Applicant ID</param>
+        /// <param name="includeInactivePrograms"></param>
+        /// <param name="currentOnly">This flag works in conjunction with includeInactive Programs</param>
+        /// <returns>StudentProgram Entity</returns>
+
+        public async Task<IEnumerable<StudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = false, bool currentOnly=true)
+        {
+            try
+            {
+                var applicantRecord = await DataReader.ReadRecordAsync<Applicants>(applicantId);
+                if (applicantRecord == null)
+                {
+                    var message = string.Format("Record ID {0} does not exist in Applicants table", applicantId);
+                    logger.Error(message);
+                    throw new KeyNotFoundException(message);
+                }
+
+
+
+                var subList = applicantRecord.AppApplications.ToArray();
+                var applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);
+
+                if (applicationDataContracts == null || !applicationDataContracts.Any())
+                {
+                    var message = string.Format("There are no applications associated with applicant {0}", applicantId);
+                    logger.Error(message);
+                    throw new KeyNotFoundException(message);
+
+                }
+
+                var stprIds = new List<string>();
+                stprIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
+                if(stprIds==null || !stprIds.Any())
+                {
+                    var message = string.Format("There are no STUDENT.PROGRAMS records associated with applications for applicant {0}", applicantId);
+                    logger.Error(message);
+                    throw new KeyNotFoundException(message);
+
+                }
+                //remove duplicate stprIds - duplicate can happen if the studen applied for same program again which was already applied for earlier
+                var studentProgramsIds = stprIds.Distinct();
+                string cachekey = string.Join(".", stprIds);
+                var programsdata = await GetOrAddToCacheAsync<Collection<StudentPrograms>>("ApplicantStudentPrograms" + cachekey,
+                    async () =>
+                    {
+                        //read STUDENT.PROGRAMS file
+                        Collection<StudentPrograms> studentProgramData = await DataReader.BulkReadRecordAsync<StudentPrograms>("STUDENT.PROGRAMS", studentProgramsIds.ToArray());
+                        if (studentProgramData == null || !studentProgramData.Any())
+                        {
+                            var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table for applicants programs {0}", string.Join(",", studentProgramsIds));
+                            logger.Info(errorMessage);
+                            }
+                        if (studentProgramData.Count == 1 && studentProgramData.FirstOrDefault() == null)
+                        {
+                            var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", studentProgramsIds));
+                            logger.Error(errorMessage);
+                        }
+                        return studentProgramData;
+                    });
+
+                var programs = await BuildApplicantStudentProgramsAsync(programsdata, applicantId, includeInactivePrograms, currentOnly);
+                return programs;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired while retrieving programs for applicant {0}", applicantId);
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occurred while retrieving applicant's student programs for applicant id=" + applicantId);
+                throw;
             }
         }
 
@@ -389,8 +500,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 studentProgramStatusesDict = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.AsEnumerable<ApplValcodesVals>().ToDictionary(a => a.ValInternalCodeAssocMember);
                 if (studentProgramStatusesDict == null)
                 {
-                    throw new Exception("Student Program Statuses is null");
+                    throw new ColleagueWebApiException("Student Program Statuses is null");
                 }
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session got expired  while retrieving student program statuses");
+                logger.Error(ce, message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -454,7 +571,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = "Unable to get data from ACAD.PROGRAMS table for program codes " + progCodes.ToString();
                 logger.Info(errorMessage);
-                //throw new Exception(errorMessage);
+                //throw new ColleagueWebApiException(errorMessage);
             }
             bool error = false;
             foreach (var prog in programData)
@@ -539,14 +656,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     stpr.HasGraduated = (programStatus == StudentProgramStatusProcessingType.Graduated) ? true : false;
                     AcadPrograms acadProgramData = null;
                     StudentAcadLevels studentAcadLevelsData = null;
-            
+
                     if (acadProgramCollection != null && acadProgramCollection.Any())
                     {
                         acadProgramData = acadProgramCollection.Where(a => a.Recordkey == progcode).FirstOrDefault();
 
                         if (studentAcadLevelsCollection != null && acadProgramData != null)
                         {
-                            studentAcadLevelsData = studentAcadLevelsCollection.Where(a => a.Recordkey.Contains(studentid + "*"  + acadProgramData.AcpgAcadLevel)).FirstOrDefault();
+                            studentAcadLevelsData = studentAcadLevelsCollection.Where(a => a.Recordkey.Contains(studentid + "*" + acadProgramData.AcpgAcadLevel)).FirstOrDefault();
                         }
                     }
 
@@ -577,7 +694,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     stpr.AddMajors(new StudentMajors(major, name, stpr.StartDate, stpr.EndDate));
                                 }
                             }
-                            catch { }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get majors.");
+                            }
                         }
 
                         // Add minors from the Academic Program
@@ -591,7 +715,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     stpr.AddMinors(new StudentMinors(minor, name, stpr.StartDate, stpr.EndDate));
                                 }
                             }
-                            catch { }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get minors.");
+                            }
                         }
                     }
                     // Additional Requirements
@@ -630,6 +761,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                 }
                             }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup Major Code: '{0}', Student ID: '{1}'", ar.StprAddnlMajorsAssocMember, studentid);
@@ -648,7 +783,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             else if (ar.StprMinorStartDateAssocMember != null && ar.StprMinorStartDateAssocMember < term.EndDate)
                                 addMinor = true; // We want any major that began before the parameter term ended, even if it has ended (or hasn't started - it's term based so "today" doesn't matter).
                         }
-                        else if ((ar.StprMinorStartDateAssocMember != null ) && (ar.StprMinorEndDateAssocMember == null || ar.StprMinorEndDateAssocMember >= DateTime.Today))
+                        else if ((ar.StprMinorStartDateAssocMember != null) && (ar.StprMinorEndDateAssocMember == null || ar.StprMinorEndDateAssocMember >= DateTime.Today))
                             addMinor = true; // If not including history, make sure the start date is on or before the current date AND the end date is null or after the current date
                         if (addMinor)
                         {
@@ -669,6 +804,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         stpr.AddMinors(new StudentMinors(ar.StprMinorsAssocMember, awardName, minorStartDate, ar.StprMinorEndDateAssocMember));
                                     }
                                 }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
                             }
                             catch (Exception ex)
                             {
@@ -691,6 +830,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprCcdsAssocMember, ar.StprCcdsReqmtsAssocMember, AwardType.Ccd, awardName));
                                 }
                             }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup CCD Code: '{0}', Student ID: '{1}'", ar.StprCcdsAssocMember, studentid);
@@ -711,6 +854,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 {
                                     stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprSpecializationsAssocMember, ar.StprSpecializationReqmtsAssocMember, AwardType.Specialization, awardName));
                                 }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
                             }
                             catch (Exception ex)
                             {
@@ -768,6 +915,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
 
                     programs.Add(stpr);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
@@ -1069,6 +1220,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 response = await transactionInvoker.ExecuteAsync<BuildDegreeAuditCustomTextRequest, BuildDegreeAuditCustomTextResponse>(request);
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session expired while calling transaction to retrieve student's program evaluation notices", studentId);
+                logger.Error(ce, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -1131,6 +1288,420 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             return studentProgramNotices;
+        }
+
+
+        /// <summary>
+        /// Builds StudentProgram Entity
+        /// </summary>
+        /// <param name="programData">Student Programs Data contracts</param>
+        /// <param name="includeInactivePrograms">include Inactive program flag</param>
+        /// <param name="term">term for the student program</param>
+        /// <param name="includeHistory">flag to include history</param>
+        /// <returns>Returns StudentProgram</returns>
+
+        private async Task<IEnumerable<StudentProgram>> BuildApplicantStudentProgramsAsync(Collection<StudentPrograms> programData, string applicantId, bool includeInactivePrograms = false, bool currentOnly=true)
+        {
+
+            List<StudentProgram> programs = new List<StudentProgram>();
+            Collection<StudentDaOverrides> overrideData = new Collection<StudentDaOverrides>();
+            Collection<StudentDaExcpts> exceptionData = new Collection<StudentDaExcpts>();
+            ICollection<string> overrideIds = new List<string>();
+            ICollection<string> exceptionIds = new List<string>();
+            IDictionary<string, ApplValcodesVals> studentProgramStatusesDict = null;
+            // build association of program statuses with its special processing code 
+            try
+            {
+                studentProgramStatusesDict = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.AsEnumerable<ApplValcodesVals>().ToDictionary(a => a.ValInternalCodeAssocMember);
+                if (studentProgramStatusesDict == null)
+                {
+                    throw new ColleagueWebApiException("Student Program Statuses is null");
+                }
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session got expired  while retrieving student program statuses");
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Unable to retrieve student program statuses");
+                logger.Error(ex, ex.Message);
+            }
+
+            foreach (var prog in programData)
+            {
+                foreach (var over in prog.StprDaOverrides)
+                {
+                    if (!string.IsNullOrEmpty(over))
+                    {
+                        overrideIds.Add(over);
+                    }
+                }
+
+                foreach (var excp in prog.StprDaExcpts)
+                {
+                    if (!string.IsNullOrEmpty(excp))
+                    {
+                        exceptionIds.Add(excp);
+                    }
+                }
+            }
+
+            if (overrideIds.Count() > 0)
+            {
+                overrideData = await DataReader.BulkReadRecordAsync<StudentDaOverrides>("STUDENT.DA.OVERRIDES", overrideIds.ToArray());
+            }
+
+            if (exceptionIds.Count() > 0)
+            {
+                exceptionData = await DataReader.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", exceptionIds.ToArray());
+            }
+
+            string[] progCodes = programData.Select(p => p.Recordkey).Where(x => !string.IsNullOrEmpty(x) && x.Contains("*")).Select(x => x.Split('*')[1]).Where(y => !string.IsNullOrEmpty(y)).ToArray();
+            Collection<AcadPrograms> acadProgramCollection = new Collection<AcadPrograms>();
+            if (progCodes != null && progCodes.Count() > 0)
+            {
+                acadProgramCollection = await DataReader.BulkReadRecordAsync<AcadPrograms>(progCodes);
+
+            }
+            if (acadProgramCollection == null || acadProgramCollection.Count() == 0)
+            {
+                var errorMessage = "Unable to get data from ACAD.PROGRAMS table for program codes " + progCodes.ToString();
+                logger.Info(errorMessage);
+            }
+            foreach (var prog in programData)
+            {
+                StudentProgramStatusProcessingType programStatus = StudentProgramStatusProcessingType.None;
+                if (studentProgramStatusesDict != null && prog.StprStatus.Count > 0)
+                {
+                    var isParsed = Enum.TryParse(studentProgramStatusesDict[prog.StprStatus.ElementAt(0)].ValActionCode1AssocMember, out programStatus);
+                    if (!isParsed || !Enum.IsDefined(typeof(StudentProgramStatusProcessingType), programStatus))
+                    {
+                        programStatus = StudentProgramStatusProcessingType.None;
+                    }
+                }
+                try
+                {
+                    if(includeInactivePrograms==false)//it means do not include inactive programs depending upon the end date
+                    {
+                        if (programStatus == StudentProgramStatusProcessingType.InActive || programStatus == StudentProgramStatusProcessingType.Withdrawn || programStatus == StudentProgramStatusProcessingType.Graduated)
+                        {
+                            if(currentOnly==true)// it means do not include inactive programs that are current: it means past will be included
+                            {
+                                if (!(prog.StprEndDate != null && prog.StprEndDate.Count > 0 && prog.StprEndDate.ElementAt(0) < DateTime.Today))
+                                {
+                                    continue;
+                                }
+
+                            }
+                            else// do not include inactive programs at all
+                            {
+                                continue;
+                            }
+                            
+                        }
+                    }
+                    if (includeInactivePrograms == true)//it means we are going to include inactive programs
+                    {
+
+                        if (programStatus == StudentProgramStatusProcessingType.InActive || programStatus == StudentProgramStatusProcessingType.Withdrawn || programStatus == StudentProgramStatusProcessingType.Graduated)
+                        {
+                            if (currentOnly == true) //going to include only current inactive programs so it means inactive programs that are in past will not be picked
+                            {
+                                // If the program's end date is in past then don't take that program
+                                if (prog.StprEndDate != null && prog.StprEndDate.Count > 0 && prog.StprEndDate.ElementAt(0) < DateTime.Today)
+                                {
+                                    continue;
+                                }
+
+                            }
+                        }
+                    }
+
+                   
+                    string catcode = prog.StprCatalog;
+                    string applId = prog.Recordkey.Split('*')[0];
+                    string progcode = prog.Recordkey.Split('*')[1];
+
+                    StudentProgram stpr = new StudentProgram(applId, progcode, catcode);
+
+                    if (prog.StprStartDate != null && prog.StprStartDate.Count() > 0)
+                    {
+                        var studentProgramStartDate = prog.StprStartDate.ElementAt(0);
+                        if (studentProgramStartDate != null && studentProgramStartDate != DateTime.MinValue)
+                        {
+                            stpr.StartDate = studentProgramStartDate;
+                        }
+                    }
+                    // Added logic to include inactive programs for comparisons in ESS, therefore, we need
+                    // End Date from the student program.
+                    // srm - 05/09/2014
+                    if (prog.StprEndDate != null && prog.StprEndDate.Count() > 0)
+                    {
+                        var studentProgramEndDate = prog.StprEndDate.ElementAt(0);
+                        if (studentProgramEndDate != null && studentProgramEndDate != DateTime.MinValue)
+                        {
+                            stpr.EndDate = studentProgramEndDate;
+                        }
+                    }
+                    // Add additional data needed by the ESS project
+                    // srm -5/09/2014
+                    stpr.AdmitStatusCode = prog.StprAdmitStatus;
+                    stpr.DepartmentCode = prog.StprDept;
+                    stpr.Location = prog.StprLocation;
+                    stpr.ProgramName = prog.StprTitle;
+                    stpr.AnticipatedCompletionDate = prog.StprAntCmplDate;
+                    stpr.ProgramStatusProcessingCode = programStatus;
+                 
+                    AcadPrograms acadProgramData = null;
+                    if (acadProgramCollection != null && acadProgramCollection.Any())
+                    {
+                        acadProgramData = acadProgramCollection.Where(a => a.Recordkey == progcode).FirstOrDefault();
+                    }
+                    if (acadProgramData != null)
+                    {
+                        // Add data from the Academic Program.
+                        if (stpr.ProgramName == null || string.IsNullOrEmpty(stpr.ProgramName))
+                        {
+                            stpr.ProgramName = acadProgramData.AcpgTitle ?? progcode;
+                        }
+                        stpr.AcademicLevelCode = acadProgramData.AcpgAcadLevel;
+                        stpr.DegreeCode = acadProgramData.AcpgDegree;
+
+                        // Add majors from the Academic Program
+                        foreach (var major in acadProgramData.AcpgMajors)
+                        {
+                            try
+                            {
+                                string name = (await studentReferenceRepo.GetMajorsAsync()).First(maj => maj.Code == major).Description ?? "";
+                                if (!string.IsNullOrEmpty(major) && !string.IsNullOrEmpty(name))
+                                {
+                                    stpr.AddMajors(new StudentMajors(major, name, stpr.StartDate, stpr.EndDate));
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get majors.");
+                            }
+                        }
+
+                        // Add minors from the Academic Program
+                        foreach (var minor in acadProgramData.AcpgMinors)
+                        {
+                            try
+                            {
+                                string name = (await studentReferenceRepo.GetMinorsAsync()).First(min => min.Code == minor).Description ?? "";
+                                if (!string.IsNullOrEmpty(minor) && !string.IsNullOrEmpty(name))
+                                {
+                                    stpr.AddMinors(new StudentMinors(minor, name, stpr.StartDate, stpr.EndDate));
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to get minors.");
+                            }
+                        }
+                    }
+                    // Additional Requirements
+
+                    // Major
+                    foreach (var ar in prog.StprMajorListEntityAssociation)
+                    {
+                        bool addMajor = false;
+                         if ((ar.StprAddnlMajorStartDateAssocMember != null) && (ar.StprAddnlMajorEndDateAssocMember == null || ar.StprAddnlMajorEndDateAssocMember >= DateTime.Today))
+                            addMajor = true; // If not including history, make sure the start date is on or before the current date AND the end date is null or after the current date
+                        if (addMajor)
+                        {
+                            try
+                            {
+                                string awardName = (await studentReferenceRepo.GetMajorsAsync()).First(maj => maj.Code == ar.StprAddnlMajorsAssocMember).Description ?? "";
+                                if (!string.IsNullOrEmpty(awardName))
+                                {
+                                    stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprAddnlMajorsAssocMember, ar.StprAddnlMajorReqmtsAssocMember, AwardType.Major, awardName));
+                                    // Add new Majors object which contains all majors from Program and Additional Requirements
+                                    // srm - 05/09/2014
+                                    var majorStartDate = ar.StprAddnlMajorStartDateAssocMember;
+                                    if (majorStartDate == null || majorStartDate == DateTime.MinValue)
+                                    {
+                                        majorStartDate = stpr.StartDate;
+                                    }
+                                    if (!string.IsNullOrEmpty(ar.StprAddnlMajorsAssocMember) && !string.IsNullOrEmpty(awardName))
+                                    {
+                                        stpr.AddMajors(new StudentMajors(ar.StprAddnlMajorsAssocMember, awardName, majorStartDate, ar.StprAddnlMajorEndDateAssocMember));
+                                    }
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                var errorMessage = string.Format("Unable to lookup Major Code: '{0}', Applicant ID: '{1}'", ar.StprAddnlMajorsAssocMember, applicantId);
+                                logger.Error(ex, errorMessage);
+                            }
+                        }
+                    }
+                    // Minor
+                    foreach (var ar in prog.StprMinorListEntityAssociation)
+                    {
+                        bool addMinor = false;
+                         if ((ar.StprMinorStartDateAssocMember != null) && (ar.StprMinorEndDateAssocMember == null || ar.StprMinorEndDateAssocMember >= DateTime.Today))
+                            addMinor = true; // If not including history, make sure the start date is on or before the current date AND the end date is null or after the current date
+                        if (addMinor)
+                        {
+                            try
+                            {
+                                string awardName = (await studentReferenceRepo.GetMinorsAsync()).First(min => min.Code == ar.StprMinorsAssocMember).Description ?? "";
+                                if (!string.IsNullOrEmpty(awardName))
+                                {
+                                    stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprMinorsAssocMember, ar.StprMinorReqmtsAssocMember, AwardType.Minor, awardName));
+                                    // Add new Minors object which contains all minors from Program and Additional Requirements
+                                    var minorStartDate = ar.StprMinorStartDateAssocMember;
+                                    if (!minorStartDate.HasValue)
+                                    {
+                                        minorStartDate = stpr.StartDate;
+                                    }
+                                    if (!string.IsNullOrEmpty(ar.StprMinorsAssocMember) && !string.IsNullOrEmpty(awardName))
+                                    {
+                                        stpr.AddMinors(new StudentMinors(ar.StprMinorsAssocMember, awardName, minorStartDate, ar.StprMinorEndDateAssocMember));
+                                    }
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                var errorMessage = string.Format("Unable to lookup Minor Code: '{0}', Applicant ID: '{1}'", ar.StprMinorsAssocMember, applicantId);
+                                logger.Error(ex, errorMessage);
+                            }
+                        }
+                    }
+                    // Ccd
+                    foreach (var ar in prog.StprCcdListEntityAssociation)
+                    {
+                        // Make sure the start date is on or before the current date AND the end date is null or after the current date
+                        if ((ar.StprCcdsStartDateAssocMember != null) && (ar.StprCcdsEndDateAssocMember == null || ar.StprCcdsEndDateAssocMember >= DateTime.Today))
+                        {
+                            try
+                            {
+                                string awardName = (await studentReferenceRepo.GetCcdsAsync()).First(ccd => ccd.Code == ar.StprCcdsAssocMember).Description ?? "";
+                                if (!string.IsNullOrEmpty(awardName))
+                                {
+                                    stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprCcdsAssocMember, ar.StprCcdsReqmtsAssocMember, AwardType.Ccd, awardName));
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                var errorMessage = string.Format("Unable to lookup CCD Code: '{0}', Applicant ID: '{1}'", ar.StprCcdsAssocMember, applicantId);
+                                logger.Error(ex, errorMessage);
+                            }
+                        }
+                    }
+                    // Specialization
+                    foreach (var ar in prog.StprSpecialtiesEntityAssociation)
+                    {
+                        // Make sure the start date is on or before the current date AND the end date is null or after the current date
+                        if ((ar.StprSpecializationStartAssocMember != null) && (ar.StprSpecializationEndAssocMember == null || ar.StprSpecializationEndAssocMember >= DateTime.Today))
+                        {
+                            try
+                            {
+                                string awardName = (await studentReferenceRepo.GetSpecializationsAsync()).First(spc => spc.Code == ar.StprSpecializationsAssocMember).Description ?? "";
+                                if (!string.IsNullOrEmpty(awardName))
+                                {
+                                    stpr.AddAddlRequirement(new AdditionalRequirement(ar.StprSpecializationsAssocMember, ar.StprSpecializationReqmtsAssocMember, AwardType.Specialization, awardName));
+                                }
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                var errorMessage = string.Format("Unable to lookup Specialization Code: '{0}', Applicant ID: '{1}'", ar.StprSpecializationsAssocMember, applicantId);
+                                logger.Error(ex, errorMessage);
+                            }
+                        }
+                    }
+
+                    // Overrides
+
+                    if (overrideData.Count() > 0)
+                    {
+                        foreach (var over in overrideData)
+                        {
+                            if (over.StovAcadReqmtBlock != "")
+                            {
+                                //Make sure the data accessor didn't leave blanks in these
+                                over.StovInclStudentAcadCred.RemoveAll(delegate (string s) { return s.Trim() == ""; });
+                                over.StovExclStudentAcadCred.RemoveAll(delegate (string s) { return s.Trim() == ""; });
+
+                                IEnumerable<string> includeCredits = over.StovInclStudentAcadCred;
+                                IEnumerable<string> excludeCredits = over.StovExclStudentAcadCred;
+                                try
+                                {
+                                    stpr.AddOverride(new Override(over.StovAcadReqmtBlock, includeCredits, excludeCredits));
+                                }
+                                catch (Exception ex)
+                                {
+                                    var errorMessage = string.Format("Unable to add override: '{0}', Applicant ID: '{1}'", over.Recordkey, applicantId);
+                                    logger.Error(ex, errorMessage);
+                                }
+                            }
+                        }
+                    }
+
+                    // Exceptions
+
+                    await BuildExceptionsAsync(prog.StprDaExcpts, exceptionData, stpr);
+
+                    var allStudentProgramStatuses = new List<StudentProgramStatus>();
+                    try
+                    {
+                        foreach (var studentProgramStatus in prog.StprStatusesEntityAssociation)
+                        {
+                            allStudentProgramStatuses.Add(new StudentProgramStatus(studentProgramStatus.StprStatusAssocMember, studentProgramStatus.StprStatusDateAssocMember));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorMessage = string.Concat("Unable to add all student statuses. Applicant ID: ", applicantId);
+                        logger.Error(ex, errorMessage);
+                    }
+                    stpr.StudentProgramStatuses = allStudentProgramStatuses;
+
+
+                    programs.Add(stpr);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Format("Could not build program {0} for student {1}", prog.Recordkey.Split('*')[0], prog.Recordkey.Split('*')[1]));
+                    logger.Error(e.GetBaseException().Message);
+                    logger.Error(e.GetBaseException().StackTrace);
+                }
+            }
+            return programs;
+
         }
     }
 }

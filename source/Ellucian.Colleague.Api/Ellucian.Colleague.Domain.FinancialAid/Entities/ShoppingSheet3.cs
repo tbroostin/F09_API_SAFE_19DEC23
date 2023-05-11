@@ -245,9 +245,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                 var cost = (TotalEstimatedCost.HasValue) ? TotalEstimatedCost.Value : 0;
                 var grants = (TotalGrants.HasValue) ? TotalGrants.Value : 0;
                 var scholarships = (TotalScholarships.HasValue) ? TotalScholarships.Value : 0;
+                //Per regulation clarification in 04/2022 Vets awards should reduce net costs
+                var vets = VetBenAmt.HasValue ? VetBenAmt.Value : 0;
                 //Removing as discussion with MXT indicated these should be added directly to TotalScholarships
                 //scholarships += (EmployerPaidTuitionBenefits.HasValue) ? EmployerPaidTuitionBenefits.Value : 0;
-                return cost - grants - scholarships;
+                return cost - grants - scholarships - vets;
             }
         }
 
@@ -269,7 +271,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                 //scholarships += (EmployerPaidTuitionBenefits.HasValue) ? EmployerPaidTuitionBenefits.Value : 0;
                 //scholarships += (SchoolPaidTuitionBenefits.HasValue) ? SchoolPaidTuitionBenefits.Value : 0;
                 //scholarships += (TuitionRemWaiver.HasValue) ? TuitionRemWaiver.Value : 0;
-                return cost - grants - scholarships;
+                //Per regulation clarification in 04/2022 Vets awards should reduce net costs
+                var vets = VetBenAmt.HasValue ? VetBenAmt.Value : 0;
+                return cost - grants - scholarships - vets;
             }
         }
 
@@ -333,6 +337,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// Origination fee for an unsub loan
         /// </summary>
         public Decimal? UnsubOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for a graduate unsub loan
+        /// </summary>
+        public Decimal? GradUnsubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a graduate unsub loan
+        /// </summary>
+        public Decimal? GradUnsubOriginationFee { get; set; }
 
         /// <summary>
         /// Interest rate associated with a private loan
@@ -434,6 +448,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// </summary>
         public int? FafsaEfc { get; set; }
 
+        ///<summary>
+        ///Total Vets benefit amount
+        /// </summary>
+        public int? VetBenAmt { get; set; }
 
 
 

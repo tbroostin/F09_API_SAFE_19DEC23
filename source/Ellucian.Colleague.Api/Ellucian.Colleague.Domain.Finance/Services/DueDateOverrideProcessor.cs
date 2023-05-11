@@ -1,5 +1,6 @@
 ﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Finance.Entities;
+using Ellucian.Data.Colleague;
 using System;
 
 namespace Ellucian.Colleague.Domain.Finance.Services
@@ -10,7 +11,7 @@ namespace Ellucian.Colleague.Domain.Finance.Services
         /// Apply due date overrides to an AccountDue
         /// </summary>
         /// <param name="accountDue">AccountDue</param>
-        public static void OverrideTermDueDates(DueDateOverrides dueDateOverrides, Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDue accountDue)
+        public static void OverrideTermDueDates(DueDateOverrides dueDateOverrides, Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDue accountDue, string colleaguetimezone)
         {
             // If there are no term/non-term due date overrides, then do nothing
             if (dueDateOverrides == null || (dueDateOverrides.TermOverrides == null && dueDateOverrides.NonTermOverride == null))
@@ -39,6 +40,7 @@ namespace Ellucian.Colleague.Domain.Finance.Services
                         {
                             if (dueDateOverrides.NonTermOverride != null && dueItem.AmountDue > 0)
                             {
+                                dueItem.DueDateOffset = dueDateOverrides.NonTermOverride.ToPointInTimeDateTimeOffset(dueDateOverrides.NonTermOverride, colleaguetimezone).GetValueOrDefault();
                                 dueItem.DueDate = dueDateOverrides.NonTermOverride;
                                 //Now check to see if overdue.
                                 dueItem.Overdue = (dueItem.DueDate.Value.Date < DateTime.Today);
@@ -49,6 +51,7 @@ namespace Ellucian.Colleague.Domain.Finance.Services
                             DateTime termOverrideDate;
                             if (dueDateOverrides.TermOverrides.TryGetValue(dueItem.Term, out termOverrideDate) && dueItem.AmountDue > 0)
                             {
+                                dueItem.DueDateOffset = termOverrideDate;
                                 dueItem.DueDate = termOverrideDate;
                                 //Now check to see if overdue.
                                 dueItem.Overdue = (dueItem.DueDate.Value.Date < DateTime.Today);
@@ -113,6 +116,7 @@ namespace Ellucian.Colleague.Domain.Finance.Services
                             if (dueItem.AmountDue > 0)
                             {
                                 dueItem.DueDate = overrideDate;
+                                dueItem.DueDateOffset = overrideDate;
                                 //Now check to see if overdue.
                                 dueItem.Overdue = (dueItem.DueDate.Value.Date < DateTime.Today);
                             }

@@ -367,7 +367,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_GET_ById_ReturnsNullEntity_Exception()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
@@ -584,7 +584,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_StartDateChange_ArgumentException()
             {
                 vendorEntity.AddDate = DateTime.Today.AddDays(-1);
@@ -593,7 +593,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_NotContainActive_ArgumentException()
             {
                 vendorDto.Statuses = new List<VendorsStatuses?>() { VendorsStatuses.Active };
@@ -612,7 +612,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_Exception()
             {
                 vendorRepositoryMock.Setup(i => i.GetVendorsByGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -620,7 +620,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_CurrencyCodes_Null_KeyNotFoundException()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetCurrencyConversionAsync())
@@ -629,7 +629,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_CurrencyCode_NotSet_KeyNotFoundException()
             {
                 vendorDto.DefaultCurrency = CurrencyIsoCode.NotSet;
@@ -637,7 +637,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_Institution_Null_KeyNotFoundException()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>())).ReturnsAsync(() => null);
@@ -645,7 +645,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Null_ArgumentException()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -654,7 +654,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Is_N_ArgumentException()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -663,7 +663,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_Invalid_InstitutionId_ArgumentException()
             {
                 personRepositoryMock.Setup(i => i.GetPersonByGuidNonCachedAsync(It.IsAny<string>()))
@@ -672,7 +672,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_Organization_Null_KeyNotFoundException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -684,7 +684,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_OrganizationId_Invalid_KeyNotFoundException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -696,7 +696,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_PersonCorpIndicator_Y_ArgumentException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -708,7 +708,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorDetail_Person_Null_KeyNotFoundException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -721,7 +721,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorDetail_Person_Not_Null_ArgumentException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -734,7 +734,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorDetail_PersonCorpIndicator_Y_ArgumentException()
             {
                 vendorDto.VendorDetail.Institution = null;
@@ -747,7 +747,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_AccountsPayableSources_Null_KeyNotFoundException()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -755,7 +755,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_AccountsPayableSource_Null_KeyNotFoundException()
             {
                 vendorDto.PaymentSources.First().Id = "";
@@ -763,7 +763,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorTerms_Null_KeyNotFoundException()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTermsAsync(It.IsAny<bool>()))
@@ -772,7 +772,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_PaymentTerm_Null_KeyNotFoundException()
             {
                 vendorDto.PaymentTerms = new List<GuidObject2>() { new GuidObject2("")};
@@ -780,7 +780,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorTypes_Null_KeyNotFoundException()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorTypesAsync(It.IsAny<bool>()))
@@ -789,7 +789,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_Classifications_Null_KeyNotFoundException()
             {
                 vendorDto.Classifications = new List<GuidObject2>() { new GuidObject2("") };
@@ -797,7 +797,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorHoldReasons_Null_KeyNotFoundException()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetVendorHoldReasonsAsync(It.IsAny<bool>()))
@@ -806,7 +806,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_PUT_VendorHoldReason_Null_KeyNotFoundException()
             {
                 vendorDto.VendorHoldReasons = new List<GuidObject2>() { new GuidObject2("") };
@@ -838,7 +838,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_POST_Exception()
             {
                 vendorRepositoryMock.Setup(i => i.CreateVendorsAsync(It.IsAny<Domain.ColleagueFinance.Entities.Vendors>()))
@@ -1586,7 +1586,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Vendors_GET_ById_ReturnsNullEntity_Exception2()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
@@ -2977,7 +2977,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException( typeof( Exception ) )]
+        [ExpectedException( typeof(ColleagueWebApiException) )]
         public async Task GetVendorsMaximumByGuidAsync_RepositoryException()
         {
             vendorContactsRepositoryMock.Setup( repo => repo.GetVendorContactsForVendorsAsync( It.IsAny<string[]>() ) ).ThrowsAsync( new RepositoryException() );
@@ -3241,7 +3241,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             phoneTypes = new List<Domain.Base.Entities.PhoneType>()
             {
-                new Domain.Base.Entities.PhoneType("gb8f690b-071f-4d98-8da8-d4312511a4c4", "Home", "Home", PhoneTypeCategory.Home)
+                new Domain.Base.Entities.PhoneType("gb8f690b-071f-4d98-8da8-d4312511a4c4", "Home", "Home", PhoneTypeCategory.Home, false)
             };
             refDataRepositoryMock.Setup( repo => repo.GetPhoneTypesAsync( It.IsAny<bool>() ) ).ReturnsAsync( phoneTypes );
         }

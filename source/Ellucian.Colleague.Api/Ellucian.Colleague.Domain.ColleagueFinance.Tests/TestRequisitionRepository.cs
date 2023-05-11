@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 {
@@ -225,7 +226,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         status = RequisitionStatus.PoCreated;
                         break;
                     default:
-                        throw new Exception("Invalid status specified in TestRequisitionRepository.");
+                        throw new ColleagueWebApiException("Invalid status specified in TestRequisitionRepository.");
                 }
 
                 apType = requisitionsArray[i, 4];
@@ -494,7 +495,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         status = RequisitionStatus.PoCreated;
                         break;
                     default:
-                        throw new Exception("Invalid status specified in TestRequisitionRepository.");
+                        throw new ColleagueWebApiException("Invalid status specified in TestRequisitionRepository.");
                 }
 
                 requisitionAmount = !string.IsNullOrEmpty(requisitionsArray[i, 5]) ? Convert.ToDecimal(Convert.ToDecimal(requisitionsArray[i, 5])) : 0;

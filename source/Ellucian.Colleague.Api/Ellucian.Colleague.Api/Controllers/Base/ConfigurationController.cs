@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -11,10 +11,15 @@ using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Linq;
 using System.Collections.Generic;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Api.Utility;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -30,7 +35,8 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly IConfigurationService configurationService;
         private readonly IProxyService proxyService;
         private readonly ILogger logger;
-
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
         /// <summary>
         /// Initializes a new instance of the ConfigurationController class.
         /// </summary>
@@ -82,10 +88,15 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await proxyService.GetProxyConfigurationAsync();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
                 logger.Info(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -117,10 +128,15 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await configurationService.GetUserProfileConfiguration2Async();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error("Error occurred while retrieving User Profile Configuration: " + ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -186,9 +202,15 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await configurationService.GetPrivacyConfigurationAsync();
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving privacy configuration";
+                logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
-                logger.Error("Error occurred while retrieving Privacy Configuration: ", ex.Message);
+                logger.Error("Error occurred while retrieving privacy configuration: ", ex.Message);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -388,7 +410,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (UnauthorizedAccessException uae)
             {
                 logger.Error("Error occurred touching web.config to force a recycle ", uae.Message);
-                throw new Exception("The settings were saved, but restarting the application failed. Either manually recycle the application pool, or verify that the web.config file " +
+                throw new ColleagueWebApiException("The settings were saved, but restarting the application failed. Either manually recycle the application pool, or verify that the web.config file " +
                         " is not read only and that the application pool has write permissions.", uae);
             }
         }
@@ -451,6 +473,79 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Calls configuration service and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAuditLogConfiguration, BasePermissionCodes.UpdateAuditLogConfiguration })]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<IEnumerable<Dtos.AuditLogConfiguration>> GetAuditLogConfigurationAsync()
+        {
+            var bypassCache = false;
+            if (Request != null && Request.Headers != null && Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                configurationService.ValidatePermissions(GetPermissionsMetaData());
+                return await configurationService.GetAuditLogConfigurationAsync(bypassCache);
+            }
+            catch (PermissionsException ex)
+            {
+                logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error occurred while retrieving Audit Log Configuration.");
+                throw CreateHttpResponseException("Could not retrieve Audit Log Configuration", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Calls configuration repository and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, HttpPost, PermissionsFilter(new string[] { BasePermissionCodes.UpdateAuditLogConfiguration })]
+        public async Task<Dtos.AuditLogConfiguration> UpdateAuditLogConfigurationAsync([FromBody] Dtos.AuditLogConfiguration auditLogConfiguration)
+        {
+            if (auditLogConfiguration == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("auditLogConfiguration",
+                    IntegrationApiUtility.GetDefaultApiError("Request body must contain a valid Audit Log Configuration.")));
+            }
+            try
+            {
+                configurationService.ValidatePermissions(GetPermissionsMetaData());
+                return await configurationService.UpdateAuditLogConfigurationAsync(auditLogConfiguration);
+            }
+            catch (PermissionsException ex)
+            {
+                logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error occurred while updating Audit Log Configuration.");
+                throw CreateHttpResponseException("Could not update Audit Log Configuration", HttpStatusCode.BadRequest);
+            }
+        }
+
 
         ///////////////////////////////////////////////////////////////////////////////////
         ///                                                                             ///
@@ -467,9 +562,21 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>Tax Form Configuration for the type of tax form.</returns>
         public async Task<TaxFormConfiguration2> GetTaxFormConfiguration2Async(string taxFormId)
         {
-            var taxFormConfiguration = await this.configurationService.GetTaxFormConsentConfiguration2Async(taxFormId);
-
-            return taxFormConfiguration;
+            try
+            {
+                var taxFormConfiguration = await this.configurationService.GetTaxFormConsentConfiguration2Async(taxFormId);
+                return taxFormConfiguration;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
+            }
         }
 
         #region OBSOLETE METHODS

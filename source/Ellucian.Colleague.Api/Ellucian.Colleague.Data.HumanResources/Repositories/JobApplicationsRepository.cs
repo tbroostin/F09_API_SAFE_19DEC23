@@ -22,7 +22,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class JobApplicationsRepository : BaseColleagueRepository, IJobApplicationsRepository
     {
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
         const string AllJobApplicationsRecordsCache = "AllJobApplicationsRecordKeys";
         const int AllJobApplicationsRecordsCacheTimeout = 20;

@@ -11,6 +11,8 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Data.FinancialAid.Transactions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -62,6 +64,11 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                     shoppingSheetRuleTable.AddRuleResultPair(ruleResult.RtRuleIdsAssocMember, ruleResult.RtResultsAssocMember));
                             }
 
+                            if (!string.IsNullOrEmpty(ruleTableRecord.RtSubName) && (ruleTableRecord.RtRuleTableEntityAssociation.Count() == 0))
+                            {
+                                shoppingSheetRuleTable.RtSubrName = ruleTableRecord.RtSubName;
+                            }
+
                             shoppingSheetRuleTables.Add(shoppingSheetRuleTable);
                         }
                         catch (Exception e)
@@ -73,6 +80,41 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
             }
             return shoppingSheetRuleTables;
+        }
+
+        /// <summary>
+        /// Executes a custom subroutine for a student/year to return custom verbiage to display in a section of the CFP
+        /// 
+        /// Populates the RtCustomVerbiage property in ruleTable with the response
+        /// </summary>
+        /// <param name="ruleTable">Use the AwardYear and RtSubrName to pass to the CTX to evaluate the student/year for the specified subr</param>
+        /// <param name="studentId"></param>
+        /// <returns></returns>
+        public async Task GetCustomVerbiageAsync(ShoppingSheetRuleTable ruleTable, string studentId)
+        {
+            var request = new GetCustomSubrVerbiageRequest();
+            request.StudentId = studentId;
+            request.Year = ruleTable.AwardYear;
+            request.SubroutineName = ruleTable.RtSubrName;
+
+            logger.Info(string.Format("Executing GET.CUSTOM.SUBR.VERBIAGE transaction to evaluate custom verbiage subroutine {0}", ruleTable.RtSubrName));
+            try
+            {
+                var response = await transactionInvoker.ExecuteAsync<GetCustomSubrVerbiageRequest, GetCustomSubrVerbiageResponse>(request);
+
+                if (string.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    ruleTable.RtCustomVerbiage = response.CustomVerbiage;
+                }
+                else
+                {
+                    logger.Error(string.Format("Error(s) returned from GET.CUSTOM.SUBR.VERBIAGE: {0}", response.ErrorMessage));
+                }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
     }
 }

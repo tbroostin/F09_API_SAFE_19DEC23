@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -153,6 +153,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 voucherDto.Approvers.Add(approverDto);
             }
 
+            voucherDto.RequestorName = Source.RequestorName;
+            voucherDto.ApprovalReturnedIndicator = Source.ApprovalReturnedIndicator;
             return voucherDto;
         }
 

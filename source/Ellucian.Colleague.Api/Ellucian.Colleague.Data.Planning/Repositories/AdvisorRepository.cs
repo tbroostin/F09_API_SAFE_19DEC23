@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -8,9 +8,11 @@ using Ellucian.Colleague.Domain.Planning.Entities;
 using Ellucian.Colleague.Domain.Planning.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -53,6 +55,11 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                 // Since this is a single get, throw an exception of not returned.
                 return (await GetAdvisorsAsync(new List<string>() { id }, adviseeInclusionType)).First();
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception)
             {
                 throw new KeyNotFoundException("Cannot find an advisor with the id " + id);
@@ -177,6 +184,11 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                 // Build list of advisors using collected data
                 advisors = await BuildAdvisorsAsync(advisorIds, personData, facultyData, studentAdvisementData, staffData, adviseeInclusionType);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error("Error occurred while trying to retrieve data to build advisors: " + ex.Message);
@@ -246,6 +258,10 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                             try
                             {
                                 hierarchy = await GetCachedNameAddressHierarchyAsync(advisorAddressHierarchy);
+                            }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
                             }
                             catch (Exception ex)
                             {
@@ -346,12 +362,22 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                             logger.Error("Given advisor Id " + advisorId + " is neither faculty nor staff. Returning no data for this Id.");
                         }
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+
                     catch (Exception ex)
                     {
                         logger.Error("Error occurred while trying to build advisor entity for ID " + advisorId + ex.Message);
                     }
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error("Error occurred in BuildAdvisor. " + ex.Message);
@@ -377,7 +403,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                             if (staffTypesValTable == null)
                             {
                                 logger.Error("STAFF.TYPES validation table data is null.");
-                                throw new Exception();
+                                throw new ColleagueWebApiException();
                             }
                             return staffTypesValTable;
                         }, Level1CacheTimeoutValue);
@@ -434,7 +460,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                             if (staffStatusesValTable == null)
                             {
                                 logger.Error("STAFF.STATUSES validation table data is null.");
-                                throw new Exception();
+                                throw new ColleagueWebApiException();
                             }
                             return staffStatusesValTable;
                         }, Level1CacheTimeoutValue);

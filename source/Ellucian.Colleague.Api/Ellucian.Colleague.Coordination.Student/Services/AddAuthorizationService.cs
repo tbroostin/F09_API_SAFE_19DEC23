@@ -1,9 +1,11 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -20,6 +22,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly ISectionRepository _sectionRepository;
         private readonly IAddAuthorizationRepository _addAuthorizationRepository;
+        private readonly IReferenceDataRepository _referenceDataRepository;
 
         /// <summary>
         /// Constructor for AddAuthorizationService
@@ -27,18 +30,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="addAuthorizationRepository"></param>
         /// <param name="sectionRepository"></param>
         /// <param name="studentRepository"></param>
+        /// <param name="referenceDataRepository"></param>
         /// <param name="adapterRegistry"></param>
         /// <param name="currentUserFactory"></param>
         /// <param name="configurationRepository"></param>
         /// <param name="roleRepository"></param>
         /// <param name="logger"></param>
         public AddAuthorizationService(IAddAuthorizationRepository addAuthorizationRepository, ISectionRepository sectionRepository, 
-            IStudentRepository studentRepository, IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, 
+            IStudentRepository studentRepository, IReferenceDataRepository referenceDataRepository, IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, 
             ICurrentUserFactory currentUserFactory,  IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _addAuthorizationRepository = addAuthorizationRepository;
             _sectionRepository = sectionRepository;
+            _referenceDataRepository = referenceDataRepository; 
         }
 
         /// <summary>
@@ -95,6 +100,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 Dtos.Student.AddAuthorization updatedAddAuthorizationDto = addAuthorizationDtoAdapter.MapToType(updatedAddAuthorization);
                 return updatedAddAuthorizationDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (KeyNotFoundException kex)
             {
                 var message = "Record not found for add authorization with ID " + addAuthorization.Id;
@@ -120,8 +129,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("Add Authorization must have a section Id.");
             }
-
-            await CheckFacultyAuthorizationsPermissions(sectionId);
+            
+            await CheckAuthorizationsPermissions(sectionId);
 
             try
             {
@@ -138,6 +147,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
                 return sectionAddAuthorizationDtos;  
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -167,8 +180,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentException("Add Authorization Input must have a student Id to create new authorization.");
             }
 
-            // Check Permissions to be sure user is faculty on the section.
-            await CheckFacultyAuthorizationsPermissions(addAuthorizationInput.SectionId);
+            // Check Permissions to be sure user is faculty or departmental oversight on the section.
+            await CheckFacultyorDepartmentalOversightAuthorizationsPermissions(addAuthorizationInput.SectionId);
 
 
             // Convert Dto to Entity
@@ -181,6 +194,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var addAuthorizationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AddAuthorization, Dtos.Student.AddAuthorization>();
                 Dtos.Student.AddAuthorization updatedAddAuthorizationDto = addAuthorizationDtoAdapter.MapToType(newAddAuthorization);
                 return updatedAddAuthorizationDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (KeyNotFoundException kex)
             {
@@ -230,12 +247,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // 2) There is no student ID or it is not the student BUT they are the faculty member of the section on the authorization.
             if (string.IsNullOrEmpty(addAuthorization.StudentId) || !UserIsSelf(addAuthorization.StudentId))
             {
-                // If person doing the update is not the student on the authorization, then only allow update if it is the faculty of the section on the authorization.
-                await CheckFacultyAuthorizationsPermissions(addAuthorization.SectionId);
+                // If person doing the update is not the student on the authorization, then only allow update if it is the faculty of the section otherwise check if the person is departmental oversight of the section on the authorization.
+                await CheckFacultyorDepartmentalOversightAuthorizationsPermissions(addAuthorization.SectionId);
             }
         }
 
-        private async Task CheckFacultyAuthorizationsPermissions(string sectionId)
+        private async Task CheckFacultyorDepartmentalOversightAuthorizationsPermissions(string sectionId)
         {
 
             List<string> ids = new List<string>() { sectionId };
@@ -244,11 +261,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (sections != null && sections.Any())
             {
                 section = sections.ElementAt(0);
-                if (!UserIsSectionFaculty(section))
+                var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+                if (!UserIsSectionFacultyorDepartmentalOversight(section, allDepartments))
                 {
                     throw new PermissionsException("You are not authorized to update this add authorization.");
                 }
 
+            }
+            else
+            {
+                throw new ArgumentException("Section Id " + sectionId + " does not exist.");
+            }
+        }
+
+        private async Task CheckAuthorizationsPermissions(string sectionId)
+        {
+
+            List<string> ids = new List<string>() { sectionId };
+            IEnumerable<Domain.Student.Entities.Section> sections = await _sectionRepository.GetCachedSectionsAsync(ids);
+            Domain.Student.Entities.Section section = null;
+            if (sections != null && sections.Any())
+            {
+                section = sections.ElementAt(0);
+                var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+                var userPermissions = await GetUserPermissionCodesAsync();
+
+                if (section == null)
+                {
+                    throw new ArgumentNullException("Must provide a section to check faculty or departmental oversight permission.");
+                }
+                if ((section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId)) && 
+                    !(CheckDepartmentalOversightAccessForSection(section, allDepartments) && 
+                    (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionWaitlists)|| userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionAddAuthorization) || 
+                      userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionAddAuthorizations))))
+                {
+                    throw new PermissionsException(string.Format("Authenticated user is neither a faculty nor a departmental oversight for course section {0}.", section.Id));
+                }
             }
             else
             {
@@ -356,6 +404,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return sectionAddAuthorizationDtos;
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to retrieve add authorizations for student " + studentId;

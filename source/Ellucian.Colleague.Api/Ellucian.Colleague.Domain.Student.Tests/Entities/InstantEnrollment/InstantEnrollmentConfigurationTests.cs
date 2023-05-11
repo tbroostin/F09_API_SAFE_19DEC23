@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         private string registrationUserRole;
         private CatalogFilterType types;
         private bool showInstantEnrollmentBookstoreLink;
+        private bool allowNonCitizenRegistration;
 
         [TestInitialize]
         public void InstantEnrollmentConfigurationTests_Initialize()
@@ -37,6 +38,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
             registrationUserRole = "CEUSER";
             types = new CatalogFilterType();
             showInstantEnrollmentBookstoreLink = false;
+            allowNonCitizenRegistration = true;
             demographicFields = new List<DemographicField>()
             {
                 null, // Nulls should be handled gracefully
@@ -46,13 +48,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
             };
         }
 
-
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InstantEnrollmentConfigurationTests_null_PaymentDistributionCode()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, null, citizenshipHomeCountryCode,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -60,7 +61,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_empty_PaymentDistributionCode()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, string.Empty, citizenshipHomeCountryCode,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -68,7 +69,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_null_CitizenshipHomeCountryCode()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, paymentDistributionCode, null, webPaymentsImplemented,
-                registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -76,14 +77,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_empty_CitizenshipHomeCountryCode()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, paymentDistributionCode, string.Empty,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
         public void InstantEnrollmentConfigurationTests_null_RegistrationUserRole_DoesNotThrow()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, paymentDistributionCode, citizenshipHomeCountryCode,
-                webPaymentsImplemented, null, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, null, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
             Assert.AreEqual(null, entity.RegistrationUserRole);
         }
 
@@ -91,8 +92,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_empty_RegistrationUserRole_DoesNotThrow()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, paymentDistributionCode, citizenshipHomeCountryCode,
-                webPaymentsImplemented, string.Empty, null, showInstantEnrollmentBookstoreLink, demographicFields);
-            Assert.AreEqual(string.Empty, entity.RegistrationUserRole); 
+                webPaymentsImplemented, string.Empty, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+            Assert.AreEqual(string.Empty, entity.RegistrationUserRole);
         }
 
         [TestMethod]
@@ -100,7 +101,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_null_AcademicProgramOptions()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, null, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented,
-                registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -108,7 +109,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_empty_AcademicProgramOptions()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, new List<AcademicProgramOption>(), paymentDistributionCode, citizenshipHomeCountryCode,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -116,14 +117,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_AcademicProgramOptions_only_contains_nulls()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, new List<AcademicProgramOption>() { null, null }, paymentDistributionCode, citizenshipHomeCountryCode,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
         }
 
         [TestMethod]
         public void InstantEnrollmentConfigurationTests_AcademicProgramOptions_valid()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions, paymentDistributionCode, citizenshipHomeCountryCode,
-                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+                webPaymentsImplemented, registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
             Assert.AreEqual(behavior, entity.StudentProgramAssignmentBehavior);
             Assert.AreEqual(2, entity.AcademicProgramOptions.Count); // Null should be stripped out
             Assert.AreEqual(paymentDistributionCode, entity.PaymentDistributionCode);
@@ -133,6 +134,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
             Assert.AreEqual(showInstantEnrollmentBookstoreLink, entity.ShowInstantEnrollmentBookstoreLink);
             Assert.AreEqual(3, entity.DemographicFields.Count);
+            Assert.AreEqual(allowNonCitizenRegistration, entity.AllowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -144,8 +146,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 new AcademicProgramOption("CE.DFLT", "2014X"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2018")
-            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, 
-            registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields);
+            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented,
+            registrationUserRole, null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
 
             Assert.AreEqual(behavior, entity.StudentProgramAssignmentBehavior);
             Assert.AreEqual(2, entity.AcademicProgramOptions.Count); // Duplicates and nulls should be stripped out
@@ -156,6 +158,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
             Assert.AreEqual(showInstantEnrollmentBookstoreLink, entity.ShowInstantEnrollmentBookstoreLink);
             Assert.AreEqual(3, entity.DemographicFields.Count);
+            Assert.AreEqual(allowNonCitizenRegistration, entity.AllowNonCitizenRegistration);
         }
 
         [TestMethod]
@@ -167,8 +170,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 new AcademicProgramOption("CE.DFLT", "2014X"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2018")
-            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole, 
-            null, showInstantEnrollmentBookstoreLink, demographicFields);
+            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole,
+            null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
             entity.AddSubjectCodeToDisplayInCatalog(null);
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
@@ -183,8 +187,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 new AcademicProgramOption("CE.DFLT", "2014X"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2018")
-            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole, 
-            null, showInstantEnrollmentBookstoreLink, demographicFields);
+            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole,
+            null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
             entity.AddSubjectCodeToDisplayInCatalog(string.Empty);
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
@@ -199,8 +204,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 new AcademicProgramOption("CE.DFLT", "2014X"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
                 new AcademicProgramOption("CE.SYSTEMASSIGNED", "2018")
-            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole, 
-            null, showInstantEnrollmentBookstoreLink, demographicFields);
+            }, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole,
+            null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+
             Assert.AreEqual(0, entity.SubjectCodesToDisplayInCatalog.Count);
             entity.AddSubjectCodeToDisplayInCatalog("CNED");
             Assert.AreEqual(1, entity.SubjectCodesToDisplayInCatalog.Count);
@@ -214,8 +220,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_CatalogSearchElements_elements_added()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions,
-            paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole, 
-            null, showInstantEnrollmentBookstoreLink, demographicFields);
+            paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole,
+            null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+
             entity.AddCatalogFilterOption(CatalogFilterType.CourseTypes, true);
 
             Assert.IsNotNull(entity.CatalogFilterOptions);
@@ -228,9 +235,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
         public void InstantEnrollmentConfigurationTests_CatalogSearchElements_no_duplicates()
         {
             var entity = new InstantEnrollmentConfiguration(behavior, academicProgramOptions,
-            paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole, 
-            null, showInstantEnrollmentBookstoreLink, demographicFields);
+            paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented, registrationUserRole,
+            null, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
+
             entity.AddCatalogFilterOption(CatalogFilterType.CourseTypes, true);
+
             // try to add a duplicate
             entity.AddCatalogFilterOption(CatalogFilterType.CourseTypes, true);
 

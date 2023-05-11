@@ -329,6 +329,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
             }
         }
 
+        public bool IsDecreaseOnly
+        {
+            get { return ((StudentAwardYear.CurrentConfiguration != null) && (StudentAwardYear.CurrentConfiguration.AllowLoanDecreaseOnly)); }
+        }
+ 
 
         /// <summary>
         /// The constructor for StudentAwardPeriod assigns this period to a StudentAward object, identifies the period with 

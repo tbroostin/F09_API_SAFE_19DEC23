@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -191,6 +192,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                     countryEntities.Add(new Country(c.RecordGuid, c.Recordkey, desc, c.CtryIsoCode,
                         c.CtryIsoAlpha3Code, c.CtryNotInUseFlag.ToUpper() == "Y"));
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee, "Colleague session expired while extracting country");
+                    throw;
                 }
                 catch (Exception ex)
                 {

@@ -69,14 +69,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentAwardYearEntities = await GetStudentAwardYearEntitiesAsync(studentId, getActiveYearsOnly);
             if (studentAwardYearEntities == null || studentAwardYearEntities.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no award years for which to get budget components", studentId));
+                logger.Debug(string.Format("Student {0} has no award years for which to get budget components", studentId));
                 return new List<StudentBudgetComponent>();
             }
 
             var studentBudgetComponentEntities = await studentBudgetComponentRepository.GetStudentBudgetComponentsAsync(studentId, studentAwardYearEntities);
             if (studentBudgetComponentEntities == null || !studentBudgetComponentEntities.Any())
             {
-                logger.Info(string.Format("Student {0} has no budget components for any award years", studentId));
+                logger.Debug(string.Format("Student {0} has no budget components for any award years", studentId));
                 return new List<StudentBudgetComponent>();
             }
 
@@ -120,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             if (studentBudgetComponentEntities == null || !studentBudgetComponentEntities.Any())
             {
-                logger.Info(string.Format("Student {0} has no budget components for {1} year", studentId, awardYear));
+                logger.Debug(string.Format("Student {0} has no budget components for {1} year", studentId, awardYear));
                 return new List<StudentBudgetComponent>();
             }
 

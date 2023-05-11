@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 
@@ -81,7 +82,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     }
                     catch (Exception e)
                     {
-                        logger.Info(e, e.Message);
+                        logger.Debug(e, e.Message);
                     }
                 }
             }
@@ -116,7 +117,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             }
                             catch (Exception e)
                             {
-                                logger.Info(e, e.Message);
+                                logger.Debug(e, e.Message);
                             }
                         }
                     }
@@ -171,6 +172,17 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         break;
                 }
 
+                //If the code is currently under review after adding attachments, set this flag so that the FA Req'd Docs page knows to display a status date
+                switch (statusCodeObject.ValActionCode2AssocMember)
+                {
+                    case "2":
+                        studentDocument.UnderReviewFlag = true;
+                        break;
+                    default:
+                        studentDocument.UnderReviewFlag = false;
+                        break;
+                }
+
                 studentDocument.StatusDescription = statusCodeObject.ValExternalRepresentationAssocMember;
             }
             
@@ -191,7 +203,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     {
                         var message = "Unable to get CORE->CORR.STATUSES valcode table";
                         logger.Error(message);
-                        throw new Exception(message);
+                        throw new ColleagueWebApiException(message);
                     }
                     return statusTable;
                 }, Level1CacheTimeoutValue);

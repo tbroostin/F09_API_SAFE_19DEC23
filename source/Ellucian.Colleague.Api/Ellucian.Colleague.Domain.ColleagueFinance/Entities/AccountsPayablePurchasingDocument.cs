@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -65,6 +65,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Document AP type.
         /// </summary>
         public string ApType { get; set; }
+
+        /// <summary>
+        /// Flag to indicate if document has attachment/s associated
+        /// </summary>
+        public bool AttachmentsIndicator { get; set; }
+
+        /// <summary>
+        /// Flag to indicate if document has returned from approval
+        /// </summary>
+        public bool ApprovalReturnedIndicator { get; set; }
 
         /// <summary>
         /// This is the private list of line items associated with the document.

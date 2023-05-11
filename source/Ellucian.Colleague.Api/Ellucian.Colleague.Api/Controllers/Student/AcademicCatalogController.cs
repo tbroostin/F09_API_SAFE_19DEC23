@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -21,6 +21,7 @@ using Ellucian.Web.Http.Filters;
 using System.Linq;
 using Ellucian.Colleague.Domain.Exceptions;
 using System.Net;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -177,6 +178,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 IEnumerable<Catalog> cats = await _academicCatalogService.GetAllAcademicCatalogsAsync(bypassCache);
                 return cats;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving active programs";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

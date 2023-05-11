@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Coordination.Base.Services;
 using System;
 using System.Collections.Generic;
@@ -53,10 +53,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             var employeeBenefitsEnrollmentEligibilityEntity = await benefitsEnrollmentRepository.GetEmployeeBenefitsEnrollmentEligibilityAsync(employeeId);
-
+            logger.Debug(string.Format("******employeeBenefitsEnrollmentEligibilityEntity obtained for {0}********", employeeId));
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeBenefitsEnrollmentEligibility, Dtos.HumanResources.EmployeeBenefitsEnrollmentEligibility>();
             var employeeBenefitsEnrollmentEligibilitydto = entityToDtoAdapter.MapToType(employeeBenefitsEnrollmentEligibilityEntity);
-
+            logger.Debug("********employeeBenefitsEnrollmentEligibilitydto obtained successfully********");
             return employeeBenefitsEnrollmentEligibilitydto;
         }
 
@@ -75,8 +75,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var employeeBenefitsEnrollmentPooldtos = new List<EmployeeBenefitsEnrollmentPoolItem>();
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeBenefitsEnrollmentPoolItem, Dtos.HumanResources.EmployeeBenefitsEnrollmentPoolItem>();
             var employeeBenefitsEnrollmentPoolEntities = await benefitsEnrollmentRepository.GetEmployeeBenefitsEnrollmentPoolAsync(employeeId);
-
-            if (employeeBenefitsEnrollmentPoolEntities.Any())
+            logger.Debug(string.Format("*******employeeBenefitsEnrollmentPoolEntities obtained for {0}******", employeeId));
+            if (employeeBenefitsEnrollmentPoolEntities!= null && employeeBenefitsEnrollmentPoolEntities.Any())
             {
                 var sortedEmployeeBenefitsEnrollmentPoolEntities = SortEnrollmentPoolEntities(employeeBenefitsEnrollmentPoolEntities);
                 foreach (var employeeBenefitsEnrollmentPoolEntity in sortedEmployeeBenefitsEnrollmentPoolEntities)
@@ -84,7 +84,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     employeeBenefitsEnrollmentPooldtos.Add(entityToDtoAdapter.MapToType(employeeBenefitsEnrollmentPoolEntity));
                 }
             }
-
+            logger.Debug("employeeBenefitsEnrollmentPooldtos obtained successfully");
             return employeeBenefitsEnrollmentPooldtos;
         }
 
@@ -99,7 +99,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (employeeBenefitsEnrollmentPoolEntities != null && employeeBenefitsEnrollmentPoolEntities.Any())
             {
                 var organizations = employeeBenefitsEnrollmentPoolEntities.Where(e => !string.IsNullOrEmpty(e.OrganizationId) || !string.IsNullOrEmpty(e.OrganizationName));
+                logger.Debug("******Organizations obtained********");
                 var nonOrganizations = employeeBenefitsEnrollmentPoolEntities.Except(organizations);
+                logger.Debug("******Non Organizations obtained******");
+                logger.Debug("*******Putting all organizations after all non-organizations*********");
                 sortedEntities.AddRange(nonOrganizations.ToList());
                 sortedEntities.AddRange(organizations.ToList());
             }
@@ -125,7 +128,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeBenefitsEnrollmentPackage, Dtos.HumanResources.EmployeeBenefitsEnrollmentPackage>();
             var enrollmentPackageEntity = await benefitsEnrollmentRepository.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
+            logger.Debug(string.Format("*******enrollmentPackageEntity obtained for {0}********", employeeId));
             var enrollmentPackageDto = entityToDtoAdapter.MapToType(enrollmentPackageEntity);
+            logger.Debug("enrollmentPackageDto obtained successfully");
             return enrollmentPackageDto;
         }
 
@@ -155,7 +160,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Get adapter to convert the dto to domain entity...
             var dtoToEntityAdapter = _adapterRegistry.GetAdapter<EmployeeBenefitsEnrollmentPoolItem, DomainEntities.EmployeeBenefitsEnrollmentPoolItem>();
             var entityBenefitsEnrollmentPool = dtoToEntityAdapter.MapToType(employeeBenefitsEnrollmentPoolItem);
-
+            logger.Debug("benefitsEnrollmentPoolEntity obtained");
             var addedEmployeeBenefitsEnrollmentPoolItem = await benefitsEnrollmentRepository.AddEmployeeBenefitsEnrollmentPoolAsync(employeeId, entityBenefitsEnrollmentPool);
 
             if (addedEmployeeBenefitsEnrollmentPoolItem == null)
@@ -164,7 +169,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug(string.Format("Added benefits enrollment pool information to {0}", employeeId));
             // Convert the domain entity to DTO and return the newly created newBenefitsPool.
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<DomainEntities.EmployeeBenefitsEnrollmentPoolItem, EmployeeBenefitsEnrollmentPoolItem>();
 
@@ -208,10 +213,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new KeyNotFoundException(message);
             }
 
+            logger.Debug(string.Format("Existing dependent found in the DB. Updating the benefits enrollment pool {0}", employeeBenefitsEnrollmentPoolItem.Id));
             // Get adapter to convert the dto to domain entity...
             var dtoToEntityAdapter = _adapterRegistry.GetAdapter<EmployeeBenefitsEnrollmentPoolItem, DomainEntities.EmployeeBenefitsEnrollmentPoolItem>();
             var entityBenefitsEnrollmentPool = dtoToEntityAdapter.MapToType(employeeBenefitsEnrollmentPoolItem);
-
+            logger.Debug("benefitsEnrollmentPoolEntity obtained");
             var updatedEmployeeBenefitsEnrollmentPoolItem = await benefitsEnrollmentRepository.UpdateEmployeeBenefitsEnrollmentPoolAsync(employeeId, entityBenefitsEnrollmentPool);
 
             if (updatedEmployeeBenefitsEnrollmentPoolItem == null)
@@ -220,7 +226,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug(string.Format("Updated the benefits enrollment pool information for {0}", employeeId));
             // Convert the domain entity to DTO and return the newly created newBenefitsPool.
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<DomainEntities.EmployeeBenefitsEnrollmentPoolItem, EmployeeBenefitsEnrollmentPoolItem>();
 
@@ -246,11 +252,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var benefitEntities = await benefitsEnrollmentRepository.QueryEnrollmentPeriodBenefitsAsync(criteria.BenefitTypeId,
                 criteria.EnrollmentPeriodId, criteria.PackageId, criteria.EnrollmentPeriodBenefitIds);
+            logger.Debug("benefitEntities obtained");
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<DomainEntities.EnrollmentPeriodBenefit, EnrollmentPeriodBenefit>();
             foreach (var entity in benefitEntities)
             {
                 benefitDtos.Add(entityToDtoAdapter.MapToType(entity));
             }
+            logger.Debug("benefitDtos obtained successfully");
             return benefitDtos;
         }
 
@@ -278,6 +286,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             EmployeeBenefitsEnrollmentInfo employeeBenefitsEnrollmentInfoDto = new EmployeeBenefitsEnrollmentInfo();
             var employeeBenefitsEnrollmentInfoEntity = await benefitsEnrollmentRepository.QueryEmployeeBenefitsEnrollmentInfoAsync(criteria.EmployeeId, criteria.EnrollmentPeriodId, criteria.BenefitTypeId);
+            logger.Debug("employeeBenefitsEnrollmentInfoEntity obtained");
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<DomainEntities.EmployeeBenefitsEnrollmentInfo, EmployeeBenefitsEnrollmentInfo>();
             return entityToDtoAdapter.MapToType(employeeBenefitsEnrollmentInfoEntity);
         }
@@ -303,6 +312,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var dtoToEntityAdapter = _adapterRegistry.GetAdapter<EmployeeBenefitsEnrollmentInfo, DomainEntities.EmployeeBenefitsEnrollmentInfo>();
             var employeeBenefitEnrollmentInfoEntity = dtoToEntityAdapter.MapToType(employeeBenefitEnrollmentInfoDto);
+            logger.Debug("employeeBenefitEnrollmentInfoEntity obtained");
             var updatedEmployeeBenefitEnrollmentInfoEntity = await benefitsEnrollmentRepository.UpdateEmployeeBenefitsEnrollmentInfoAsync(employeeBenefitEnrollmentInfoEntity);
 
             if (updatedEmployeeBenefitEnrollmentInfoEntity == null)
@@ -311,7 +321,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug("Employee benefits enrollment information updated successfully. updatedEmployeeBenefitEnrollmentInfoEntity obtained");
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<DomainEntities.EmployeeBenefitsEnrollmentInfo, EmployeeBenefitsEnrollmentInfo>();
 
             return entityToDtoAdapter.MapToType(updatedEmployeeBenefitEnrollmentInfoEntity);
@@ -351,10 +361,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (criteria.SubmitBenefitElections)
             {
                 benefitEnrollmentCompletionInfoEntity = await benefitsEnrollmentRepository.SubmitBenefitElectionAsync(criteria.EmployeeId, criteria.EnrollmentPeriodId, criteria.BenefitsPackageId);
+                logger.Debug("Benefits elected submitted successfully. benefitEnrollmentCompletionInfoEntity obtained");
             }
             else
             {
                 benefitEnrollmentCompletionInfoEntity = await benefitsEnrollmentRepository.ReOpenBenefitElectionsAsync(criteria.EmployeeId, criteria.EnrollmentPeriodId);
+                logger.Debug("Benefits elected reopened successfully. benefitEnrollmentCompletionInfoEntity obtained");
             }
 
             var benefitEnrollmentCompletionInfoEntityToAdapter = _adapterRegistry.GetAdapter<DomainEntities.BenefitEnrollmentCompletionInfo, BenefitEnrollmentCompletionInfo>();
@@ -369,11 +381,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             List<BeneficiaryCategory> beneficiaryCategoryDtos = new List<BeneficiaryCategory>();
             var beneficiaryCategoryEntities = await humanResourceRepository.GetBeneficiaryCategoriesAsync();
+            logger.Debug("beneficiaryCategoryEntities obtained");
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.BeneficiaryCategory, BeneficiaryCategory>();
             foreach (var entity in beneficiaryCategoryEntities)
             {
                 beneficiaryCategoryDtos.Add(entityToDtoAdapter.MapToType(entity));
             }
+            logger.Debug("beneficiaryCategoryDtos obtained successfully");
             return beneficiaryCategoryDtos;
         }
 
@@ -417,12 +431,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (eligibilityInfo == null)
             {
                 string errorMessage = string.Format("Employee Benefits Enrollment Eligibility data is null for employee {0}.", employeeId);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new ApplicationException(errorMessage);
             }
-
+            logger.Debug(string.Format("Employee Benefits Enrollment Eligibility data obtained for employee {0}.", employeeId));
             var benefits = await GetBenefitsAcknowledgementInformationAsync(employeeId);
-
+            logger.Debug(string.Format("Benefits enrollment acknowledgement information obtained successfully for {0}", employeeId));
             LocalReport report = new LocalReport();
 
             try
@@ -433,7 +447,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var utility = new ReportUtility();
 
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { resourceFilePath });
-
+                logger.Debug("Collection of report parameter objects built successfully from a collection of resource file paths");
                 var benefitsConfirmationText = string.Empty;
 
                 //Replacing the parameter with formated resource string by adding end date
@@ -447,16 +461,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                         parameters[parameters.FindIndex(p => p.Name.Equals("Report_Header_TitleDescription"))] = parameter;
                     }
+                    logger.Debug("Parameter replaced with the formatted resource string by adding end date");
                 }
 
                 if (eligibilityInfo.ConfirmationCompleteText.Any())
                 {
                     var benefitsCompleteText = string.Join(" ", eligibilityInfo.ConfirmationCompleteText.ToArray());
                     parameters.Add(new ReportParameter("Benefits_CompleteText", benefitsCompleteText));
+                    logger.Debug("ConfirmationCompleteText added to the parameter");
                 }
 
                 report.SetParameters(parameters);
-
+                logger.Debug("Report parameter properties successfully set for the local report");
                 var benefitsDataSet = utility.ConvertToDataSet(benefits.ToArray());
 
                 report.DataSources.Add(new ReportDataSource("Benefits", benefitsDataSet.Tables[0]));
@@ -467,7 +483,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 string fileNameExtension;
                 Warning[] warnings;
                 string[] streams;
-
+                logger.Debug("Rendering the report as a byte array in the following format:");
+                logger.Debug("ReportType, DeviceInfo, mimeType, encoding, fileNameExtension, streams and warnings");
                 // Render the report as a byte array
                 return report.Render(PdfReportConstants.ReportType, PdfReportConstants.DeviceInfo, out mimeType, out encoding, out fileNameExtension, out streams, out warnings);
             }
@@ -501,10 +518,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (packageInfo == null)
             {
                 string errorMessage = string.Format("Employee Benefits Enrollment Package data is null for employee {0}.", employeeId);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new ApplicationException(errorMessage);
             }
-
+            logger.Debug(string.Format("Employee Benefits Enrollment Package data obtained for employee {0}.", employeeId));
             var criteria = new EmployeeBenefitsEnrollmentInfoQueryCriteria()
             {
                 EmployeeId = employeeId,
@@ -516,10 +533,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (enrollmentInfo == null)
             {
                 string errorMessage = string.Format("Employee Benefits Enrollment Information is null for employee {0} and enrollment period {1}.", employeeId, packageInfo.BenefitsEnrollmentPeriodId);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new ApplicationException(errorMessage);
             }
-
+            logger.Debug(string.Format("Employee Benefits Enrollment Information obtained for employee {0} and enrollment period {1}.", employeeId, packageInfo.BenefitsEnrollmentPeriodId));
             var acknowledgementInfo = new List<BenefitsEnrollmentAknowledgement>();
 
             //Separate opted out benefit types
@@ -529,7 +546,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                                                         .Where(b => enrollmentInfo.OptOutBenefitTypes.Contains(b.BenefitType))
                                                         .Select(b => new BenefitsEnrollmentAknowledgement(b) { BenefitPlanDescription = waivedPlanDescription }));
             }
-
+            logger.Debug("Opted out benefit types separated successfully");
             foreach (var type in packageInfo.EmployeeEligibleBenefitTypes.Where(b => !enrollmentInfo.OptOutBenefitTypes.Contains(b.BenefitType)))
             {
                 var details = enrollmentInfo.EmployeeBenefitEnrollmentDetails.Where(d => d.BenefitTypeId.Equals(type.BenefitType) && (!d.Action.Equals(BenefitTypeAction.Cancel.ToString(), StringComparison.OrdinalIgnoreCase)));
@@ -550,6 +567,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 int index = 0;
                 acknowledgementInfo.ForEach(a => a.Index = index++);
+                logger.Debug("Index parameter of each benefit types updated successfully");
             }
 
             return acknowledgementInfo;

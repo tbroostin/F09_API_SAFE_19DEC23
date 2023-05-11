@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.purDefaultsDataContract.PurShipToCode = "MC";
             this.purDefaultsDataContract.PurReqApprovalNeededFlag = "N";
             this.purDefaultsDataContract.PurPoApprovalNeededFlag = "A";
+            this.purDefaultsDataContract.PurApprAllowReturnFlag = "Y";
             this.cfDocAttachParmsDataContract = new CfDocAttachParms()
             {
                 CfDocAttachVoucherCol = "VOUCHERS",
@@ -586,6 +587,39 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.cfWebDefaultsDataContract.CfwebCkrApTypes = new List<string> { };
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
             Assert.AreEqual(cfWebDefaultsActual.Result.RequestPaymentDefaults.RestrictToListedApTypeCodes, null);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_AllowApprovalReturnsFlag()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled, cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_AllowApprovalReturnsFlag_SetsFalse_IfNullOrEmpty()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled = false;
+            purDefaultsDataContract.PurApprAllowReturnFlag = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+            Assert.IsFalse(cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled, cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_AllowApprovalReturnsFlag_SetsFalse_IfNotY()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled = false;
+            purDefaultsDataContract.PurApprAllowReturnFlag = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+            Assert.IsFalse(cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsApprovalReturnsEnabled, cfWebDefaultsActual.Result.PurchasingDefaults.IsApprovalReturnsEnabled);
         }
 
         private ColleagueFinanceWebConfigurationsRepository BuildMockColleagueFinanceWebConfigurationsRepository()

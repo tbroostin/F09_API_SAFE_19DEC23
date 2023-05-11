@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Data.Base
@@ -27,7 +27,12 @@ namespace Ellucian.Colleague.Data.Base
         /// <summary>
         /// A collection of expressions
         /// </summary>
-        public IList<RuleExpressionDescriptor> Expressions = new List<RuleExpressionDescriptor>();
+        private IList<RuleExpressionDescriptor> expressions = new List<RuleExpressionDescriptor>();
+        public IList<RuleExpressionDescriptor> Expressions
+        {
+            get { return expressions; }
+            set { expressions = value; }
+        }
 
         /// <summary>
         /// Gets or sets the not supported message.

@@ -12,6 +12,5 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         Task<Dictionary<string, List<string>>> GetSupervisorIdsForPositionsAsync(IEnumerable<string> positionIds);
         Task<IEnumerable<string>> GetSupervisorsByPositionIdAsync(string positionId, string superviseeId);
         Task<IEnumerable<string>> GetSuperviseesByPrimaryPositionForSupervisorAsync(string supervisorId);
-        
     }
 }

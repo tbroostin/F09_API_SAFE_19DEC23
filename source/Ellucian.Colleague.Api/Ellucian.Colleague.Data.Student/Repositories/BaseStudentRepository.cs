@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
               {
                   Ellucian.Colleague.Data.Student.DataContracts.RegDefaults regDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS");
                   Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                  Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2 stwebDefaults2 = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2");
                   if (regDefaults == null)
                   {
                       var errorMessage = "Unable to access registration defaults from ST.PARMS. REG.DEFAULTS. Default values will be assumed for purpose of building registration configuration in API." + Environment.NewLine
@@ -63,6 +64,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                           result.ShowBooksOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowBksOnSchedPrt) && stwebDefaults.StwebShowBksOnSchedPrt.ToUpper() == "Y" ? true : false;
                           result.ShowCommentsOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowCmntOnSchedPrt) && stwebDefaults.StwebShowCmntOnSchedPrt.ToUpper() == "Y" ? true : false;
                           result.AddDefaultTermsToDegreePlan = !string.IsNullOrEmpty(stwebDefaults.StwebAddDfltTermsToDp) && stwebDefaults.StwebAddDfltTermsToDp.ToUpper() == "N" ? false : true;
+                          result.AllowFacultyAddAuthFromWaitlist = (!string.IsNullOrEmpty(regDefaults.RgdAllowAddAuthWaitlist) && regDefaults.RgdAllowAddAuthWaitlist.ToUpper() == "Y");
                           if (stwebDefaults.StwebQuickRegTerms != null)
                           {
                               foreach (var termCode in stwebDefaults.StwebQuickRegTerms)
@@ -71,6 +73,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                   {
                                       result.AddQuickRegistrationTerm(termCode);
                                   }
+                                  catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+                                  {
+                                      throw;
+                                  }
                                   catch (Exception ex)
                                   {
                                       logger.Debug(ex, string.Format("Unable to add termCode '{0}' to list of quick registration terms.", termCode));
@@ -78,7 +84,45 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                               }
                           }
                       }
+                      if (stwebDefaults2 == null)
+                      {
+                          var errorMessage = "Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS.2";
+                          logger.Info(errorMessage);
+                          result.AlwaysPromptUsersForIntentToWithdrawWhenDropping = false;
+                          result.CensusDateNumberForPromptingIntentToWithdraw = null;
+                      } else
+                      {
+                          result.AlwaysPromptUsersForIntentToWithdrawWhenDropping = !string.IsNullOrEmpty(stwebDefaults2.Stweb2IntToWdrlAlways) && stwebDefaults2.Stweb2IntToWdrlAlways.ToUpper() == "Y" ? true : false;
+                          result.CensusDateNumberForPromptingIntentToWithdraw = stwebDefaults2.Stweb2IntToWdrlCensus;
+                      }
                   }
+                  return result;
+              });
+            return configuration;
+        }
+
+        /// <summary>
+        /// Retrieves course section availability information configuration
+        /// </summary>
+        /// <returns><see cref="SectionAvailabilityInformationConfiguration"/></returns>
+        public async Task<SectionAvailabilityInformationConfiguration> GetSectionAvailabilityInformationConfigurationAsync()
+        {
+            SectionAvailabilityInformationConfiguration result = new SectionAvailabilityInformationConfiguration(false, false);
+            SectionAvailabilityInformationConfiguration configuration = await GetOrAddToCacheAsync<SectionAvailabilityInformationConfiguration>("SectionAvailabilityInformationConfiguration",
+              async () =>
+              {
+                  Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                  if (stwebDefaults == null)
+                  {
+                      var errorMessage = "Unable to access section availability information settings from ST.PARMS. STWEB.DEFAULTS.";
+                      logger.Info(errorMessage);
+                  }
+                  else
+                  {
+                      bool showNegativeSeatCounts = !string.IsNullOrEmpty(stwebDefaults.StwebShowNegativeSeats) && stwebDefaults.StwebShowNegativeSeats.ToUpper() == "Y" ? true : false;
+                      bool includeSeatsTakenInAvailabilityInformation = !string.IsNullOrEmpty(stwebDefaults.StwebUseAtcwFormat) && stwebDefaults.StwebUseAtcwFormat.ToUpper() == "Y" ? true : false;
+                      result = new SectionAvailabilityInformationConfiguration(showNegativeSeatCounts, includeSeatsTakenInAvailabilityInformation);
+                  }                  
                   return result;
               });
             return configuration;

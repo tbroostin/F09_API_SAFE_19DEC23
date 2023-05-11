@@ -1,10 +1,11 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -35,6 +36,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly IHumanResourcesTaxFormPdfService taxFormPdfService;
         private readonly ITaxFormConsentService taxFormConsentService;
         private readonly IConfigurationService configurationService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initialize the Tax Form pdf controller.
@@ -62,32 +64,47 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetW2TaxFormPdf2Async(string personId, string recordId)
         {
-            if (string.IsNullOrEmpty(personId))
-                throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
-
-            if (string.IsNullOrEmpty(recordId))
-                throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
-
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormW2);
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
-
-            // Check if the person has consented to receiving their W2 online - if not, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormW2);
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
-            {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
-            }
-
-            string pdfTemplatePath = string.Empty;
             try
             {
+                if (string.IsNullOrEmpty(personId))
+                    throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+                if (string.IsNullOrEmpty(recordId))
+                    throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
+
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormW2);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
+
+                // Check if the person has consented to receiving their W2 online - if not, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormW2);
+                if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
+
+                string pdfTemplatePath = string.Empty;
                 var pdfData = await taxFormPdfService.GetW2TaxFormDataAsync(personId, recordId);
                 var guamFlag = await taxFormPdfService.GetW2GuamFlag();
+                var americanSamoaFlag = await taxFormPdfService.GetW2AmericanSamoaFlag();
 
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2022":
+                        if (guamFlag)
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2022-W2-Guam.rdlc");
+                        }
+                        else
+                            if (americanSamoaFlag)
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2022-W2-AS.rdlc");
+                        }
+                        else
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2022-W2-W2ST.rdlc");
+                        }
+                        break;
                     case "2021":
                         if (guamFlag)
                         {
@@ -173,6 +190,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
@@ -193,26 +215,25 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns>HttpResponseMessage</returns>
         public async Task<HttpResponseMessage> GetW2cTaxFormPdf2Async(string personId, string recordId)
         {
-            if (string.IsNullOrEmpty(personId))
-                throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
-
-            if (string.IsNullOrEmpty(recordId))
-                throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
-
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormW2C);
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
-
-            // Check if the person has consented to receiving their W2c online - if not, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormW2C);
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
-            {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
-            }
-
-            string pdfTemplatePath = string.Empty;
             try
             {
+                if (string.IsNullOrEmpty(personId))
+                    throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+                if (string.IsNullOrEmpty(recordId))
+                    throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
+
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormW2C);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
+
+                // Check if the person has consented to receiving their W2c online - if not, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormW2C);
+                if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
+
+                string pdfTemplatePath = string.Empty;
                 var pdfData = await taxFormPdfService.GetW2cTaxFormData(personId, recordId);
 
                 // Determine which PDF template to use.
@@ -232,6 +253,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 };
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
@@ -259,30 +285,33 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> Get1095cTaxFormPdf2Async(string personId, string recordId)
         {
-            if (string.IsNullOrEmpty(personId))
-                throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
-
-            if (string.IsNullOrEmpty(recordId))
-                throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
-
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.Form1095C);
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
-
-            // Check if the person has consented to receiving their 1095C online - if not, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.Form1095C);
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
-            {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
-            }
-
-            string pdfTemplatePath = string.Empty;
             try
             {
+                if (string.IsNullOrEmpty(personId))
+                    throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+
+                if (string.IsNullOrEmpty(recordId))
+                    throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
+
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.Form1095C);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
+
+                // Check if the person has consented to receiving their 1095C online - if not, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.Form1095C);
+                if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
+
+                string pdfTemplatePath = string.Empty;
                 var pdfData = await taxFormPdfService.Get1095cTaxFormDataAsync(personId, recordId);
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2022":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2022-1095C.rdlc");
+                        break;
                     case "2021":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-1095C.rdlc");
                         break;
@@ -325,6 +354,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
@@ -351,36 +385,34 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetT4TaxFormPdf2Async(string personId, string recordId)
         {
-            if (string.IsNullOrEmpty(personId))
-                throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
-
-            if (string.IsNullOrEmpty(recordId))
-                throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
-
-
-            var config = await configurationService.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
-
-            // We only need to verify consents if clients use them.
-            if (config == null || !config.HideConsent)
-            {
-                logger.Debug("Using consents for T4 tax forms");
-                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4);
-                consents = consents.OrderByDescending(c => c.TimeStamp);
-                var mostRecentConsent = consents.FirstOrDefault();
-
-                // ************* T4s and T2202As are special cases based on CRA regulations! *************
-                // Check if the person has explicitly withheld consent to receiving their T4 online - if they opted out, throw exception
-                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4);
-                if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
-                {
-                    logger.Debug("Consent is required to view T4 information.");
-                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
-                }
-            }
-
-            string pdfTemplatePath = string.Empty;
             try
             {
+                if (string.IsNullOrEmpty(personId))
+                    throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+                if (string.IsNullOrEmpty(recordId))
+                    throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
+
+                var config = await configurationService.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                // We only need to verify consents if clients use them.
+                if (config == null || !config.HideConsent)
+                {
+                    logger.Debug("Using consents for T4 tax forms");
+                    var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4);
+                    consents = consents.OrderByDescending(c => c.TimeStamp);
+                    var mostRecentConsent = consents.FirstOrDefault();
+
+                    // ************* T4s and T2202As are special cases based on CRA regulations! *************
+                    // Check if the person has explicitly withheld consent to receiving their T4 online - if they opted out, throw exception
+                    var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4);
+                    if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                    {
+                        logger.Debug("Consent is required to view T4 information.");
+                        throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                    }
+                }
+
+                string pdfTemplatePath = string.Empty;
                 var pdfData = await taxFormPdfService.GetT4TaxFormDataAsync(personId, recordId);
                 if (pdfData != null && pdfData.TaxYear != null)
                 {
@@ -392,6 +424,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 }
                 switch (pdfData.TaxYear)
                 {
+                    case "2022":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2022-T4.rdlc");
+                        break;
                     case "2021":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-T4.rdlc");
                         break;
@@ -448,6 +483,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 };
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {

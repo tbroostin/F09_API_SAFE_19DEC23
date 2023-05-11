@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -39,16 +40,24 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>List of ReceivableType DTOs</returns>
         public IEnumerable<ConvenienceFee> GetConvenienceFees()
         {
-            var entityCollection = _ecommerceRepository.ConvenienceFees;
-            var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.ConvenienceFee, ConvenienceFee>();
-
-            var dtoCollection = new List<ConvenienceFee>();
-            foreach (var entity in entityCollection)
+            try
             {
-                dtoCollection.Add(adapter.MapToType(entity));
-            }
+                var entityCollection = _ecommerceRepository.ConvenienceFees;
+                var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.ConvenienceFee, ConvenienceFee>();
 
-            return dtoCollection;
+                var dtoCollection = new List<ConvenienceFee>();
+                foreach (var entity in entityCollection)
+                {
+                    dtoCollection.Add(adapter.MapToType(entity));
+                }
+
+                return dtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
     }
 }

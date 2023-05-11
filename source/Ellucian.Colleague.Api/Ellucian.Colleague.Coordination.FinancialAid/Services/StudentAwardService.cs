@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -109,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (allStudentAwards == null || allStudentAwards.Count() == 0)
             {
                 var message = string.Format("No awards exist in any of the award years for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<StudentAward>();
             }
 
@@ -127,7 +128,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (filteredAwards == null || filteredAwards.Count() == 0)
             {
                 var message = string.Format("Office Configurations have filtered out all student awards for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return studentAwardDtoList;
             }
 
@@ -181,7 +182,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (studentAwards == null || studentAwards.Count() == 0)
             {
                 var message = string.Format("awardYear {0} has no awards for student {1}", awardYear, studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<StudentAward>();
             }
 
@@ -199,7 +200,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (filteredAwards == null || filteredAwards.Count() == 0)
             {
                 var message = string.Format("FA Office {0} filtered out all StudentAwards for student {1} awardYear {2}", activeStudentAwardYear.CurrentOffice.Id, studentId, awardYear);
-                logger.Info(message);
+                logger.Debug(message);
                 return studentAwardDtoList;
             }
 
@@ -363,41 +364,52 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new KeyNotFoundException(message);
             }
-
-            var updatedStudentAwards = await studentAwardRepository.UpdateStudentAwardsAsync(
-                studentAwardYear,
-                StudentAwardDomainService.VerifyUpdatedStudentAwards(studentAwardYear, newStudentAwards, currentStudentAwards, studentLoanLimitations, suppressMaximumLoanLimits),
-                awards,
-                awardStatuses);
-
-            if (updatedStudentAwards == null)
+            try
             {
-                var message = string.Format("Unable to Update Student Awards for student {0} awardYear {1}", CurrentUser.PersonId, studentAwardYear.Code);
-                logger.Error(message);
-                throw new ApplicationException(message);
-            }
+                var updatedStudentAwards = await studentAwardRepository.UpdateStudentAwardsAsync(
+                    studentAwardYear,
+                    StudentAwardDomainService.VerifyUpdatedStudentAwards(studentAwardYear, newStudentAwards, currentStudentAwards, studentLoanLimitations, suppressMaximumLoanLimits),
+                    awards,
+                    awardStatuses);
 
-            var communications = StudentAwardDomainService.GetCommunicationsForUpdatedAwards(studentAwardYear, updatedStudentAwards, currentStudentAwards);
-            if (communications != null && communications.Count() > 0)
-            {
-                foreach (var communication in communications)
+
+                if (updatedStudentAwards == null)
                 {
-                    try
+                    var message = string.Format("Unable to Update Student Awards for student {0} awardYear {1}", CurrentUser.PersonId, studentAwardYear.Code);
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+
+                var communications = StudentAwardDomainService.GetCommunicationsForUpdatedAwards(studentAwardYear, updatedStudentAwards, currentStudentAwards);
+                if (communications != null && communications.Count() > 0)
+                {
+                    foreach (var communication in communications)
                     {
-                        communicationRepository.SubmitCommunication(communication);
-                    }
-                    catch (Exception e)
-                    {
-                        var message = string.Format("Error submitting Communication {0} for student {1}", communication.ToString(), studentId);
-                        logger.Warn(e, message);
+                        try
+                        {
+                            communicationRepository.SubmitCommunication(communication);
+                        }
+                        catch (Exception e)
+                        {
+                            var message = string.Format("Error submitting Communication {0} for student {1}", communication.ToString(), studentId);
+                            logger.Debug(e, message);
+                        }
                     }
                 }
-            }
-            //Filter out awards/award periods that are not viewable
-            var filteredAwards = ApplyConfigurationService.FilterStudentAwards(updatedStudentAwards);
+                //API 1.36 removing the filter on returning awards as it caused the My Awards
+                //Page to not render properly for award flagged as removed from view
+                //This led to display issues as well as sub/unsub combination action issues
+                //Filter out awards/award periods that are not viewable
+                //var filteredAwards = ApplyConfigurationService.FilterStudentAwards(updatedStudentAwards);
 
-            var studentAwardDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAward, StudentAward>();
-            return filteredAwards.Select(sa => studentAwardDtoAdapter.MapToType(sa));
+                var studentAwardDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAward, StudentAward>();
+                //return filteredAwards.Select(sa => studentAwardDtoAdapter.MapToType(sa));
+                return updatedStudentAwards.Select(sa => studentAwardDtoAdapter.MapToType(sa));
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
         }
 
         /// <summary>

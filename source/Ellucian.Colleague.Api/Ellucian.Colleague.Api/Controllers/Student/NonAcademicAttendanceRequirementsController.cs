@@ -27,7 +27,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly INonAcademicAttendanceService _nonAcademicAttendanceService;
         private readonly ILogger _logger;
-                
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+
         /// <summary>
         /// Initializes a new instance of the NonAcademicAttendanceRequirementsController class.
         /// </summary>
@@ -57,6 +58,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(pex.ToString());
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ColleagueDataReaderException cdre)
             {

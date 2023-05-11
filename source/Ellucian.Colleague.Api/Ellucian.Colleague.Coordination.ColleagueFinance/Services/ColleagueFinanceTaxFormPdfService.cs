@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -73,6 +74,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 return taxFormPdfData;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 // Log the error and throw the exception that was given
@@ -112,6 +117,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
 
                 return taxFormPdfData;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -276,11 +285,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box5Amt", GetAmountFromBoxList(taxFormBoxesList, "5")));
                 parameters.Add(utility.BuildReportParameter("Box6Amt", GetAmountFromBoxList(taxFormBoxesList, "6")));
                 parameters.Add(utility.BuildReportParameter("Box8Amt", GetAmountFromBoxList(taxFormBoxesList, "8")));
-                parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));        
-                parameters.Add(utility.BuildReportParameter("Box13Amt", GetAmountFromBoxList(taxFormBoxesList, "13")));
+                parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));
+                if (pdfData.TaxYear != "2022")
+                { 
+                  parameters.Add(utility.BuildReportParameter("Box13Amt", GetAmountFromBoxList(taxFormBoxesList, "13")));
+                }
                 parameters.Add(utility.BuildReportParameter("Box14Amt", GetAmountFromBoxList(taxFormBoxesList, "14")));
 
-                if (pdfData.TaxYear == "2021")
+                if (pdfData.TaxYear == "2021" || pdfData.TaxYear == "2022")
                 {
                     parameters.Add(utility.BuildReportParameter("Box11Amt", GetAmountFromBoxList(taxFormBoxesList, "11")));
                 }
@@ -300,7 +312,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     parameters.Add(utility.BuildReportParameter("Box16b", ""));
                     parameters.Add(utility.BuildReportParameter("Box17Amt", GetAmountFromBoxList(taxFormBoxesList, "17")));
                     parameters.Add(utility.BuildReportParameter("Box17bAmt", ""));
-                } else
+                }
+                else if(pdfData.TaxYear == "2022")
+                { 
+                    parameters.Add(utility.BuildReportParameter("Box7", pdfData.IsDirectResale ? "X" : ""));
+                    parameters.Add(utility.BuildReportParameter("Box9Amt", GetAmountFromBoxList(taxFormBoxesList, "9")));
+                    parameters.Add(utility.BuildReportParameter("Box12Amt", GetAmountFromBoxList(taxFormBoxesList, "12")));
+                    parameters.Add(utility.BuildReportParameter("Box15Amt", GetAmountFromBoxList(taxFormBoxesList, "15")));
+                    parameters.Add(utility.BuildReportParameter("Box16Amt", GetAmountFromBoxList(taxFormBoxesList, "16")));
+                    parameters.Add(utility.BuildReportParameter("Box16bAmt", ""));
+                    parameters.Add(utility.BuildReportParameter("Box17", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
+                    parameters.Add(utility.BuildReportParameter("Box17b", ""));
+                    parameters.Add(utility.BuildReportParameter("Box18Amt", GetAmountFromBoxList(taxFormBoxesList, "18")));
+                    parameters.Add(utility.BuildReportParameter("Box18bAmt", ""));
+                }
+                else
                 {
                     parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
                     parameters.Add(utility.BuildReportParameter("Box9", pdfData.IsDirectResale ? "X" : ""));
@@ -381,6 +407,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 return taxFormPdfData;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 // Log the error and throw the exception that was given.
@@ -435,7 +465,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 parameters.Add(utility.BuildReportParameter("PayersEIN", pdfData.PayersEin));
                 parameters.Add(utility.BuildReportParameter("RecipientsEIN", pdfData.Ein));
-                if (pdfData.TaxYear != "2021") { 
+                if (pdfData.TaxYear != "2021" && pdfData.TaxYear != "2022") { 
                     parameters.Add(utility.BuildReportParameter("FATCAFiling", ""));
                 }
                 parameters.Add(utility.BuildReportParameter("AccountNumber", pdfData.AccountNumber));
@@ -449,7 +479,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box6b", ""));
                 parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
                 parameters.Add(utility.BuildReportParameter("Box7bAmt", ""));
-                if (pdfData.TaxYear == "2021")
+                if (pdfData.TaxYear == "2021" || pdfData.TaxYear == "2022")
                 {
                     parameters.Add(utility.BuildReportParameter("Box2", pdfData.IsDirectResale ? "X" : ""));
                 }

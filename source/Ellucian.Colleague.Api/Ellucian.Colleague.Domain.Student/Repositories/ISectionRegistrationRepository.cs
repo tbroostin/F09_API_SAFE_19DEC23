@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -21,7 +21,8 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         //Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrationsAsync(int offset, int limit);
         Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrationsAsync(int offset, int limit, string sectionId, string personId);
         //V7
-        Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode);
+        Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode, bool updateRegistration = true);
+        Task<SectionRegistrationResponse> CheckSectionRegistrations(SectionRegistrationsRequest request, string personId, Dictionary<string, string> SectionGuidCollection);
         Task<bool> CheckStuAcadCredRecord(string id);
 
         //V16.0.0

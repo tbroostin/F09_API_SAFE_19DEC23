@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliatesusing System;
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliatesusing System;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -327,7 +327,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                throw new ColleagueWebApiException(e.Message);
             }
 
         }
@@ -876,8 +876,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     personEmergencyContactsEntityId = await _emergencyInformationRepository.GetPersonEmergencyContactIdFromGuidAsync(personEmergencyContacts.Id);
                 }
-                catch (Exception)
-                { // if the guid is not found then attempt to create
+                catch (Exception ex)
+                {
+                    // if the guid is not found then attempt to create
+                    logger.Error(ex.Message, "Error: guid not found");
                 }
 
                 // map the DTO to entities
@@ -920,7 +922,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
             
            
@@ -998,7 +1000,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
         }
@@ -1055,7 +1057,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 

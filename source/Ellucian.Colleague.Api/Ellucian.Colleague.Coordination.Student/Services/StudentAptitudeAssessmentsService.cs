@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -486,7 +486,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -646,7 +646,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -832,7 +832,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (studentTestScoreEntity == null)
                 {
-                    throw new Exception("An error occurred setting required fields on Student Aptitude Assessment.");
+                    throw new ColleagueWebApiException("An error occurred setting required fields on Student Aptitude Assessment.");
                 }
 
                 if ((studentAptitudeAssessmentsDto.Score == null) || (!studentAptitudeAssessmentsDto.Score.Value.HasValue))
@@ -924,7 +924,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var testSources = await this.GetTestSourcesAsync();
                     if (testSources == null)
                     {
-                        throw new Exception("Unable to retrieve test sources");
+                        throw new ColleagueWebApiException("Unable to retrieve test sources");
                     }
                     var testSource = testSources.FirstOrDefault(ts => ts.Guid == studentAptitudeAssessmentsDto.Source.Id);
                     if (testSource == null)

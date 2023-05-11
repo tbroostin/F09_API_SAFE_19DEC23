@@ -18,6 +18,7 @@ using Ellucian.Web.Security;
 using Ellucian.Web.Http.TestUtil;
 using Ellucian.Colleague.Domain.Repositories;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
 {
@@ -396,7 +397,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoCurrentActiveTerms_AndThereAreNoFutureTerms_AndNoTermIsSelectedToLoadSamplePlanFrom()
             {
                 degreePlanPreview.LoadDegreePlanPreviewWithAllTerms(degreePlan, sampleDegreePlan, studentAcademicCredits, filteredAllTerms, null, logger);
@@ -457,7 +458,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoTermsAtAll_AndThereAreNoFutureTerms()
             {
 
@@ -465,7 +466,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 degreePlanPreview.LoadDegreePlanPreviewWithAllTerms(degreePlan, sampleDegreePlan, studentAcademicCredits, filteredAllTerms, null, logger);
             }
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveCurrentActiveTerm_AndThereAreNoFutureTerms()
             {
                 //This test scenario is rare but can happen if a term was removed after student had already planned for the term
@@ -474,7 +475,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoCurrentActiveTerm_AndThereAreNoFutureTerms_AndSelectedTermIsNotOneOfThePlannedTerm()
             {
                 //This test scenario is rare but can only happen when API is called directly rather than through Self-service
@@ -519,6 +520,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             private IStudentRepository studentRepo;
             private Mock<IPlanningStudentRepository> planningStudentRepoMock;
             private IPlanningStudentRepository planningStudentRepo;
+            private Mock<IApplicantRepository> applicantRepoMock;
+            private IApplicantRepository applicantRepo;
             private Mock<IStudentProgramRepository> studentProgramRepoMock;
             private IStudentProgramRepository studentProgramRepo;
             private Mock<IAcademicCreditRepository> academicCreditRepoMock;
@@ -585,6 +588,9 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 planningStudentRepo = planningStudentRepoMock.Object;
                 studentProgramRepo = new TestStudentProgramRepository();
 
+                applicantRepoMock = new Mock<IApplicantRepository>();
+                applicantRepo = applicantRepoMock.Object;
+                
                 academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
                 academicCreditRepo = academicCreditRepoMock.Object;
                 referenceDataRepo = new Mock<IReferenceDataRepository>().Object;
@@ -911,7 +917,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoCurrentActiveTerms_AndThereAreNoFutureTerms_AndNoTermIsSelectedToLoadSamplePlanFrom()
             {
                 degreePlanPreview.LoadDegreePlanPreviewWithAllTermsAndAppliedCreditsFromEvaluation(degreePlan, sampleDegreePlan, studentAcademicCredits, emptyProgramEvalResult, courses, filteredAllTerms, null, logger);
@@ -972,7 +978,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoTermsAtAll_AndThereAreNoFutureTerms()
             {
 
@@ -980,7 +986,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 degreePlanPreview.LoadDegreePlanPreviewWithAllTermsAndAppliedCreditsFromEvaluation(degreePlan, sampleDegreePlan, studentAcademicCredits, emptyProgramEvalResult, courses, filteredAllTerms, null, logger);
             }
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveCurrentActiveTerm_AndThereAreNoFutureTerms()
             {
                 //This test scenario is rare but can happen if a term was removed after student had already planned for the term
@@ -989,7 +995,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DegreePlanPreview_WhenDegreePlanHaveNoCurrentActiveTerm_AndThereAreNoFutureTerms_AndSelectedTermIsNotOneOfThePlannedTerm()
             {
                 //This test scenario is rare but can only happen when API is called directly rather than through Self-service
@@ -1040,7 +1046,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
 
                 academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(creditsDict));
                 programEvaluationService = new ProgramEvaluationService(
-                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, applicantRepo, studentProgramRepo,
                     requirementRepo, academicCreditRepo, null, courseRepo, termRepo, ruleRepo, programRepo, catalogRepo, planningConfigRepo,
                     referenceDataRepo, currentUserFactory, roleRepository, logger, configRepo);
 

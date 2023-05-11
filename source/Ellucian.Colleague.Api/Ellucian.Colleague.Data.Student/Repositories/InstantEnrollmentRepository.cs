@@ -1,13 +1,15 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -269,7 +271,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     logger.Info("InstantEnrollmentZeroCostRegistrationResult the response from the InstEnrollZeroCostRgstrtn CTX is null.");
                 }
-
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -277,7 +282,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(ex, exceptionMsg);
                 throw;
             }
-
 
             return zeroCostRegistrationResult;
         }
@@ -420,10 +424,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
                 echeckRegistrationResult = new InstantEnrollmentEcheckRegistrationResult(response.ErrorOccurred,
-                    echeckRegisteredSections, 
-                    instantEnrollmentRegistrationMessages, 
+                    echeckRegisteredSections,
+                    instantEnrollmentRegistrationMessages,
                     response.StudentId,
-                    response.CashReceiptId, 
+                    response.CashReceiptId,
                     response.AUserName);
             }
             else
@@ -432,7 +436,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return echeckRegistrationResult;
-
         }
 
         /// <summary>
@@ -524,7 +527,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             else
             {
-                throw new Exception("InstantEnrollmentProposedRegistrationResult response from CTX is null.");
+                throw new ColleagueWebApiException("InstantEnrollmentProposedRegistrationResult response from CTX is null.");
             }
 
             return result;
@@ -549,7 +552,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     StudentId = request.PersonId,
                     CashRcptsId = request.CashReceiptId
                 };
-                    
+
                 var ctxResponse = await transactionInvoker.ExecuteAsync<InstantEnrollmentBuildAcknowledgementParagraphRequest, InstantEnrollmentBuildAcknowledgementParagraphResponse>(ctxRequest);
                 // CTX returns null object
                 if (ctxResponse == null)
@@ -592,6 +595,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 paragraphText.AddRange(ctxResponse.ParaText);
                 return paragraphText;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -701,6 +708,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 return MapCashReceiptAckInfoResponseToCashReceiptAcknowledgement(ctxResponse);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -833,7 +844,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return cashReceiptAcknowledgement;
         }
-
     }
 }
 

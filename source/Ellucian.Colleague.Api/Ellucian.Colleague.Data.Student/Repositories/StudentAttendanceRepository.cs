@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -6,10 +6,12 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -138,7 +140,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 string err = "Update Attendance: Section does not have a meeting instance cooresponding to the student attendance being updated. ";
                 logger.Error(err);
-                throw new Exception(err);
+                throw new ColleagueWebApiException(err);
             }
             // For now we are only supplying one student attendance item to update.
             var request = new UpdateStudentAttendanceRequest();
@@ -158,6 +160,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 response = await transactionInvoker.ExecuteAsync<UpdateStudentAttendanceRequest, UpdateStudentAttendanceResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception)
             {

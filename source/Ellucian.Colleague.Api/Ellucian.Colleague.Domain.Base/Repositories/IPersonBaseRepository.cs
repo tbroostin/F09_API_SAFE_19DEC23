@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
@@ -65,5 +65,17 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// Gets languages from valcodes
         /// </summary>
         Task<ApplValcodes> GetLanguagesAsync();
+
+        /// <summary>
+        /// Get the NameAddrHierarchy
+        /// </summary>
+        Task<NameAddressHierarchy> GetCachedNameAddressHierarchyAsync(string nameAddressHierarchyCode);
+
+        /// <summary>
+        /// Returns true if the person id belongs to a student
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <returns></returns>
+        Task<bool> IsStudentAsync(string personId);
     }
 }

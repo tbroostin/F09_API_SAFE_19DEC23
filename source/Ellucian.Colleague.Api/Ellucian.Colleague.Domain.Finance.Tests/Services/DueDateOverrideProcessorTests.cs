@@ -14,6 +14,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
         DueDateOverrides dueDateOverrides;
         AccountDue accountDue;
         AccountDuePeriod accountDuePeriod;
+        string timezone = TimeZoneInfo.Local.Id;
 
         [TestInitialize]
         public void Initialize()
@@ -59,7 +60,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
             [TestMethod]
             public void DueDateOverrideProcessor_OverrideTermDueDates_NullDueDateOverrides()
             {
-                DueDateOverrideProcessor.OverrideTermDueDates(null, accountDue);
+                DueDateOverrideProcessor.OverrideTermDueDates(null, accountDue, timezone);
             }
 
             [TestMethod]
@@ -67,14 +68,14 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
             {
                 var ad = accountDuePeriod.Current;
                 ad.AccountTerms[0].AccountDetails = null;
-                DueDateOverrideProcessor.OverrideTermDueDates(dueDateOverrides, ad);
+                DueDateOverrideProcessor.OverrideTermDueDates(dueDateOverrides, ad, timezone);
             }
 
             [TestMethod]
             public void DueDateOverrideProcessor_OverrideTermDueDates_NullTermOverridesAndNonTermOverride()
             {
                 AccountDue preOverride = accountDue;
-                DueDateOverrideProcessor.OverrideTermDueDates(new DueDateOverrides() { CurrentPeriodOverride = DateTime.Today.AddDays(30) }, accountDue);
+                DueDateOverrideProcessor.OverrideTermDueDates(new DueDateOverrides() { CurrentPeriodOverride = DateTime.Today.AddDays(30) }, accountDue, timezone);
                 for(int i = 0; i < accountDue.AccountTerms.Count; i++)
                 {
                     for(int j = 0; j < accountDue.AccountTerms[i].AccountDetails.Count; j++)
@@ -89,7 +90,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
             {
                 AccountDue preOverride = accountDue;
                 DueDateOverrides tempOverride = new DueDateOverrides() { NonTermOverride = DateTime.Today.AddDays(10) };
-                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue);
+                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue, timezone);
 
                 Assert.AreEqual(preOverride.AccountTerms[0].AccountDetails[0].DueDate, accountDue.AccountTerms[0].AccountDetails[0].DueDate);
                 Assert.AreEqual(tempOverride.NonTermOverride, accountDue.AccountTerms[0].AccountDetails[1].DueDate);
@@ -108,7 +109,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
             {
                 AccountDue preOverride = accountDue;
                 DueDateOverrides tempOverride = new DueDateOverrides() { TermOverrides = new Dictionary<string,DateTime>() { { "Term", DateTime.Today.AddDays(3) } } };
-                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue);
+                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue, timezone);
 
                 Assert.AreEqual(tempOverride.TermOverrides["Term"], accountDue.AccountTerms[0].AccountDetails[0].DueDate);
                 Assert.AreEqual(preOverride.AccountTerms[0].AccountDetails[1].DueDate, accountDue.AccountTerms[0].AccountDetails[1].DueDate);
@@ -126,7 +127,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Services
             {
                 AccountDue preOverride = accountDue;
                 DueDateOverrides tempOverride = new DueDateOverrides() { TermOverrides = new Dictionary<string, DateTime>() { { "Term2", DateTime.Today.AddDays(3) } } };
-                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue);
+                DueDateOverrideProcessor.OverrideTermDueDates(tempOverride, accountDue, timezone);
 
                 Assert.AreEqual(preOverride.AccountTerms[0].AccountDetails[0].DueDate, accountDue.AccountTerms[0].AccountDetails[0].DueDate);
                 Assert.AreEqual(preOverride.AccountTerms[0].AccountDetails[1].DueDate, accountDue.AccountTerms[0].AccountDetails[1].DueDate);

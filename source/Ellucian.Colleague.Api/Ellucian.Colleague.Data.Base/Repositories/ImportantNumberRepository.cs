@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections;
@@ -107,10 +107,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                             }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
                             // if the valcode is not public, don't throw, but return an empty list
                             //throw new ApplicationException("Anonymous data reader request denied. Table is not public.");
+                            logger.Error(ex.Message, "Valcode is not public.");
                         }
                         return impNumCats;
                     }

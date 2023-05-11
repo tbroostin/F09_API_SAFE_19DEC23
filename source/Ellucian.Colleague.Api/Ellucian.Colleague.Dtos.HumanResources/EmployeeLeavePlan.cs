@@ -1,8 +1,9 @@
-﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -121,7 +122,7 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// The Leave Plans start date in the current year. Only the Month and Day should be used from this date.
         /// </summary>
         public DateTime CurrentPlanYearStartDate { get; set; }
-        
+
         /// <summary>
         /// The Leave Plans end date.
         /// </summary>
@@ -143,6 +144,11 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         public Decimal? AccrualMaxCarryOver { get; set; }
 
         /// <summary>
+        /// Accrual Maximum Roll Over
+        /// </summary>
+        public decimal? AccrualMaxRollOver { get; set; }
+
+        /// <summary>
         ///  Accrual Method
         /// </summary>
         public string AccrualMethod { get; set; }
@@ -156,5 +162,20 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Indicates whether or not this leave plan has a plan year start date defined in LEAD form. 
         /// </summary>
         public bool IsPlanYearStartDateDefined { get; set; }
+
+        /// <summary>
+        /// List of all Leave Transactions associated with a Employee Leave Plan
+        /// </summary>
+        public IEnumerable<EmployeeLeaveTransaction> EmployeeLeaveTransactions { get; set; }
+        
+        /// <summary>
+        /// The Current Balance from the B record of the Current Plan Year, if it exists.
+        /// </summary>
+        public decimal RetroAvailableBalance { get; set; }
+
+        /// <summary>
+        /// PriorYearEndTrnsaction's forwarding balance hours.
+        /// </summary>
+        public decimal? PriorYearForwardingBalanceHours { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using slf4net;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Dmi.Runtime;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -26,11 +27,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class InstitutionsAttendRepository : BaseColleagueRepository, IInstitutionsAttendRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        //public static char _SM = Convert.ToChar(DynamicArray.SM);
         private RepositoryException exception;
         readonly int readSize;
         private ApplValcodes _institutionTypes;
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         public InstitutionsAttendRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -679,7 +680,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     var errorMessage = "Unable to access INST.TYPES valcode table.";
                     logger.Info(errorMessage);
-                    throw new Exception(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
                 }
                 return typesTable;
             }, Level1CacheTimeoutValue);

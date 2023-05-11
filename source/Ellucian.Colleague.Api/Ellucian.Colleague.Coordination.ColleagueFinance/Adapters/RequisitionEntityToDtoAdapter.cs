@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -51,6 +51,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             requisitionDto.VendorAddress = Source.VendorAddress;
             requisitionDto.VendorAddressTypeCode = Source.VendorAddressTypeCode;
             requisitionDto.VendorAddressTypeDesc = Source.VendorAddressTypeDesc;
+            requisitionDto.ApprovalReturnedIndicator = Source.ApprovalReturnedIndicator;
 
             requisitionDto.PurchaseOrders = new List<string>();
             if ((Source.PurchaseOrders != null) && (Source.PurchaseOrders.Count > 0))

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Services;
 using System;
 using System.Collections.Generic;
@@ -19,10 +19,10 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// List of relationships for this organizational position
         /// </summary>
-        public ReadOnlyCollection<OrganizationalRelationship> Relationships;
+        public ReadOnlyCollection<OrganizationalRelationship> Relationships { get; private set; }
         private readonly List<OrganizationalRelationship> relationships = new List<OrganizationalRelationship>();
 
-        public ReadOnlyCollection<OrganizationalPositionRelationship> PositionRelationships;
+        public ReadOnlyCollection<OrganizationalPositionRelationship> PositionRelationships { get; private set; }
         private readonly List<OrganizationalPositionRelationship> positionRelationships = new List<OrganizationalPositionRelationship>();
 
 

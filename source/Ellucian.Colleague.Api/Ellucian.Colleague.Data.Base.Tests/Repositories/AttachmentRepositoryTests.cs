@@ -1,8 +1,9 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -427,7 +428,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
                 }
-                
+
                 dataReaderMock.Verify();
             }
 
@@ -436,7 +437,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 string expected = "Collection ID(s) are required to query attachments";
                 string actual = string.Empty;
-                
+
                 // null collection
                 try
                 {
@@ -514,7 +515,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task AttachmentRepository_QueryAttachmentsAsync_InvalidStartDate()
             {
                 await repository.QueryAttachmentsAsync(false, null, new DateTime(2020, 3, 2), new DateTime(2020, 3, 1),
-                    new List<string>() { "COLLECTION1" });               
+                    new List<string>() { "COLLECTION1" });
             }
 
             [TestMethod]
@@ -929,6 +930,224 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.IsTrue(e.Message == "Exception occurred deleting attachment");
                     throw;
                 }
+            }
+        }
+
+        [TestClass]
+        public class AttachmentRepository_QueryAttachmentsAsyncs : AttachmentRepositoryTests
+        {
+            Collection<DataContracts.AttachmentsNoEncr> userData;
+
+            [TestInitialize]
+            public void AttachmentRepository_QueryAttachmentsAsync_Initialize()
+            {
+                Initialize();
+
+                // user data w/ encryption properties
+                userData = new Collection<DataContracts.AttachmentsNoEncr>();
+                var attachment1 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "f070516e-09f4-4232-af06-78391100e213",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag1",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData.Add(attachment1);
+                var attachment2 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "90c96aff-4d7b-4f65-a35a-b87ba6c2fc68",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment2.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag5",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData.Add(attachment2);
+                var attachment3 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "90c96aff-4d7b-4f65-a35a-b87ba6c2fc68",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment2.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag4",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData.Add(attachment3);
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_OwnerAndCollectionSuccess()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(userData);
+
+                var actual = await repository.QueryAttachmentsAsync("0000001", "COLLECTION1", null);
+                Assert.AreEqual(userData.Count(), actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_OwnerSuccess()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(userData);
+
+                var actual = await repository.QueryAttachmentsAsync("0000001", null, null);
+                Assert.AreEqual(userData.Count(), actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_CollectionSuccess()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(userData);
+
+                var actual = await repository.QueryAttachmentsAsync(null, "COLLECTION1", null);
+                Assert.AreEqual(userData.Count(), actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_TagOneListSuccess()
+            {
+                dataReaderMock.Setup(a => a.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(new string[0]);
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(userData);
+
+                List<string> tagOnesList = new List<string>() { "tag1" };
+                var actual = await repository.QueryAttachmentsAsync(null, "COLLECTION1", tagOnesList);
+                Assert.AreEqual(userData.Count(), actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_TagOneBulkReadInChunks()
+            {
+                // user data w/ encryption properties
+                var userData_bulkRead1 = new Collection<DataContracts.AttachmentsNoEncr>();
+                var attachment1 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "f070516e-09f4-4232-af06-78391100e213",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag1",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData_bulkRead1.Add(attachment1);
+                var attachment2 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "90c96aff-4d7b-4f65-a35a-b87ba6c2fc68",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment2.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag5",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData_bulkRead1.Add(attachment2);
+
+                var userData = new List<DataContracts.AttachmentsNoEncr>();
+                userData.AddRange(userData_bulkRead1);
+
+                List<string> tagOnesList = new List<string>();
+                for (int i = 1; i < 6; i++)
+                {
+                    tagOnesList.Add(string.Format("tag{0}", i));
+                }
+
+                dataReaderMock.Setup(a => a.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(new string[0]);
+
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(userData_bulkRead1);
+
+                var apiSettingsMock = new ApiSettings("settings") { BulkReadSize = 3 };
+                repository = new AttachmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+
+                
+                var actual = await repository.QueryAttachmentsAsync(null, "COLLECTION1", tagOnesList);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(4, actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+
+                dataReaderMock.Verify(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>(It.IsAny<string[]>(), It.IsAny<bool>()), Times.Exactly(2));
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_NullOwnerAndCollection()
+            {
+                List<string> tagOnesList = new List<string>() { "tag1" };
+                await repository.QueryAttachmentsAsync(null, null, tagOnesList);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_EmptyOwnerAndCollection()
+            {
+                await repository.QueryAttachmentsAsync(string.Empty, string.Empty, new List<string>());
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_OwnerAndCollectionException()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving bulk attachment metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.QueryAttachmentsAsync("0000001", "COLLECTION1", null);
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -103,7 +104,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }            
         }
 
@@ -162,7 +163,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -200,7 +201,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -238,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw new Exception(ex.Message, ex);
+                throw new ColleagueWebApiException(ex.Message, ex);
             }
         }
 
@@ -287,7 +288,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var error = string.Concat(ex.Message, "Something unexpected happened for guid ", source.RecordGuid);
-                throw new Exception(error, ex);
+                throw new ColleagueWebApiException(error, ex);
             } 
         }
 
@@ -330,7 +331,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var error = string.Concat(ex.Message, "Something unexpected happened for guid ", source.RecordGuid);
-                throw new Exception(error, ex);
+                throw new ColleagueWebApiException(error, ex);
             }
         }
 

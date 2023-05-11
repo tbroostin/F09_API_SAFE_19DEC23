@@ -1,4 +1,4 @@
-﻿// Copyright 2013 - 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
@@ -26,12 +26,12 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// Messages
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Ellucian.StyleCop.WebApi.EllucianWebApiDtoAnalyzer", "EL1000:NoPublicFieldsOnDtos", Justification = "Already released. Risk of breaking change.")] 
-        public List<string> ModificationMessages;
+        public List<string> ModificationMessages { get; set; }
         /// <summary>
         /// Indicates when requirement is not complete because requirement GPA is lower than the stated threshold
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Ellucian.StyleCop.WebApi.EllucianWebApiDtoAnalyzer", "EL1000:NoPublicFieldsOnDtos", Justification = "Already released. Risk of breaking change.")] 
-        public bool MinGpaIsNotMet;
+        public bool MinGpaIsNotMet { get; set; }
         /// <summary>
         /// The total number of institution credits that have been applied 
         /// </summary>

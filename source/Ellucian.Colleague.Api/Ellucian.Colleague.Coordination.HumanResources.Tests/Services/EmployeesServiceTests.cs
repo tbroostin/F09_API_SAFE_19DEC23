@@ -74,6 +74,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 employeesService = new EmployeeService(personRepositoryMock.Object, personBaseRepositoryMock.Object, employeeRepositoryMock.Object, referenceDataRepositoryMock.Object, hrReferenceDataRepositoryMock.Object,
                                                positionRepositoryMock.Object, baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+
+                var personBaseEntityToPersonDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.PersonBase, Dtos.Base.Person>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.Base.Person>()).Returns(personBaseEntityToPersonDtoAdapter);
             }
 
             [TestCleanup]
@@ -1568,7 +1571,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PostEmployeeAsync_Exception()
             {
                 employeeRepositoryMock.Setup(e => e.CreateEmployee2Async(It.IsAny<Domain.HumanResources.Entities.Employee>())).ThrowsAsync(new Exception());
@@ -1599,7 +1602,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_Contract_Detail_Id_Null()
             {
                 employee.Contract.Detail.Id = null;
@@ -1615,7 +1618,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_Exception()
             {
                 employeeRepositoryMock.Setup(e => e.UpdateEmployee2Async(It.IsAny<Domain.HumanResources.Entities.Employee>())).ThrowsAsync(new Exception());
@@ -1623,7 +1626,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_Status()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1643,7 +1646,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_Person()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1664,7 +1667,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_location()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1686,7 +1689,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_contract()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1709,7 +1712,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_payclass()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1736,7 +1739,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_payclass_null()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1764,7 +1767,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_paystatus()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1790,7 +1793,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_benefitstatus()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1817,7 +1820,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_endDate()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1845,7 +1848,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_term()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1875,7 +1878,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_term_null()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1904,7 +1907,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_rehire()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1933,7 +1936,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_rehireType()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1963,7 +1966,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_rehireId()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -1994,7 +1997,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_hoursPerPeriod()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
@@ -2033,7 +2036,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task EmployeeService_PutEmployeeAsync_ArgumentException_hoursPerPeriod2()
             {
                 employee.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;

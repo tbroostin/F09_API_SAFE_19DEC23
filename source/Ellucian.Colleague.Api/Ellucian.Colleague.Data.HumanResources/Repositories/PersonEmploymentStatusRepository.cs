@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -35,16 +35,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
-            if(personIds == null) {throw new ArgumentNullException("PersonIds");}
-            if(!personIds.Any()) {throw new ArgumentException("Cannot pass in an empty list of personIds to get PersonEmploymentStatuses");}
+            if (personIds == null) { throw new ArgumentNullException("PersonIds"); }
+            if (!personIds.Any()) { throw new ArgumentException("Cannot pass in an empty list of personIds to get PersonEmploymentStatuses"); }
 
             var criteria = "WITH PERSTAT.HRP.ID EQ ?";
             if (lookupStartDate.HasValue)
             {
-                criteria += " AND (PERSTAT.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter) 
+                criteria += " AND (PERSTAT.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter)
                     + "' OR PERSTAT.END.DATE EQ '')";
             }
-            var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, personIds.Select(id => string.Format("\"{0}\"",id)).ToArray()); // wrap each Id in quotes for successful read
+            var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray()); // wrap each Id in quotes for successful read
 
             if (perstatKeys == null)
             {
@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perstatKeys.Any())
             {
-                logger.Info("No PERSTAT keys exist for the given person Ids: " + string.Join(",", personIds));
+                logger.Error("No PERSTAT keys exist for the given person Ids: " + string.Join(",", personIds));
             }
 
             var perstatRecords = new List<Perstat>();
@@ -74,12 +74,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             var domainPersonEmploymentStatuses = new List<PersonEmploymentStatus>();
-            foreach(var record in perstatRecords)
+            foreach (var record in perstatRecords)
             {
                 PersonEmploymentStatus entityToAdd = null;
                 try
                 {
-                    entityToAdd = new PersonEmploymentStatus(
+                    if (!string.IsNullOrEmpty(record.PerstatPrimaryPosId) && !string.IsNullOrEmpty(record.PerstatPrimaryPerposId))
+                    {
+                        entityToAdd = new PersonEmploymentStatus(
                         record.Recordkey,
                         record.PerstatHrpId,
                         record.PerstatPrimaryPosId,
@@ -87,14 +89,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         record.PerstatStartDate,
                         record.PerstatEndDate
                     );
+                    }
+
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     // we don't want to use this record if there is an error creating it
                     LogDataError("Perstat", record.Recordkey, record, e, e.Message);
                     entityToAdd = null;
                 }
-                if(entityToAdd != null)
+                if (entityToAdd != null)
                     domainPersonEmploymentStatuses.Add(entityToAdd);
             }
             return domainPersonEmploymentStatuses;

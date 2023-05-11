@@ -30,6 +30,9 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.Payments
         
         public Nullable<DateTime> ReceiptTime { get; set; }
 
+
+        public Nullable<DateTimeOffset> ReceiptDateTimeOffset { get; set; }
+
         
         public List<string> MerchantNameAddress { get; set; }
 

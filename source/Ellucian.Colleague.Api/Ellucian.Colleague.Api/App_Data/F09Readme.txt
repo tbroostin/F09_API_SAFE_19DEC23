@@ -12,8 +12,8 @@
 **-----------------------------------------------------------------
   
   FGU-dev
-      purpose..............: matches build that is currently deployed to PROJDB18
-      Colleague.Api Version: 1.33.1.6
+      purpose..............: matches build that is currently deployed to TEST18
+      Colleague.Api Version: 1.37.1.2
       deployed date........: 01/14/21
       deployed commit......: see server for actual commit (this is inside source control)
 
@@ -38,6 +38,7 @@
   12/13/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
   01/14/22 TEST18                                                      -override reg dates cache timer
   01/19/22 LIVE                                                        -override reg dates cache timer
+  12/03/22 TEST18   v1.37.1.2                                          -upgrade API to v1.37
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions

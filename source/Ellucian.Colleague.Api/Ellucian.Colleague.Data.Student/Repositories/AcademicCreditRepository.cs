@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -8,11 +8,13 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -37,7 +39,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private string colleagueTimeZone;
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
         const string AllStudentEquivEvalsRecordsCache = "AllStudentEquivEvalsRecordKeys";
         const int AllStudentEquivEvalsRecordsCacheTimeout = 20;
         private RepositoryException exception = new RepositoryException();
@@ -822,47 +824,60 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             Dictionary<string, List<AcademicCredit>> studentAcadCredit = new Dictionary<string, List<AcademicCredit>>();
 
-            if (studentIds != null && studentIds.Count() > 0)
+            try
             {
-                // Need to execute Select and Bulk Reads in chunks of no more than 5,000.
-                var academicCreditData = new List<AcademicCredit>();
-                for (int i = 0; i < studentIds.Count(); i += readSize)
+                if (studentIds != null && studentIds.Count() > 0)
                 {
-                    var subList = studentIds.Skip(i).Take(readSize).ToArray();
-                    string[] creditIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.PERSON.ID = '?'", subList);
-                    if (creditIds != null && creditIds.Count() > 0)
+                    // Need to execute Select and Bulk Reads in chunks of no more than 5,000.
+                    var academicCreditData = new List<AcademicCredit>();
+                    for (int i = 0; i < studentIds.Count(); i += readSize)
                     {
-                        IEnumerable<AcademicCredit> creditData = await GetAsync(creditIds, bestFit, filter, includeDrops);
-                        academicCreditData.AddRange(creditData);
-                    }
-                    else
-                    {
-                        // Log that we could not select data for this list of students
-                        var message = "Could not select data from STUDENT.ACAD.CRED.  Index = '" + i + "', Readsize = '" + readSize + "'.";
-                        logger.Warn(message);
-                    }
-                }
-                // Put into dictionary to return to calling process.
-                if (academicCreditData != null)
-                {
-                    foreach (var creditData in academicCreditData)
-                    {
-                        if (studentAcadCredit.ContainsKey(creditData.StudentId))
+                        var subList = studentIds.Skip(i).Take(readSize).ToArray();
+                        string[] creditIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.PERSON.ID = '?'", subList);
+                        if (creditIds != null && creditIds.Count() > 0)
                         {
-                            var creditDataList = studentAcadCredit[creditData.StudentId];
-                            creditDataList.Add(creditData);
-                            studentAcadCredit[creditData.StudentId] = creditDataList;
+                            IEnumerable<AcademicCredit> creditData = await GetAsync(creditIds, bestFit, filter, includeDrops);
+                            academicCreditData.AddRange(creditData);
                         }
                         else
                         {
-                            List<AcademicCredit> creditDataList = new List<AcademicCredit>();
-                            creditDataList.Add(creditData);
-                            studentAcadCredit.Add(creditData.StudentId, creditDataList);
+                            // Log that we could not select data for this list of students
+                            var message = "Could not select data from STUDENT.ACAD.CRED.  Index = '" + i + "', Readsize = '" + readSize + "'.";
+                            logger.Warn(message);
+                        }
+                    }
+                    // Put into dictionary to return to calling process.
+                    if (academicCreditData != null)
+                    {
+                        foreach (var creditData in academicCreditData)
+                        {
+                            if (studentAcadCredit.ContainsKey(creditData.StudentId))
+                            {
+                                var creditDataList = studentAcadCredit[creditData.StudentId];
+                                creditDataList.Add(creditData);
+                                studentAcadCredit[creditData.StudentId] = creditDataList;
+                            }
+                            else
+                            {
+                                List<AcademicCredit> creditDataList = new List<AcademicCredit>();
+                                creditDataList.Add(creditData);
+                                studentAcadCredit.Add(creditData.StudentId, creditDataList);
+                            }
                         }
                     }
                 }
+                return studentAcadCredit;
             }
-            return studentAcadCredit;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving academic credit for student with id {0}", studentIds);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occurred while retrieving academic credits");
+                throw;
+            }
         }
 
         /// <summary>
@@ -1193,9 +1208,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             ac.AddDepartment(dept);
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
                             // If the department is already in the list just keep going. 
+                            logger.Error(ex, "Department is already in the list.");
                         }
 
                     }
@@ -1208,9 +1224,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 ac.AddDepartment(d);
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
                                 // If the department is already in the list just keep going. 
+                                logger.Error(ex, "Department is already in the list.");
                             }
                         }
                     }
@@ -1338,6 +1355,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                             }
                         }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             // Log the message only.
@@ -1355,6 +1376,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     ac.RepeatAcademicCreditIds = cred.StcRepeatedAcadCred;
 
                     credits.Add(ac);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception aex)
                 {
@@ -1695,7 +1720,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 else
                 {
-                    throw new Exception("Transaction failed to return credit types");
+                    throw new ColleagueWebApiException("Transaction failed to return credit types");
                 }
             }
 
@@ -1826,7 +1851,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access STUDENT.ACAD.CRED.STATUSES valcode table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    return studentAcadCredStatuses;
                }, Level1CacheTimeoutValue);
@@ -1903,7 +1928,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var message = "Student " + studentId + " is not registered for course section " + id + ".";
                     logger.Error(message);
-                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, id, message));
+                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, string.Empty, id, message));
                 }
 
                 //filter out sections if specified in the criteria
@@ -1959,7 +1984,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var message = "Student " + studentId + " is not registered for course sections that are configured for random grading in term: " + id + ".";
                     logger.Error(message);
-                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, id, message));
+                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty,string.Empty, string.Empty, id, message));
                 }
 
                 // filter out terms if terms where specified in the query criteria
@@ -2040,6 +2065,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 var gradingId = (studentSection.ScsRandomId.HasValue) ? studentSection.ScsRandomId.Value.ToString() : string.Empty;
+                var midTermGradingId = (studentSection.ScsMidRandomId.HasValue) ? studentSection.ScsMidRandomId.Value.ToString() : string.Empty;
                 var termId = (acadCredit.TermCode == null) ? string.Empty : acadCredit.TermCode;
 
                 //skip sections that are missing anonymous grading ids
@@ -2050,7 +2076,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     continue;
                 }
 
-                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, termId, studentSection.ScsCourseSection, message));
+                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, midTermGradingId, termId, studentSection.ScsCourseSection, message));
             }
 
             return studentAnonymousGradingIds;
@@ -2080,6 +2106,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             foreach (var studentTerm in studentTermsOutput.BulkRecordsRead)
             {
                 var gradingId = (studentTerm.SttrRandomId.HasValue) ? studentTerm.SttrRandomId.Value.ToString() : string.Empty;
+                var midTermGradingId = (studentTerm.SttrMidRandomId.HasValue) ? studentTerm.SttrMidRandomId.Value.ToString() : string.Empty;
                 var recordKeyValues = studentTerm.Recordkey.Split('*');
                 var termId = (recordKeyValues == null || recordKeyValues.Length != 3) ? string.Empty : recordKeyValues[1];
                 string message = null;
@@ -2092,7 +2119,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     continue;
                 }
 
-                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, termId, null, message));
+                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId,midTermGradingId, termId, null, message));
             }
 
             return studentAnonymousGradingIds;

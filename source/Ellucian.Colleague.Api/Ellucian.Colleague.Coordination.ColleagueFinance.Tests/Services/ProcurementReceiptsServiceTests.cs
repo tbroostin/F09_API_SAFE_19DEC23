@@ -205,7 +205,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_InvalidOperationException()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
@@ -221,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_ArgumentException()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
@@ -229,7 +229,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_Exception()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -255,7 +255,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }        
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_PO()
         {
             procurementReciept.PurchaseOrder = null;
@@ -263,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_POId()
         {
             procurementReciept.PurchaseOrder.Id = string.Empty;
@@ -271,7 +271,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_LineItem()
         {
             procurementReciept.LineItems = null;
@@ -279,7 +279,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Empty_LineItem()
         {
             procurementReciept.LineItems = new List<ProcurementReceiptsLineItems>();
@@ -287,7 +287,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_ReceivedBy()
         {
             procurementReciept.ReceivedBy = null;
@@ -295,7 +295,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_ReceivedBy_Id()
         {
             procurementReciept.ReceivedBy = new GuidObject2();
@@ -303,7 +303,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_PO_Null()
         {
             _purchaseOrderRepositoryMock.Setup(i => i.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
@@ -311,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_InProgress()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.InProgress, DateTime.Today, DateTime.Today)
@@ -323,7 +323,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_NotApproved()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.NotApproved, DateTime.Today, DateTime.Today)
@@ -335,7 +335,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_OutstandingItemsId_Null()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.Accepted, DateTime.Today, DateTime.Today)
@@ -348,7 +348,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_OutstandingItemsId_NotAny()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.Accepted, DateTime.Today, DateTime.Today)
@@ -361,7 +361,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_AcceptedItemsId_Null()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.Accepted, DateTime.Today, DateTime.Today)
@@ -374,7 +374,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_POStatus_AcceptedItemsId_NotAny()
         {
             purchaseOrder = new PurchaseOrder("123", "123", "Vendor", PurchaseOrderStatus.Accepted, DateTime.Today, DateTime.Today)
@@ -388,7 +388,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_PO_LineItems_Empty()
         {
             procurementReciept.LineItems.First().LineItemNumber = string.Empty;
@@ -396,7 +396,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_LineItemReceived_Empty()
         {
             procurementReciept.LineItems.First().Received = null;
@@ -404,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_LineItem_Noquantity()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty();
@@ -412,7 +412,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_LineItem_NoCost()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty() { Quantity = 1 };
@@ -420,7 +420,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_LineItem_CostNotNull()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -435,7 +435,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_LineItem_CostNull()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -449,7 +449,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_CurrencyMismatch()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -464,7 +464,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_Null()
         {
             procurementReciept.LineItems.First().Rejected = new Dtos.DtoProperties.QuantityAmount2DtoProperty() { };
@@ -472,7 +472,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_VS_Received()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -489,7 +489,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_GT_Received()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -506,7 +506,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_RejectedQT_VS_ReceivedCost()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -521,7 +521,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_RejectedQT_VS_ReceivedQT()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -538,7 +538,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_RejectedQT_GT_ReceivedQT()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -555,7 +555,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_RejectedQT_GT_ReceivedCost()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -574,7 +574,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_QT_Rejected_Null()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -590,7 +590,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_CostNull_QtHasValue()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -607,7 +607,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Rejected_CostNotNull_QtHasValue()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -626,7 +626,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_ReceivedCostNotNull()
         {
             procurementReciept.LineItems.First().Received = new Dtos.DtoProperties.QuantityAmount2DtoProperty()
@@ -649,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_ShippingMethod_Null()
         {
             _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -657,7 +657,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_ShippingMethod_BadGuid()
         {
             procurementReciept.ShippingMethod = new GuidObject2("BadGuid");
@@ -665,7 +665,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Person_BadId()
         {
             procurementReciept.ReceivedBy = new GuidObject2("BadGuid");

@@ -108,5 +108,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of budget periods for the project.
         /// </summary>
         public List<ProjectBudgetPeriod> BudgetPeriods { get; set; }
+
+        /// <summary>
+        /// Attachments Indicator
+        /// </summary>
+        public bool AttachmentsIndicator { get; set; }
     }
 }

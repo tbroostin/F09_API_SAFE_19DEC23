@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -284,6 +284,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// Institutional message to display to the User Profile form user
         /// </summary>
         public string Text { get; set; }
+
+        /// <summary>
+        /// Indicates whether institution wishes to allow the self-service user to authorize a personal phone number for text
+        /// </summary>
+        public bool? AuthorizePhonesForText { get; set; }
 
         #region Identity View/Update
 

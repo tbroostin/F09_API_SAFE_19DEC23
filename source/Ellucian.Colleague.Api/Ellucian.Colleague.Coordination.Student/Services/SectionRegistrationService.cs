@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -13,6 +13,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -245,7 +246,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     acadPeriod = (AcademicPeriods(bypassCache)).FirstOrDefault(ap => ap.Guid.Equals(academicPeriod, StringComparison.OrdinalIgnoreCase));
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Unable to get academic period.");
+                }
                 if (acadPeriod == null || string.IsNullOrEmpty(acadPeriod.Code))
                 {
                     return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
@@ -263,7 +267,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     sectInstructorNewValue = await _personRepository.GetPersonIdForNonCorpOnly(sectionInstructor);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Unable to get section instructor.");
+                }
                 if (string.IsNullOrEmpty(sectInstructorNewValue))
                 {
                     return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
@@ -303,7 +310,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         academicPeriods = this.AcademicPeriods(bypassCache);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Unable to get academic periods.");
+                    }
                     if (academicPeriods == null)
                     {
                         return new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(sectRegistrationList, 0);
@@ -1184,9 +1194,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     stcKey = await _sectionRegistrationRepository.GetSectionRegistrationIdFromGuidAsync(guid);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Fall through with a null stcKey in case we are doing PUT with a new GUID.
+                    logger.Error(ex, "Unable to get section registration for stcKey.");
                 }
             }
             //check if required fields are filled
@@ -1321,7 +1332,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="guid">Guid for section registration</param>
         /// <param name="registrationDto">The <see cref="Dtos.SectionRegistration2">section registration</see> entity to update in the database.</param>
         /// <returns>The modified section registration <see cref="Dtos.SectionRegistration2">object</see></returns>
-        public async Task<Dtos.SectionRegistration4> UpdateSectionRegistration3Async(string guid, Dtos.SectionRegistration4 registrationDto)
+        public async Task<Dtos.SectionRegistration4> UpdateSectionRegistration3Async(string guid, Dtos.SectionRegistration4 registrationDto, bool updateRegistration = true)
         {
             string stcKey = string.Empty;
             if (!string.IsNullOrEmpty(guid))
@@ -1331,9 +1342,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     stcKey = await _sectionRegistrationRepository.GetSectionRegistrationIdFromGuidAsync(guid);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Fall through with a null stcKey in case we are doing PUT with a new GUID.
+                    logger.Error(ex, "Unable to get section registration ID for stcKey.");
                 }
             }
             //check if required fields are filled
@@ -1351,9 +1363,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     personId = await _personRepository.GetPersonIdFromGuidAsync(registrationDto.Registrant.Id);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall through to null or empty check
+                logger.Error(ex, "Unable to get person ID.");
             }
 
             if (registrationDto.Registrant != null && !string.IsNullOrEmpty(registrationDto.Registrant.Id) && string.IsNullOrEmpty(personId))
@@ -1395,9 +1408,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(registrationDto.Section.Id);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall through to null or empty check
+                logger.Error(ex, "Unable to get section ID.");
             }
             if (registrationDto.Section != null && !string.IsNullOrEmpty(registrationDto.Section.Id) && string.IsNullOrEmpty(sectionId))
                 // throw new KeyNotFoundException("Section ID associated to guid '" + registrationDto.Id + "' not found");
@@ -1418,7 +1432,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             SectionRegistrationResponse response = null;
             try
             {
-                response = await _sectionRegistrationRepository.Update2Async(request, guid, personId, sectionId, statusCode);
+                response = await _sectionRegistrationRepository.Update2Async(request, guid, personId, sectionId, statusCode, updateRegistration);
+                if (!updateRegistration)
+                {
+                    foreach(var message in response.Messages)
+                    {
+                        IntegrationApiExceptionAddError(message.Message, "Validation.Exception");
+                    }
+                    // If we have errors, do not call the update method
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
+
+                    return registrationDto;
+                }
             }
             catch (RepositoryException ex)
             {
@@ -1473,7 +1501,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-
                 // If we have errors, do not call the update method
                 if (IntegrationApiException != null)
                 {
@@ -1481,6 +1508,200 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
                 return registrationDto;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// Update a section registration
+        /// </summary>
+        /// <param name="guid">Guid for section registration</param>
+        /// <param name="registrationDto">The <see cref="Dtos.SectionRegistration2">section registration</see> entity to update in the database.</param>
+        /// <returns>The modified section registration <see cref="Dtos.SectionRegistration2">object</see></returns>
+        public async Task<Dtos.SectionRegistrations> CheckSectionRegistrations(Dtos.SectionRegistrations registrationDto)
+        {
+            // newRegistrationDto will be filtered to only those sections that should be passed into repo/CTX.
+            var newRegistrationDto = new Dtos.SectionRegistrations();
+            newRegistrationDto.Registrant = registrationDto.Registrant;
+            newRegistrationDto.Sections = new List<SectionRegistration5>();
+                        
+            var sectionEntities = new List<Domain.Student.Entities.Section>();                   
+
+            Dictionary<string, string> sectionGuidCollection = new Dictionary<string, string>();
+            Dictionary<string, string> sectionIdCollection = new Dictionary<string, string>();
+            if (registrationDto.Sections != null && registrationDto.Sections.Any())
+            {
+                // Get section domain entities
+                try
+                {
+                    var sectionGuids = registrationDto.Sections
+                        .Where(x => (x.Section != null && !string.IsNullOrEmpty(x.Section.Id)))
+                        .Select(x => x.Section.Id).Distinct().ToList();
+                    sectionEntities = await _sectionRepository.GetSectionsDatesByIds(sectionGuids);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
+                }
+
+                // Validation that each section GUID has a section entity.  If not, issue error
+                // and exclude for call to CTX for any valid section GUIDs.
+                foreach (var regSection in registrationDto.Sections)
+                {
+                    if (regSection.Section != null && !string.IsNullOrEmpty(regSection.Section.Id))
+                    {
+                        try
+                        {
+                            var sectionEntity = sectionEntities.Where(x => x.Guid == regSection.Section.Id).FirstOrDefault();
+
+                            if (sectionEntity != null && !string.IsNullOrEmpty(sectionEntity.Id))
+                            {
+                                newRegistrationDto.Sections.Add(regSection);
+
+                                // Build dictionaries for GUID and section ID in both directions for later extraction.
+                                sectionIdCollection.Add(regSection.Section.Id, sectionEntity.Id);
+                                sectionGuidCollection.Add(sectionEntity.Id, regSection.Section.Id.ToString());
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("Unable to build section.", "Validation.Exception", guid: regSection.Section.Id);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, "Unable to get section.");
+                            IntegrationApiExceptionAddError("Unable to retrieve section", "Validation.Exception", guid: regSection.Section.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError("Each section must have a section.Id", "ValidationException");
+                    }
+                }
+            }
+            else
+            {
+                IntegrationApiExceptionAddError("Must provide a sections object", "Missing.Required.Property");
+                throw IntegrationApiException;
+            }
+
+            // Continue but only for valid section objects
+            registrationDto = newRegistrationDto;
+            if (registrationDto.Sections != null)
+            {
+                //check if required fields are filled
+                CheckForRequiredFields4(registrationDto, sectionIdCollection);
+
+                //Check business logic
+                registrationDto = await CheckForBusinessRules4Async(registrationDto, sectionIdCollection, sectionEntities);
+
+                // get the person ID associated with the incoming guid
+                string personId = string.Empty;
+                try
+                {
+                    if (registrationDto.Registrant != null && !string.IsNullOrEmpty(registrationDto.Registrant.Id))
+                    {
+                        personId = await _personRepository.GetPersonIdFromGuidAsync(registrationDto.Registrant.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Fall through to null or empty check
+                    logger.Error(ex, "Unable to get person ID.");
+                }
+
+                if (registrationDto.Registrant != null && !string.IsNullOrEmpty(registrationDto.Registrant.Id) && string.IsNullOrEmpty(personId))
+                    IntegrationApiExceptionAddError("Person associated to id '" + registrationDto.Registrant.Id + "' not found",
+                        "registrant.id", registrationDto.Id, "", System.Net.HttpStatusCode.NotFound);
+
+                _sectionRegistrationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+                foreach (var section in registrationDto.Sections)
+                {
+
+                    string statusCode = string.Empty;
+                    if (section.Status != null && section.Status.Detail != null && !string.IsNullOrEmpty(section.Status.Detail.Id))
+                    {
+                        // get optional Status Code from Detail guid.
+                        var statusCollection = await GetSectionRegistrationStatusesAsync(false);
+                        var statusItem = statusCollection.Where(r => r.Guid == section.Status.Detail.Id).FirstOrDefault();
+
+                        if (statusItem != null)
+                        {
+                            statusCode = statusItem.Code;
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Registration Status with id '",
+                                section.Status.Detail.Id.ToString(),
+                                "' was not found in the valid Section Registration Status List."),
+                                "Validation.Exception", section.Id);
+                        }
+                    }
+                }
+
+                // convert the request
+                var request = await ConvertDtoToRequest5Entity(registrationDto, personId, sectionIdCollection);
+
+                if (request == null)
+                {
+                    IntegrationApiExceptionAddError("No valid sections found","Validation.Exception");
+                    throw IntegrationApiException;
+                }
+
+                // process the request
+                SectionRegistrationResponse response = null;
+                try
+                {
+                    response = await _sectionRegistrationRepository.CheckSectionRegistrations(request, personId, sectionGuidCollection);
+
+                    // Just fall through and return null.  Getting here means no errors were caught/thrown 
+                    // so no problems encountered.
+                    //                    
+                    return null;
+                }
+
+                catch (RepositoryException ex)
+                {
+                    if (ex.Errors.Any())
+                    {
+                        foreach (var error in ex.Errors)
+                        {
+                            var errorId = string.Empty;
+                            var errorGuid = string.Empty;
+                            var errorCode = string.Empty;
+                            if (!string.IsNullOrEmpty(error.Message))
+                            {
+                                if (!string.IsNullOrEmpty(error.Id))
+                                {
+                                    errorId = error.Id;
+                                }
+                                if (!string.IsNullOrEmpty(error.SourceId))
+                                {
+                                    errorGuid = error.SourceId;
+                                }
+                                if (!string.IsNullOrEmpty(error.Code))
+                                {
+                                    errorCode = error.Code;
+                                }
+                                IntegrationApiExceptionAddError(error.Message, code: errorCode, guid: errorGuid, id: errorId);
+                            }
+                        }
+                    }
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+            else
+            {
+                IntegrationApiExceptionAddError("Must provide a sections object", "Missing.Required.Property");
+                throw IntegrationApiException;
             }
         }
 
@@ -2342,6 +2563,74 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Checks all the required fields in section registration Dto
+        /// </summary>
+        /// <param name="registrationDto">registrationDto</param>
+        private void CheckForRequiredFields4(Dtos.SectionRegistrations registrationDto, Dictionary<string, string> sectionIdCollection)
+        {
+            if (registrationDto == null)
+            {
+                IntegrationApiExceptionAddError("Must provide a SectionRegistration object", "Missing.Required.Property");
+                throw IntegrationApiException;
+            }
+
+            if (registrationDto.Registrant == null)
+                IntegrationApiExceptionAddError("Must provide a registrant object", "Missing.Required.Property");
+
+            if (registrationDto.Registrant != null && string.IsNullOrEmpty(registrationDto.Registrant.Id))
+                IntegrationApiExceptionAddError("Must provide an id for registrant", "Missing.Required.Property");
+
+            if (registrationDto.Sections != null)
+            {
+                foreach (var section in registrationDto.Sections)
+                {
+                    var sectionId = string.Empty;                
+                    sectionIdCollection.TryGetValue(section.Section.Id, out sectionId);
+                    if (string.IsNullOrEmpty(sectionId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to locate id for section : '{0}'", section.Section.Id), 
+                            "Validation.Exception", guid: section.Section.Id);
+                    }
+
+                    else
+                    {
+                        //Academic Level
+                        if (section.AcademicLevel == null)
+                        {
+                            IntegrationApiExceptionAddError("Must provide academic level for person", "Missing.Required.Property", guid: section.Section.Id, id: sectionId);
+                        }
+
+                        //Credits
+                        if (section.Credit != null && (section.Credit.Measure == null || section.Credit.Measure == StudentCourseTransferMeasure.NotSet))
+                        {
+                            IntegrationApiExceptionAddError("Must provide a credit measure for credit", "Missing.Required.Property", guid: section.Section.Id, id: sectionId);
+                        }
+
+                        // Status
+                        if (section.Status == null)
+                            IntegrationApiExceptionAddError("Must provide a status object for update", "Missing.Required.Property", guid: section.Section.Id, id: sectionId);
+                        else
+                        {
+                            if (section.Status.RegistrationStatus == RegistrationStatus3.NotSet)
+                            { 
+                                IntegrationApiExceptionAddError("Must provide registration status", "Missing.Required.Property", guid: section.Section.Id, id: sectionId);
+                            }
+                            else
+                            {
+                                if (section.Status.RegistrationStatus != RegistrationStatus3.Registered && section.Status.RegistrationStatus != RegistrationStatus3.NotRegistered)
+                                {
+                                    IntegrationApiExceptionAddError("Must provide a valid registration status", "Validation.Exception", guid: section.Section.Id, id: sectionId);
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Checks all the business rules
         /// </summary>
         /// <param name="guid">guid</param>
@@ -2956,9 +3245,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     section = await _sectionRepository.GetSectionByGuidAsync(registrationDto.Section.Id);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Fall through to null check
+                    // Fall through to null or empty check
+                    logger.Error(ex, "Unable to get section.");
                 }
                 if (section == null)
                     // throw new KeyNotFoundException("Provided sectionId is invalid");
@@ -3077,6 +3367,121 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             #endregion
+        }
+
+        /// <summary>
+        /// Checks all the business rules
+        /// </summary>
+        /// <param name="guid">guid</param>
+        /// <param name="registrationDto">SectionRegistration2 object</param>
+        /// <returns></returns>
+        private async Task<SectionRegistrations> CheckForBusinessRules4Async(Dtos.SectionRegistrations registrationDto, Dictionary<string, string> sectionIdCollection,
+            List<Domain.Student.Entities.Section> sectionEntities)
+        {
+            var newRegistrationDto = new Dtos.SectionRegistrations();
+            newRegistrationDto.Registrant = registrationDto.Registrant;
+            newRegistrationDto.Sections = new List<SectionRegistration5>();
+
+            if (registrationDto.Sections != null)
+            {
+                foreach (var regSection in registrationDto.Sections)
+                {
+                    var sectionId = string.Empty;
+                    sectionIdCollection.TryGetValue(regSection.Section.Id, out sectionId);
+                    if (string.IsNullOrEmpty(sectionId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to locate id for section : '{0}'", regSection.Section.Id),
+                            "Validation.Exception", guid: regSection.Section.Id);
+                    }
+                    else
+                    {
+                        bool validSection = true;
+
+                        Domain.Student.Entities.Section section = null;
+                        if (regSection.Section != null && !string.IsNullOrEmpty(regSection.Section.Id))
+                        {
+                            try
+                            {
+                                section = sectionEntities.Where(x => x.Guid == regSection.Section.Id).FirstOrDefault();   
+                            }
+                            catch (Exception ex)
+                            {
+                                validSection = false;
+                                // Fall through to null check
+                                logger.Error(ex, "Unable to get section.");
+                            }
+                            if (section == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Provided section id '{0}' is invalid", regSection.Section.Id),
+                                    code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.NotFound);
+                                validSection = false;
+                            }
+                        }
+
+                        #region Involvement
+                        //Check involvement startOn before section start date
+                        if (regSection.Involvement != null && section != null)
+                        {
+                            if (regSection.Involvement.StartOn != null && regSection.Involvement.EndOn != null)
+                            {
+                                if (regSection.Involvement.StartOn.Value.Date > regSection.Involvement.EndOn.Value.Date)
+                                {
+                                    IntegrationApiExceptionAddError("The participation start date cannot be after the participation end date.", 
+                                        code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.BadRequest);
+                                    validSection = false;
+                                }
+                            }
+
+                            if (regSection.Involvement.StartOn != null && section.StartDate != null)
+                            {
+                                if (regSection.Involvement.StartOn.Value.Date < section.StartDate.Date)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("The participation start date cannot be before the section start date of '{0}'.", section.StartDate.Date.ToShortDateString()),
+                                        code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.BadRequest);
+                                    validSection = false;
+                                }
+                            }
+                            //Check involvement startOn after section end date
+                            if (regSection.Involvement.StartOn != null && section.EndDate != null && section.EndDate.HasValue)
+                            {
+                                if (regSection.Involvement.StartOn.Value.Date > section.EndDate.Value.Date)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("The participation start date cannot be after the section end date of '{0}'.", section.EndDate.Value.Date.ToShortDateString()),
+                                        code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.BadRequest);
+                                    validSection = false;
+                                }
+                            }
+                            //Check involvement endOn after section start date
+                            if (regSection.Involvement.EndOn != null && section.StartDate != null)
+                            {
+                                if (regSection.Involvement.EndOn.Value.Date < section.StartDate.Date)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("The participation end date cannot be before the section start date of '{0}'.", section.StartDate.Date.ToShortDateString()),
+                                        code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.BadRequest);
+                                    validSection = false;
+                                }
+                            }
+                            //Check involvement endOn after section end date
+                            if (regSection.Involvement.EndOn != null && section.EndDate != null && section.EndDate.HasValue)
+                            {
+                                if (regSection.Involvement.EndOn.Value.Date > section.EndDate.Value.Date)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("The participation end date cannot be after the section end date of '{0}'.", section.EndDate.Value.Date.ToShortDateString()),
+                                        code: "Validation.Exception", guid: regSection.Section.Id, id: sectionId, httpStatusCode: System.Net.HttpStatusCode.BadRequest);
+                                    validSection = false;
+                                }
+                            }
+                        }
+                        #endregion
+
+                        if (validSection == true)
+                        {
+                            newRegistrationDto.Sections.Add(regSection);
+                        }
+                    }
+                }
+            }
+            return newRegistrationDto;
         }
 
         #endregion
@@ -3405,6 +3810,144 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return request;
         }
+
+        /// <summary>
+        /// Convert a Dto to a registration request.
+        /// </summary>
+        /// <param name="sectionRegistrationDto">The section <see cref="Dtos.SectionRegistration4">registration</see> Object.</param>
+        /// <returns>Registration <see cref="RegistrationRequest">request</see></returns>
+        private async Task<SectionRegistrationsRequest> ConvertDtoToRequest5Entity(Dtos.SectionRegistrations sectionRegistrationDto, string personId, Dictionary<string, string> sectionIdCollection)
+        {
+            var sectionRegistrations = new List<Domain.Student.Entities.SectionRegistration>();
+
+            if (sectionRegistrationDto.Sections != null)
+            {
+                foreach (var section in sectionRegistrationDto.Sections)
+                {
+                    Ellucian.Colleague.Domain.Student.Entities.SectionRegistration sectionRegistration = new Domain.Student.Entities.SectionRegistration();
+
+                    if (section.Status != null && section.Status.RegistrationStatus != RegistrationStatus3.NotSet)
+                    {
+                        // Set appropriate action in the request.
+                        switch (section.Status.RegistrationStatus)
+                        {
+                            case Dtos.EnumProperties.RegistrationStatus3.Registered:
+                                {
+                                    sectionRegistration.Action = Domain.Student.Entities.RegistrationAction.Add;  
+                                }
+                                break;
+                            case Dtos.EnumProperties.RegistrationStatus3.NotRegistered:
+                                {
+                                    sectionRegistration.Action = Domain.Student.Entities.RegistrationAction.Drop;
+                                }
+                                break;
+                            default:
+                                {
+                                    break;
+                                }
+                        }
+                    }
+
+                    // get the section ID associated to the incoming guid
+
+                    string sectionId = string.Empty;
+                    try
+                    {
+                        if (section.Section != null && !string.IsNullOrEmpty(section.Section.Id))
+                        {
+
+                            sectionIdCollection.TryGetValue(section.Section.Id, out sectionId);
+                            if (string.IsNullOrEmpty(sectionId))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to locate id for section : '{0}'", section.Section.Id),
+                                            guid: section.Section.Id);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Fall through to null or empty check
+                        logger.Error(ex, "Unable to get section ID.");
+                    }
+                    if (section.Section != null && !string.IsNullOrEmpty(section.Section.Id) && string.IsNullOrEmpty(sectionId))
+                        IntegrationApiExceptionAddError("Section ID associated to guid '" + section.Section.Id + "' not found",
+                            "sectionRegistrations.section.id", section.Id, "", System.Net.HttpStatusCode.NotFound);
+
+                    if (!string.IsNullOrEmpty(sectionId))
+                    {
+                        sectionRegistration.SectionId = sectionId;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError("Missing section.Id", "section.Section.Id", sectionRegistrationDto.Id);
+                    }
+                    sectionRegistration.RegistrationDate = section.StatusDate;
+
+                    //Academic levels
+                    if (section.AcademicLevel != null && !string.IsNullOrEmpty(section.AcademicLevel.Id))
+                    {
+                        var academicLevel = (await AcademicLevelsAsync()).FirstOrDefault(al => al.Guid.Equals(section.AcademicLevel.Id, StringComparison.OrdinalIgnoreCase));
+                        if (academicLevel == null)
+                        {
+                            IntegrationApiExceptionAddError("Academic level ID associated to guid '" + section.AcademicLevel.Id + "' not found",
+                                "sectionRegistrations.academicLevel.id", sectionRegistrationDto.Id);
+                        }
+                        else
+                        {
+                            sectionRegistration.AcademicLevelCode = academicLevel.Code;
+                        }
+                    }
+
+                    //Attempted credit or ceus
+                    if (section.Credit != null && section.Credit.Measure != null)
+                    {
+                        if (section.Credit.Measure == StudentCourseTransferMeasure.Credit || section.Credit.Measure == StudentCourseTransferMeasure.Hour)
+                        {
+                            if (section.Credit.RegistrationCredit != null)
+                            {
+                                sectionRegistration.Credits = section.Credit.RegistrationCredit;
+                            }
+                        }
+                        if (section.Credit.Measure == StudentCourseTransferMeasure.Ceu)
+                        {
+                            if (section.Credit.RegistrationCredit != null)
+                            {
+                                sectionRegistration.Ceus = section.Credit.RegistrationCredit;
+                            }
+                        }
+                    }
+
+                    if (section.Involvement != null && section.Involvement.StartOn != null && section.Involvement.StartOn.HasValue)
+                    {
+                        sectionRegistration.InvolvementStartOn = section.Involvement.StartOn;
+                    }
+                    if (section.Involvement != null && section.Involvement.EndOn != null && section.Involvement.EndOn.HasValue)
+                    {
+                        sectionRegistration.InvolvementEndOn = section.Involvement.EndOn;
+                    }
+
+                    sectionRegistrations.Add(sectionRegistration);
+
+                }
+            }
+
+
+            // Return a new registration request object
+            if (sectionRegistrations.Any())
+            {
+                var request = new SectionRegistrationsRequest(personId, null, sectionRegistrations)
+                {
+                    CreateStudentFlag = false
+                };
+
+                return request;
+            }
+            else
+            {
+                return null;
+            }    
+        }
+
 
         /// <summary>
         /// Convert the Registration Response into the DTO response for Section Registration
@@ -4263,7 +4806,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Error occured while getting course section guids.", ex);
+                throw new ColleagueWebApiException("Error occured while getting course section guids.", ex);
             }
 
             //Get grade terms

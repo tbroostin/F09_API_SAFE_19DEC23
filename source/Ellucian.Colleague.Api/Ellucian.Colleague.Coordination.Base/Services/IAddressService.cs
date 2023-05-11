@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -25,5 +25,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task DeleteAddressesAsync(string id);
 
         Task QueryAddressPermissionAsync(IEnumerable<string> personIds);
+
+        /// <summary>
+        /// Get all current addresses for a person
+        /// </summary>
+        /// <param name="personId">Person to get addresses for</param>
+        /// <returns>List of Address Objects <see cref="Ellucian.Colleague.Dtos.Base.Address">Address</see></returns>
+        Task<IEnumerable<Dtos.Base.Address>> GetPersonAddresses2Async(string personId);
     }
 }

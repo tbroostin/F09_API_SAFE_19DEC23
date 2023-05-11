@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -30,6 +30,7 @@ using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -832,8 +833,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     origVendor = await _vendorsService.GetVendorsByGuidAsync2(guid);
                 }
-                catch
-                { }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Unable to get vendor by guid");
+                }
 
                 //get the merged DTO. 
 
@@ -1216,18 +1219,23 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             catch (ArgumentNullException anex)
             {
-                _logger.Error(anex, anex.Message);
+                _logger.Error(anex, "Invalid argument.");
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
             catch (KeyNotFoundException knfex)
             {
-                _logger.Error(knfex, knfex.Message);
+                _logger.Error(knfex, "Record not found.");
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Debug(csee, "Session expired - unable to search vendors.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
-                _logger.Error(ex, ex.Message);
+                _logger.Error(ex, "Unable to search vendors");
                 throw CreateHttpResponseException("Unable to search vendors", HttpStatusCode.BadRequest);
             }
         }
@@ -1270,6 +1278,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 _logger.Error(knfex, "Record not found.");
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Debug(csee, "Session expired - unable to find vendors.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)
@@ -1317,6 +1330,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 _logger.Error(knfex, "Record not found.");
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Debug(csee, "Session expired - unable to populate vendor default tax form info.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

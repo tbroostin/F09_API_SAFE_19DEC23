@@ -1,23 +1,23 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Net;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using Newtonsoft.Json;
-using Ellucian.Web.Utility;
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client.Core;
-using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Colleague.Dtos.Student.DegreePlans;
-using Ellucian.Colleague.Dtos.Student.Requirements;
-using Ellucian.Colleague.Dtos.Student.QuickRegistration;
-using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
-using Ellucian.Colleague.Dtos.Student.TransferWork;
 using Ellucian.Colleague.Dtos.Student.AnonymousGrading;
+using Ellucian.Colleague.Dtos.Student.DegreePlans;
+using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Colleague.Dtos.Student.QuickRegistration;
+using Ellucian.Colleague.Dtos.Student.Requirements;
+using Ellucian.Colleague.Dtos.Student.TransferWork;
+using Ellucian.Rest.Client.Exceptions;
+using Ellucian.Web.Utility;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -73,6 +73,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving faculty information");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Faculty");
@@ -131,9 +136,14 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving faculty details");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve faculty.");
+                logger.Error(ex, "Unable to retrieve faculty.");
                 throw;
             }
         }
@@ -187,6 +197,11 @@ namespace Ellucian.Colleague.Api.Client
                 studentIds = JsonConvert.DeserializeObject<IEnumerable<string>>(await response.Content.ReadAsStringAsync());
                 return studentIds;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving list of faculty keys");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve Faculty IDs");
@@ -232,6 +247,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving grades");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Grade>");
@@ -260,6 +280,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving grade scheme");
+                throw;
+            }
             catch (Exception ex)
             {
                 string message = string.Format("Unable to retrieve grade scheme {0}.", id);
@@ -289,6 +314,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving grade subscheme");
+                throw;
+            }
             catch (Exception ex)
             {
                 string message = string.Format("Unable to retrieve grade subscheme {0}.", id);
@@ -489,6 +519,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving book information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Book");
@@ -522,6 +557,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
 
                 return JsonConvert.DeserializeObject<IEnumerable<Book>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred");
+                throw;
             }
             catch (Exception ex)
             {
@@ -668,6 +708,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic history for student: " + id);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Academic History");
@@ -705,6 +750,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic history.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Academic History");
@@ -818,6 +868,12 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic levels");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<AcademicLevel>");
@@ -910,6 +966,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving class levels");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<ClassLevel>");
@@ -954,6 +1015,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<CourseLevel>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course levels");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1001,6 +1067,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<CourseType>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course types");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1047,6 +1118,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<TopicCode>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving topic codes");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1102,6 +1179,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Requirement>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception occurred while fetching requirements");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1171,6 +1253,12 @@ namespace Ellucian.Colleague.Api.Client
 
                 return JsonConvert.DeserializeObject<IEnumerable<Requirement>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception occurred while querying for requirements");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1270,6 +1358,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving programs for student: " + id);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<StudentProgram2>");
@@ -1300,6 +1393,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all academic programs async.
         /// </summary>
@@ -1307,7 +1401,6 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<Program>> GetProgramsAsync()
         {
-
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_programsPath);
@@ -1317,6 +1410,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Program>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic programs");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -1324,6 +1422,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all active programs, version 2
         /// </summary>
@@ -1342,6 +1441,7 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Program>");
@@ -1366,6 +1466,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Program>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving active programs");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -1428,6 +1533,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving program details for program: " + id);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Program");
@@ -1493,6 +1603,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, string.Format("Timeout exception has occurred while retrieving program requirments for program {0} and catalog {1}", program, catalog));
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get ProgramRequirements");
@@ -1525,6 +1640,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<StudentProgram2>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding a program for student: " + studentId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -1556,6 +1676,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecutePutRequestWithResponseAsync(studentAcademicProgram, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<StudentProgram2>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating a program for student: " + studentId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1618,6 +1743,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Course");
@@ -1680,6 +1810,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<IEnumerable<Course2>>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving courses for the given criteria");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get requested Course2 objects");
@@ -1904,9 +2039,14 @@ namespace Ellucian.Colleague.Api.Client
 
                 return courses;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while searching for courses");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex, "Exception occurred while searching for courses");
                 throw;
             }
         }
@@ -2006,9 +2146,14 @@ namespace Ellucian.Colleague.Api.Client
 
                 return courses;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while searching for courses");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex, "Exception occurred while searching for courses");
                 throw;
             }
         }
@@ -2446,6 +2591,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section information for section: " + id);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get course section");
@@ -2641,6 +2791,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<IEnumerable<Section3>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve sections.");
@@ -2678,13 +2833,17 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<IEnumerable<Section4>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve sections.");
                 throw;
             }
         }
-
 
         /// <summary>
         /// Given a set of section IDs, return an iCal representation of those sections' meetings
@@ -2787,6 +2946,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<SectionMeetingInstance>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section meeting instances.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e.ToString());
@@ -2824,6 +2988,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentAttendance>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student attendances.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student attendances.");
@@ -2860,14 +3029,18 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<StudentSectionsAttendances>(await response.Content.ReadAsStringAsync());
             }
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student attendances.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve  attendances for student " + studentId);
                 throw;
             }
         }
-
-
 
         /// <summary>
         /// Update a student attendance information async.
@@ -2918,6 +3091,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<SectionAttendanceResponse>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating student section attendance.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to update Section Attendance information.");
@@ -3077,7 +3255,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync<SectionGrades4>(sectionGrades, urlPath, headers: headers);
                 updatedResponse = JsonConvert.DeserializeObject<SectionGradeSectionResponse>(await response.Content.ReadAsStringAsync());
             }
-
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating student section grades.");
+                throw;
+            }
             // If the HTTP request fails, the grades weren't updated successfull
             catch (HttpRequestFailedException hre)
             {
@@ -3155,6 +3337,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving session cycle list");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the session cycle list.");
@@ -3176,6 +3363,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<IEnumerable<YearlyCycle>>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving yearly cycle list");
+                throw;
             }
             catch (Exception ex)
             {
@@ -3224,6 +3416,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving subjects");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Subject>");
@@ -3269,6 +3466,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<InstructionalMethod>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving instructional methods");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -3315,10 +3518,15 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Major>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving majors");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to get IEnumerable<Major>");
+                logger.Error(ex, "Unable to get major list");
                 throw;
             }
         }
@@ -3360,6 +3568,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Minor>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving minors.");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -3452,6 +3665,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Specialization>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving the specializations.");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -3599,6 +3817,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving terms.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Term>");
@@ -3703,6 +3926,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving planning terms");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<Term>");
@@ -3748,6 +3976,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Term>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving registration terms");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -3786,6 +4020,76 @@ namespace Ellucian.Colleague.Api.Client
                 throw new InvalidOperationException("Unable to determine registration eligibility.", exception);
             }
         }
+
+        /// <summary>
+        /// Returns registration eligibility information for a student
+        /// </summary>
+        /// <param name="studentId">Id of student to check registration eligibility for</param>
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
+        /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
+        /// register the student even if the student is ineligible.</returns>
+        public RegistrationEligibility CheckRegistrationEligibility3(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id must contain a valid value.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _studentsPath, studentId, "registration-eligibility" });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+            try
+            {
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var registrationEligibility = JsonConvert.DeserializeObject<RegistrationEligibility>(response.Content.ReadAsStringAsync().Result);
+                return registrationEligibility;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to determine registration eligibility.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Returns registration eligibility information for a student async.
+        /// </summary>
+        /// <param name="studentId">Id of student to check registration eligibility for</param>
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
+        /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
+        /// register the student even if the student is ineligible.</returns>
+        public async Task<RegistrationEligibility> CheckRegistrationEligibility3Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id must contain a valid value.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _studentsPath, studentId, "registration-eligibility" });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+
+            try
+            {
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var registrationEligibility = JsonConvert.DeserializeObject<RegistrationEligibility>(await response.Content.ReadAsStringAsync());
+                return registrationEligibility;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "timeout exception has occurred while checking registration eligibility");
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to determine registration eligibility.", exception);
+            }
+        }
+
         /// <summary>
         /// Returns registration eligibility information for a student async.
         /// </summary>
@@ -3813,7 +4117,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (LoginException lex)
             {
-                logger.Error(lex, "timeout exception have occurred while checking registration eligibility");
+                logger.Error(lex, "timeout exception has occurred while checking registration eligibility");
                 throw;
             }
             catch (Exception exception)
@@ -3822,6 +4126,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw new InvalidOperationException("Unable to determine registration eligibility.", exception);
             }
         }
+
         /// <summary>
         /// Get the set of Admitted Statuses
         /// </summary>
@@ -5021,6 +5326,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentProgram2>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student programs.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student programs.");
@@ -5095,6 +5405,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentStanding>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student standings (Academic Standings) for a list of students async");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student standings.");
@@ -5126,6 +5441,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentStanding>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving active standings for student: " + studentId);
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student academic standings.");
@@ -5329,6 +5650,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<IEnumerable<PersonRestriction>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve student restrictions for student " + studentId + ".");
@@ -5463,6 +5789,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentBatch3>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving students");
+                throw;
             }
             catch (Exception ex)
             {
@@ -5699,6 +6030,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving list of facultys");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve faculty.");
@@ -5727,6 +6063,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecutePostRequestWithResponseAsync(facultyIds, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<FacultyOfficeHours>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving list of faculty office hours");
+                throw;
             }
             catch (Exception ex)
             {
@@ -5765,6 +6106,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(hre.ToString());
                 throw new InvalidOperationException(string.Format("Add office hours failed."), hre);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding office hours");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -5796,6 +6142,11 @@ namespace Ellucian.Colleague.Api.Client
             {
                 logger.Error(hre.ToString());
                 throw new InvalidOperationException(string.Format("Update office hours failed."), hre);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating office hours");
+                throw;
             }
             catch (Exception ex)
             {
@@ -5829,6 +6180,11 @@ namespace Ellucian.Colleague.Api.Client
             {
                 logger.Error(hre.ToString());
                 throw new InvalidOperationException(string.Format("Delete office hours failed."), hre);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while deleting office hours");
+                throw;
             }
             catch (Exception ex)
             {
@@ -5885,6 +6241,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get AcademicPrograms");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting Academic Programs");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get AcademicPrograms");
@@ -5908,6 +6269,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Catalog>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving all active catalogs");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException rnfe)
             {
@@ -5963,6 +6330,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<AdvisorType>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception occurred while retrieving advisor types");
+                throw;
+            }
+
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException rnfe)
             {
@@ -6439,6 +6812,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<TestResult2>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting test results for this student");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -6485,6 +6863,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Test>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while fetching tests");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -6530,6 +6913,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<NoncourseStatus>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while fetching non-course statuses");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -6578,6 +6966,12 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic standings");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get academic standings");
@@ -6725,7 +7119,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (LoginException lex)
             {
-                logger.Error(lex, "Registration timeout have occurred");
+                logger.Error(lex, "Registration Session has expired");
                 throw;
             }
             catch (Exception exception)
@@ -6764,7 +7158,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (LoginException lex)
             {
-                logger.Error(lex, "Registration timeout have occurred" );
+                logger.Error(lex, "Registration Session has expired");
                 throw;
             }
             catch (Exception exception)
@@ -6807,9 +7201,14 @@ namespace Ellucian.Colleague.Api.Client
                 var messages = JsonConvert.DeserializeObject<RegistrationResponse>(await response.Content.ReadAsStringAsync());
                 return messages;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Session has expired while dropping student section registration");
+                throw;
+            }
             catch (Exception exception)
             {
-                logger.Error(exception.ToString());
+                logger.Error(exception, exception.ToString());
                 throw new InvalidOperationException("Unable to drop registration.", exception);
             }
         }
@@ -6845,6 +7244,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var transcriptGroupings = JsonConvert.DeserializeObject<IEnumerable<TranscriptGrouping>>(await response.Content.ReadAsStringAsync());
                 return transcriptGroupings;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student's transcript groupings");
+                throw;
             }
             catch (Exception exception)
             {
@@ -6966,6 +7370,11 @@ namespace Ellucian.Colleague.Api.Client
                 var transcriptAccess = JsonConvert.DeserializeObject<TranscriptAccess>(await response.Content.ReadAsStringAsync());
                 return transcriptAccess;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving transcript restrictions for a student");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -7011,6 +7420,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section transfer statuses");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get section transfer statuses");
@@ -7189,6 +7603,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving faculty details");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Faculty Sections");
@@ -7245,6 +7664,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentWaiver>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section student waivers");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Section Waivers");
@@ -7273,6 +7697,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentWaiver>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student waivers");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get student Waivers");
@@ -7315,6 +7745,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentWaiverReason>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Student Waiver Reasons timeout exception has occurred");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Student Waiver Reasons");
@@ -7344,6 +7779,265 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Returns a list of student release access codes and descriptions
+        /// </summary>
+        /// <returns>List of <see cref="StudentReleaseAccess">StudentReleaseAccess</see> codes and descriptions</returns>
+        public async Task<IEnumerable<StudentReleaseAccess>> GetStudentReleaseAccessCodesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentReleaseAccessCodesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<StudentReleaseAccess>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student release access codes");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student release access codes");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns student records release configuration information.
+        /// </summary>
+        /// <returns><see cref="StudentRecordsReleaseConfig">StudentRecordsReleaseConfig</see>text</returns>
+        public async Task<StudentRecordsReleaseConfig> GetStudentRecordsReleaseConfigAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentRecordsReleaseConfigPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<StudentRecordsReleaseConfig>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student records release configuration information.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student records release configuration information.");
+                throw;
+            }
+        }
+        /// <summary>
+        ///  Get Student Records Release Deny Access.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <returns>Student Records Release Deny Access</returns>
+        public async Task<StudentRecordsReleaseDenyAccess> GetStudentRecordsReleaseDenyAccessAsync(string studentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    throw new ArgumentNullException("Student ID cannot be empty/null to retrieve student records release deny access.");
+                }
+                string[] pathStrings = new string[] { _studentsPath, UrlParameterUtility.EncodeWithSubstitution(studentId), _studentRecordsReleaseDenyAccessPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentRecordsReleaseDenyAccess>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student records release deny access for student {0}", studentId);
+                throw;
+            }
+
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student records release deny access for student {0}", studentId);
+                throw;
+            }
+        }
+
+
+        // <summary>
+        /// Get student Records Release Information for student.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <returns>Student Records Release Information</returns>
+        public async Task<IEnumerable<StudentRecordsReleaseInfo>> GetStudentRecordsReleaseInformationAsync(string studentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    throw new ArgumentNullException("Student ID cannot be empty/null to retrieve student records release information.");
+                }
+                string[] pathStrings = new string[] { _studentsPath, UrlParameterUtility.EncodeWithSubstitution(studentId), _studentRecordsReleasePath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentRecordsReleaseInfo>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student Records Release Information for student {0}", studentId);
+                throw;
+            }
+
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student Records Release Information for student {0}", studentId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Add a new Student Records Release Information for student.
+        /// </summary>
+        /// <param name="StudentRecordsRelease">New Student Records Release Information</param>
+        /// <returns>Newly Added Student Records Release Information</returns>
+        public async Task<StudentRecordsReleaseInfo> AddStudentRecordsReleaseInformationAsync(StudentRecordsReleaseInfo studentRecordsRelease)
+        {
+            if (studentRecordsRelease == null)
+            {
+                throw new ArgumentNullException("studentRecordsRelease", "studentRecordsRelease cannot be null ");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync<StudentRecordsReleaseInfo>(studentRecordsRelease, _studentRecordsReleasePath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentRecordsReleaseInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding Student Records Release information");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception has occurred while adding Student Records Release information");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// End a Student Records Release Information for student.
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <param name="studentReleaseId">Student Release Id</param>
+        /// <returns>StudentRecordsReleaseInfo object</returns>
+        public async Task<StudentRecordsReleaseInfo> EndStudentRecordsReleaseInformation(string studentId, string studentReleaseId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Must provide the student id to end student records release info.");
+            }
+            if (string.IsNullOrEmpty(studentReleaseId))
+            {
+                throw new ArgumentNullException("studentReleaseId", "Must provide the student release id to end student records release info.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                string urlPath = UrlUtility.CombineUrlPath(_studentRecordsReleasePath, studentId, "student-release", studentReleaseId);
+                var response = await ExecutePutRequestWithResponseAsync<StudentRecordsReleaseInfo>(new StudentRecordsReleaseInfo(), urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentRecordsReleaseInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while ending Student Records Release information");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception has occurred while ending Student Records Release information");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Deny access to student records release information
+        /// </summary>
+        /// <param name="studentRecordsRelDenyAccess">student records release deny access information</param>
+        /// <returns>The updated Student Records Release Information</returns>
+        public async Task<IEnumerable<StudentRecordsReleaseInfo>> DenyStudentRecordsReleaseAccessAsync(DenyStudentRecordsReleaseAccessInformation studentRecordsRelDenyAccess)
+        {
+            if (studentRecordsRelDenyAccess == null)
+            {
+                throw new ArgumentNullException("studentRecordsRelDenyAccess", "studentRecordsRelDenyAccess cannot be null ");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync<DenyStudentRecordsReleaseAccessInformation>(studentRecordsRelDenyAccess, _denyStudentRecordsReleaseAccessPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentRecordsReleaseInfo>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while denying access to student records release information");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception has occurred while denying access to student records release information");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Update Student Records Release Information for student.
+        /// </summary>
+        /// <param name="StudentRecordsRelease"> Student Records Release Information to update</param>
+        /// <returns>StudentRecordsReleaseInfo that was just updated</returns>
+        public async Task<StudentRecordsReleaseInfo> UpdateStudentRecordsReleaseInformationAsync(StudentRecordsReleaseInfo studentRecordsRelease)
+        {
+            if (studentRecordsRelease == null)
+            {
+                throw new ArgumentNullException("studentRecordsRelease", "studentRecordsRelease cannot be null ");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePutRequestWithResponseAsync<StudentRecordsReleaseInfo>(studentRecordsRelease, _studentRecordsReleasePath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<StudentRecordsReleaseInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating Student Records Release information");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception has occurred while updating Student Records Release information");
+                throw;
+            }
+        }
         public async Task<RegistrationOptions> GetRegistrationOptionsAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -7361,6 +8055,11 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<RegistrationOptions>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student registartion options information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get student's registration options");
@@ -7407,9 +8106,9 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="studentId">Student Id for whom the test results are requested</param>
         /// <param name="transcriptGrouping">Transcript grouping of the requested transcript</param>
-        /// <param name="fileName">Filename of the pdf provided - output</param>
         /// <returns>Returns the student's unofficial transcript</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="LoginException">Timeout exception has occurred.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<Tuple<byte[], string>> GetUnofficialTranscriptAsync(string studentId, string transcriptGrouping)
         {
@@ -7417,6 +8116,12 @@ namespace Ellucian.Colleague.Api.Client
             {
                 throw new ArgumentNullException("studentId", "Student ID cannot be empty/null for unofficial transcript retrieval.");
             }
+
+            if (string.IsNullOrEmpty(transcriptGrouping))
+            {
+                throw new ArgumentNullException("transcriptGrouping", "Transcript Grouping cannot be empty/null for unofficial transcript retrieval.");
+            }
+
             try
             {
                 string query = UrlUtility.BuildEncodedQueryString("transcriptGrouping", transcriptGrouping);
@@ -7430,6 +8135,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = await response.Content.ReadAsByteArrayAsync();
                 Tuple<byte[], string> fileInfoResource = new Tuple<byte[], string>(resource, fileName);
                 return fileInfoResource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting student's unofficial transcript");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -7505,6 +8215,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 permissions = JsonConvert.DeserializeObject<FacultyPermissions>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving Faculty Permissions.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "An error occurred while retrieving Faculty Permissions.");
@@ -7578,6 +8293,11 @@ namespace Ellucian.Colleague.Api.Client
                     var resource = JsonConvert.DeserializeObject<StudentWaiver>(await response.Content.ReadAsStringAsync());
                     return studentWaiver;
                 }
+                catch (LoginException lex)
+                {
+                    logger.Error(lex, "Timeout exception has occurred while creating student section waiver.");
+                    throw;
+                }
                 // If the HTTP request fails, the waiver probably wasn't created successfully...
                 catch (HttpRequestFailedException hre)
                 {
@@ -7587,9 +8307,14 @@ namespace Ellucian.Colleague.Api.Client
                 // HTTP request successful, but some other problem encountered...
                 catch (Exception ex)
                 {
-                    logger.Error(ex.ToString());
+                    logger.Error(ex, "an error occured while creating student section waiver.");
                     throw;
                 }
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while creating student section waiver.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -7706,6 +8431,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<SectionRegistrationDate>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section's registration dates");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve section registration dates.");
@@ -7748,6 +8479,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PetitionStatus>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving petition statuses");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Petition Statuses");
@@ -7789,6 +8525,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentPetitionReason>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving petition reasons");
+                throw;
             }
             catch (Exception ex)
             {
@@ -7850,6 +8591,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Student");
@@ -7958,6 +8704,11 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<SectionPermission>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student section permissions information.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -8175,6 +8926,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<List<StudentPetition>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student petitions");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the requested Student Petition");
@@ -8219,6 +8976,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving graduation configuration");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the graduation configuration information.");
@@ -8239,6 +9001,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecuteGetRequestWithResponseAsync(_myprogressConfigurationPath, headers: headers);
                 var configuration = JsonConvert.DeserializeObject<MyProgressConfiguration>(await responseString.Content.ReadAsStringAsync());
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving my progress configuration");
+                throw;
             }
             catch (Exception ex)
             {
@@ -8291,6 +9058,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return graduationApplication;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving graduation application for student.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get the graduation application for student Id {0} and program Code{1} ", studentId, programCode));
@@ -8315,9 +9087,14 @@ namespace Ellucian.Colleague.Api.Client
                 var graduationApplications = JsonConvert.DeserializeObject<List<GraduationApplication>>(await responseString.Content.ReadAsStringAsync());
                 return graduationApplications;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving graduation applications for student.");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, string.Format("Unable to get the graduation applications for student Id {0} ", studentId));
+                logger.Error(ex, string.Format("Unable to get the graduation applications for student Id {0}", studentId));
                 throw;
             }
         }
@@ -8373,6 +9150,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<GraduationApplication>(graduationApplication, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<GraduationApplication>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while creating graduation application");
+                throw;
             }
             catch (HttpRequestFailedException hre)
             {
@@ -8443,6 +9225,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving cap size list");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the cap size list.");
@@ -8463,6 +9250,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<IEnumerable<GownSize>>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving gown size list");
+                throw;
             }
             catch (Exception ex)
             {
@@ -8520,6 +9312,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<SectionRoster>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section roster for section " + sectionId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -8654,6 +9451,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<SectionMidtermGradingComplete>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section midterm grading complete information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve section midterm grading complete information.");
@@ -8704,6 +9506,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<SectionMidtermGradingComplete>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while posting section midterm grading complete information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to post section midterm grading complete information.");
@@ -8733,13 +9540,17 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<SectionWaitlistConfig>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section waitlist configuration details");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve section waitlist configuration.");
                 throw;
             }
         }
-
 
         /// <summary>
         /// Get a <see cref="StudentSectionWaitlistInfo"/> for a given course section ID and student Id
@@ -8768,6 +9579,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<StudentSectionWaitlistInfo>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section waitlist information");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve student section waitlist information.");
@@ -8792,6 +9608,7 @@ namespace Ellucian.Colleague.Api.Client
             {
                 throw new ArgumentException("Graduation Application is missing a required property.");
             }
+
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, graduationApplication.StudentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(graduationApplication.ProgramCode), _graduationApplicationPath);
@@ -8802,11 +9619,15 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<GraduationApplication>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating graduation application for student");
+                throw;
+            }
             // If the HTTP request fails, the graduation application wasn't updated successfully...
             catch (HttpRequestFailedException hre)
             {
                 logger.Error(hre, string.Format("Request failed for updating graduation application for student Id{0} in program Code {1}. Request Error Code occured is {2}", graduationApplication.StudentId, graduationApplication.ProgramCode, hre.StatusCode.ToString()));
-
                 throw;
             }
             // HTTP request successful, but some other problem encountered...
@@ -8838,6 +9659,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var graduationApplicationFee = JsonConvert.DeserializeObject<GraduationApplicationFee>(await responseString.Content.ReadAsStringAsync());
                 return graduationApplicationFee;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving graduation application fee for student");
+                throw;
             }
             catch (Exception ex)
             {
@@ -8875,6 +9701,11 @@ namespace Ellucian.Colleague.Api.Client
                 {
                     logger.Error(hre.ToString());
                     throw new InvalidOperationException(string.Format("StudentRequest creation failed."), hre);
+                }
+                catch (LoginException lex)
+                {
+                    logger.Error(lex, "Timeout exception has occurred while creating student transcript request.");
+                    throw;
                 }
                 // HTTP request successful, but some other problem encountered...
                 catch (Exception ex)
@@ -8927,6 +9758,11 @@ namespace Ellucian.Colleague.Api.Client
                     throw;
                 }
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while creating student transcript request");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to create Student Transcript request");
@@ -8957,6 +9793,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentTranscriptRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student transcript request.");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -8990,6 +9831,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student enrollment request");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Student Enrollment Request");
@@ -9014,6 +9860,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student request configuration information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the student request configuration information.");
@@ -9035,6 +9886,11 @@ namespace Ellucian.Colleague.Api.Client
                 var requestTypes = JsonConvert.DeserializeObject<IEnumerable<HoldRequestType>>(await responseString.Content.ReadAsStringAsync());
 
                 return requestTypes;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving list of hold request types.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9067,6 +9923,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student enrollment requests");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Student Enrollment Requests");
@@ -9098,6 +9959,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student transcript request.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Student Transcript Requests");
@@ -9127,6 +9993,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var studentRequestFee = JsonConvert.DeserializeObject<StudentRequestFee>(await responseString.Content.ReadAsStringAsync());
                 return studentRequestFee;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, string.Format("Timeout exception has occurred while retrieving student request fee information for student Id {0} and request Id{1} ", studentId, requestId));
+                throw;
             }
             catch (Exception ex)
             {
@@ -9216,11 +10087,10 @@ namespace Ellucian.Colleague.Api.Client
             {
                 throw new ArgumentNullException("You must supply a criteria with at least one section Id to retrieve aademic credit information.");
             }
+
             try
             {
-
                 var queryString = UrlUtility.BuildEncodedQueryString("offset", offset.HasValue ? offset.Value.ToString() : null, "limit", limit.HasValue ? limit.Value.ToString() : null);
-
 
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _academicCreditsPath);
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
@@ -9231,6 +10101,11 @@ namespace Ellucian.Colleague.Api.Client
                 var academicCreditsWithInvalidKeys = JsonConvert.DeserializeObject<AcademicCreditsWithInvalidKeys>(responseString);
                 return academicCreditsWithInvalidKeys;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while academic credit information");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to query academic credit information."));
@@ -9238,11 +10113,11 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-
         /// <summary>
         /// Asynchronously returns faculty grading configuration with all needed information to render faculty grade view
         /// </summary>
         /// <returns>The requested <see cref="FacultyGradingConfiguration">FacultyGradingConfiguration</see> object</returns>
+        [Obsolete("Obsolete as of API 1.36. Use GetFacultyGradingConfiguration2Async instead.")]
         public async Task<FacultyGradingConfiguration> GetFacultyGradingConfigurationAsync()
         {
             try
@@ -9255,6 +10130,35 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<FacultyGradingConfiguration>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get faculty grading configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns faculty grading configuration with all needed information to render faculty grade view
+        /// </summary>
+        /// <returns>The requested <see cref="FacultyGradingConfiguration2">FacultyGradingConfiguration2</see> object</returns>
+        public async Task<FacultyGradingConfiguration2> GetFacultyGradingConfiguration2Async()
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _facultyGradingPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration2 = JsonConvert.DeserializeObject<FacultyGradingConfiguration2>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration2;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving faculty grading configuration information.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9328,6 +10232,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course catalog configuration information");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the course catalog configuration information.");
@@ -9351,6 +10260,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration4>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course catalog configuration information");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9388,6 +10302,11 @@ namespace Ellucian.Colleague.Api.Client
             }
 
             // If the HTTP request fails, the SectionTextbook was probably not added to the Section
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating a textbook for section ", textbook.SectionId);
+                throw;
+            }
             catch (HttpRequestFailedException hre)
             {
                 logger.Error(hre.ToString());
@@ -9416,6 +10335,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return requestTypes;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Book options timeout exception has occurred");
+                throw;
+            }
             catch (HttpRequestFailedException hre)
             {
                 logger.Error(hre.ToString());
@@ -9432,7 +10356,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <summary>
         /// Gets a list of all attendance categories.
         /// </summary>
-        /// <returns>The full list of book options</returns>
+        /// <returns>The full list of attendance categories</returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.AttendanceCategories>> GetAttendanceCategoriesAsync()
         {
             try
@@ -9442,10 +10366,16 @@ namespace Ellucian.Colleague.Api.Client
 
                 return requestTypes;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving a attendance categories.");
+                throw;
+            }
             catch (HttpRequestFailedException hre)
             {
-                logger.Error(hre.ToString());
-                throw new InvalidOperationException("Failed to get list of attendance categories.", hre);
+                var message = "Failed to get list of attendance categories.";
+                logger.Error(hre, message);
+                throw new InvalidOperationException(message, hre);
             }
             // HTTP request successful, but some other problem encountered...
             catch (Exception ex)
@@ -9471,7 +10401,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<NonAcademicAttendanceEventType>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
-            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving nonacademic attendance for student.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get nonacademic attendance event types");
@@ -9495,6 +10430,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<NonAcademicAttendanceRequirement>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving nonacademic attendance for student.");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -9520,6 +10461,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<NonAcademicAttendance>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving nonacademic events attended for person.");
+                throw;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
@@ -9549,6 +10496,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<NonAcademicEvent>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving nonacademic events by ids.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9641,6 +10594,10 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<StudentAwardYear2>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get {0} student award year", awardYear));
@@ -9697,6 +10654,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return students;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while searching");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -9724,6 +10686,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync<AddAuthorization>(addAuthorization, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<AddAuthorization>(await response.Content.ReadAsStringAsync());
             }
+            // Log exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating add authorization information.");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -9747,6 +10715,11 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<RegistrationConfiguration>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9777,6 +10750,11 @@ namespace Ellucian.Colleague.Api.Client
                 var addAuthorizations = JsonConvert.DeserializeObject<IEnumerable<AddAuthorization>>(await responseString.Content.ReadAsStringAsync());
 
                 return addAuthorizations;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving add authorizations for section " + sectionId);
+                throw;
             }
             catch (Exception ex)
             {
@@ -9830,6 +10808,11 @@ namespace Ellucian.Colleague.Api.Client
                 var addAuthorizations = JsonConvert.DeserializeObject<IEnumerable<AddAuthorization>>(await responseString.Content.ReadAsStringAsync());
                 return addAuthorizations;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving add authorizations");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get add authorizations for student {0}", studentId));
@@ -9874,15 +10857,16 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>Newly created add authorization</returns>
         public async Task<AddAuthorization> CreateAddAuthorizationAsync(AddAuthorizationInput addAuthorizationInput)
         {
-
             if (addAuthorizationInput == null)
             {
                 throw new ArgumentNullException("addAuthorizationInput", "AddAuthorizationInput cannot be null ");
             }
+
             if (string.IsNullOrEmpty(addAuthorizationInput.StudentId) || string.IsNullOrEmpty(addAuthorizationInput.SectionId))
             {
                 throw new ArgumentException("AddAuthorizationInput must have a student Id and section Id. ");
             }
+
             try
             {
                 //string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentWaiver.StudentId, "student-waiver");
@@ -9891,6 +10875,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<AddAuthorizationInput>(addAuthorizationInput, _addAuthorizationsPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AddAuthorization>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while creating student add authorization.");
+                throw;
             }
             // If the HTTP request fails, the add authorization wasn't created
             catch (HttpRequestFailedException hre)
@@ -9910,8 +10899,8 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex.ToString());
                 throw;
             }
-
         }
+
         /// <summary>
         /// Retrieve sections calendar schedules in iCal format
         /// </summary>
@@ -9933,6 +10922,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<EventsICal>(await response.Content.ReadAsStringAsync());
                 return resource.iCal;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred");
+                throw;
             }
             catch (Exception ex)
             {
@@ -9962,6 +10956,11 @@ namespace Ellucian.Colleague.Api.Client
                 var criteria = new GraduationApplicationEligibilityCriteria() { StudentId = studentId, ProgramCodes = programCodes };
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<GraduationApplicationProgramEligibility>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving graduation application eligibility.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -10189,7 +11188,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (LoginException lex)
             {
-                logger.Error(lex, "DegreePlan retrieval timeout exception have occurred");
+                logger.Error(lex, "DegreePlan retrieval timeout exception has occurred");
                 throw;
             }
             catch (Exception ex)
@@ -10544,6 +11543,12 @@ namespace Ellucian.Colleague.Api.Client
 
                 return createdDegreePlan;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while creating a new degree plan for the given student: " + studentId);
+                throw;
+            }
+
             // If the HTTP request fails because of a conflict indicate that with a specific type of exception.
             catch (HttpRequestFailedException hre)
             {
@@ -11065,6 +12070,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<PlanningStudent>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving planning student");
+                throw;
+            }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception ex)
             {
@@ -11100,6 +12110,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return JsonConvert.DeserializeObject<IEnumerable<CampusOrganization2>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to fetch the requested CampusOrganization2 objects");
@@ -11121,6 +12136,12 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<StudentProfileConfiguration>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred ");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the student profile configuration information.");
@@ -11172,6 +12193,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return dropReasons;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving education goals information");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the education goals.");
@@ -11194,6 +12220,11 @@ namespace Ellucian.Colleague.Api.Client
                 var dropReasons = JsonConvert.DeserializeObject<IEnumerable<RegistrationReason>>(await responseString.Content.ReadAsStringAsync());
 
                 return dropReasons;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving registration reasons information");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11218,6 +12249,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return dropReasons;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving registration marketing sources");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the registration marketing sources.");
@@ -11239,6 +12275,11 @@ namespace Ellucian.Colleague.Api.Client
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var configuration = JsonConvert.DeserializeObject<InstantEnrollmentConfiguration>(await responseString.Content.ReadAsStringAsync());
                 return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving instant enrollment configuration information");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11268,6 +12309,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(proposedRegistration, urlPath, headers: headers);
                 var proposedRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentProposedRegistrationResult>(await response.Content.ReadAsStringAsync());
                 return proposedRegistrationResult;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while processing instant enrollment proposed registration");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11301,6 +12347,11 @@ namespace Ellucian.Colleague.Api.Client
                 var zeroCostRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentZeroCostRegistrationResult>(await response.Content.ReadAsStringAsync());
                 return zeroCostRegistrationResult;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while processing instant enrollment zero cost registration");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to complete zero cost registration for instant enrollment.");
@@ -11330,6 +12381,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(echeckRegistration, urlPath, headers: headers);
                 var echeckRegistrationResult = JsonConvert.DeserializeObject<InstantEnrollmentEcheckRegistrationResult>(await response.Content.ReadAsStringAsync());
                 return echeckRegistrationResult;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while processing instant enrollment echeck registration");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11361,6 +12417,11 @@ namespace Ellucian.Colleague.Api.Client
                 var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentStartPaymentGatewayRegistrationResult>(await response.Content.ReadAsStringAsync());
                 return registrationResult;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while processing instant enrollment echeck registration");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to complete instant enrollment start payment gateway registration.");
@@ -11388,6 +12449,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(paragraphRequest, urlPath, headers: headers);
                 var registrationResult = JsonConvert.DeserializeObject<IEnumerable<string>>(await response.Content.ReadAsStringAsync());
                 return registrationResult;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving instant enrollment payment acknowledgement paragraph text");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11421,6 +12487,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(cashReceiptRequest, urlPath, headers: headers);
                 var registrationResult = JsonConvert.DeserializeObject<InstantEnrollmentCashReceiptAcknowledgement>(await response.Content.ReadAsStringAsync());
                 return registrationResult;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while processing instant enrollment cash receipt acknowledgement");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11464,6 +12535,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get IEnumerable<StudentProgram2>");
@@ -11538,6 +12614,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 return sectionPage;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while performing section search");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -11565,6 +12646,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get case types");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving case types");
                 throw;
             }
             catch (Exception ex)
@@ -11596,6 +12682,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get case priorities");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving case priorities");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get case priorities");
@@ -11623,6 +12714,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get case categories");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while while retrieving case categories");
                 throw;
             }
             catch (Exception ex)
@@ -11654,6 +12750,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get case closure reasons");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while while retrieving case closure reasons");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get case closure reasons");
@@ -11683,6 +12784,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding retention alert case for a student");
+                throw;
             }
             catch (Exception ex)
             {
@@ -11743,6 +12849,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert work cases async");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Retention Alert work Cases");
@@ -11772,9 +12883,14 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase2>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert work cases 2 async");
+                throw;
+            }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to get Retention Alert work cases 2 async");
+                logger.Error(ex, "Unable to get retention alert work cases 2 async");
                 throw;
             }
         }
@@ -11805,6 +12921,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get retention alert contributions");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert contributions");
                 throw;
             }
             catch (Exception ex)
@@ -11839,6 +12960,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get retention alert case detail");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert case detail");
                 throw;
             }
             catch (Exception ex)
@@ -11881,6 +13007,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to add retention alert case note");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding retention alert case note");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to add retention alert case note");
@@ -11919,6 +13050,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to add retention alert case note");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding retention alert case note");
                 throw;
             }
             catch (Exception ex)
@@ -11961,6 +13097,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to add retention alert communication code");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding retention alert communication code");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to add retention alert communication code");
@@ -11999,6 +13140,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to add retention alert case Type");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while adding retention alert case Type");
                 throw;
             }
             catch (Exception ex)
@@ -12041,6 +13187,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to change retention alert case priority");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while changing retention alert case priority");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to change retention alert case priority");
@@ -12079,6 +13230,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to close retention alert case");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while closing retention alert case");
                 throw;
             }
             catch (Exception ex)
@@ -12121,6 +13277,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to set reminder for alert case");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while setting reminder for alert case");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to set reminder for alert case");
@@ -12154,6 +13315,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to clear case reminders.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while clearing case reminder dates.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to clear case reminder dates.");
@@ -12179,6 +13345,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get retention alert permissions");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert permissions");
                 throw;
             }
             catch (Exception ex)
@@ -12221,6 +13392,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to send retention alert case mail");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while sending retention alert case mail");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to send retention alert case mail");
@@ -12247,6 +13423,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get retention alert open cases");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting retention alert open cases");
                 throw;
             }
             catch (Exception ex)
@@ -12279,12 +13460,17 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (ResourceNotFoundException rnfe)
             {
-                logger.Error(rnfe, "Unable to get retention alert open cases");
+                logger.Error(rnfe, "Unable to get retention alert closed cases by reason");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert closed cases by reason");
                 throw;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to get retention alert open cases");
+                logger.Error(ex, "Unable to get retention alert closed cases by reason");
                 throw;
             }
         }
@@ -12320,6 +13506,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to reassign retention alert case");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while reassigning retention alert case");
                 throw;
             }
             catch (Exception ex)
@@ -12358,6 +13549,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(rnfe, "Unable to get a Group of Cases Summary");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting a Group of Cases Summary.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get a Group of Cases Summary");
@@ -12391,6 +13587,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException rnfe)
             {
                 logger.Error(rnfe, "Unable to get a List of Case Category Org Roles");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while getting a List of Case Category Org Roles.");
                 throw;
             }
             catch (Exception ex)
@@ -12432,6 +13633,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to set retention alert case worker email preference.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while setting retention alert case worker email preference.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to set retention alert case worker email preference.");
@@ -12466,13 +13672,17 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get retention alert case worker email preference.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving retention alert case worker email preference.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get retention alert case worker email preference.");
                 throw;
             }
         }
-
 
         /// <summary>
         /// Query persons matching the criteria using the ELF duplicate checking criteria configured for Instant Enrollment.
@@ -12493,6 +13703,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync<PersonMatchCriteriaInstantEnrollment>(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<InstantEnrollmentPersonMatchResult>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving instant enrollment person-matching results");
+                throw;
             }
             catch (Exception e)
             {
@@ -12523,6 +13738,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<TransferEquivalencies>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving transfer equivalencies for a student.");
+                throw;
             }
             catch (Exception e)
             {
@@ -12634,12 +13854,18 @@ namespace Ellucian.Colleague.Api.Client
                 return JsonConvert.DeserializeObject<IEnumerable<StudentAcademicLevel>>(await response.Content.ReadAsStringAsync());
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic levels for student: " + studentId);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to get academic levels for the given student {0}", studentId));
                 throw;
             }
         }
+
         /// <summary>
         /// Asynchronously certifies the section's census.
         /// </summary>
@@ -12678,6 +13904,11 @@ namespace Ellucian.Colleague.Api.Client
                 var certifiedCensus = JsonConvert.DeserializeObject<SectionCensusCertification>(await response.Content.ReadAsStringAsync());
                 return certifiedCensus;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while certifying census information for the section " + sectionId);
+                throw;
+            }
             // If the HTTP request fails because of a conflict indicate that with a specific type of exception.
             catch (HttpRequestFailedException hre)
             {
@@ -12690,6 +13921,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Asynchronously returns section census configuration with information
         /// </summary>
         /// <returns>The requested <see cref="SectionCensusConfiguration">SectionCensusConfiguration</see> object</returns>
+        [Obsolete("Obsolete as of API 1.36. Use GetSectionCensusConfiguration2Async instead.")]
         public async Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync()
         {
             try
@@ -12706,6 +13938,35 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get section census configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns section census configuration2 with information
+        /// </summary>
+        /// <returns>The requested <see cref="SectionCensusConfiguration2">SectionCensusConfiguration2</see> object</returns>
+        public async Task<SectionCensusConfiguration2> GetSectionCensusConfiguration2Async()
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _sectionCensusPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration2 = JsonConvert.DeserializeObject<SectionCensusConfiguration2>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration2;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section census configuration2 information");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get section census configuration2 information.");
                 throw;
             }
         }
@@ -12752,6 +14013,12 @@ namespace Ellucian.Colleague.Api.Client
                 var coursePlaceholders = JsonConvert.DeserializeObject<IEnumerable<CoursePlaceholder>>(await response.Content.ReadAsStringAsync());
                 return coursePlaceholders;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while querying placeholder");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 var message = string.Format("An error occurred while trying to retrieve course placeholder data for IDs {0}.", string.Join(",", coursePlaceholderIds));
@@ -12781,6 +14048,11 @@ namespace Ellucian.Colleague.Api.Client
                 var sectionsSeats = JsonConvert.DeserializeObject<IEnumerable<SectionSeats>>(await response.Content.ReadAsStringAsync());
                 return sectionsSeats;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section seat count");
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = string.Format("An error occurred while trying to retrieve section seat count data for section ids {0}.", string.Join(",", sectionIds));
@@ -12809,6 +14081,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<List<StudentOverloadPetition>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving student overload petitions");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the requested Student Overload Petitions");
@@ -12832,6 +14109,12 @@ namespace Ellucian.Colleague.Api.Client
                 var configuration = JsonConvert.DeserializeObject<AcademicRecordConfiguration>(await responseString.Content.ReadAsStringAsync());
                 return configuration;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving academic record configuration");
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get academic record configuration information.");
@@ -12864,6 +14147,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAnonymousGrading>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while querying anonymous grading Ids");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve grading IDs for the student.");
@@ -12891,6 +14179,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath: urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<SectionPreliminaryAnonymousGrading>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving preliminary anonymous grade information.");
+                throw;
             }
             catch (Exception ex)
             {
@@ -12925,6 +14218,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync(preliminaryAnonymousGrades, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PreliminaryAnonymousGradeUpdateResult>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while updating preliminary anonymous grade information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Could not update preliminary anonymous grade information for course section {0}.", sectionId));
@@ -12953,9 +14251,214 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<SectionGradingStatus>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving course section grading status information.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Could not retrieve course section grading status information for course section {0}.", sectionId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Searches for sections for the Departmental Oversight person when he/she performs search based on Faculty Id/name or Section name asynchronously
+        /// </summary>
+        /// <param name="facultyKeyword">The search string used when searching sections for given faculty by name or ID</param>
+        /// <param name="sectionKeyword">The search string used when searching sections by section name. Either a faculty keyword or a section Keyword must be supplied but not both.</param>
+        /// <returns>A list of matching section/faculty details, which may be empty</returns>
+        /// <exception cref="System.ArgumentException">Thrown when neither facultyKeyword nor sectionKeyword is supplied. Must provide one.</exception>
+        public async Task<IEnumerable<DeptOversightSearchResult>> QueryDepartmentalOversightByPostAsync(string FacultyKeyword, string SectionKeyword, int pageSize = int.MaxValue, int pageIndex = 1)
+        {
+            if (string.IsNullOrEmpty(FacultyKeyword) && string.IsNullOrEmpty(SectionKeyword))
+            {
+                throw new ArgumentException("Must provide either FacultyKeyword or SectionKeyword.");
+            }
+            if (!string.IsNullOrEmpty(FacultyKeyword) && !string.IsNullOrEmpty(SectionKeyword))
+            {
+                throw new ArgumentException("Must provide either FacultyKeyword or SectionKeyword but not both.");
+            }
+            string query = UrlUtility.BuildEncodedQueryString(new[] { "pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString() });
+
+            string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _departmentalOversightPath);
+            urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            IEnumerable<DeptOversightSearchResult> deptOversightSearchResults = null;
+            var criteria = new DeptOversightSearchCriteria();
+            criteria.FacultyKeyword = FacultyKeyword;
+            criteria.SectionKeyword = SectionKeyword;
+            try
+            {
+                // Option 1: Prevents the request AND response from being logged by the Service Client.
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                deptOversightSearchResults = JsonConvert.DeserializeObject<IEnumerable<DeptOversightSearchResult>>(await response.Content.ReadAsStringAsync());
+                return deptOversightSearchResults;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving sections for the departmental oversight person");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the departmental oversight permissions
+        /// </summary>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <returns>Departmental oversight permissions for the current user</returns>
+        public async Task<DepartmentalOversightPermissions> GetDepartmentalOversightPermissionsAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_departmentalOversightPath, _permissionsPath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<DepartmentalOversightPermissions>(await response.Content.ReadAsStringAsync());
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get departmental oversight permissions");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get departmental oversight permissions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the departmental oversight and faculty details
+        /// </summary>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <returns>List of Departmental oversight and faculty details</returns>
+        public async Task<IEnumerable<DepartmentalOversight>> QueryDepartmentalOversightDetailsAsync(IEnumerable<string> Ids, string SectionId)
+        {
+            if (Ids == null || !Ids.Any())
+            {
+                throw new ArgumentException("List of Ids should not be empty.");
+            }
+            if (string.IsNullOrEmpty(SectionId))
+            {
+                throw new ArgumentException("Must provide Section Id.");
+            }
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            var criteria = new DeptOversightDetailsCriteria();
+            criteria.Ids = Ids;
+            criteria.SectionId = SectionId;
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _departmentalOversightDetailsPath);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<DepartmentalOversight>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving departmental oversight details");
+                throw;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get departmental oversight details");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get departmental oversight details");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns all intent to withdraw codes
+        /// </summary>
+        /// <returns>Collection of <see cref="IntentToWithdrawCode">intent to withdraw codes</see></returns>
+        public async Task<IEnumerable<IntentToWithdrawCode>> GetIntentToWithdrawCodesAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_intentToWithdrawCodesPath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<IntentToWithdrawCode>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get departmental oversight permissions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves course section availability information configuration
+        /// </summary>
+        /// <returns>The <see cref="SectionAvailabilityInformationConfiguration">Section availability information configuration</see></returns>
+        public async Task<SectionAvailabilityInformationConfiguration> GetSectionAvailabilityInformationConfigurationAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _sectionAvailabilityInformationPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<SectionAvailabilityInformationConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving section availability information configuration");
+                throw;
+            }
+
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the section availability information configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns faculty attendance configuration with all needed information to render faculty attendance view
+        /// </summary>
+        /// <returns>The requested <see cref="FacultyAttendanceConfiguration">FacultyAttendanceConfiguration</see> object</returns>
+        public async Task<FacultyAttendanceConfiguration> GetFacultyAttendanceConfigurationAsync()
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _facultyAttendancePath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<FacultyAttendanceConfiguration>(await responseString.Content.ReadAsStringAsync());
+                return configuration;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout exception has occurred while retrieving faculty attendance configuration information.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get faculty attendance configuration information.");
                 throw;
             }
         }

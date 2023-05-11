@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Security;
 using System.Net;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -31,6 +32,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
         private readonly IEmployeeCompensationService employeeCompensationService;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the EmployeeCompensationController class.
@@ -68,13 +70,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException("User doesn't have the permission to query the Employee Compensation Information.", HttpStatusCode.Forbidden);
             }
             catch (RepositoryException re)
             {
                 var message = re.Message;
                 logger.Error(re, message);
-                throw CreateHttpResponseException(message);
+                throw CreateHttpResponseException("Database Error occurred while querying the Employee Compensation Information.");
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

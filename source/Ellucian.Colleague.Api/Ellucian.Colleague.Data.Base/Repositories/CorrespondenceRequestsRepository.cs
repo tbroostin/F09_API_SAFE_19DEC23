@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,6 +12,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -287,7 +288,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var message = "Unable to get CORE->CORR.STATUSES valcode table";
                         logger.Error(message);
-                        throw new Exception(message);
+                        throw new ColleagueWebApiException(message);
                     }
                     return statusTable;
                 }, Level1CacheTimeoutValue);

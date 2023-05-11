@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.DataContracts;
@@ -31,7 +32,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private ApplValcodes studentProgramStatuses;
         private List<ApplicationStatuses> allAppStatuses;
         private readonly int readSize;
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         protected const string AllStudentAcademicProgramsCache = "AllStudentAcademicPrograms";
         protected const int AllStudentAcademicProgramsCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllStudentAcademicProgramsPersonFilterCache = "AllStudentAcademicProgramsPersonFilter";
@@ -1594,7 +1595,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception ex) // Do not throw error.
                 {
-                    throw new Exception(string.Format("Error occured while getting guids for {0}.", "STUDENT.PROGRAMS"), ex);
+                    throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "STUDENT.PROGRAMS"), ex);
                 }
             }
 
@@ -1621,7 +1622,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access STUDENT.PROGRAM.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -1941,7 +1942,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access APPLICATION.STATUSES table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return applStat;
                 }, Level1CacheTimeoutValue);

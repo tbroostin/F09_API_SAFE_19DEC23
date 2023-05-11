@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentDocumentDtoList = new List<Dtos.FinancialAid.StudentDocument>();
             if (studentDocumentEntityList == null)
             {
-                logger.Info("StudentDocumentRepository returned null from Get(string studentId).");
+                logger.Debug("StudentDocumentRepository returned null from Get(string studentId) for student {0}.",studentId);
                 return studentDocumentDtoList;
             }
 

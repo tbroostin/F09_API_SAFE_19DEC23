@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,6 +16,7 @@ using slf4net;
 using System;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
         private readonly IStudentTaxFormStatementService taxFormStatementService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initialize the Student Tax Form Statement controller.
@@ -60,6 +62,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await taxFormStatementService.Get2Async(personId, Domain.Base.TaxFormTypes.Form1098);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -102,6 +109,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await taxFormStatementService.Get2Async(personId, Domain.Base.TaxFormTypes.FormT2202A);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

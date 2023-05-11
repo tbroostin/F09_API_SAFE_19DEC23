@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+using System;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
 {
@@ -15,8 +13,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
 
         // Non-required fields
 
-        public string PrimaryPhoneNumber;
-        public string SmsPhoneNumber;
+        public string PrimaryPhoneNumber { get; set; }
+        public string SmsPhoneNumber { get; set; }
 
         public PilotPhoneNumber(string personId)
         {

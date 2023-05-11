@@ -18,7 +18,8 @@ using System.Net.Http.Headers;
 using Ellucian.Web.Http.Configuration;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -787,6 +788,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             {
                 return await awardLetterService.GetAwardLetter4Async(studentId, awardYear);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
@@ -881,6 +886,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 response.Content.Headers.ContentLength = renderedBytes.Length;
                 return response;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
@@ -938,6 +947,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             try
             {
                 return await awardLetterService.UpdateAwardLetter3Async(awardLetter);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException ae)
             {

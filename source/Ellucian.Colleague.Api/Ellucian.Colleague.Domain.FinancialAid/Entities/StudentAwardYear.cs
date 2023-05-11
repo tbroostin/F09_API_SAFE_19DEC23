@@ -224,6 +224,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         }
 
         /// <summary>
+        /// Flag indicating whether or not FA Credits are visible
+        /// </summary>
+        public bool AreFaCreditsVisible { get; set; }
+
+        /// <summary>
         /// Constructor that accepts studentId and awardYearCode
         /// </summary>
         public StudentAwardYear(string studentId, string awardYearCode)

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
@@ -700,6 +701,23 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.GetSectionWaitlistConfigAsync(It.IsAny<string>()))
                     .Throws(new Exception());
                 await sectionsController.GetSectionWaitlistConfigAsync("100");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionsController_GetSectionWaitlistSettingAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    sectionCoordinationServiceMock.Setup(s => s.GetSectionWaitlistConfigAsync(It.IsAny<string>()))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await sectionsController.GetSectionWaitlistConfigAsync("100");
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]

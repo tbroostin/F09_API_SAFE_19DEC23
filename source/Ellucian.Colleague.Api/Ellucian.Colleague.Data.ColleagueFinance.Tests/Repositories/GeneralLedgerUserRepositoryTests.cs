@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -295,7 +295,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             var personId = "000999Z";
             var fullAccessRole = "ALL-ACCESS";
-            
+
             InitializeCtxResponsesAndDataContracts();
             InitializeMockMethods(personId);
 
@@ -308,7 +308,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             var personId = "0000006";
             string fullAccessRole = null;
-            
+
             InitializeCtxResponsesAndDataContracts();
             InitializeMockMethods(personId);
 
@@ -750,6 +750,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(GlAccessLevel.No_Access, generalLedgerUser.GlAccessLevel);
             #endregion
         }
+
         #endregion
 
         #region GetGeneralLedgerUserAsync2
@@ -1018,6 +1019,412 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
         #endregion
 
+        #region GetGlUserApprovalAndGlAccessAccountsAsync
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_SuccessWithGlAccessAndApprovalAccess()
+        {
+            var personId = "3333333";
+
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            var allAccessAndApprovalAccountsFromTest = await testGeneralLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            // Make sure the All GL accounts list is correct.
+            Assert.AreEqual(allAccessAndApprovalAccountsFromTest.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var testGlAccount in allAccessAndApprovalAccountsFromTest)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == testGlAccount);
+                Assert.IsNotNull(testGlAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_SuccessWithGlAccessOnly()
+        {
+            var personId = "3333333";
+
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            glAcctsRolesList = null;
+            DataReader.Setup(acc => acc.SelectAsync("GL.ACCTS.ROLES", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).Returns(() =>
+            {
+                return Task.FromResult(glAcctsRolesList);
+            });
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            // Make sure the All GL accounts list is correct.
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_SuccessWithNoGlAccessndApprovalAccess()
+        {
+            var personId = "3333333";
+
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, new List<string>());
+
+            // Make sure the All GL accounts list is correct.
+            Assert.AreEqual(glAcctsRolesList.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAcctsRolesList)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_SuccessWithNoGlAccessAndNoApprovalAccess()
+        {
+            var personId = "3333333";
+
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            glAcctsRolesList = null;
+            DataReader.Setup(acc => acc.SelectAsync("GL.ACCTS.ROLES", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).Returns(() =>
+            {
+                return Task.FromResult(glAcctsRolesList);
+            });
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, new List<string>());
+
+            Assert.AreEqual(0, allAccessAndApprovalAccountsFromRepo.Count());
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_NoStaffRecord()
+        {
+            var personId = "0000011";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_NoStaffLoginId()
+        {
+            var personId = "0000010";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_NoGlusersRecord()
+        {
+            var personId = "0000009";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_MissingGlusersStartDate()
+        {
+            var personId = "0000022";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_FutureGlusersStartDate()
+        {
+            var personId = "0000026";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_PastGlusersEndDate()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = DateTime.Today.AddDays(-1),
+            };
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_NullApprovalRolesAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null
+            };
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_EmptyApprovalRolesAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string>()
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_EmptyApprovalRoleIdAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string> { string.Empty },
+                GlusApprStartDates = new List<DateTime?> { DateTime.Today.AddDays(-5) },
+                GlusApprPolicyFlag = new List<string> { "Y" }
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_OneApprovalRolesIdWithNullStartDateAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string> { "APPROVAL1" },
+                GlusApprStartDates = null,
+                GlusApprPolicyFlag = new List<string> { "Y" }
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_OneApprovalRolesIdWithFutureStartDateAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string> { "APPROVAL1" },
+                GlusApprStartDates = new List<DateTime?> { DateTime.Today.AddDays(+1) },
+                GlusApprPolicyFlag = new List<string> { "Y" }
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_OneApprovalRolesIdWithPastEndDateAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string> { "APPROVAL1" },
+                GlusApprStartDates = new List<DateTime?> { DateTime.Today.AddDays(-30) },
+                GlusApprEndDates = new List<DateTime?> { DateTime.Today.AddDays(-3) },
+                GlusApprPolicyFlag = new List<string> { "Y" }
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(glAccessAccounts.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var glAccount in glAccessAccounts)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == glAccount);
+                Assert.IsNotNull(glAccount, repoGlAccount);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlUserApprovalAndGlAccessAccountsAsync_DuplicateApprovalRolesIdWithDifferentDatesAssoc()
+        {
+            var personId = "3333333";
+            IEnumerable<string> glAccessAccounts = new List<string>() { "11_00_02_01_33333_51111", "11_00_02_01_33333_55555" };
+            var allAccessAndApprovalAccountsFromTest = await testGeneralLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            InitializeCtxResponsesAndDataContracts();
+            InitializeMockMethods(personId);
+            var glUsersRecord = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = DateTime.Today.AddDays(-5),
+                GlusEndDate = null,
+                GlusApprRoleIds = new List<string> { "APPROVAL1", "APPROVAL1" },
+                GlusApprStartDates = new List<DateTime?> { DateTime.Today.AddDays(-30), DateTime.Today.AddDays(-10) },
+                GlusApprEndDates = new List<DateTime?> { DateTime.Today.AddDays(+100), null },
+                GlusApprPolicyFlag = new List<string> { "Y", "Y" }
+            };
+            glUsersRecord.buildAssociations();
+            DataReader.Setup(acc => acc.ReadRecordAsync<Glusers>("GLUSERS", glUsersRecord.Recordkey, true)).ReturnsAsync(glUsersRecord);
+
+            IEnumerable<string> allAccessAndApprovalAccountsFromRepo = await repository.GetGlUserApprovalAndGlAccessAccountsAsync(personId, glAccessAccounts);
+
+            Assert.AreEqual(allAccessAndApprovalAccountsFromTest.Count(), allAccessAndApprovalAccountsFromRepo.Count());
+            foreach (var testGlAccount in allAccessAndApprovalAccountsFromTest)
+            {
+                var repoGlAccount = allAccessAndApprovalAccountsFromRepo.FirstOrDefault(x => x == testGlAccount);
+                Assert.IsNotNull(testGlAccount, repoGlAccount);
+            }
+        }
+
+        #endregion
+
         #region Private methods
         /// <summary>
         /// This private method builds a valid general ledger user repository, 
@@ -1072,24 +1479,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 GlrRoleUse = "B"
             };
             personDataContract = new Person()
-             {
-                 Recordkey = "0000005",
-                 LastName = "Thorne"
-             };
+            {
+                Recordkey = "0000005",
+                LastName = "Thorne"
+            };
 
             staffDataContract = new Staff()
-             {
-                 Recordkey = "0000005",
-                 StaffLoginId = "GTT"
-             };
+            {
+                Recordkey = "0000005",
+                StaffLoginId = "GTT"
+            };
 
             glUsersDataContract = new Glusers()
-             {
-                 Recordkey = "GTT",
-                 GlusStartDate = new DateTime(2015, 01, 01),
-                 GlusRoleIds = new List<string>() { "ALL-ACCESS" },
-                 GlusRoleStartDates = new List<DateTime?>() { new DateTime(2015, 01, 01) }
-             };
+            {
+                Recordkey = "GTT",
+                GlusStartDate = new DateTime(2015, 01, 01),
+                GlusRoleIds = new List<string>() { "ALL-ACCESS" },
+                GlusRoleStartDates = new List<DateTime?>() { new DateTime(2015, 01, 01) }
+            };
             generalLedgerUserDataContract = new GeneralLedgerUserDataContract();
             generalLedgerUserDataContract.glRolesDataContract = glRolesDataContract;
             generalLedgerUserDataContract.personDataContract = personDataContract;
@@ -1260,9 +1667,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             };
 
             glUsersDataContract = new Glusers()
-                {
+            {
 
-                };
+            };
 
             generalLedgerUserDataContract = new GeneralLedgerUserDataContract();
             generalLedgerUserDataContract.glRolesDataContract = glRolesDataContract;
@@ -1993,6 +2400,45 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.generalLedgerUserDataContracts.Add(generalLedgerUserDataContract);
             #endregion
 
+            #region GeneralLedgerUser with possible access in approval roles
+
+            glRolesDataContract = new Glroles()
+            {
+                Recordkey = "APPROVAL1",
+                GlrRoleUse = "W"
+            };
+
+            personDataContract = new Person()
+            {
+                Recordkey = "3333333",
+                LastName = "Last name for 3333333"
+            };
+
+            staffDataContract = new Staff()
+            {
+                Recordkey = "3333333",
+                StaffLoginId = "APR"
+            };
+
+            glUsersDataContract = new Glusers()
+            {
+                Recordkey = "APR",
+                GlusStartDate = new DateTime(2015, 01, 01),
+                GlusRoleIds = new List<string>() { "ANDY" },
+                GlusRoleStartDates = new List<DateTime?>() { new DateTime(2015, 01, 01) },
+                ApprovalRolesEntityAssociation = new List<GlusersApprovalRoles>()
+                {
+                    (new GlusersApprovalRoles( "APPROVAL1", DateTime.Today.AddDays(-5), null, null, null, null, null, null, "Y"))
+                }
+
+            };
+            generalLedgerUserDataContract = new GeneralLedgerUserDataContract();
+            generalLedgerUserDataContract.glRolesDataContract = glRolesDataContract;
+            generalLedgerUserDataContract.personDataContract = personDataContract;
+            generalLedgerUserDataContract.staffDataContract = staffDataContract;
+            generalLedgerUserDataContract.glUsersDataContract = glUsersDataContract;
+            this.generalLedgerUserDataContracts.Add(generalLedgerUserDataContract);
+            #endregion
         }
 
         /// <summary>
@@ -2032,10 +2478,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     Recordkey = "PREFERRED",
                     NahNameHierarchy = new List<string>() { "PF" }
-            });
+                });
 
             // Mock the DataReader.Select on GLROLES
-            var glRolesList = new string[] { "ALL-ACCESS", "ANDY", "GTT4" , "WALL-ACCESS"};
+            var glRolesList = new string[] { "ALL-ACCESS", "ANDY", "GTT4", "WALL-ACCESS" };
+            if (personId == "3333333")
+            {
+                glRolesList = new string[] { "APPROVAL1" };
+            }
             DataReader.Setup(acc => acc.SelectAsync("GLROLES", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(glRolesList);
 
             // Mock DataReader.SelectAsync on GL.ACCTS.ROLES for a user with full access
@@ -2066,6 +2516,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             if (personId == "0000033")
             {
                 glAcctsRolesList = this.generalLedgerUserDomainEntity.AllAccounts.ToArray();
+            }
+
+            // User with approval role.
+            if (personId == "3333333")
+            {
+                glAcctsRolesList = new string[] { "11_00_02_01_33333_52222", "11_00_02_01_33333_53333", "11_00_02_01_33333_54444" };
             }
             DataReader.Setup(acc => acc.SelectAsync("GL.ACCTS.ROLES", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).Returns(() =>
                 {

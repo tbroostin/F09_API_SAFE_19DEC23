@@ -14,6 +14,7 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Text.RegularExpressions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -84,7 +85,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             //if the student has no year-specific financial aid data, return an empty list
             if (studentAwardYears.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
+                logger.Debug(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
                 return new List<AwardLetter2>();
             }
 
@@ -211,13 +212,20 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 throw new ArgumentNullException("studentAwardYear");
             }
 
-            // Check to see if we need a new AwardLetterHistory record generated into Colleague.
-            if (createAwardLetterHistoryRecord)
+            try
             {
-                await CreateAwardLetterHistoryRecordAsync(studentId, studentAwardYear.Code);
-            }
+                // Check to see if we need a new AwardLetterHistory record generated into Colleague.
+                if (createAwardLetterHistoryRecord)
+                {
+                    await CreateAwardLetterHistoryRecordAsync(studentId, studentAwardYear.Code);
+                }
 
-            return await BuildAwardLetter2(studentId, studentAwardYear, allAwards);
+                return await BuildAwardLetter2(studentId, studentAwardYear, allAwards);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
 
         }        
 
@@ -242,7 +250,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             //if the student has no year-specific financial aid data, return an empty list
             if (!studentAwardYears.Any())
             {
-                logger.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
+                logger.Debug(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
                 return new List<AwardLetter3>();
             }
 
@@ -287,6 +295,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             {
                 awardLetterEntity = await BuildAwardLetter2(studentAwardYears, allAwards, recordId);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
@@ -326,9 +338,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             UpdateAwardLetterSignedDateRequest request = new UpdateAwardLetterSignedDateRequest();
             request.AwardLetterHistId = awardLetter.Id;
-
-            var transactionResponse = await transactionInvoker.ExecuteAsync<UpdateAwardLetterSignedDateRequest, UpdateAwardLetterSignedDateResponse>(request);
-
+            var transactionResponse = new UpdateAwardLetterSignedDateResponse();
+            try
+            {
+                transactionResponse = await transactionInvoker.ExecuteAsync<UpdateAwardLetterSignedDateRequest, UpdateAwardLetterSignedDateResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             if (!string.IsNullOrEmpty(transactionResponse.ErrorMessage))
             {
                 if (transactionResponse.ErrorMessage == "This award letter has already been signed. No update required.")
@@ -388,7 +406,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             if (mostRecentRecord == null )
             {
                 var message = string.Format("No Award Letter History records for student {0}", studentId);
-                logger.Warn(message);
+                logger.Debug(message);
             }
 
             return await BuildAwardLetterEntity(studentAwardYear, allAwards, mostRecentRecord);
@@ -516,25 +534,32 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <exception cref="KeyNotFoundException">Thrown if the year-specific award letter parameters record does not exist</exception>
         private async Task<AwardLetter3> BuildAwardLetter2(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards)
         {
-            // Get the most recent AwardLetterHistory record for this student and year
-            string criteria = "WITH ALH.STUDENT.ID EQ '" + studentId + "' WITH ALH.AWARD.YEAR EQ '" + studentAwardYear.Code + "'";
-            var awardLetterHistoryRecords = await DataReader.BulkReadRecordAsync<AwardLetterHistory>(criteria);
-
-            //get the most recent award letter history record for the year
-            var mostRecentAwardLetterHistoryRecordForYear = awardLetterHistoryRecords != null ?
-                awardLetterHistoryRecords.Where(r => r.AlhAwardYear == studentAwardYear.Code)
-                .OrderByDescending(a => a.AlhAwardLetterDate)
-                .ThenByDescending(a => a.AwardLetterHistoryAddtime).FirstOrDefault() : null;
-            
-
-            if (mostRecentAwardLetterHistoryRecordForYear == null)
+            try
             {
-                var message = string.Format("No Award Letter History records for student {0}", studentId);
-                logger.Warn(message);
-                throw new KeyNotFoundException(message);
-            }
+                // Get the most recent AwardLetterHistory record for this student and year
+                string criteria = "WITH ALH.STUDENT.ID EQ '" + studentId + "' WITH ALH.AWARD.YEAR EQ '" + studentAwardYear.Code + "'";
+                var awardLetterHistoryRecords = await DataReader.BulkReadRecordAsync<AwardLetterHistory>(criteria);
 
-            return await BuildAwardLetterEntity2(studentAwardYear, allAwards, mostRecentAwardLetterHistoryRecordForYear);
+                //get the most recent award letter history record for the year
+                var mostRecentAwardLetterHistoryRecordForYear = awardLetterHistoryRecords != null ?
+                    awardLetterHistoryRecords.Where(r => r.AlhAwardYear == studentAwardYear.Code)
+                    .OrderByDescending(a => a.AlhAwardLetterDate)
+                    .ThenByDescending(a => a.AwardLetterHistoryAddtime).FirstOrDefault() : null;
+
+
+                if (mostRecentAwardLetterHistoryRecordForYear == null)
+                {
+                    var message = string.Format("No Award Letter History records for student {0}", studentId);
+                    logger.Debug(message);
+                    throw new KeyNotFoundException(message);
+                }
+
+                return await BuildAwardLetterEntity2(studentAwardYear, allAwards, mostRecentAwardLetterHistoryRecordForYear);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
         
 
@@ -548,15 +573,22 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <returns>AwardLetter3 entity</returns>
         private async Task<AwardLetter3> BuildAwardLetter2(IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards, string recordId)
         {
-            //Get the award letter history record by the record id            
-            var awardLetterHistoryRecord = await DataReader.ReadRecordAsync<AwardLetterHistory>(recordId);
-            if (awardLetterHistoryRecord == null)
+            try
             {
-                throw new KeyNotFoundException(string.Format("No award letter history record {0} was found for the student", recordId));
-            }
-            var awardYear = awardLetterHistoryRecord.AlhAwardYear;
+                //Get the award letter history record by the record id            
+                var awardLetterHistoryRecord = await DataReader.ReadRecordAsync<AwardLetterHistory>(recordId);
+                if (awardLetterHistoryRecord == null)
+                {
+                    throw new KeyNotFoundException(string.Format("No award letter history record {0} was found for the student", recordId));
+                }
+                var awardYear = awardLetterHistoryRecord.AlhAwardYear;
 
-            return await BuildAwardLetterEntity2(studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
+                return await BuildAwardLetterEntity2(studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
         
 
@@ -597,6 +629,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 awardLetter3Entity.CreatedDate = awardLetterHistoryRecord.AlhAwardLetterDate;
                 awardLetter3Entity.StudentOfficeCode = awardLetterHistoryRecord.AlhOfficeId;
                 string alhLetterType = awardLetterHistoryRecord.AlhLetterType;
+
+                awardLetter3Entity.AlhZeroAwardFlg = (!string.IsNullOrEmpty(awardLetterHistoryRecord.AlhZeroAwardFlg) && awardLetterHistoryRecord.AlhZeroAwardFlg.ToUpper() == "Y");
+
 
                 if (string.IsNullOrEmpty(alhLetterType))
                 {
@@ -693,32 +728,64 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                 var alhHousingDesc = new List<string>();
                 var alhEnrollmentDesc = new List<string>();
+                
 
-                var awardPeriodsForYear = awardLetterAnnualAwards.Any() ? awardLetterAnnualAwards.SelectMany(a => a.AwardLetterAwardPeriods).ToList() : new List<Domain.FinancialAid.Entities.AwardLetterAwardPeriod>();
-                if (awardPeriodsForYear != null && awardPeriodsForYear.Any())
+                if (awardLetterHistoryRecord.AlhZeroAwardFlg == "Y")
                 {
-                    var distinctAwardPeriodColumnsForYear = awardPeriodsForYear.Any() ? awardPeriodsForYear.Select(ap => ap.ColumnNumber).Distinct().OrderBy(cn => cn).ToList() : new List<int>();
-
+                    var alhZeroAwpds = new List<string>();
                     var distinctAwardPeriods = new List<AwardLetterHistoryAlhAwardPeriodTable>();
-
-                    foreach (var columnNumber in distinctAwardPeriodColumnsForYear)
+                    var z = 0;
+                    foreach (var awpdName in awardLetterHistoryRecord.AlhColumnGroupName)
                     {
-
-                        var distinctAwardPeriod = awardPeriodAssociationTable.Where(ap => ap.AlhColumnGroupNumberAssocMember == columnNumber.ToString()).FirstOrDefault();
+                        var distinctAwardPeriod = awardPeriodAssociationTable.Where(ap => ap.AlhColumnGroupNumberAssocMember == awardLetterHistoryRecord.AlhColumnGroupNumber[z].ToString()).FirstOrDefault();
                         distinctAwardPeriods.Add(distinctAwardPeriod);
+                        z++;
+                        alhZeroAwpds.Add(awpdName);
                     }
-
-                    if (distinctAwardPeriods.Any())
+                    foreach (var ahd in awardLetterHistoryRecord.AlhHousingDesc)
                     {
-                        foreach (var awardPeriod in distinctAwardPeriods)
+                        alhHousingDesc.Add(ahd);
+                    }
+                    foreach (var aed in awardLetterHistoryRecord.AlhEnrlDesc)
+                    {
+                        alhEnrollmentDesc.Add(aed);
+                    }
+                    var zeroPeriodList = new List<string>();
+                    foreach (var aza in alhZeroAwpds)
+                    {
+                        zeroPeriodList.Add(aza.ToUpper());
+                    }
+                    awardLetter3Entity.AlhZeroAwpds = zeroPeriodList;
+                    //awardLetter3Entity.AlhZeroAwpds = alhZeroAwpds;
+                }
+                else
+                {
+                    var awardPeriodsForYear = awardLetterAnnualAwards.Any() ? awardLetterAnnualAwards.SelectMany(a => a.AwardLetterAwardPeriods).ToList() : new List<Domain.FinancialAid.Entities.AwardLetterAwardPeriod>();
+                    if (awardPeriodsForYear != null && awardPeriodsForYear.Any())
+                    {
+                        var distinctAwardPeriodColumnsForYear = awardPeriodsForYear.Any() ? awardPeriodsForYear.Select(ap => ap.ColumnNumber).Distinct().OrderBy(cn => cn).ToList() : new List<int>();
+
+                        var distinctAwardPeriods = new List<AwardLetterHistoryAlhAwardPeriodTable>();
+
+                        foreach (var columnNumber in distinctAwardPeriodColumnsForYear)
                         {
-                            if (awardPeriod.AlhHousingDescAssocMember != null || awardPeriod.AlhHousingDescAssocMember != "")
+
+                            var distinctAwardPeriod = awardPeriodAssociationTable.Where(ap => ap.AlhColumnGroupNumberAssocMember == columnNumber.ToString()).FirstOrDefault();
+                            distinctAwardPeriods.Add(distinctAwardPeriod);
+                        }
+
+                        if (distinctAwardPeriods.Any())
+                        {
+                            foreach (var awardPeriod in distinctAwardPeriods)
                             {
-                                alhHousingDesc.Add(awardPeriod.AlhHousingDescAssocMember);
-                            }
-                            if (awardPeriod.AlhEnrlDescAssocMember != null || awardPeriod.AlhEnrlDescAssocMember != "")
-                            {
-                                alhEnrollmentDesc.Add(awardPeriod.AlhEnrlDescAssocMember);
+                                if (awardPeriod.AlhHousingDescAssocMember != null || awardPeriod.AlhHousingDescAssocMember != "")
+                                {
+                                    alhHousingDesc.Add(awardPeriod.AlhHousingDescAssocMember);
+                                }
+                                if (awardPeriod.AlhEnrlDescAssocMember != null || awardPeriod.AlhEnrlDescAssocMember != "")
+                                {
+                                    alhEnrollmentDesc.Add(awardPeriod.AlhEnrlDescAssocMember);
+                                }
                             }
                         }
                     }
@@ -788,8 +855,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             request.StudentId = studentId;
 
             //Execute
-            var response = await transactionInvoker.ExecuteAsync<CreateAwardLetterHistoryRequest, CreateAwardLetterHistoryResponse>(request);
-
+            var response = new CreateAwardLetterHistoryResponse();
+            try
+            {
+                response = await transactionInvoker.ExecuteAsync<CreateAwardLetterHistoryRequest, CreateAwardLetterHistoryResponse>(request);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             if (response == null)
             {
                 var message = "Error getting CreateAwardLetterHistory transaction response from Colleague";

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using System.Linq;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         const string AllEmploymentPerformanceReviewsRecordsCache = "AllEmploymentPerformanceReviewsRecordKeys";
         const int AllEmploymentPerformanceReviewsRecordsCacheTimeout = 20;
         private RepositoryException exception = new RepositoryException();
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// ..ctor
@@ -152,7 +153,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             catch (Exception ex)
             {
                 // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
-                // we process the list of employee performance reviews              
+                // we process the list of employee performance reviews 
+                logger.Error(ex, "Unable to get perpos contracts by guid.");
             }
 
             // loop through list of concatenated perpos key and PERPOS.EVAL.RATINGS.DATE
@@ -255,7 +257,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", "PERPOS"), ex);
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "PERPOS"), ex);
             }
 
             return guidCollection;
@@ -329,9 +331,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 recordGuid = await GetGuidFromRecordInfoAsync("PERPOS", employmentPerformanceReviewsEntity.PerposId, "PERPOS.EVAL.RATINGS.DATE", DmiString.DateTimeToPickDate((DateTime)employmentPerformanceReviewsEntity.CompletedDate).ToString());
             }
-            catch
+            catch (Exception ex)
             {
                 // Guid does not already exist so we are okay.
+                logger.Error(ex, "Unable to get perpos by guid.");
             }
             if (!string.IsNullOrEmpty(recordGuid))
             {
@@ -486,7 +489,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     catch (RepositoryException ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, ", effectiveDate: ", effectiveDate != DateTime.MinValue ? effectiveDate.ToShortDateString() : ""),
                             ex.InnerException);
                     }
                 }
@@ -658,7 +661,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;

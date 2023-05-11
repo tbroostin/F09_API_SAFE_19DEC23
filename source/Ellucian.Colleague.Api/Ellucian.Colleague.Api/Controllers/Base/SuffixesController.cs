@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,9 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
+using Ellucian.Data.Colleague.Exceptions;
+using slf4net;
+
 namespace Ellucian.Colleague.Api.Controllers
 {
     /// <summary>
@@ -26,16 +29,21 @@ namespace Ellucian.Colleague.Api.Controllers
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IAdapterRegistry _adapterRegistry;
+        private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// Initializes a new instance of the SuffixController class.
         /// </summary>
         /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
         /// <param name="referenceDataRepository">Repository of type <see cref="IReferenceDataRepository">IReferenceDataRepository</see></param>
-        public SuffixesController(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository)
+        /// <param name="logger">Interface to logger</param>
+        public SuffixesController(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository, ILogger logger)
         {
             _adapterRegistry = adapterRegistry;
             _referenceDataRepository = referenceDataRepository;
+            _logger = logger;
         }
 
         /// <summary>
@@ -44,19 +52,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="Suffix">Suffix codes and descriptions.</see></returns>
         public IEnumerable<Suffix> Get()
         {
-            var suffixCollection = _referenceDataRepository.Suffixes;
-
-            // Get the right adapter for the type mapping
-            var suffixDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Suffix, Suffix>();
-
-            // Map the suffix entity to the program DTO
-            var suffixDtoCollection = new List<Suffix>();
-            foreach (var suffix in suffixCollection)
+            try
             {
-                suffixDtoCollection.Add(suffixDtoAdapter.MapToType(suffix));
-            }
+                var suffixCollection = _referenceDataRepository.Suffixes;
 
-            return suffixDtoCollection;
+                // Get the right adapter for the type mapping
+                var suffixDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Suffix, Suffix>();
+
+                // Map the suffix entity to the program DTO
+                var suffixDtoCollection = new List<Suffix>();
+                foreach (var suffix in suffixCollection)
+                {
+                    suffixDtoCollection.Add(suffixDtoAdapter.MapToType(suffix));
+                }
+
+                return suffixDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +12,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         public List<AcadResult> Results { get; set; }
         public HashSet<GroupExplanation> Explanations { get; set; }
         public List<string> EvalDebug { get; set; }
-        public List<string> ForceAppliedAcademicCreditIds;
-        public List<string> ForceDeniedAcademicCreditIds;
+        public List<string> ForceAppliedAcademicCreditIds { get; set; }
+        public List<string> ForceDeniedAcademicCreditIds { get; set; }
         public GroupResultMinGroupStatus MinGroupStatus { get; set; }
         //Do we want to evalauate related courses for this group result. 
         //This is controlled by settings on AEDF.
@@ -207,7 +207,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                             {
                                 nonOverrideAppliedCourses.Add(academicResults[c]);
                             }
-                            catch { }
+                            catch 
+                            {
+                                var DoNothing = true; // avoid empty catch block
+                            }
                         }
                     }
                 }

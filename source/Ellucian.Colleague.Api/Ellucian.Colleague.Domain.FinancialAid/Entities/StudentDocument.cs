@@ -54,6 +54,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public string StatusDescription { get; set; }
 
         /// <summary>
+        /// Flag indicating that this code is under review after receiving an attachment
+        /// </summary>
+        public bool UnderReviewFlag { get; set; }
+
+
+        /// <summary>
         /// Constructor for a StudentDocument
         /// </summary>
         /// <param name="studentId">The studentId of the StudentDocument</param>

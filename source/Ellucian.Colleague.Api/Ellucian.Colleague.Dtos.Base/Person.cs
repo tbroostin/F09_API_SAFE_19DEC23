@@ -96,5 +96,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Personal Pronoun Code indicating person's perferred manner of address
         /// </summary>
         public string PersonalPronounCode { get; set; }
+
+        /// <summary>
+        /// Name that should be used when displaying a person's name on reports and forms.
+        /// This property is based on a Name Address Hierarcy and will be null if none is provided.
+        /// </summary>
+        public PersonHierarchyName PersonDisplayName { get; set; }
     }
 }

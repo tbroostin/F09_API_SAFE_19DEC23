@@ -1,7 +1,9 @@
-﻿using Ellucian.Colleague.Api.Licensing;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -29,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly IFacultyContractService _facultyContractService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the FacultyContractcontroller class.
@@ -66,6 +69,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 _logger.Error(e, "User does not have permission to retrieve faculty ID " + facultyId);
                 throw CreateHttpResponseException("You are not authorized to retrieve this contract", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

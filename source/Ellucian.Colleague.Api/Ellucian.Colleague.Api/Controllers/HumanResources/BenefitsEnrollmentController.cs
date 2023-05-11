@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -19,6 +19,7 @@ using System.Net.Http;
 using System.Web;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -40,6 +41,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private const string invalidBenefitEnrollmentCompletionCriteriaErrorMessage = "Required parameters of BenefitEnrollmentCompletionCriteria DTO contain invalid values.";
         private const string beneficiaryCategoryFailureMessage = "Unable to get beneficiary categories";
         private const string forbiddenSubmitOrReopenErrorMessage = "User does not have the permission to submit/re-open the elected benefits of others";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string invalidPermissionsErrorMessage = "The current user does not have the permissions to perform the requested operation.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
+
         /// <summary>
         /// Initializes a new instance of the BenefitsEnrollmentController class
         /// </summary>
@@ -68,18 +73,25 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentEligibilityAsync(employeeId);
+                logger.Debug("*******Start - Process to get benefits enrollment eligibility for an employee - Start***********");
+                var eligibility = await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentEligibilityAsync(employeeId);
+                logger.Debug("*******End - Process to get benefits enrollment eligibility for an employee is successful - End***********");
+                return eligibility;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, "User does not have permission to access EmployeeBenefitsEnrollmentEligibility for " + employeeId);
-                throw CreateHttpResponseException("You are not authorized to retrieve EmployeeBenefitsEnrollmentEligibility", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                var message = "Unable to get EmployeeBenefitsEnrollmentEligibility details";
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
 
@@ -100,18 +112,25 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                return await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentPoolAsync(employeeId);
+                logger.Debug("*******Start - Process to get benefits enrollment pool items (dependent and beneficiary information) for an employee - Start***********");
+                var poolItems = await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentPoolAsync(employeeId);
+                logger.Debug("*******End - Process to get benefits enrollment pool items (dependent and beneficiary information) for an employee is successful - End***********");
+                return poolItems;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, "User does not have permission to access EmployeeBenefitsEnrollmentPool for " + employeeId);
-                throw CreateHttpResponseException("You are not authorized to retrieve EmployeeBenefitsEnrollmentPool information", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                var message = "Unable to get EmployeeBenefitsEnrollmentPool details";
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
 
@@ -133,18 +152,25 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     throw new ArgumentNullException("employeeId");
                 }
-                return await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
+                logger.Debug("*******Start - Process to get EmployeeBenefitsEnrollmentPackage object for the specified employee - Start***********");
+                var package = await benefitsEnrollmentService.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
+                logger.Debug("*******End - Process to get EmployeeBenefitsEnrollmentPackage object for the specified employee is successful - End***********");
+                return package;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, "User does not have permission to access EmployeeBenefitsEnrollmentPackage for " + employeeId);
-                throw CreateHttpResponseException("You are not authorized to retrieve EmployeeBenefitsEnrollmentPackage information", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                var message = "Unable to get EmployeeBenefitsEnrollmentPackage details";
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
 
@@ -181,18 +207,25 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-                return await benefitsEnrollmentService.AddEmployeeBenefitsEnrollmentPoolAsync(employeeId, employeeBenefitsEnrollmentPoolItem);
+                logger.Debug("*******Start - Process to add new benefits enrollment pool information to an employee - Start***********");
+                var addBenefits = await benefitsEnrollmentService.AddEmployeeBenefitsEnrollmentPoolAsync(employeeId, employeeBenefitsEnrollmentPoolItem);
+                logger.Debug("*******End - Process to add new benefits enrollment pool information to an employee is successful - End***********");
+                return addBenefits;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException ex)
             {
-                var message = string.Format(ex.Message);
-                logger.Error(ex, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -218,7 +251,6 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             if (employeeBenefitsEnrollmentPoolItem == null)
             {
-
                 throw CreateHttpResponseException(noBenefitEnrollmentPoolDTOErrorMessage);
             }
 
@@ -235,14 +267,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-                return await benefitsEnrollmentService.UpdateEmployeeBenefitsEnrollmentPoolAsync(employeeId, employeeBenefitsEnrollmentPoolItem);
+                logger.Debug("*******Start - Process to update new benefits enrollment pool information to an employee - Start***********");
+                var updateBenefits = await benefitsEnrollmentService.UpdateEmployeeBenefitsEnrollmentPoolAsync(employeeId, employeeBenefitsEnrollmentPoolItem);
+                logger.Debug("*******End - Process to update new benefits enrollment pool information to an employee is successful - End***********");
+                return updateBenefits;
             }
-
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException ex)
             {
-                var message = string.Format(ex.Message);
-                logger.Error(ex, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
 
             catch (KeyNotFoundException knfe)
@@ -254,7 +292,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -302,20 +340,26 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-                return await benefitsEnrollmentService.UpdateEmployeeBenefitsEnrollmentInfoAsync(employeeBenefitsEnrollmentInfo);
+                logger.Debug("*******Start - Process to update benefits enrollment information of an employee for the given benefit types specified - Start***********");
+                var updateBenefitsEnrollmentInfo = await benefitsEnrollmentService.UpdateEmployeeBenefitsEnrollmentInfoAsync(employeeBenefitsEnrollmentInfo);
+                logger.Debug("*******End - Process to update benefits enrollment information of an employee for the given benefit types specified is successful - End***********");
+                return updateBenefitsEnrollmentInfo;
             }
-
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException ex)
             {
-                var message = string.Format(ex.Message);
-                logger.Error(ex, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
 
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -335,7 +379,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     throw new ArgumentNullException("criteria");
                 }
+                logger.Debug("*******Start - Process to query enrollment period benefits based on specified criteria - Start***********");
                 var benefits = await benefitsEnrollmentService.QueryEnrollmentPeriodBenefitsAsync(criteria);
+                logger.Debug("*******End - Process to query enrollment period benefits based on specified criteria is successful - End***********");
                 return benefits;
             }
             catch (RepositoryException re)
@@ -372,7 +418,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     throw new ArgumentNullException("criteria");
                 }
+                logger.Debug("*******Start - Process to query benefits enrollment information based on specified criteria - Start***********");
                 var benefits = await benefitsEnrollmentService.QueryEmployeeBenefitsEnrollmentInfoAsync(criteria);
+                logger.Debug("*******End - Process to query benefits enrollment information based on specified criteria is successful - End***********");
                 return benefits;
             }
             catch (RepositoryException re)
@@ -385,15 +433,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(ane, ane.Message);
                 throw CreateHttpResponseException("Unable to get benefits enrollment information", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException("You are not authorized to retrieve Employee Benefits Enrollment Info", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unable to get benefits enrollment information", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -430,8 +483,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     throw new ArgumentException("BenefitsPackageId is required");
                 }
-
+                logger.Debug("*******Start - Process to submit/re-open the benefits elected by an employee - Start***********");
                 var benefitsEnrollmentCompletionInfo = await benefitsEnrollmentService.SubmitOrReOpenBenefitElectionsAsync(criteria);
+                logger.Debug("*******End - Process to submit/re-open the benefits elected by an employee is successful - End***********");
                 return benefitsEnrollmentCompletionInfo;
             }
             catch (ArgumentNullException ane)
@@ -443,6 +497,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 logger.Error(ae, invalidBenefitEnrollmentCompletionCriteriaErrorMessage);
                 throw CreateHttpResponseException(invalidBenefitEnrollmentCompletionCriteriaErrorMessage, HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException ex)
             {
@@ -469,7 +528,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await benefitsEnrollmentService.GetBeneficiaryCategoriesAsync();
+                logger.Debug("*******Start - Process to get the beneficiary categories/types - Start***********");
+                var beneficiaryCategories = await benefitsEnrollmentService.GetBeneficiaryCategoriesAsync();
+                logger.Debug("*******End - Process to get the beneficiary categories/types is successful - End***********");
+                return beneficiaryCategories;
             }
             catch (Exception e)
             {
@@ -496,12 +558,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                logger.Debug("*******Start - Process to get the benefits enrollment acknowledgement report - Start***********");
+
                 var path = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/BenefitsEnrollmentAcknowledgement.rdlc");
 
                 var resourceFilePath = HttpContext.Current.Server.MapPath("~/App_GlobalResources/HumanResources/BenefitsEnrollment.resx");
 
                 var renderedBytes = await benefitsEnrollmentService.GetBenefitsInformationForAcknowledgementReport(employeeId, path, resourceFilePath);
-
+                logger.Debug(string.Format("*****Benefits information for acknowledgement report obtained successfully for {0}******", employeeId));
                 var fileNameString = string.Format("Open Enrollment Benefits {0}", DateTime.Now.ToString("MMddyyyy HH:mm:ss"));
 
                 var response = new HttpResponseMessage();
@@ -514,6 +578,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 };
                 response.Content.Headers.ContentLength = renderedBytes.Length;
 
+                logger.Debug("*******End - Process to get the benefits enrollment acknowledgement report is successful - End***********");
                 return response;
             }
             catch (ArgumentException ex)
@@ -521,10 +586,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Parameters are not valid. See log for details.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException ex)
             {
                 logger.Error(ex, ex.Message);
-                throw CreateHttpResponseException("Access to Benefits Enrollment is forbidden. See log for details.", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (ApplicationException ex)
             {
@@ -539,7 +609,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
-                throw CreateHttpResponseException("Unknown error occurred while getting Benefits Enrollment Acknowledgement resource. See log for details.");
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
     }

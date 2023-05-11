@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using slf4net;
 using Ellucian.Web.Cache;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -92,6 +93,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 createResponse = await transactionInvoker.ExecuteAsync<AddOfficeHoursRequest, AddOfficeHoursResponse>(newRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while adding office hours");
+                throw;
             }
             catch (Exception ex)
             {
@@ -231,6 +237,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 updateResponse = await transactionInvoker.ExecuteAsync<UpdateOfficeHoursRequest, UpdateOfficeHoursResponse>(updateRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while updating office hours");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Error occurred during updateOfficeHours transaction execution.");
@@ -321,6 +332,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 deleteResponse = await transactionInvoker.ExecuteAsync<DeleteOfficeHoursRequest, DeleteOfficeHoursResponse>(deleteRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while deleting office hours");
+                throw;
             }
             catch (Exception ex)
             {

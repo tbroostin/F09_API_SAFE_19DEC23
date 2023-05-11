@@ -44,6 +44,11 @@ namespace Ellucian.Colleague.Dtos.Finance.Payments
         public Nullable<DateTime> ReceiptTime { get; set; }
 
         /// <summary>
+        /// Receipt date and time offset to ctzs
+        /// </summary>
+        public Nullable<DateTimeOffset> ReceiptDateTimeOffset { get; set; }
+
+        /// <summary>
         /// List containing the merchant's name and address
         /// </summary>
         public List<string> MerchantNameAddress { get; set; }

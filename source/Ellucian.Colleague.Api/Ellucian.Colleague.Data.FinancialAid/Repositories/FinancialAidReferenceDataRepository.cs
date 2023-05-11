@@ -1,4 +1,4 @@
-﻿//Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2013-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -896,7 +896,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         //                var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
         //                logger.Info(errorMessage);
         //                // If we cannot read the international parameters default to US with a / delimiter.
-        //                // throw new Exception(errorMessage);
+        //                // throw new ColleagueWebApiException(errorMessage);
         //                Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
         //                newIntlParams.HostShortDateFormat = "MDY";
         //                newIntlParams.HostDateDelimiter = "/";

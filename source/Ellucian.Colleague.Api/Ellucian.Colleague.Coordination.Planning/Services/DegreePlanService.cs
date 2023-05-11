@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Planning.Reports;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Planning;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
 using slf4net;
@@ -21,6 +22,8 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Planning.Services
 {
@@ -50,6 +53,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         private readonly IStudentDegreePlanService _studentDegreePlanService;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IProgramEvaluationService _programEvaluationService;
+        private readonly ICoursePlaceholderRepository _coursePlaceholderRepository;
 
         public DegreePlanService(IAdapterRegistry adapterRegistry, IDegreePlanRepository degreePlanRepository, ITermRepository termRepository, IStudentRepository studentRepository, IPlanningStudentRepository planningStudentRepository,
             IStudentProgramRepository studentProgramRepository, ICourseRepository courseRepository, ISectionRepository sectionRepository, IProgramRepository programRepository,
@@ -57,7 +61,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             ISampleDegreePlanRepository curriculumTrackRepository, IPlanningConfigurationRepository planningConfigurationRepository, ICatalogRepository catalogRepository,
             IDegreePlanArchiveRepository degreePlanArchiveRepository, IAdvisorRepository advisorRepository, IGradeRepository gradeRepository, IAcademicHistoryService academicHistoryService,
             IStudentDegreePlanRepository studentDegreePlanRepository, IStudentDegreePlanService studentDegreePlanService,
-            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository, IProgramEvaluationService programEvaluationService)
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository, IProgramEvaluationService programEvaluationService, ICoursePlaceholderRepository coursePlaceholderRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _configurationRepository = configurationRepository;
@@ -84,6 +88,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             _studentDegreePlanService = studentDegreePlanService;
             _configurationRepository = configurationRepository;
             _programEvaluationService = programEvaluationService;
+            _coursePlaceholderRepository = coursePlaceholderRepository;
         }
 
         /// <summary>
@@ -137,10 +142,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     }
                 }
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                logger.Error(ex.Message);
+                logger.Error(ex, "Unable to find sample plan or unable to overlay plan.");
                 throw new InvalidOperationException("There is no sample degree plan available.");
             }
 
@@ -190,7 +200,12 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 pgmCurrTrackCode = (await _programRequirementsRepository.GetAsync(programCode, catalog)).CurriculumTrackCode;
                 sampleDegreePlan = await _curriculumTrackRepository.GetAsync(pgmCurrTrackCode);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve program current track or degree plan.");
+            }
+
+
 
             return sampleDegreePlan;
         }
@@ -211,8 +226,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 currTrackCode = (await _planningConfigurationRepository.GetPlanningConfigurationAsync()).DefaultCurriculumTrack;
                 sampleDegreePlan = await _curriculumTrackRepository.GetAsync(currTrackCode);
             }
-            catch
-            { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Cannot retrieve current track code or degree plan.");
+            }
 
             return sampleDegreePlan;
         }
@@ -279,7 +296,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -344,7 +361,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -413,7 +430,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -482,7 +499,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -552,7 +569,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
                 logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -625,7 +642,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
                 logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -662,6 +679,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 {
                     throw new KeyNotFoundException("Degree plan id " + degreePlanId + " not found.");
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch
             {
@@ -750,7 +771,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
                 logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -990,7 +1011,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
 
@@ -1032,7 +1053,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             var degreePlanSections = await _sectionRepository.GetCachedSectionsAsync(sectionsOnPlan);
             var academicCredits = await _academicCreditRepository.GetAsync(student.AcademicCreditIds, true);
             var grades = await _gradeRepository.GetAsync();
-            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, academicCredits, grades);
+            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, academicCredits, grades, null);
             var degreePlanArchive = await _degreePlanArchiveRepository.AddAsync(newDegreePlanArchive);
 
             // Get the right adapter for the type mapping and convert the degree plan entity to degree plan DTO
@@ -1089,7 +1110,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 academicCredits = academicCreditsDict[student.Id];
             }
             var grades = await _gradeRepository.GetAsync();
-            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, academicCredits, grades);
+            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, academicCredits, grades, null);
             var degreePlanArchive = await _degreePlanArchiveRepository.AddAsync(newDegreePlanArchive);
 
             // Get the right adapter for the type mapping and convert the degree plan entity to degree plan DTO
@@ -1148,7 +1169,33 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             //var academicCredits = await _academicCreditRepository.GetAsync(student.AcademicCreditIds, true);
             var grades = await _gradeRepository.GetAsync();
-            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, studentAcademicCredits, grades);
+
+            // Identify course placeholders on the student's degree plan
+            List<string> placeholdersOnPlan = null;
+            if (degreePlan.NonTermPlannedCourses != null)
+            {
+                placeholdersOnPlan = degreePlan.NonTermPlannedCourses.Where(c => c != null && !string.IsNullOrEmpty(c.CoursePlaceholderId)).Select(s => s.CoursePlaceholderId).ToList();
+            }
+            if (degreePlan.Terms != null)
+            {
+                foreach (var term in degreePlan.Terms)
+                {
+                    if (term != null && term.PlannedCourses != null)
+                    {
+                        var placeholdersToAdd = term.PlannedCourses.Where(c => c != null && !string.IsNullOrEmpty(c.CoursePlaceholderId)).Select(p => p.CoursePlaceholderId).ToList();
+                        placeholdersOnPlan.AddRange(placeholdersToAdd);
+                    }
+                }
+            }
+            placeholdersOnPlan = placeholdersOnPlan.Distinct().ToList();
+            List<CoursePlaceholder> coursePlaceholders = new List<CoursePlaceholder>();
+            if (placeholdersOnPlan.Any())
+            {
+                coursePlaceholders = (await _coursePlaceholderRepository.GetCoursePlaceholdersByIdsAsync(placeholdersOnPlan)).ToList();
+            }
+
+            // Build the degree plan archive from previously gathered data
+            var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, studentAcademicCredits, grades, coursePlaceholders);
             var degreePlanArchive = await _degreePlanArchiveRepository.AddAsync(newDegreePlanArchive);
 
             // Get the right adapter for the type mapping and convert the degree plan entity to degree plan DTO
@@ -1224,7 +1271,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             return degreePlanArchiveDtos;
         }
 
-        //TODO
         /// <summary>
         /// Given an archive ID, return the archive report object, which contains the data required to generate the pdf.
         /// </summary>
@@ -1249,7 +1295,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 // Gather information needed to build the DegreePlanArchiveReport model.
                 var programs = await _programRepository.GetAsync();
                 // Set the planned term data in the report
-                var terms = (await _termRepository.GetAsync()).ToList(); //TODO
+                var terms = (await _termRepository.GetAsync()).ToList();
                 logger.Info("GetDegreePlanArchiveReport: After retrieval of programs and terms.");
 
                 //read student program file too
@@ -1275,17 +1321,28 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         var advisor = await _advisorRepository.GetAsync(id, Domain.Planning.Entities.AdviseeInclusionType.NoAdvisees);
                         degreePlanPeople.Add(advisor);
                     }
-                    catch (Exception)
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+
+                    catch (Exception ex)
                     {
                         // Can't find advisor 
+                        logger.Error(ex, "Unable to find advisor.");
                     }
                 }
                 logger.Info("GetDegreePlanArchiveReport: Call to DegreePlanArchiveReport constructor");
                 // Now create the DegreePlanReportArchive
-                var report = new DegreePlanArchiveReport(degreePlanArchive, student, programs, degreePlanPeople, terms, studentPrograms);
+                var report = new DegreePlanArchiveReport(degreePlanArchive, student, programs, degreePlanPeople, terms, studentPrograms, logger);
                 logger.Info("GetDegreePlanArchiveReport complete.");
                 return report;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 throw (ex);
@@ -1329,7 +1386,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             report.SetParameters(parameters);
 
             report.DataSources.Add(new ReportDataSource("ArchivedCourses", archiveReport.ArchivedCoursesDataSet.Tables[0]));
-
             report.DataSources.Add(new ReportDataSource("ArchivedNotes", archiveReport.ArchivedNotesDataSet.Tables[0]));
 
             // Set up some options for the report
@@ -1388,7 +1444,28 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             //Filter the results. Do not apply filter if DegreePlanRetrievalType.All
             if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.UnAssignedAdvisees)
             {
-                degreePlans = degreePlans.Where(dp => dp.AssignedReviewer == null);
+                var planningConfig = await _planningConfigurationRepository.GetPlanningConfigurationAsync();
+                //When both ABO and nonABO are on, check if the student has any assigned advisors 
+                //show in the unassigned tab, only degree plans students with no assigned advisors
+                if(planningConfig != null && planningConfig.AdviseByAssignmentFlag && planningConfig.AdviseByOfficeFlag)
+                {
+                    var filteredDegreePlans = new List<Domain.Planning.Entities.DegreePlanReviewRequest>();
+                    degreePlans = degreePlans.Where(dp => dp.AssignedReviewer == null);
+                    foreach (var degreeplan in degreePlans)
+                    {
+                        var planningStudentEntity = await _planningStudentRepository.GetAsync(degreeplan.PersonId);
+                        if(planningStudentEntity!= null && !planningStudentEntity.HasAdvisor)
+                        {
+                            filteredDegreePlans.Add(degreeplan);
+                        }
+                    }
+                    degreePlans = filteredDegreePlans;
+                }
+                else
+                {
+                    degreePlans = degreePlans.Where(dp => dp.AssignedReviewer == null);
+                }
+
             }
             else if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.AssignedToOthers)
             {
@@ -1545,18 +1622,18 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.UnAssignedAdvisees)
             {
-                filteredResults = (from student in students
-                                   join dp in degreePlans
-                                   on student.Id equals dp.PersonId into results
-                                   from result in results.DefaultIfEmpty()
-                                   select new DegreePlanReviewRequest()
-                                   {
-                                       Id = (result != null) ? result.Id : null,
-                                       AssignedReviewer = (result != null) ? result.AssignedReviewer : null,
-                                       PersonId = (result != null) ? result.PersonId : student.Id,
-                                       ReviewRequestedDate = (result != null) ? result.ReviewRequestedDate : null
-                                   }).ToList();
-            }
+                    filteredResults = (from student in students
+                                       join dp in degreePlans
+                                       on student.Id equals dp.PersonId into results
+                                       from result in results.DefaultIfEmpty()
+                                       select new DegreePlanReviewRequest()
+                                       {
+                                           Id = (result != null) ? result.Id : null,
+                                           AssignedReviewer = (result != null) ? result.AssignedReviewer : null,
+                                           PersonId = (result != null) ? result.PersonId : student.Id,
+                                           ReviewRequestedDate = (result != null) ? result.ReviewRequestedDate : null
+                                       }).ToList();
+            }             
             else if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.AssignedToOthers)
             {
                 filteredResults = filteredResults.Where(dp => dp.AssignedReviewer != null && dp.AssignedReviewer != CurrentUser.PersonId).ToList();
@@ -1713,18 +1790,18 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.UnAssignedAdvisees)
             {
-                filteredResults = (from student in students
-                                   join dp in degreePlans
-                                   on student.Id equals dp.PersonId into results
-                                   from result in results.DefaultIfEmpty()
-                                   select new DegreePlanReviewRequest()
-                                   {
-                                       Id = (result != null) ? result.Id : null,
-                                       AssignedReviewer = (result != null) ? result.AssignedReviewer : null,
-                                       PersonId = (result != null) ? result.PersonId : student.Id,
-                                       ReviewRequestedDate = (result != null) ? result.ReviewRequestedDate : null
-                                   }).ToList();
-            }
+                    filteredResults = (from student in students
+                                       join dp in degreePlans
+                                       on student.Id equals dp.PersonId into results
+                                       from result in results.DefaultIfEmpty()
+                                       select new DegreePlanReviewRequest()
+                                       {
+                                           Id = (result != null) ? result.Id : null,
+                                           AssignedReviewer = (result != null) ? result.AssignedReviewer : null,
+                                           PersonId = (result != null) ? result.PersonId : student.Id,
+                                           ReviewRequestedDate = (result != null) ? result.ReviewRequestedDate : null
+                                       }).ToList();
+            }         
             else if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.AssignedToOthers)
             {
                 filteredResults = filteredResults.Where(dp => dp.AssignedReviewer != null && dp.AssignedReviewer != CurrentUser.PersonId).ToList();
@@ -1783,10 +1860,14 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var degreePlanEntityAdapter = _adapterRegistry.GetAdapter<Domain.Planning.Entities.DegreePlanReviewRequest, DegreePlanReviewRequest>();
                 return degreePlanEntityAdapter.MapToType(degreePlanReviewRequestResponse);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception)
             {
                 logger.Error("Unable to create degree plan review assignment");
-                throw new Exception("Unable to create degree plan review assignment.");
+                throw new ColleagueWebApiException("Unable to create degree plan review assignment.");
             }
         }
 

@@ -1,9 +1,10 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.Base.Repositories
 {
@@ -12,6 +13,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
     /// </summary>
     public interface IConfigurationRepository : IEthosExtended
     {
+        /// <summary>
+        /// Contains a Tuple where Item1 is a bool set to true if any fields are denied or secured, 
+        /// Item2 is a list of DeniedAccess Fields and Item3 is a list of Restricted fields.
+        /// </summary>
+        Tuple<bool, List<string>, List<string>> GetSecureDataDefinition();
+
         /// <summary>
         /// Get the external mapping.
         /// </summary>
@@ -93,7 +100,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="reportEthosApiErrors">Flag to determine if we should throw an exception on Extended Errors.</param>
         /// <param name="bypassCache">Flag to indicate if we should bypass the cache and read directly from disk.</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false);
+        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds,
+            Dictionary<string, Dictionary<string, string>> allColumnData = null, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false, bool returnRestrictedFields = false);
 
         ///// <summary>
         ///// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
@@ -110,7 +118,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="resourceVersionNumber">version number of ther resource</param>
         /// <param name="extendedSchemaResourceId">extended schema identifier</param>
         /// <returns> extended configuration if available. Returns null if none available or none configured</returns>
-        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false);
+        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false, bool readRtFields = false);
 
         /// <summary>
         /// Return the default version for an extension used in Stand Alone API builder.
@@ -118,7 +126,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="resourceName"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false);
+        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false, string requestedVersion = "");
 
         /// <summary>
         /// Gets the extended configuration available on a resource, returns null if there are none
@@ -134,6 +142,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
         /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
         Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntities(bool customOnly = true, bool bypassCache = false);
+
+        /// <summary>
+        /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS for a resource
+        /// </summary>
+        /// <param name="bypassCache">bool to determine if cache should be bypassed</param>
+        /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
+        Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntitiesByResource(string resourceName, bool customOnly = true, bool bypassCache = false);
 
         /// <summary>
         /// Encode a primary key for use in Extensibility
@@ -198,6 +213,26 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Session Configuration entity</returns>
         Task<SessionConfiguration> GetSessionConfigurationAsync();
 
+        /// <summary>
+        /// Gets the list of Audit Log configuration records from Colleague
+        /// </summary>
+        /// <returns>An <see cref="AuditLogConfiguration">Audit Log configuration</see></returns>
+        Task<IEnumerable<AuditLogConfiguration>> GetAuditLogConfigurationAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Get a collection of AuditLogCategories
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of AuditLogCategories</returns>
+        Task<IEnumerable<AuditLogCategory>> GetAuditLogCategoriesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Updates a single item in the list of Audit Log configuration records from Colleague
+        /// </summary>
+        /// <param name="auditLogConfiguration">Audit Log Configuration to update</param>
+        /// <returns>An <see cref="AuditLogConfiguration">Updated Audit Log configuration</see></returns>
+        Task<AuditLogConfiguration> UpdateAuditLogConfigurationAsync(AuditLogConfiguration auditLogConfiguration);
+
 
         ///////////////////////////////////////////////////////////////////////////////////
         ///                                                                             ///
@@ -241,6 +276,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Availability dates for the tax form</returns>
         [Obsolete("Obsolete as of API 1.29.1. Use GetTaxFormAvailabilityConfiguration2Async instead.")]
         Task<TaxFormConfiguration> GetTaxFormAvailabilityConfigurationAsync(TaxForms taxFormId);
+        
 
         #endregion
 

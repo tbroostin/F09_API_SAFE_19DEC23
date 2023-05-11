@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             if (studentAppealRecords == null || studentAppealRecords.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no Academic Progress Appeals", studentId));
+                logger.Debug(string.Format("Student {0} has no Academic Progress Appeals", studentId));
                 return new List<AcademicProgressAppeal>();
             }
 

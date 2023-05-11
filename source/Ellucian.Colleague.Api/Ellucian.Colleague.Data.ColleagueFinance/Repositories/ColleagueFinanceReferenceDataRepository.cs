@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -1883,7 +1884,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception("failed to load accountingstring");
+                throw new ColleagueWebApiException("failed to load accountingstring");
             }
 
             try
@@ -1896,7 +1897,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception("failed to load description");
+                throw new ColleagueWebApiException("failed to load description");
             }
 
             try
@@ -1974,7 +1975,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to get type");
+                throw new ColleagueWebApiException("Failed to get type");
             }
             //Get the Account type
 
@@ -3059,7 +3060,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception("failed to load description");
+                throw new ColleagueWebApiException("failed to load description");
             }
 
             try
@@ -3146,7 +3147,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception("Failed to get type");
+                throw new ColleagueWebApiException("Failed to get type");
             }
             //Get the Account type
 

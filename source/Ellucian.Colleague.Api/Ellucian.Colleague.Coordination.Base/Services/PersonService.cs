@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IRelationshipRepository _relationshipRepository;
         private readonly IProxyRepository _proxyRepository;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PersonService"/> class.
@@ -392,7 +393,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     return new Tuple<IEnumerable<Dtos.PersonCredential2>, int>(new List<PersonCredential2>(), 0);
                 }
-                
+
                 var personEntities = await _personRepository.GetPersonIntegrationByGuidNonCachedAsync(personGuids.Item1);
                 var personIds = personEntities
                         .Where(x => (!string.IsNullOrEmpty(x.Id)))
@@ -410,6 +411,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 return personCredentials.Any() ? new Tuple<IEnumerable<Dtos.PersonCredential2>, int>(personCredentials, personGuids.Item2) :
                                                  new Tuple<IEnumerable<Dtos.PersonCredential2>, int>(new List<PersonCredential2>(), 0);
+            }
+            catch (LoginException lex)
+            {
+                throw;
             }
             catch (RepositoryException rex)
             {
@@ -479,6 +484,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(rex.Message);
                 throw rex;
             }
+            catch (LoginException lex)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -505,7 +514,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 PersonFilterCriteria personFilterCriteria = new PersonFilterCriteria();
 
-                if ( personFilterCredentials != null && personFilterCredentials.Credentials != null && personFilterCredentials.Credentials.Any())
+                if (personFilterCredentials != null && personFilterCredentials.Credentials != null && personFilterCredentials.Credentials.Any())
                 {
                     List<Tuple<string, string>> creds = new List<Tuple<string, string>>();
                     personFilterCredentials.Credentials.ToList().ForEach(i =>
@@ -523,31 +532,31 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     List<Tuple<string, string>> altCreds = new List<Tuple<string, string>>();
 
                     //Make sure altIdTypesList is not null
-                    if( altIdTypesList != null && altIdTypesList.Any() )
+                    if (altIdTypesList != null && altIdTypesList.Any())
                     {
-                        personFilterCredentials.AlternativeCredentials.ToList().ForEach( i =>
-                         {
-                             if (i.Type != null && !string.IsNullOrEmpty(i.Type.Id))
-                             {
-                                 var altCredTypeEntity = altIdTypesList.FirstOrDefault(e => !string.IsNullOrEmpty(e.Guid) && e.Guid.Equals(i.Type.Id, StringComparison.OrdinalIgnoreCase));
-                                 if (altCredTypeEntity != null)
-                                 {
-                                     var altCredTypeCode = altCredTypeEntity.Code;
-                                     if (!string.IsNullOrEmpty(altCredTypeCode))
-                                     {
-                                         var tempValue = !string.IsNullOrWhiteSpace( i.Value ) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
-                                         Tuple<string, string> tuple = new Tuple<string, string>(altCredTypeCode, tempValue);
-                                         altCreds.Add(tuple);
-                                     }
-                                 }
-                             }
-                             else
-                             {
-                                 var tempValue = !string.IsNullOrWhiteSpace( i.Value ) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
-                                 Tuple<string, string> tuple = new Tuple<string, string>("", tempValue);
-                                 altCreds.Add(tuple);
-                             }
-                         });
+                        personFilterCredentials.AlternativeCredentials.ToList().ForEach(i =>
+                        {
+                            if (i.Type != null && !string.IsNullOrEmpty(i.Type.Id))
+                            {
+                                var altCredTypeEntity = altIdTypesList.FirstOrDefault(e => !string.IsNullOrEmpty(e.Guid) && e.Guid.Equals(i.Type.Id, StringComparison.OrdinalIgnoreCase));
+                                if (altCredTypeEntity != null)
+                                {
+                                    var altCredTypeCode = altCredTypeEntity.Code;
+                                    if (!string.IsNullOrEmpty(altCredTypeCode))
+                                    {
+                                        var tempValue = !string.IsNullOrWhiteSpace(i.Value) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
+                                        Tuple<string, string> tuple = new Tuple<string, string>(altCredTypeCode, tempValue);
+                                        altCreds.Add(tuple);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                var tempValue = !string.IsNullOrWhiteSpace(i.Value) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
+                                Tuple<string, string> tuple = new Tuple<string, string>("", tempValue);
+                                altCreds.Add(tuple);
+                            }
+                        });
                         if (altCreds == null || !altCreds.Any())
                         {
                             return new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
@@ -557,7 +566,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     else
                     {
                         //Per Vickie, return an empty set
-                        return new Tuple<IEnumerable<Dtos.PersonCredential3>, int>( new List<PersonCredential3>(), 0 );
+                        return new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
                     }
                 }
 
@@ -596,6 +605,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 return personCredentials.Any() ? new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(personCredentials, personGuids.Item2) :
                                                  new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+            }
+            catch (LoginException lex)
+            {
+                throw;
             }
             catch (RepositoryException rex)
             {
@@ -672,17 +685,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             try
             {
-                personEntity = await _personRepository.GetPersonCredentialByGuidNonCachedAsync( id );
+                personEntity = await _personRepository.GetPersonCredentialByGuidNonCachedAsync(id);
             }
-            catch( ArgumentNullException e )
+            catch (ArgumentNullException e)
             {
-                IntegrationApiExceptionAddError( string.Format( "No person credentials was found for guid '{0}'.", id ), "GUID.Not.Found", id, string.Empty, System.Net.HttpStatusCode.NotFound );
+                IntegrationApiExceptionAddError(string.Format("No person credentials was found for guid '{0}'.", id), "GUID.Not.Found", id, string.Empty, System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
 
             if (personEntity == null)
             {
-                IntegrationApiExceptionAddError( string.Format( "No person credentials was found for guid '{0}'.", id ), "GUID.Not.Found", id, string.Empty, System.Net.HttpStatusCode.NotFound );
+                IntegrationApiExceptionAddError(string.Format("No person credentials was found for guid '{0}'.", id), "GUID.Not.Found", id, string.Empty, System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
             await this.GetPersonUserNames(new string[] { personEntity.Id });
@@ -804,29 +817,42 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns><see cref="Profile">Profile</see> DTO object</returns>
         public async Task<Dtos.Base.Profile> GetProfileAsync(string personId, bool useCache = true)
         {
-            if (string.IsNullOrEmpty(personId))
+            try
             {
-                throw new ArgumentNullException("personId", "A person's id is required to retrieve profile information");
-            }
+                if (string.IsNullOrEmpty(personId))
+                {
+                    throw new ArgumentNullException("personId", "A person's id is required to retrieve profile information");
+                }
 
-            // For now, profile information may only be viewed by that person.
-            if (!(await UserCanViewProfileForPerson(personId)))
+                // For now, profile information may only be viewed by that person.
+                if (!(await UserCanViewProfileForPerson(personId)))
+                {
+                    string message = CurrentUser + " cannot view profile for person " + personId;
+                    logger.Error(message);
+                    throw new PermissionsException();
+                }
+
+                Domain.Base.Entities.Profile profileEntity = await _profileRepository.GetProfileAsync(personId, useCache);
+                if (profileEntity == null)
+                {
+                    throw new ColleagueWebApiException("Profile information could not be retrieved for person " + personId);
+                }
+
+                var profileDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.Profile, Dtos.Base.Profile>();
+                Dtos.Base.Profile profileDto = profileDtoAdapter.MapToType(profileEntity);
+
+                return profileDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
             {
-                string message = CurrentUser + " cannot view profile for person " + personId;
-                logger.Error(message);
-                throw new PermissionsException();
+                logger.Error(csee, "Colleague session expired while retrieving person profile information.");
+                throw;
             }
-
-            Domain.Base.Entities.Profile profileEntity = await _profileRepository.GetProfileAsync(personId, useCache);
-            if (profileEntity == null)
+            catch (Exception ex)
             {
-                throw new Exception("Profile information could not be retrieved for person " + personId);
+                logger.Error(ex.ToString());
+                throw;
             }
-
-            var profileDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.Profile, Dtos.Base.Profile>();
-            Dtos.Base.Profile profileDto = profileDtoAdapter.MapToType(profileEntity);
-
-            return profileDto;
         }
 
         public async Task<Dtos.Base.PersonProxyDetails> GetPersonProxyDetailsAsync(string personId)
@@ -835,7 +861,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("personId", "A person's id is required to retrieve profile information");
             }
-            if (!(await UserCanViewProfileForPerson(personId)))
+            if (!await UserCanViewProfileForPerson(personId) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 string message = CurrentUser + " cannot view profile for person " + personId;
                 logger.Error(message);
@@ -844,18 +870,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var person = await GetProfileAsync(personId, false);
             if (person == null)
             {
-                throw new Exception("Information could not be retrieved for person " + personId);
+                throw new ColleagueWebApiException("Information could not be retrieved for person " + personId);
             }
             if (person.IsDeceased)
             {
-                throw new Exception("Cannot retrieve proxy details for a deceased person");
+                throw new ColleagueWebApiException("Cannot retrieve proxy details for a deceased person");
             }
             var preferredName = person.PreferredName;
 
             var proxyConfig = await _proxyRepository.GetProxyConfigurationAsync();
             if (proxyConfig == null)
             {
-                throw new Exception("Could not retrieve proxy configuration");
+                throw new ColleagueWebApiException("Could not retrieve proxy configuration");
             }
             var emailFromHierarchy = await _personRepository.GetEmailAddressFromHierarchyAsync(personId, proxyConfig.ProxyEmailAddressHierarchy);
             var emailAddress = person.PreferredEmailAddress;
@@ -912,7 +938,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (guids == null || guids.Count() == 0)
                 throw new ArgumentNullException("guids", "Must provide guids to get persons");
-     
+
             var personEntities = await _personRepository.GetPersonIntegrationByGuidNonCachedAsync(guids);
 
             if (personEntities == null || personEntities.Count() == 0)
@@ -1364,7 +1390,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             BuildFullName("FM", "", person.BirthNameFirst, person.BirthNameMiddle, person.BirthNameLast, ""),
                         FirstName = string.IsNullOrEmpty(person.BirthNameFirst) ? null : person.BirthNameFirst,
                         MiddleName = string.IsNullOrEmpty(person.BirthNameMiddle) ? null : person.BirthNameMiddle,
-                        LastName = string.IsNullOrEmpty(person.BirthNameLast) ? null : person.BirthNameLast,                       
+                        LastName = string.IsNullOrEmpty(person.BirthNameLast) ? null : person.BirthNameLast,
                         Preference = !string.IsNullOrEmpty(preferredNameType) && preferredNameType.Equals("BIRTH", StringComparison.CurrentCultureIgnoreCase) ?
                             Dtos.EnumProperties.PersonNamePreference.Preferred : (PersonNamePreference?)null,
                     };
@@ -1693,7 +1719,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (personAltIds != null && personAltIds.Any())
             {
                 var credentials = new List<AlternativeCredentials>();
-                var altCredTypes = await GetAlternateIdTypesAsync( bypassCache );
+                var altCredTypes = await GetAlternateIdTypesAsync(bypassCache);
 
                 foreach (var cred in personAltIds)
                 {
@@ -1705,12 +1731,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         {
                             try
                             {
-                                if( altCredTypes != null && altCredTypes.Any() )
+                                if (altCredTypes != null && altCredTypes.Any())
                                 {
-                                    var credType = ConvertCodeToGuid( altCredTypes, cred.Type );
-                                    if( !string.IsNullOrEmpty( credType ) )
+                                    var credType = ConvertCodeToGuid(altCredTypes, cred.Type);
+                                    if (!string.IsNullOrEmpty(credType))
                                     {
-                                        credentials.Add( new AlternativeCredentials() { Type = new GuidObject2( credType ), Value = cred.Id } );
+                                        credentials.Add(new AlternativeCredentials() { Type = new GuidObject2(credType), Value = cred.Id });
                                     }
                                 }
                                 else
@@ -1751,7 +1777,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// 
         public async Task<Tuple<IEnumerable<Dtos.Person3>, int>> GetPerson3NonCachedAsync(int offset, int limit, bool bypassCache, Dtos.Filters.PersonFilter personFilter, string personFilterFilter, string preferredNameFilter)
         {
-        
+
             var personDtos = new List<Dtos.Person3>();
             try
             {
@@ -2202,7 +2228,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             var addresses = await GetAddresses3Async(addressEntities, personEntity.Guid, personEntity.Id, bypassCache);
             if ((addresses != null) && (addresses.Any())) personDto.Addresses = addresses;
-           
+
             var phoneNumbers = await GetPhones3Async(phoneEntities, bypassCache);
             if ((phoneNumbers != null) && (phoneNumbers.Any())) personDto.Phones = phoneNumbers;
             if ((socialMediaEntities != null) && (socialMediaEntities.Any()))
@@ -2264,7 +2290,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="personFilter">personFilterId filter</param>
         /// <returns>List of <see cref="Dtos.Person5">persons</see></returns>
         public async Task<Tuple<IEnumerable<Dtos.Person5>, int>> GetPerson5NonCachedAsync(int offset, int limit, bool bypassCache, Person5 person, string personFilter)
-        {         
+        {
             var personDtos = new List<Dtos.Person5>();
             //titles, firstnames, middlenames, lastNamePrefixes, lastNames
             var personFilterCriteria = new PersonFilterCriteria();
@@ -2308,7 +2334,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 var altCredTypeCode = altCredTypeEntity.Code;
                                 if (!string.IsNullOrEmpty(altCredTypeCode))
                                 {
-                                    var tempValue = !string.IsNullOrWhiteSpace( i.Value ) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
+                                    var tempValue = !string.IsNullOrWhiteSpace(i.Value) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
                                     var tuple = new Tuple<string, string>(altCredTypeCode, tempValue);
                                     altCreds.Add(tuple);
                                 }
@@ -2316,7 +2342,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                         else
                         {
-                            var tempValue = !string.IsNullOrWhiteSpace( i.Value ) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
+                            var tempValue = !string.IsNullOrWhiteSpace(i.Value) && i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
                             var tuple = new Tuple<string, string>("", tempValue);
                             altCreds.Add(tuple);
                         }
@@ -2409,7 +2435,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     personEntities = await _personRepository.GetPersonIntegration3ByGuidNonCachedAsync(filteredTuple.Item1);
                     var personIds = personEntities
                      .Where(x => (!string.IsNullOrEmpty(x.Id)))
-                     .Select(x => x.Id).Distinct().ToList();                    
+                     .Select(x => x.Id).Distinct().ToList();
                     await this.GetPersonUserNames(personIds.ToArray());
                 }
                 catch (RepositoryException ex)
@@ -2436,7 +2462,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return personDtos != null && personDtos.Any() ? new Tuple<IEnumerable<Dtos.Person5>, int>(personDtos, filteredTuple.Item2) :
                 new Tuple<IEnumerable<Person5>, int>(new List<Dtos.Person5>(), 0);
         }
-        
+
         #endregion
 
         #region Create Person Methods
@@ -2454,7 +2480,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("personDto", "Must provide a guid for person creation");
 
             PersonIntegration createdPersonEntity = null;
-           
+
 
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2471,13 +2497,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // create the person entity in the database
                 createdPersonEntity = await _personRepository.Create2Async(personEntity, addressEntities, phoneEntities);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw csee;
+            }
             catch (RepositoryException ex)
             {
                 throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
             // return the newly created person
@@ -2497,7 +2527,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("personDto", "Must provide a guid for person creation");
 
             PersonIntegration createdPersonEntity = null;
-         
+
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
@@ -2510,13 +2540,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // create the person entity in the database
                 createdPersonEntity = await _personRepository.Create2Async(personEntity, addressEntities, phoneEntities);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw csee;
+            }
             catch (RepositoryException ex)
             {
                 throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
             // return the newly created person
@@ -2536,7 +2570,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("personDto", "Must provide a guid for person creation");
 
             PersonIntegration createdPersonEntity = null;
-           
+
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
@@ -2558,13 +2592,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // create the person entity in the database
                 createdPersonEntity = await _personRepository.Create2Async(personEntity, addressEntities, phoneEntities);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw csee;
+            }
             catch (RepositoryException ex)
             {
                 throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
             // return the newly created person
@@ -2592,7 +2630,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             PersonIntegration createdPersonEntity = null;
             var personGuid = personDto.Id;
             var personId = string.Empty;
-           
+
 
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2644,13 +2682,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                 }
             }
-            catch (IntegrationApiException)
+            catch (IntegrationApiException iaex)
             {
                 // Drop through on Integration API exception
+                logger.Error(iaex.Message, "Error creating person.");
             }
             catch (RepositoryException ex)
             {
                 IntegrationApiExceptionAddError(ex, guid: personGuid, id: personId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw csee;
             }
             catch (Exception ex)
             {
@@ -2691,9 +2734,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personId = await _personRepository.GetPersonIdFromGuidAsync(personDto.Id);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                logger.Error(knfex.Message, "Error getting person ID");
             }
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2727,13 +2771,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return await ConvertPerson2EntityToDtoAsync(updatedPersonEntity, false);
 
                 }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    throw csee;
+                }
                 catch (RepositoryException ex)
                 {
                     throw ex;
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             else
@@ -2762,9 +2810,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personId = await _personRepository.GetPersonIdFromGuidAsync(personDto.Id);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                logger.Error(knfex.Message, "Error getting person ID");
             }
 
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -2796,13 +2845,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return await ConvertPerson3EntityToDtoAsync(updatedPersonEntity, false);
 
                 }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    throw csee;
+                }
                 catch (RepositoryException ex)
                 {
                     throw ex;
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             else
@@ -2830,9 +2883,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personId = await _personRepository.GetPersonIdFromGuidAsync(personDto.Id);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                logger.Error(knfex.Message, "Error getting person ID");
             }
 
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -2863,13 +2917,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return await ConvertPerson4EntityToDtoAsync(updatedPersonEntity, false);
 
                 }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    throw csee;
+                }
                 catch (RepositoryException ex)
                 {
                     throw ex;
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             else
@@ -2903,9 +2961,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personId = await _personRepository.GetPersonIdFromGuidAsync(personDto.Id);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                logger.Error(knfex.Message, "Error getting person ID");
             }
 
             _personRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -2962,9 +3021,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                     }
                 }
-                catch (IntegrationApiException)
+                catch (IntegrationApiException iaex)
                 {
                     // Drop through on Integration API exception
+                    logger.Error(iaex.Message, "Error updating person.");
                 }
                 catch (RepositoryException ex)
                 {
@@ -3109,6 +3169,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     returnedProfileEntity = await _profileRepository.UpdateProfileAsync(verifiedProfile);
                 }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    throw csee;
+                }
                 catch (Exception ex)
                 {
                     logger.Error("Error occurred during profile update: " + ex.Message);
@@ -3159,7 +3223,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 filteredTuple = await _personRepository.GetFilteredOrganizationGuidsAsync(offset, limit,
                    role, credentialType, credentialValue);
             }
-            catch(RepositoryException ex)
+            catch (RepositoryException ex)
             {
                 throw ex;
             }
@@ -3310,7 +3374,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -3334,9 +3398,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     // get the person ID associated with the incoming guid
                     personOrgId = await _personRepository.GetPersonIdFromGuidAsync(organizationDto.Id);
                 }
-                catch (KeyNotFoundException)
+                catch (KeyNotFoundException knfex)
                 {
                     // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                    logger.Error(knfex.Message, "Error getting person ID");
                 }
 
                 // verify the GUID exists to perform an update.  If not, perform a create instead
@@ -3371,7 +3436,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 
@@ -3391,15 +3456,42 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (personDtoIn.PersonNames == null)
                 throw new ArgumentNullException("personDtoIn", "PersonNames must be defined in query");
 
-            var personPrimaryName =
-                personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Legal).FirstOrDefault();
-            if (personPrimaryName == null || string.IsNullOrEmpty(personPrimaryName.FirstName) ||
-                string.IsNullOrEmpty(personPrimaryName.LastName))
+            PersonNameDtoProperty personPrimaryName = null;
+            try
+            {
+                personPrimaryName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Legal).FirstOrDefault();
+            }
+            catch
+            {
+                personPrimaryName = personDtoIn.PersonNames.FirstOrDefault();
+            }
+            if (personPrimaryName != null && (string.IsNullOrEmpty(personPrimaryName.FirstName) ||
+                string.IsNullOrEmpty(personPrimaryName.LastName)))
                 throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
 
-            var personBirthName =
-                personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
-        
+            PersonNameDtoProperty personBirthName = null;
+            try
+            {
+                personBirthName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
+                if (personBirthName != null && personPrimaryName == null)
+                {
+                    personPrimaryName = personBirthName;
+                }
+            }
+            catch
+            {
+                // Leave personBirthName null if we can't find a match.
+            }
+            if (personBirthName != null && (string.IsNullOrEmpty(personBirthName.FirstName) ||
+                string.IsNullOrEmpty(personBirthName.LastName)))
+            {
+                throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
+            }
+            if (personPrimaryName == null && personBirthName == null)
+            {
+                throw new ArgumentNullException("personDtoIn", "Person name type category must be 'legal' or 'birth' to query.");
+            }
+
             IEnumerable<Dtos.Person2> personDtos = new List<Dtos.Person2>();
 
             // create a person entity of the allowable match criteria
@@ -3447,14 +3539,41 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (personDtoIn.PersonNames == null)
                 throw new ArgumentNullException("personDtoIn", "PersonNames must be defined in query");
 
-            var personPrimaryName =
-                personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Legal).FirstOrDefault();
-            if (personPrimaryName == null || string.IsNullOrEmpty(personPrimaryName.FirstName) ||
-                string.IsNullOrEmpty(personPrimaryName.LastName))
+            PersonNameDtoProperty personPrimaryName = null;
+            try
+            {
+                personPrimaryName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Legal).FirstOrDefault();
+            }
+            catch
+            {
+                personPrimaryName = personDtoIn.PersonNames.FirstOrDefault();
+            }
+            if (personPrimaryName != null && (string.IsNullOrEmpty(personPrimaryName.FirstName) ||
+                string.IsNullOrEmpty(personPrimaryName.LastName)))
                 throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
 
-            var personBirthName =
-                personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
+            PersonNameDtoProperty personBirthName = null;
+            try
+            {
+                personBirthName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
+                if (personBirthName != null && personPrimaryName == null)
+                {
+                    personPrimaryName = personBirthName;
+                }
+            }
+            catch
+            {
+                // Leave personBirthName null if we can't find a match.
+            }
+            if (personBirthName != null && (string.IsNullOrEmpty(personBirthName.FirstName) ||
+                string.IsNullOrEmpty(personBirthName.LastName)))
+            {
+                throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
+            }
+            if (personPrimaryName == null && personBirthName == null)
+            {
+                throw new ArgumentNullException("personDtoIn", "Person name type category must be 'legal' or 'birth' to query.");
+            }
 
             IEnumerable<Dtos.Person3> personDtos = new List<Dtos.Person3>();
 
@@ -3512,18 +3631,32 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personPrimaryName = personDtoIn.PersonNames.FirstOrDefault();
             }
-            if (personPrimaryName == null || string.IsNullOrEmpty(personPrimaryName.FirstName) ||
-                string.IsNullOrEmpty(personPrimaryName.LastName))
+            if (personPrimaryName != null && (string.IsNullOrEmpty(personPrimaryName.FirstName) ||
+                string.IsNullOrEmpty(personPrimaryName.LastName)))
                 throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
 
             PersonName2DtoProperty personBirthName = null;
             try
             {
                 personBirthName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
+                if (personBirthName != null && personPrimaryName == null)
+                {
+                    personPrimaryName = personBirthName;
+                }
             }
-            catch
+            catch (Exception ex)
             {
                 // Leave personBirthName null if we can't find a match.
+                logger.Error(ex.Message, "Cannot match person birth name.");
+            }
+            if (personBirthName != null && (string.IsNullOrEmpty(personBirthName.FirstName) ||
+                string.IsNullOrEmpty(personBirthName.LastName)))
+            {
+                throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
+            }
+            if (personPrimaryName == null && personBirthName == null)
+            {
+                throw new ArgumentNullException("personDtoIn", "Person name type category must be 'legal' or 'birth' to query.");
             }
 
             List<Dtos.Person4> personDtos = new List<Dtos.Person4>();
@@ -3573,14 +3706,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (personDtoIn == null)
             {
-                // throw new ArgumentNullException("personDtoIn", "Person required to query");
-                IntegrationApiExceptionAddError("Person required to query.", "qapi/persons");
+                IntegrationApiExceptionAddError("Person required to query.", "Validation.Exception");
                 throw IntegrationApiException;
             }
             if (personDtoIn.PersonNames == null)
             {
-                // throw new ArgumentNullException("personDtoIn", "PersonNames must be defined in query");
-                IntegrationApiExceptionAddError("Names must be defined in query.", "qapi/persons.names");
+                IntegrationApiExceptionAddError("Names must be defined in query.", "Validation.Exception");
                 throw IntegrationApiException;
             }
 
@@ -3593,12 +3724,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 personPrimaryName = personDtoIn.PersonNames.FirstOrDefault();
             }
-            if (personPrimaryName == null || string.IsNullOrEmpty(personPrimaryName.FirstName) ||
-                string.IsNullOrEmpty(personPrimaryName.LastName))
+            if (personPrimaryName != null && (string.IsNullOrEmpty(personPrimaryName.FirstName) ||
+                string.IsNullOrEmpty(personPrimaryName.LastName)))
             {
-                // throw new ArgumentNullException("personDtoIn", "Person first and last name required to query");
-                var code = "qapi/persons.names.firstName";
-                if (string.IsNullOrEmpty(personPrimaryName.LastName)) code = "qapi/person.names.lastName";
+                var code = "Validation.Exception";
                 IntegrationApiExceptionAddError("Person first and last name are required for matching.", code);
                 throw IntegrationApiException;
             }
@@ -3607,10 +3736,28 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             try
             {
                 personBirthName = personDtoIn.PersonNames.Where(p => p.NameType.Category == Dtos.EnumProperties.PersonNameType2.Birth).FirstOrDefault();
+                if (personBirthName != null && personPrimaryName == null)
+                {
+                    personPrimaryName = personBirthName;
+                }
             }
-            catch
+            catch (Exception ex)
             {
                 // Leave personBirthName null if we can't find a match.
+                logger.Error(ex.Message, "Cannot match person birth name");
+            }
+            if (personBirthName != null && (string.IsNullOrEmpty(personBirthName.FirstName) ||
+                string.IsNullOrEmpty(personBirthName.LastName)))
+            {
+                var code = "Validation.Exception";
+                IntegrationApiExceptionAddError("Person first and last name are required for matching.", code);
+                throw IntegrationApiException;
+            }
+            if (personPrimaryName == null && personBirthName == null)
+            {
+                var code = "Validation.Exception";
+                IntegrationApiExceptionAddError("Person name type category must be 'legal' or 'birth' for matching.", code);
+                throw IntegrationApiException;
             }
 
             List<Dtos.Person5> personDtos = new List<Dtos.Person5>();
@@ -3854,10 +4001,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// 1. Himself/herself
         /// 2. Someone with whom they have an ERP-recognized relationship
         /// 3. Someone who currently has permission to proxy for the user
-        /// </summary>
+        /// Logged in user with the permission ADD.ALL.HR.PROXY, can view the profile of anyone. 
+        /// </summary
         private async Task<bool> UserCanViewProfileForPerson(string personId)
         {
-            if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId))
+            if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 var relationshipIds = await _relationshipRepository.GetRelatedPersonIdsAsync(CurrentUser.PersonId);
                 if (relationshipIds.Contains(personId))
@@ -3909,8 +4057,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (person.PersonAltIds != null && person.PersonAltIds.Count() > 0)
             {
                 var elevPersonAltIdList =
-    person.PersonAltIds.Where(
-        a => a.Type == Domain.Base.Entities.PersonAlt.ElevatePersonAltType);
+                    person.PersonAltIds.Where(
+                        a => a.Type == Domain.Base.Entities.PersonAlt.ElevatePersonAltType);
                 if (elevPersonAltIdList != null && elevPersonAltIdList.Any())
                 {
                     foreach (var elevPersonAltId in elevPersonAltIdList)
@@ -4516,9 +4664,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         religionDto = new Dtos.GuidObject2(religionEntity.Guid);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Do nothing if not found in denominations table
+                    logger.Error(ex.Message, "religion code not found in denominations table");
                 }
             }
             return religionDto;
@@ -4624,9 +4773,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                         (Dtos.EnumProperties.AddressType)
                                             Enum.Parse(typeof(Dtos.EnumProperties.AddressType),
                                                 type.AddressTypeCategory.ToString());
-                                     if (!string.IsNullOrEmpty(type.Guid))
+                                    if (!string.IsNullOrEmpty(type.Guid))
                                         addressDto.Type.Detail = new Dtos.GuidObject2(type.Guid);
-                                     else
+                                    else
                                         IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the address type '{0}'", addrType), "GUID.Not.Found");
 
                                 }
@@ -4637,8 +4786,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                     {
                                         addressId = await _personRepository.GetAddressIdFromGuidAsync(addressEntity.Guid);
                                     }
-                                    catch
+                                    catch (Exception ex)
                                     {
+                                        logger.Error(ex.Message, "Cannot address ID from guid");
                                     }
                                     IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the address type '{0}' for address record ID '{1}'", addrType, addressId), "GUID.Not.Found", personGuid, personId);
                                 }
@@ -4688,9 +4838,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                                 Recurrence = recurrence
                                             });
                                     }
-                                    catch
+                                    catch (Exception ex)
                                     {
                                         // Invalid seasonal start or end dates, just ignore and don't include
+                                        logger.Error(ex.Message, "Invalid seasonal start or end date");
                                     }
                                 }
                                 if (seasonalOccupancies.Any())
@@ -4701,12 +4852,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                             addressDtos.Add(addressDto);
                         }
-                    } 
+                    }
                     //as per BA, do not throw error for missing addrss type.It is okay for the address to not display.
                     //else
                     //address type is required and missing it creates a bad data situation
                     //{
-                        //IntegrationApiExceptionAddError(string.Format("The address id '{0}' does not have an address type.", addressEntity.AddressId), "Bad.Data", personGuid, personId);
+                    //IntegrationApiExceptionAddError(string.Format("The address id '{0}' does not have an address type.", addressEntity.AddressId), "Bad.Data", personGuid, personId);
                     //}
                 }
             }
@@ -4750,12 +4901,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 {
                                     addressId = await _personRepository.GetAddressIdFromGuidAsync(addressEntity.Guid);
                                 }
-                                catch 
+                                catch (Exception ex)
                                 {
+                                    logger.Error(ex.Message, "Cannot address ID from guid");
                                 }
                                 var errorMessage = string.Format("Address type '{0}' for address record ID '{1}' is not valid.", addrType, addressId);
                                 logger.Error(errorMessage);
-                                throw new Exception(errorMessage);
+                                throw new ColleagueWebApiException(errorMessage);
 
                             }
                             if (addressEntity.IsPreferredResidence && i == 0)
@@ -4799,9 +4951,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                                 Recurrence = recurrence
                                             });
                                     }
-                                    catch
+                                    catch (Exception ex)
                                     {
                                         // Invalid seasonal start or end dates, just ignore and don't include
+                                        logger.Error(ex.Message, "Invalid seasonal start or end date");
                                     }
                                 }
                                 if (seasonalOccupancies.Any())
@@ -4854,7 +5007,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 {
                                     addressId = await _personRepository.GetAddressIdFromGuidAsync(addressEntity.Guid);
                                 }
-                                catch { }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex.Message, "Cannot address ID from guid");
+                                }
                                 var errorMessage = string.Format("Address type '{0}' for address record ID '{1}' is not valid.", addrType, addressId);
                                 logger.Error(errorMessage);
                                 IntegrationApiExceptionAddError(errorMessage, "persons.addresses", guid, id);
@@ -4901,9 +5057,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                                 Recurrence = recurrence
                                             });
                                     }
-                                    catch
+                                    catch (Exception ex)
                                     {
                                         // Invalid seasonal start or end dates, just ignore and don't include
+                                        logger.Error(ex.Message, "Invalid seasonal start or end date");
                                     }
                                 }
                                 if (seasonalOccupancies.Any())
@@ -4958,10 +5115,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                         phoneDtos.Add(phoneDto);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // do not fail if we can't find a guid from the code table or category
                         // Just exclude the phone number from the output.
+                        logger.Error(ex.Message, "Cannot find guid. Phone number excluded from output.");
                     }
                 }
             }
@@ -5005,10 +5163,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                         phoneDtos.Add(phoneDto);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // do not fail if we can't find a guid from the code table or category
                         // Just exclude the phone number from the output.
+                        logger.Error(ex.Message, "Cannot find guid. Phone number excluded from output.");
                     }
                 }
             }
@@ -5050,10 +5209,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                         emailAddressDtos.Add(addressDto);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table or translate the cateory
-                        // Just exclude this email address.
+                        // do not fail if we can't find a guid from the code table or category
+                        // Just exclude the email address from the output.
+                        logger.Error(ex.Message, "Cannot find guid. Email address excluded from output.");
                     }
                 }
             }
@@ -5114,9 +5274,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                 }
             }
-            catch
-            {
-                // Do nothing if the code doesn't exist.
+            catch (Exception ex)
+            { // Do nothing if the code doesn't exist.                        
+                logger.Error(ex.Message, "Cannot find privacy status type");
             }
 
             return personPrivacy;
@@ -5272,10 +5432,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             Detail = new Dtos.GuidObject2(citizenshipStatusEntity.Guid)
                         };
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // do not fail if we can't find a guid and category from the code table
+                    // do not fail if we can't find a guid from the code table or category
                     // just return an empty status object
+                    logger.Error(ex.Message, "Cannot find guid for citizenship status.");
                 }
             }
             else
@@ -5312,10 +5473,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         EndOn = personVisaEntity.ExpireDate
                     };
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // do not fail if we can't find a guid and category from the code table
+                    // do not fail if we can't find a guid from the code table or category
                     // just return an empty status object
+                    logger.Error(ex.Message, "Cannot find guid for visa.");
                 }
             }
 
@@ -5342,9 +5504,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (identityDocumentType != null)
                             guid = identityDocumentType.Guid;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table
+                        // do not fail if we can't find a guid from the code table or category
+                        logger.Error(ex.Message, "Cannot find guid for passport.");
                     }
 
                     if (string.IsNullOrEmpty(passportEntity.IssuingCountry.Trim()))
@@ -5374,9 +5537,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                         personIdentityDocuments.Add(identityDocument);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Do not include identity document
+                        logger.Error(ex.Message, "Cannot find identity document");
                     }
                 }
             }
@@ -5397,9 +5561,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (identityDocumentType != null)
                             guid = identityDocumentType.Guid;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table
+                        // do not fail if we can't find a guid from the code table or category
+                        logger.Error(ex.Message, "Cannot find guid for drivers license.");
                     }
 
                     var stateInfo = (await GetStateCodesAsync(bypassCache)).FirstOrDefault(s => s.Code == driverEntity.IssuingState);
@@ -5507,9 +5672,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             if (identityDocumentType != null)
                                 guid = identityDocumentType.Guid;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // do not fail if we can't find a guid from the code table
+                            // do not fail if we can't find a guid from the code table or category
+                            logger.Error(ex.Message, "Cannot find guid for other identity document.");
                         }
 
                         var identityDocument = new Dtos.DtoProperties.PersonIdentityDocument()
@@ -5538,9 +5704,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             }
                             personIdentityDocuments.Add(identityDocument);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Do not include identity document
+                            logger.Error(ex.Message, "Cannot add identity document.");
                         }
                     }
                 }
@@ -5569,9 +5736,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (identityDocumentType != null)
                             guid = identityDocumentType.Guid;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table
+                        // do not fail if we can't find a guid from the code table or category
+                        logger.Error(ex.Message, "Cannot find guid for passport.");
                     }
 
                     if (string.IsNullOrEmpty(passportEntity.IssuingCountry.Trim()))
@@ -5601,9 +5769,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                         personIdentityDocuments.Add(identityDocument);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Do not include identity document
+                        logger.Error(ex.Message, "Cannot add identity document.");
                     }
                 }
             }
@@ -5624,9 +5793,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (identityDocumentType != null)
                             guid = identityDocumentType.Guid;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table
+                        // do not fail if we can't find a guid from the code table or category
+                        logger.Error(ex.Message, "Cannot find guid for Drivers License.");
                     }
 
                     var stateInfo = (await GetStateCodesAsync(bypassCache)).FirstOrDefault(s => s.Code == driverEntity.IssuingState);
@@ -5734,9 +5904,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             if (identityDocumentType != null)
                                 guid = identityDocumentType.Guid;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // do not fail if we can't find a guid from the code table
+                            // do not fail if we can't find a guid from the code table or category
+                            logger.Error(ex.Message, "Cannot find guid for other identity document.");
                         }
 
                         var identityDocument = new Dtos.DtoProperties.PersonIdentityDocument()
@@ -5765,9 +5936,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             }
                             personIdentityDocuments.Add(identityDocument);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Do not include identity document
+                            logger.Error(ex.Message, "Cannot add identity document.");
                         }
                     }
                 }
@@ -5791,14 +5963,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         var guid = firstOrDefault.Guid;
                         if (interestGuids == null)
                         {
-                            interestGuids = new List<Dtos.GuidObject2>();                            
+                            interestGuids = new List<Dtos.GuidObject2>();
                         }
                         interestGuids.Add(new Dtos.GuidObject2(guid));
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // do nothing if guid does not exist
+                    // do not fail if we can't find a guid from the code table or category
+                    logger.Error(ex.Message, "Cannot find guid for interest.");
                 }
             }
 
@@ -5875,9 +6048,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     socialMediaEntries.Add(socialMedia);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Do not include code since we couldn't find a category
+                    logger.Error(ex.Message, "Cannot find category for social media code.");
                 }
             }
 
@@ -6641,7 +6815,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 try
                 {
-                    personEntity = await ConvertPerson2MaritalStatus2DtoToEntityAsync(personEntity, personDto.MaritalStatus);                
+                    personEntity = await ConvertPerson2MaritalStatus2DtoToEntityAsync(personEntity, personDto.MaritalStatus);
                 }
                 catch (Exception ex)
                 {
@@ -6968,9 +7142,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             //process last name prefix
             if (!string.IsNullOrEmpty(primaryName.LastNamePrefix) && !string.IsNullOrEmpty(primaryName.LastName))
             {
-                string lprefix = primaryName.LastName.Substring(0, primaryName.LastNamePrefix.Length);
-                if (!string.Equals(primaryName.LastNamePrefix, lprefix, StringComparison.OrdinalIgnoreCase))
-                    primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                try
+                {
+                    string lprefix = primaryName.LastName.Substring(0, primaryName.LastNamePrefix.Length);
+                    if (!string.Equals(primaryName.LastNamePrefix, lprefix, StringComparison.OrdinalIgnoreCase))
+                        primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                }
+                catch
+                {
+                    if (!string.IsNullOrEmpty(primaryName.LastNamePrefix) && !primaryName.LastNamePrefix.Equals(primaryName.LastName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                    }
+                }
             }
 
             // professional abbreviations
@@ -7044,9 +7228,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     //process last name prefix
                     if (!string.IsNullOrEmpty(birthName.LastNamePrefix) && !string.IsNullOrEmpty(birthName.LastName))
                     {
-                        string bprefix = birthName.LastName.Substring(0, birthName.LastNamePrefix.Length);
-                        if (!string.Equals(birthName.LastNamePrefix, bprefix, StringComparison.OrdinalIgnoreCase))
-                            birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                        try
+                        {
+                            string bprefix = birthName.LastName.Substring(0, birthName.LastNamePrefix.Length);
+                            if (!string.Equals(birthName.LastNamePrefix, bprefix, StringComparison.OrdinalIgnoreCase))
+                                birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                        }
+                        catch
+                        {
+                            if (!string.IsNullOrEmpty(birthName.LastNamePrefix) && !birthName.LastNamePrefix.Equals(birthName.LastName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                            }
+                        }
                     }
 
                     personEntity.BirthNameLast = birthName.LastName;
@@ -7161,9 +7355,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         //process last name prefix
                         if (!string.IsNullOrEmpty(chosenName.LastNamePrefix) && !string.IsNullOrEmpty(chosenName.LastName))
                         {
-                            string cPrefix = chosenName.LastName.Substring(0, chosenName.LastNamePrefix.Length);
-                            if (!string.Equals(chosenName.LastNamePrefix, cPrefix, StringComparison.OrdinalIgnoreCase))
-                                chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                            try
+                            {
+                                string cPrefix = chosenName.LastName.Substring(0, chosenName.LastNamePrefix.Length);
+                                if (!string.Equals(chosenName.LastNamePrefix, cPrefix, StringComparison.OrdinalIgnoreCase))
+                                    chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                            }
+                            catch
+                            {
+                                if (!string.IsNullOrEmpty(chosenName.LastNamePrefix) && !chosenName.LastNamePrefix.Equals(chosenName.LastName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                                }
+                            }
                         }
                         personEntity.ChosenLastName = chosenName.LastName;
                         personEntity.ChosenFirstName = chosenName.FirstName;
@@ -7220,9 +7424,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     //process last name prefix
                     if (!string.IsNullOrEmpty(historyName.LastNamePrefix) && !string.IsNullOrEmpty(historyName.LastName))
                     {
-                        string hprefix = historyName.LastName.Substring(0, historyName.LastNamePrefix.Length);
-                        if (!string.Equals(historyName.LastNamePrefix, hprefix, StringComparison.OrdinalIgnoreCase))
-                            historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                        try
+                        {
+                            string hprefix = historyName.LastName.Substring(0, historyName.LastNamePrefix.Length);
+                            if (!string.Equals(historyName.LastNamePrefix, hprefix, StringComparison.OrdinalIgnoreCase))
+                                historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                        }
+                        catch
+                        {
+                            if (!string.IsNullOrEmpty(historyName.LastNamePrefix) && !historyName.LastNamePrefix.Equals(historyName.LastName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                            }
+                        }
                     }
 
                     var formerName = new PersonName(historyName.FirstName, historyName.MiddleName,
@@ -7313,9 +7527,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             //process last name prefix
             if (!string.IsNullOrEmpty(primaryName.LastNamePrefix) && !string.IsNullOrEmpty(primaryName.LastName))
             {
-                string lprefix = primaryName.LastName.Substring(0, primaryName.LastNamePrefix.Length);
-                if (!string.Equals(primaryName.LastNamePrefix, lprefix, StringComparison.OrdinalIgnoreCase))
-                    primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                try
+                {
+                    string lprefix = primaryName.LastName.Substring(0, primaryName.LastNamePrefix.Length);
+                    if (!string.Equals(primaryName.LastNamePrefix, lprefix, StringComparison.OrdinalIgnoreCase))
+                        primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                }
+                catch
+                {
+                    if (!string.IsNullOrEmpty(primaryName.LastNamePrefix) && !primaryName.LastNamePrefix.Equals(primaryName.LastName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                    }
+                }
             }
             personEntity = new PersonIntegration(personId, primaryName.LastName)
             {
@@ -7380,9 +7604,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     //process last name prefix
                     if (!string.IsNullOrEmpty(birthName.LastNamePrefix) && !string.IsNullOrEmpty(birthName.LastName))
                     {
-                        string bprefix = birthName.LastName.Substring(0, birthName.LastNamePrefix.Length);
-                        if (!string.Equals(birthName.LastNamePrefix, bprefix, StringComparison.OrdinalIgnoreCase))
-                            birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                        try
+                        {
+                            string bprefix = birthName.LastName.Substring(0, birthName.LastNamePrefix.Length);
+                            if (!string.Equals(birthName.LastNamePrefix, bprefix, StringComparison.OrdinalIgnoreCase))
+                                birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                        }
+                        catch
+                        {
+                            if (!string.IsNullOrEmpty(birthName.LastNamePrefix) && !birthName.LastNamePrefix.Equals(birthName.LastName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                            }
+                        }
                     }
                     personEntity.BirthNameLast = birthName.LastName;
                     personEntity.BirthNameFirst = birthName.FirstName;
@@ -7452,9 +7686,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         //process last name prefix
                         if (!string.IsNullOrEmpty(chosenName.LastNamePrefix) && !string.IsNullOrEmpty(chosenName.LastName))
                         {
-                            string cPrefix = chosenName.LastName.Substring(0, chosenName.LastNamePrefix.Length);
-                            if (!string.Equals(chosenName.LastNamePrefix, cPrefix, StringComparison.OrdinalIgnoreCase))
-                                chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                            try
+                            {
+                                string cPrefix = chosenName.LastName.Substring(0, chosenName.LastNamePrefix.Length);
+                                if (!string.Equals(chosenName.LastNamePrefix, cPrefix, StringComparison.OrdinalIgnoreCase))
+                                    chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                            }
+                            catch
+                            {
+                                if (!string.IsNullOrEmpty(chosenName.LastNamePrefix) && !chosenName.LastNamePrefix.Equals(chosenName.LastName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                                }
+                            }
                         }
                         personEntity.ChosenLastName = chosenName.LastName;
                         personEntity.ChosenFirstName = chosenName.FirstName;
@@ -7561,9 +7805,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     //process last name prefix
                     if (!string.IsNullOrEmpty(historyName.LastNamePrefix) && !string.IsNullOrEmpty(historyName.LastName))
                     {
-                        string hprefix = historyName.LastName.Substring(0, historyName.LastNamePrefix.Length);
-                        if (!string.Equals(historyName.LastNamePrefix, hprefix, StringComparison.OrdinalIgnoreCase))
-                            historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                        try
+                        {
+                            string hprefix = historyName.LastName.Substring(0, historyName.LastNamePrefix.Length);
+                            if (!string.Equals(historyName.LastNamePrefix, hprefix, StringComparison.OrdinalIgnoreCase))
+                                historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                        }
+                        catch
+                        {
+                            if (!string.IsNullOrEmpty(historyName.LastNamePrefix) && !historyName.LastNamePrefix.Equals(historyName.LastName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                            }
+                        }
                     }
 
                     var formerName = new PersonName(historyName.FirstName, historyName.MiddleName,
@@ -7669,9 +7923,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (!string.Equals(primaryName.LastNamePrefix, lprefix, StringComparison.OrdinalIgnoreCase))
                             primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Ignore possible object reference errors
+                        if (!string.IsNullOrEmpty(primaryName.LastNamePrefix) && !primaryName.LastNamePrefix.Equals(primaryName.LastName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            primaryName.LastName = string.Concat(primaryName.LastNamePrefix, " ", primaryName.LastName);
+                        }
                     }
                 }
                 var professionalAbbreviations = new List<string>();
@@ -7752,9 +8009,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             if (!string.Equals(birthName.LastNamePrefix, bprefix, StringComparison.OrdinalIgnoreCase))
                                 birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Ignore here.  Missing data was already reported but may cause object reference error.
+                            if (!string.IsNullOrEmpty(birthName.LastNamePrefix) && !birthName.LastNamePrefix.Equals(birthName.LastName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                birthName.LastName = string.Concat(birthName.LastNamePrefix, " ", birthName.LastName);
+                            }
                         }
                     }
                     if (personEntity != null)
@@ -7833,9 +8093,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                     if (!string.Equals(chosenName.LastNamePrefix, cPrefix, StringComparison.OrdinalIgnoreCase))
                                         chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    // Ignore possible object reference errors
+                                    if (!string.IsNullOrEmpty(chosenName.LastNamePrefix) && !chosenName.LastNamePrefix.Equals(chosenName.LastName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        chosenName.LastName = string.Concat(chosenName.LastNamePrefix, " ", chosenName.LastName);
+                                    }
                                 }
                             }
                             if (personEntity != null)
@@ -7957,9 +8220,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 if (!string.Equals(historyName.LastNamePrefix, hprefix, StringComparison.OrdinalIgnoreCase))
                                     historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                // Ignore possible object reference errors
+                                if (!string.IsNullOrEmpty(historyName.LastNamePrefix) && !historyName.LastNamePrefix.Equals(historyName.LastName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    historyName.LastName = string.Concat(historyName.LastNamePrefix, " ", historyName.LastName);
+                                }
                             }
                         }
 
@@ -7969,9 +8235,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 historyName.LastName);
                             formerNames.Add(formerName);
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Ignore errors from missing last name in constructor or object reference error.
+                            logger.Error(ex.Message, "Missing last name in constructor or object reference error.");
                         }
                     }
                     if (personEntity != null)
@@ -8442,7 +8709,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             throw new InvalidOperationException("maritalStatus.maritalCategory '" + maritalStatusCategory + "' does not match the category '" + maritalStatusEntityById.Type + "' of id: " + personMaritalStatusDtoProperty.Detail.Id);
                         }
                     }
-                    maritalState = (Domain.Base.Entities.MaritalState?)maritalStatusEntityById.Type; 
+                    maritalState = (Domain.Base.Entities.MaritalState?)maritalStatusEntityById.Type;
                     personEntity.MaritalStatus = maritalState;
                     personEntity.MaritalStatusCode = maritalStatusEntityById.Code;
                     return personEntity;
@@ -8460,7 +8727,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // Translate the marital status enumeration for the DTO to the marital status enumeration for the entity.
 
                 try
-                {maritalState = (Domain.Base.Entities.MaritalState)Enum.Parse(typeof(Domain.Base.Entities.MaritalState), personMaritalStatusDtoProperty.MaritalCategory.ToString());
+                {
+                    maritalState = (Domain.Base.Entities.MaritalState)Enum.Parse(typeof(Domain.Base.Entities.MaritalState), personMaritalStatusDtoProperty.MaritalCategory.ToString());
 
                 }
                 catch (ArgumentException)
@@ -10276,9 +10544,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         {
                             addressId = await _personRepository.GetAddressIdFromGuidAsync(addressDto.address.Id);
                         }
-                        catch 
+                        catch (Exception ex)
                         {
                             //ignore all errors as it will be caught below
+                            logger.Error(ex.Message, "Cannot process address.");
                         }
                         if (string.IsNullOrEmpty(addressId))
                         {
@@ -10810,11 +11079,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (string.IsNullOrEmpty(personEntity.Guid))
                 IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the organization '{0}'", personEntity.Id), "GUID.Not.Found", personEntity.Guid, personEntity.Id);
             else
-            organizationDto.Id = personEntity.Guid;
+                organizationDto.Id = personEntity.Guid;
             if (string.IsNullOrEmpty(personEntity.PreferredName))
                 IntegrationApiExceptionAddError(string.Format("Title is required'", personEntity.Id), "Bad.Data", personEntity.Guid, personEntity.Id);
             else
-            organizationDto.Title = personEntity.PreferredName;
+                organizationDto.Title = personEntity.PreferredName;
 
             if (personEntity.Roles != null && personEntity.Roles.Any())
             {
@@ -10857,7 +11126,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
             }
 
-            
+
 
             organizationDto.Credentials = await GetPersonCredentials(personEntity);
 
@@ -10892,7 +11161,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 var phoneNumbers = await GetPhones2Async(phoneEntities, bypassCache);
                 if ((phoneNumbers != null) && (phoneNumbers.Any()))
-                {                   
+                {
                     organizationDto.Phones = phoneNumbers;
                 }
             }

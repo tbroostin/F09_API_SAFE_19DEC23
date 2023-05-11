@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Models;
 using Ellucian.Web.Http.Configuration;
@@ -32,14 +32,24 @@ namespace Ellucian.Colleague.Api.Utility
         /// <summary>
         /// config service client settings
         /// </summary>
-        public static ConfigStorageServiceClientSettings ConfigServiceClientSettings = Utilities.GetConfigMonitorSettings();
+        public static ConfigStorageServiceClientSettings ConfigServiceClientSettings 
+        { 
+            get { return configServiceClientSettings; }
+            set { configServiceClientSettings = value; }
+        }
+        private static ConfigStorageServiceClientSettings configServiceClientSettings = Utilities.GetConfigMonitorSettings();
 
         /// <summary>
         /// Config service client for sending requests to the storage service.
         /// This static client gets set by the first call to GetApiConfigurationObject() below, 
         /// which provides this instance's namespace that the client requires.
         /// </summary>
-        public static ConfigStorageServiceHttpClient StorageServiceClient;
+        public static ConfigStorageServiceHttpClient StorageServiceClient
+        {
+            get { return storageServiceClient; }
+            set { storageServiceClient = value;  }
+        }
+        private static ConfigStorageServiceHttpClient storageServiceClient;
 
         /// <summary>
         /// Get back the overall config object which contains all of API's various config data objects

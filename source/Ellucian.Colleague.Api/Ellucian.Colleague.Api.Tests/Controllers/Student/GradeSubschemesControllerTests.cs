@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -88,6 +89,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await GradeSubschemesController.GetGradeSubschemeByIdAsync("UG");
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task GradeSubschemesController_GetGradeSubschemeByIdAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                gradeSchemeServiceMock.Setup(x => x.GetGradeSubschemeByIdAsync(It.IsAny<string>()))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                await GradeSubschemesController.GetGradeSubschemeByIdAsync("UG");
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
+            }
+        }
         [TestMethod]
         public async Task GradeSubschemesController_GetGradeSubschemeByIdAsync_Valid()
         {

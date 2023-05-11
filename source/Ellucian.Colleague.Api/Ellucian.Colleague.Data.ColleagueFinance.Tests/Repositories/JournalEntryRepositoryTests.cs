@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -1099,7 +1100,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     this.journalEntryDataContract.JrtsStatus = "U";
                     break;
                 default:
-                    throw new Exception("Invalid status specified in JournalEntryRepositoryTests");
+                    throw new ColleagueWebApiException("Invalid status specified in JournalEntryRepositoryTests");
             }
 
             switch (this.journalEntryDomainEntity.Type)
@@ -1111,7 +1112,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     this.journalEntryDataContract.JrtsSource = "AA";
                     break;
                 default:
-                    throw new Exception("Invalid type specified in JournalEntryRepositoryTests");
+                    throw new ColleagueWebApiException("Invalid type specified in JournalEntryRepositoryTests");
             }
 
             this.projectDataContracts = new Collection<Projects>();

@@ -19,6 +19,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -136,7 +137,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             //[TestMethod]
-            //[ExpectedException(typeof(Exception))]
+            //[ExpectedException(typeof(ColleagueWebApiException))]
             //public async Task ExternalEmploymentRepository_GetExternalEmploymentByIdAsync_EmploymtRecordNull_KeyNotFoundException()
             //{
             //    dataAccessorMock.Setup(i => i.ReadRecordAsync<DataContracts.Employmt>(It.IsAny<string>(), It.IsAny<bool>()))

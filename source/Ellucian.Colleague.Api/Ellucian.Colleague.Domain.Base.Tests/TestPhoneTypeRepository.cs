@@ -11,23 +11,23 @@ namespace Ellucian.Colleague.Domain.Base.Tests
     {
         private string[,] phoneTypes = {
                                             //GUID   CODE   DESCRIPTION
-                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H", "Home/Permanent", "home"}, 
-                                            {"31d8aa32-dbe6-4a49-a1c4-2cad39e232e4", "CR", "Main Office/Headquarters", "school"},
-                                            {"61336621-71e9-49df-ade3-65cee449ccfb", "B", "Business/Employment", "business"},
-                                            {"7fc96ae3-fe58-4f99-91aa-75f9e8a36a62", "V", "Vacation", "vacation"},
-                                            {"e67855a0-f5c9-4aa8-a387-9797a6eaacae", "COB", "Correction", "billing"},
-                                            {"5914cb0d-ec01-43f5-b1a2-faa73b9a963b", "AL", "Alternate/Seasonal", "mobile"},
-                                            {"ec2b0f56-65ef-4752-814e-e73a6f034298", "FO", "Foreign", "fax"},
-                                            {"e63f0368-4bad-4b49-8fed-36bf79j551d4", "WB", "Web-obtained", "branch"},
-                                            {"w53g4371-2cfd-2h48-0fgd-85vx27b551d4", "CB", "Campus Box", "parent"},
-                                            {"ec2b0f56-65ef-4752-814e-e73a6f034298", "FO2", "Foreign", "regional"},
-                                            {"5914cb0d-ec01-43f5-b1a2-faa73b9a963b", "AL2", "Alternate/Seasonal", "support"},
-                                            {"e67855a0-f5c9-4aa8-a387-9797a6eaacae", "COB2", "Correction", "tdd"},
-                                            {"61336621-71e9-49df-ade3-65cee449ccfb", "B2", "Business/Employment", "matching"},
-                                            {"31d8aa32-dbe6-4a49-a1c4-2cad39e232e4", "CR2", "Main Office/Headquarters", "main"},
-                                            {"3cf4t676-2aed-5626-b67c-3r6ab796e024", "H3", "Home/Permanent", ""},
-                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H2", "Home/Permanent", "family"},
-                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H2", "Home/Permanent", "pager"}
+                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H", "Home/Permanent", "home", "N"}, 
+                                            {"31d8aa32-dbe6-4a49-a1c4-2cad39e232e4", "CR", "Main Office/Headquarters", "school", "N"},
+                                            {"61336621-71e9-49df-ade3-65cee449ccfb", "B", "Business/Employment", "business", "N"},
+                                            {"7fc96ae3-fe58-4f99-91aa-75f9e8a36a62", "V", "Vacation", "vacation", "N"},
+                                            {"e67855a0-f5c9-4aa8-a387-9797a6eaacae", "COB", "Correction", "billing", "N"},
+                                            {"5914cb0d-ec01-43f5-b1a2-faa73b9a963b", "AL", "Alternate/Seasonal", "mobile", "Y"},
+                                            {"ec2b0f56-65ef-4752-814e-e73a6f034298", "FO", "Foreign", "fax", "N"},
+                                            {"e63f0368-4bad-4b49-8fed-36bf79j551d4", "WB", "Web-obtained", "branch", "Y"},
+                                            {"w53g4371-2cfd-2h48-0fgd-85vx27b551d4", "CB", "Campus Box", "parent", "N"},
+                                            {"ec2b0f56-65ef-4752-814e-e73a6f034298", "FO2", "Foreign", "regional", "N"},
+                                            {"5914cb0d-ec01-43f5-b1a2-faa73b9a963b", "AL2", "Alternate/Seasonal", "support", "N"},
+                                            {"e67855a0-f5c9-4aa8-a387-9797a6eaacae", "COB2", "Correction", "tdd", "N"},
+                                            {"61336621-71e9-49df-ade3-65cee449ccfb", "B2", "Business/Employment", "matching", "N"},
+                                            {"31d8aa32-dbe6-4a49-a1c4-2cad39e232e4", "CR2", "Main Office/Headquarters", "main", "N"},
+                                            {"3cf4t676-2aed-5626-b67c-3r6ab796e024", "H3", "Home/Permanent", "", "N"},
+                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H2", "Home/Permanent", "family", "N"},
+                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "H2", "Home/Permanent", "pager", "N"}
                                           };
 
         public IEnumerable<PhoneType> Get()
@@ -35,7 +35,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             var phoneTypeList = new List<PhoneType>();
 
             // There are 4 fields for each phone type in the array
-            var items = phoneTypes.Length / 4;
+            var items = phoneTypes.Length / 5;
 
             for (int x = 0; x < items; x++)
             {
@@ -94,7 +94,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                         phoneTypeCategory = PhoneTypeCategory.Other;
                         break;
                 }
-                phoneTypeList.Add(new PhoneType(phoneTypes[x, 0], phoneTypes[x, 1], phoneTypes[x, 2], phoneTypeCategory));
+                var isPersonal = phoneTypes[x, 4] == "Y" ? true : false;
+                phoneTypeList.Add(new PhoneType(phoneTypes[x, 0], phoneTypes[x, 1], phoneTypes[x, 2], phoneTypeCategory, isPersonal));
             }
             return phoneTypeList;
 

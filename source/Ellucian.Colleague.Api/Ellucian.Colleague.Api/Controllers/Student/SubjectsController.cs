@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -58,18 +59,33 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="Subject">Subject</see> codes and descriptions.</returns>
         public async Task<IEnumerable<Subject>> GetAsync()
         {
-            var subjectCollection = await _referenceDataRepository.GetSubjectsAsync();
-
-            // Get the right adapter for the type mapping
-            var subjectDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Subject, Subject>();
-
-            // Map the subject entity to the program DTO
-            var subjectDtoCollection = new List<Subject>();
-            foreach (var subject in subjectCollection)
+            try
             {
-                subjectDtoCollection.Add(subjectDtoAdapter.MapToType(subject));
+                var subjectCollection = await _referenceDataRepository.GetSubjectsAsync();
+
+                // Get the right adapter for the type mapping
+                var subjectDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Subject, Subject>();
+
+                // Map the subject entity to the program DTO
+                var subjectDtoCollection = new List<Subject>();
+                foreach (var subject in subjectCollection)
+                {
+                    subjectDtoCollection.Add(subjectDtoAdapter.MapToType(subject));
+                }
+                return subjectDtoCollection;
             }
-            return subjectDtoCollection;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving subjects";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception tex)
+            {
+                string message = "Exception occurred while retrieving subjects";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN CDM</remarks>

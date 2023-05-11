@@ -16,13 +16,14 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class HumanResourcesReferenceDataRepository : BaseColleagueRepository, IHumanResourcesReferenceDataRepository
     {
-        
+
         /// <summary>
         /// ..ctor
         /// </summary>
@@ -82,7 +83,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return await GetOrAddToCacheAsync("AllBenefitDeductionTypes", async () => await BuildBenefitDeductionTypesAsync(), Level1CacheTimeoutValue);
         }
 
-        private async Task<IEnumerable<BenefitDeductionType>> BuildBenefitDeductionTypesAsync() 
+        private async Task<IEnumerable<BenefitDeductionType>> BuildBenefitDeductionTypesAsync()
         {
             var entities = new List<BenefitDeductionType>();
             var records = await DataReader.BulkReadRecordAsync<Bended>(string.Empty);
@@ -104,6 +105,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         )
                     );
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     LogDataError("BENDED", bended.Recordkey, bended, e);
@@ -111,8 +116,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             return entities;
         }
-
-
 
         /// <summary>
         /// Translate the institution type (aka bended type) into enum...
@@ -391,11 +394,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of employee classifications</returns>
         public async Task<IEnumerable<EmploymentClassification>> GetEmploymentClassificationsAsync(bool ignoreCache)
-            {
-                return await GetGuidValcodeAsync<EmploymentClassification>("HR", "CLASSIFICATIONS",
-                    (e, g) => new EmploymentClassification(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
-                        EmploymentClassificationType.Position), bypassCache: ignoreCache);
-            }
+        {
+            return await GetGuidValcodeAsync<EmploymentClassification>("HR", "CLASSIFICATIONS",
+                (e, g) => new EmploymentClassification(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
+                    EmploymentClassificationType.Position), bypassCache: ignoreCache);
+        }
 
         /// <summary>
         /// Get all Employment Department objects, built from database data
@@ -447,7 +450,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
                 catch (Exception)
                 {
-                    exception.AddError(new RepositoryError("Bad.Data","No GUID found for the entity 'DEPTS' with a key of '" + employmentDepartmentRecord.Recordkey + "'"));
+                    exception.AddError(new RepositoryError("Bad.Data", "No GUID found for the entity 'DEPTS' with a key of '" + employmentDepartmentRecord.Recordkey + "'"));
                 }
             }
             if (exception != null && exception.Errors != null && exception.Errors.Any())
@@ -523,7 +526,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             return await GetGuidValcodeAsync<EmploymentPerformanceReviewType>("HR", "EVALUATION.CYCLES",
                 (cl, g) => new EmploymentPerformanceReviewType(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
-                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)) { Frequency = cl.ValActionCode1AssocMember }, bypassCache: ignoreCache);
+                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember))
+                { Frequency = cl.ValActionCode1AssocMember }, bypassCache: ignoreCache);
         }
 
         /// <summary>
@@ -643,7 +647,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             return await GetGuidValcodeAsync<LeaveType>("HR", "LEAVE.TYPES",
                 (cl, g) => new LeaveType(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
-                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)) { TimeType = TranslateTimeType(cl.ValActionCode1AssocMember) }, bypassCache: ignoreCache);
+                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember))
+                { TimeType = TranslateTimeType(cl.ValActionCode1AssocMember) }, bypassCache: ignoreCache);
         }
 
         private LeaveTypeCategory TranslateTimeType(string valActionCode1)
@@ -905,7 +910,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     configuration.PreviousYearsCount = previousYearsCount;
                 }
                 SSNDisplay ssnDisplay;
-                if(tryParseSSNDisplay(hrWebDefaults.HrwebPayAdviceDisplaySsn, out ssnDisplay))
+                if (tryParseSSNDisplay(hrWebDefaults.HrwebPayAdviceDisplaySsn, out ssnDisplay))
                 {
                     configuration.SocialSecurityNumberDisplay = ssnDisplay;
                 }
@@ -934,14 +939,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         configuration.InstitutionMailingLabel.Add(new PayStatementAddress(addressLine));
                     }
                 }
-                if (!string.IsNullOrWhiteSpace(payMaster.PmInstitutionCity) && 
-                    !string.IsNullOrWhiteSpace(payMaster.PmInstitutionState) && 
+                if (!string.IsNullOrWhiteSpace(payMaster.PmInstitutionCity) &&
+                    !string.IsNullOrWhiteSpace(payMaster.PmInstitutionState) &&
                     !string.IsNullOrWhiteSpace(payMaster.PmInstitutionZipcode))
                 {
                     var csz = string.Format("{0}, {1} {2}", payMaster.PmInstitutionCity, payMaster.PmInstitutionState, payMaster.PmInstitutionZipcode);
                     configuration.InstitutionMailingLabel.Add(new PayStatementAddress(csz));
                 }
-                    
             }
             else
             {
@@ -951,6 +955,33 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return configuration;
         }
 
+        /// <summary>
+        /// Gets the configuration from HRSS.DEFAULTS entity
+        /// </summary>
+        /// <returns>HRSSConfiguration entity</returns>
+        public async Task<HRSSConfiguration> GetHrssConfigurationAsync()
+        {
+            return await GetOrAddToCacheAsync("HrssConfiguration", async () => await BuildHrssConfigurationAsync(), Level1CacheTimeoutValue);
+        }
+
+        /// <summary>
+        /// Build the configuration from HRSS.DEFAULTS for the name hierarchy
+        /// </summary>
+        /// <returns>HRSSConfiguration entity</returns>
+        private async Task<HRSSConfiguration> BuildHrssConfigurationAsync()
+        {
+            var hrssDefaults = await DataReader.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS");
+            var hrssConfiguration = new HRSSConfiguration();
+            if (hrssDefaults !=null)
+            {
+                hrssConfiguration.HrssDisplayNameHierarchy = hrssDefaults.HrssDisplayNameHierarchy;
+            }
+            else
+            {
+                logger.Debug("Null HrssDefaults record returned from database");
+            }
+            return hrssConfiguration;
+        }
         private bool tryParseSSNDisplay(string code, out SSNDisplay ssnDisplay)
         {
             if (string.IsNullOrWhiteSpace(code))
@@ -958,12 +989,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 ssnDisplay = SSNDisplay.LastFour;
                 return false;
             }
-            switch(code.ToUpperInvariant())
+            switch (code.ToUpperInvariant())
             {
                 case "S": ssnDisplay = SSNDisplay.Full; return true;
                 case "L": ssnDisplay = SSNDisplay.LastFour; return true;
                 case "N": ssnDisplay = SSNDisplay.Hidden; return true;
-                default: ssnDisplay  = SSNDisplay.LastFour; return false;
+                default: ssnDisplay = SSNDisplay.LastFour; return false;
             }
         }
 
@@ -1007,7 +1038,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         public async Task<IEnumerable<TaxCode>> GetTaxCodesAsync()
         {
             return await GetOrAddToCacheAsync<IEnumerable<TaxCode>>("TaxCodes",
-                async () => {
+                async () =>
+                {
                     var codes = await DataReader.BulkReadRecordAsync<Taxcodes>("");
                     var filingStatuses = await GetTaxCodeFilingStatuses();
 
@@ -1049,7 +1081,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 return TaxCodeType.FicaWithholding;
             }
 
-            switch(code.ToUpperInvariant())
+            switch (code.ToUpperInvariant())
             {
                 case "FICA":
                     return TaxCodeType.FicaWithholding;
@@ -1146,7 +1178,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                (cl, g) => new TimeUnits(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
         }
-        
+
         /// <summary>
         /// Get a collection of Assignment Contract Types
         /// </summary>
@@ -1174,7 +1206,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         try
                         {
-                            var isEnabledForTimeManagemnt = record.EtpgUseInSelfService != null && 
+                            var isEnabledForTimeManagemnt = record.EtpgUseInSelfService != null &&
                                 record.EtpgUseInSelfService.Equals("Y", StringComparison.CurrentCultureIgnoreCase);
 
                             var group = new EarningsTypeGroup(record.Recordkey, record.EtpgDesc, isEnabledForTimeManagemnt)
@@ -1206,7 +1238,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                 }
 
-                return earningsTypeGroups;                
+                return earningsTypeGroups;
             });
         }
 

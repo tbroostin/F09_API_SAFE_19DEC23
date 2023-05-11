@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -32,12 +33,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private DraftBudgetAdjustmentService deleteDraftService;
         private DraftBudgetAdjustmentService serviceForNoPermission;
         private DraftBudgetAdjustmentService nullDomainDraftService;
+        private DraftBudgetAdjustmentService expiredSessionDraftService;
 
         private Mock<IDraftBudgetAdjustmentsRepository> repositoryMock = new Mock<IDraftBudgetAdjustmentsRepository>();
         private TestDraftBudgetAdjustmentRepository testDraftBudgetAdjustmentRepository;
         private Mock<IDraftBudgetAdjustmentsRepository> testDraftBaRepositoryDeleteMock;
         private Mock<IDraftBudgetAdjustmentsRepository> testDraftBaRepositoryNullDomainMock;
-        private DraftBudgetAdjustment draftBudgetAdjustmentEntity;
+        private Mock<IDraftBudgetAdjustmentsRepository> expiredDraftBaRepositoryMock = new Mock<IDraftBudgetAdjustmentsRepository>();
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -52,6 +54,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private GeneralLedgerCurrentUser.UserFactory userFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
 
+        private DraftBudgetAdjustment draftBudgetAdjustmentEntity;
         private Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentSuccessEntity;
         private Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentErrorEntity;
 
@@ -101,6 +104,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             testDraftBudgetAdjustmentRepository = new TestDraftBudgetAdjustmentRepository();
             testDraftBaRepositoryDeleteMock = new Mock<IDraftBudgetAdjustmentsRepository>();
             testDraftBaRepositoryNullDomainMock = new Mock<IDraftBudgetAdjustmentsRepository>();
+            expiredDraftBaRepositoryMock = new Mock<IDraftBudgetAdjustmentsRepository>();
 
             draftBudgetAdjustmentEntity = testDraftBudgetAdjustmentRepository.GetAsync("1").Result;
 
@@ -159,7 +163,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
         #endregion
 
-        #region SaveDraftBudgetAdjustmentAsync
+        #region SAVE a Draft Budget Adjustment
 
         [TestMethod]
         public async Task SaveDraftBudgetAdjustmentAsync_Success()
@@ -548,7 +552,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
             }
 
-            var expectedMessage = string.Format("{0} does not have permission to create or update budget adjustments.", noPermissionsUser.CurrentUser.PersonId);
+            var expectedMessage = string.Format("==> {0} does not have permission to create or update budget adjustments <==", noPermissionsUser.CurrentUser.PersonId);
             var actualMessage = "";
             try
             {
@@ -671,9 +675,56 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(expectedMessage, actualMessage);
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task SaveDraftBudgetAdjustmentAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "1",
+                Initiator = null,
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredDraftBaRepositoryMock.Setup(exs => exs.GetAsync(It.IsAny<string>())).Returns(() =>
+            {
+                draftBudgetAdjustmentEntity.PersonId = "0000001";
+                return Task.FromResult(draftBudgetAdjustmentEntity);
+            });
+            expiredDraftBaRepositoryMock.Setup(exs => exs.SaveAsync(It.IsAny<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment>(), testGlConfigurationRepository.accountStructure.MajorComponentStartPositions)).Returns(() =>
+            {
+                throw new ColleagueSessionExpiredException("timeout");
+            });
+            // Build a service for a Colleague expired session.
+            expiredSessionDraftService = new DraftBudgetAdjustmentService(expiredDraftBaRepositoryMock.Object, testGlConfigurationRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await expiredSessionDraftService.SaveDraftBudgetAdjustmentAsync(inputDto);
+        }
+
         #endregion
 
-        #region Get a draft budget adjustment
+        #region GET a draft budget adjustment
 
         [TestMethod]
         public async Task GetAsync_Success()
@@ -721,7 +772,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         #endregion
 
-        #region Delete Draft Budget Adjustment
+        #region DELETE Draft Budget Adjustment
 
         [TestMethod]
         public async Task DeleteAsync_Success()
@@ -775,6 +826,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await deleteDraftService.DeleteAsync("");
 
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task DeleteAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredDraftBaRepositoryMock.Setup(exs => exs.GetAsync(It.IsAny<string>())).Returns(() =>
+            {
+                draftBudgetAdjustmentEntity.PersonId = "0000001";
+                return Task.FromResult(draftBudgetAdjustmentEntity);
+            });
+            expiredDraftBaRepositoryMock.Setup(exs => exs.DeleteAsync(It.IsAny<string>())).Returns(() =>
+            {
+                throw new ColleagueSessionExpiredException("timeout");
+            });
+            // Build a service for a Colleague expired session.
+            expiredSessionDraftService = new DraftBudgetAdjustmentService(expiredDraftBaRepositoryMock.Object, testGlConfigurationRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await expiredSessionDraftService.DeleteAsync("1");
+        }
+
         #endregion
     }
 }

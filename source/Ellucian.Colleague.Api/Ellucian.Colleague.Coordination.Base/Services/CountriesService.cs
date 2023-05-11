@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates..
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates..
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -56,6 +57,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             catch (RepositoryException ex)
             {
                 throw ex;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while retrieving countries";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var message = "Exception occurred while retrieving countries";
+                logger.Error(ex, message);
+                throw;
             }
 
             foreach (var countryEntity in countryEntities)

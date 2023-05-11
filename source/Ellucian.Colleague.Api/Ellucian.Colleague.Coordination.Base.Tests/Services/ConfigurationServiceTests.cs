@@ -231,6 +231,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(upcEntity.CanUpdateEmailWithoutPermission, upcDto.CanUpdateEmailWithoutPermission);
             Assert.AreEqual(upcEntity.CanUpdatePhoneWithoutPermission, upcDto.CanUpdatePhoneWithoutPermission);
             Assert.AreEqual(upcEntity.Text, upcDto.Text);
+            Assert.AreEqual(upcEntity.AuthorizePhonesForText, upcDto.AuthorizePhonesForText);
             CollectionAssert.AreEqual(upcEntity.UpdatableAddressTypes, upcDto.UpdatableAddressTypes);
             CollectionAssert.AreEqual(upcEntity.UpdatableEmailTypes, upcDto.UpdatableEmailTypes);
             CollectionAssert.AreEqual(upcEntity.UpdatablePhoneTypes, upcDto.UpdatablePhoneTypes);
@@ -439,7 +440,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 async () => await testConfigurationRepository.GetPrivacyConfigurationAsync());
 
             configRepoMock.Setup(repo => repo.GetSelfServiceConfigurationAsync()).Returns(testConfigurationRepository.GetSelfServiceConfigurationAsync());
-
+           
             configurationServiceToReturnNull = new ConfigurationService(testConfigurationRepositoryMock.Object, adapterRegistry.Object, currentUserFactory, roleRepository,
                 FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
         }

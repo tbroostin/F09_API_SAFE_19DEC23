@@ -1,4 +1,4 @@
-﻿// Copyright 2014 - 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014 - 2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -172,7 +172,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
         public static void UpdateSectionFacultyFromSectionMeetings(Section section, string meetingGuid)
         {
             var roster = new List<SectionFaculty>();
-            
+
             // Find the matching (i.e. current) meeting
             var match = section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid);
             // A non-match should be an error - trying to update a meeting that is not a child of the same section.
@@ -208,12 +208,12 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         // Take the higher number for now, but these may be adjusted once we're done.
                         var responsibility = current.ResponsibilityPercentage > faculty.ResponsibilityPercentage ? current.ResponsibilityPercentage : faculty.ResponsibilityPercentage;
                         var sectionFaculty = new SectionFaculty(current.Id, section.Id, current.FacultyId, current.InstructionalMethodCode, startDate, endDate, responsibility)
-                            {
-                                ContractAssignment = contractAssignment,
-                                LoadFactor = load,
-                                TeachingArrangementCode = teachArrangement,
-                                TotalMeetingMinutes = totalMinutes
-                            };
+                        {
+                            ContractAssignment = contractAssignment,
+                            LoadFactor = load,
+                            TeachingArrangementCode = teachArrangement,
+                            TotalMeetingMinutes = totalMinutes
+                        };
                         section.RemoveSectionFaculty(current);
                         section.AddSectionFaculty(sectionFaculty);
                     }
@@ -353,9 +353,9 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         // Could not calculate faculty per meeting load based on meeting hours
                         if (_logger != null)
                         {
-                            string message = string.IsNullOrEmpty(meeting.Id) ? 
+                            string message = string.IsNullOrEmpty(meeting.Id) ?
                                 "Unable to calculate faculty load factor for the new section meeting" :
-                                "Unable to calculate faculty load factor for section meeting " +  meeting.Id;
+                                "Unable to calculate faculty load factor for section meeting " + meeting.Id;
                             _logger.Error(message + "for section " + meeting.SectionId + ": " + ex.Message);
                         }
                     }
@@ -557,7 +557,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
             }
 
             // Always return any protected requisites from the course
-            effectiveRequisites.AddRange(course.Requisites.Where(r=>r.IsProtected));
+            effectiveRequisites.AddRange(course.Requisites.Where(r => r.IsProtected));
 
             // If the section overrides the course requisities, then add the section requisites to that list.
             if (section.OverridesCourseRequisites == true)
@@ -572,7 +572,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
 
             return effectiveRequisites;
         }
-    
+
         /// <summary>
         /// For the given Section, determine the requisites that can be waived.
         /// </summary>
@@ -584,7 +584,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
             IEnumerable<Requisite> effectiveRequisites = DetermineEffectiveSectionRequisites(section, course);
 
             return effectiveRequisites
-                .Where(er=>er.IsRequired && (er.CompletionOrder == Domain.Student.Entities.RequisiteCompletionOrder.Previous || er.CompletionOrder == Domain.Student.Entities.RequisiteCompletionOrder.PreviousOrConcurrent)).ToList();
+                .Where(er => er.IsRequired && (er.CompletionOrder == Domain.Student.Entities.RequisiteCompletionOrder.Previous || er.CompletionOrder == Domain.Student.Entities.RequisiteCompletionOrder.PreviousOrConcurrent)).ToList();
         }
 
         /// <summary>
@@ -627,7 +627,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
 
             // Combine non-term and registration term sections for processing
             filteredSections.Intersect(nonTermSections);
-            
+
             // Identify any sections excluded from processing and log
             var notProcessedIds = allSectionIds.Except(filteredSections.Select(fs => fs.Id));
             if (notProcessedIds.Any())
@@ -651,11 +651,10 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 }
 
                 // Next try the section itself 
-
                 if (section.RegistrationDateOverrides != null)
                 {
                     _logger.Debug(string.Format("Section {0} registration dates determined by section override (SRGD).", section.Id));
-                    sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id, 
+                    sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id,
                         section.Location,
                         section.RegistrationDateOverrides.RegistrationStartDate,
                         section.RegistrationDateOverrides.RegistrationEndDate,
@@ -758,6 +757,111 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 _logger.Error(string.Format("Registration dates could not be determined for section {0}.", section.Id));
             }
             return sectionRegistrationDatesEntities;
+        }
+
+        /// <summary>
+        /// Returns census dates for specific sections. 
+        /// </summary>
+        /// <param name="sections">Sections for which census dates are requested.</param>
+        /// <param name="terms">list of terms for sections or all terms</param>
+        /// <returns>Applicable Section census dates for the provided sections</returns>
+        public static Dictionary<string, List<DateTime?>> GetSectionCensusDates(IEnumerable<Section> sections, IEnumerable<Term> terms)
+        {
+            if (sections == null || sections.Count() == 0)
+            {
+                throw new ArgumentNullException("sections", "At least one Section is required.");
+            }
+            if (terms == null)
+            {
+                terms = new List<Term>();
+            }
+
+            var sectionCensusDates = new Dictionary<string, List<DateTime?>>();
+
+            var allSectionIds = sections.Select(s => s.Id).ToList();
+            _logger.Debug(string.Format("Getting section dates for sections {0}", string.Join(", ", allSectionIds)));
+
+
+            // Limit the sections processed to those that have no term or a term in the terms list.
+            _logger.Debug(string.Format("Section dates will only be retrieved for non-term sections and sections in following terms {0}", string.Join(", ", terms.Select(t => t.Code))));
+
+            var filteredTermSections = (from t in terms
+                                    join sec in sections
+                                    on t.Code equals sec.TermId
+                                    select sec).ToList();
+            var filteredTermSectionIds = filteredTermSections.Select(s => s.Id).ToList();
+            _logger.Debug(string.Format("Sections in terms: {0}", string.Join(", ", filteredTermSectionIds)));
+
+            //get sections without a term
+            var nonTermSections = sections.Where(s => string.IsNullOrEmpty(s.TermId)).ToList();
+            var filteredNonTermSectionIds = nonTermSections.Select(s => s.Id).ToList();
+            _logger.Debug(string.Format("Non-term sections: {0}", string.Join(", ", filteredNonTermSectionIds)));
+
+            // Combine non-term and filtered term sections for processing
+            var filteredSections = filteredTermSections.Union(nonTermSections);
+
+            // Identify any sections excluded from processing and log
+            var notProcessedIds = allSectionIds.Except(filteredSections.Select(fs => fs.Id));
+            if (notProcessedIds.Any())
+            {
+                _logger.Debug(string.Format("Sections with an assigned term not contained in terms parameter that have been excluded from processing: {0}", string.Join(Environment.NewLine, notProcessedIds)));
+            }
+
+            //Determine the applicable section census dates based on SRGD > TLOC > ACTM
+            foreach (var section in filteredSections)
+            {
+                //First, check for section override dates on the section (SRGD)
+                if (section.RegistrationDateOverrides != null)
+                {
+                    _logger.Debug(string.Format("Section {0} census dates determined by section override (SRGD).", section.Id));
+
+                    if (!sectionCensusDates.ContainsKey(section.Id))
+                    {
+                        sectionCensusDates.Add(section.Id, section.RegistrationDateOverrides.CensusDates);
+                    }
+                    continue;
+                }
+
+                // Next, see if there is a Term RegistrationDate item available with this section's particular location. (TERM + LOCATION)
+                if (!string.IsNullOrEmpty(section.TermId))
+                {
+                    var sectionTerm = terms.Where(t => t.Code == section.TermId).FirstOrDefault();
+
+                    if (!string.IsNullOrEmpty(section.Location))
+                    {
+                        if (sectionTerm != null && sectionTerm.RegistrationDates != null)
+                        {
+                            var termLocation = sectionTerm.RegistrationDates.Where(r => r.Location == section.Location).FirstOrDefault();
+                            if (termLocation != null)
+                            {
+                                _logger.Debug(string.Format("Section {0} census dates determined by term/location override (RYAT > ACTM > TLOC) for term {1}, location {2}.", section.Id, section.TermId, section.Location));
+
+                                if (!sectionCensusDates.ContainsKey(section.Id))
+                                {
+                                    sectionCensusDates.Add(section.Id, termLocation.CensusDates);
+                                }
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Last, just use the term's dates for this term (TERM) with no location RYAT > ACTM.
+                    if (sectionTerm != null && sectionTerm.RegistrationDates != null)
+                    {
+                        var termRegDates = sectionTerm.RegistrationDates.Where(r => string.IsNullOrEmpty(r.Location)).FirstOrDefault();
+                        if (termRegDates != null)
+                        {
+                            _logger.Debug(string.Format("Section {0} census dates determined by term (ACTM) for term {1}.", section.Id, section.TermId));
+
+                            if (!sectionCensusDates.ContainsKey(section.Id))
+                            {
+                                sectionCensusDates.Add(section.Id, termRegDates.CensusDates);
+                            }
+                        }
+                    }
+                }
+            }
+            return sectionCensusDates;
         }
     }
 }

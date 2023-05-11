@@ -1,9 +1,10 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     {
         private readonly IAddAuthorizationService _addAuthorizationService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Provides access to Student Waivers.
@@ -50,8 +52,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if the record cannot be updated due to a lock.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
         /// <accessComments>
-        /// This action can only be performed by a student who is assigning themselves to a previously unassigned add authorization code, or
-        /// by a faculty member assigned to the section on the add authorization being submitted.
+        /// This action can only be performed by:
+        /// 1. a student who is assigning themselves to a previously unassigned add authorization code, or
+        /// 2. a faculty member assigned to the section,or
+        /// 3. a departmental oversight member assigned to the section may update an add authorization for a section with the following permission code 
+        /// CREATE.SECTION.ADD.AUTHORIZATION
         /// </accessComments>
         [HttpPut]
         public async Task<AddAuthorization> PutAddAuthorizationAsync([FromBody] AddAuthorization addAuthorization)
@@ -62,9 +67,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(errorText);
                 throw CreateHttpResponseException(errorText, HttpStatusCode.BadRequest);
             }
+
             try
             {
                 return await _addAuthorizationService.UpdateAddAuthorizationAsync(addAuthorization);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {
@@ -94,7 +105,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">The id of the section</param>
         /// <returns>The <see cref="AddAuthorization">Add Authorizations</see> for the section.</returns>
         /// <accessComments>
-        /// Only permitted for faculty members assigned to the section.
+        /// 1. Only permitted for faculty members assigned to the section.
+        /// 2. A departmental oversight member assigned to the section may retrieve add authorization information with any of the following permission codes
+        /// VIEW.SECTION.WAITLISTS
+        /// VIEW.SECTION.ADD.AUTHORIZATIONS
+        /// CREATE.SECTION.ADD.AUTHORIZATION
         /// </accessComments>
         [ParameterSubstitutionFilter]
         [HttpGet]
@@ -106,19 +121,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(errText);
                 throw CreateHttpResponseException(errText, HttpStatusCode.BadRequest);
             }
+
             try
             {
                 return await _addAuthorizationService.GetSectionAddAuthorizationsAsync(sectionId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                var message = "Session has expired while retrieving add autorizations for section " + sectionId;
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
-                _logger.Info(pe.ToString());
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                var message = "User is not authorized to retrieve add autorizations for section " + sectionId;
+                _logger.Info(pe, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Info(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving add autorizations for section " + sectionId;
+                _logger.Info(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -127,15 +151,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="addAuthorizationInput"><see cref="AddAuthorizationInput">Add Authorization Input</see> with information on creating a new authorization.</param>
         /// <returns>Newly created <see cref="AddAuthorization">Add Authorization</see>.</returns>
-        /// <accessComments>
-        /// This action can only be performed by a faculty member assigned to the section.
-        /// </accessComments>
         /// <returns>An HttpResponseMessage which includes the newly created <see cref="AddAuthorization">add authorization</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create an add authorization for this section.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if an unrevoked authorization already exists for the student in the section.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if any other creation problem.</exception>
         /// <accessComments>
-        /// This action can only be performed by a faculty member assigned to the section.
+        /// This action can only be performed by:
+        /// 1. a faculty member assigned to the section.
+        /// 2. a departmental oversight member assigned to the section may create an add authorization for a section with the following permission code 
+        /// CREATE.SECTION.ADD.AUTHORIZATION
         /// </accessComments>
         [HttpPost]
         public async Task<HttpResponseMessage> PostAddAuthorizationAsync([FromBody] AddAuthorizationInput addAuthorizationInput)
@@ -153,19 +177,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 SetResourceLocationHeader("GetAddAuthorization", new { id = newAuthorization.Id });
                 return response;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while creating add autorization.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
-                _logger.Info(pe.ToString());
+                var message = "User is not authorized to create add autorizations.";
+                _logger.Info(pe, message);
                 throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
             catch (ExistingResourceException re)
             {
-                _logger.Info(re.ToString());
+                var message = "Add authorization already exists.";
+                _logger.Info(re, message);
                 throw CreateHttpResponseException(re.Message, HttpStatusCode.Conflict);
             }
             catch (Exception e)
             {
-                _logger.Info(e.ToString());
+                var message = "An error occurred while creating add autorization.";
+                _logger.Info(e, message);
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -191,19 +224,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return addAuthorization;
             }
-            catch (PermissionsException)
+            catch (ColleagueSessionExpiredException csse)
             {
-                throw CreateHttpResponseException("Not permitted to view Add Authorization.", System.Net.HttpStatusCode.Forbidden);
+                var message = "Session has expired while retrieving add autorization.";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException pex)
+            {
+                var message = "User is unable to retrieve add authorization Id " + id;
+                this._logger.Error(pex, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException kex)
             {
-                this._logger.Error(kex, "Unable to retrieve add authorization Id " + id);
-                throw CreateHttpResponseException("Add Authorization not found.", System.Net.HttpStatusCode.NotFound);
+                var message = "Add Authorization not found for Id " + id;
+                this._logger.Error(kex, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.NotFound);
             }
             catch (Exception e)
             {
-                _logger.Info(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving add autorization.";
+                _logger.Info(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -230,15 +273,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var notices = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(studentId);
                 return notices;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student's add autorizations";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
-                _logger.Error(pex.Message);
-                throw CreateHttpResponseException("User does not have permission to retrieve add authorizations for student.", HttpStatusCode.Forbidden);
+                string message = "User does not have permission to retrieve add authorizations for student.";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception exception)
             {
-                _logger.Error(exception.ToString());
-                throw CreateHttpResponseException("Unable to retrieve add authorizations for student.", HttpStatusCode.BadRequest);
+                string message = "Unable to retrieve add authorizations for student.";
+                _logger.Error(exception, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 

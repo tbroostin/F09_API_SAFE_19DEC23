@@ -253,5 +253,11 @@ namespace Ellucian.Colleague.Domain.Student
 
         // Permission to allow faculty to drop students from sections.
         public const string CanDropStudent = "DROP.STUDENT";
+
+        // Permission to create/update instructional events
+        public const string UpdateInstructionalEvent = "UPDATE.INSTRUCTIONAL.EVENT";
+
+        // Permission to delete instructional events
+        public const string DeleteInstructionalEvent = "DELETE.INSTRUCTIONAL.EVENT";
     }
 }

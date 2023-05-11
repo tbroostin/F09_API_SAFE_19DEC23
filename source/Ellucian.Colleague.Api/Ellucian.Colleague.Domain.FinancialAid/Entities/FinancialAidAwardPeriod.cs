@@ -1,8 +1,7 @@
-﻿using Ellucian.Colleague.Domain.Entities;
+﻿/*Copyright 2021 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Domain.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Entities
 {
@@ -20,7 +19,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// Status of financial aid award period
         /// </summary>
-        public string status;
+        public string status { get; set; }
         /// <summary>
         /// List of Terms associated to an award period.
         /// </summary>

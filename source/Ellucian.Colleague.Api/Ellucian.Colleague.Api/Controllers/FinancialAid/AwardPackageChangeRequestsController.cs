@@ -15,6 +15,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -157,6 +158,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 var response = Request.CreateResponse<AwardPackageChangeRequest>(System.Net.HttpStatusCode.Created, newAwardPackageChangeRequest);
                 SetResourceLocationHeader("GetStudentAwardPackageChangeRequest", new { studentId = studentId, requestId = newAwardPackageChangeRequest.Id });
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pe)
             {

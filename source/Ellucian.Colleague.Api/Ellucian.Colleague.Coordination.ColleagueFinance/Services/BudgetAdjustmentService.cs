@@ -1,7 +1,9 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Data.ColleagueFinance;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
@@ -9,6 +11,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -32,6 +35,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IApproverRepository approverRepository;
         private readonly IStaffRepository staffRepository;
         private readonly IGeneralLedgerUserRepository generalLedgerUserRepository;
+        private IApprovalConfigurationRepository approvalConfigurationRepository;
+        private IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentsRepository;
+        private IColleagueFinanceWebConfigurationsRepository cfWebConfigRepository;
+        private IAttachmentRepository attachmentRepository;
+        private IAttachmentCollectionService attachmentCollectionService;
+        private IProcurementsUtilityService procurementsUtilityService;
 
         /// <summary>
         /// Initialize the service.
@@ -44,7 +53,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="roleRepository">Role repository</param>
         /// <param name="logger">Logger object</param>
         public BudgetAdjustmentService(IBudgetAdjustmentsRepository budgetAdjustmentRepository, IGeneralLedgerConfigurationRepository configurationRepository, IGeneralLedgerUserRepository generalLedgerUserRepository,
-            IApproverRepository approverRepository, IStaffRepository staffRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+            IApproverRepository approverRepository, IStaffRepository staffRepository, IApprovalConfigurationRepository approvalConfigurationRepository, IDraftBudgetAdjustmentsRepository draftBudgetAdjustmentsRepository,
+            IColleagueFinanceWebConfigurationsRepository cfWebConfigRepository, IAttachmentRepository attachmentRepository, IAttachmentCollectionService attachmentCollectionService, IProcurementsUtilityService procurementsUtilityService,
+            IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.budgetAdjustmentRepository = budgetAdjustmentRepository;
@@ -52,6 +63,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.approverRepository = approverRepository;
             this.staffRepository = staffRepository;
             this.generalLedgerUserRepository = generalLedgerUserRepository;
+            this.approvalConfigurationRepository = approvalConfigurationRepository;
+            this.draftBudgetAdjustmentsRepository = draftBudgetAdjustmentsRepository;
+            this.cfWebConfigRepository = cfWebConfigRepository;
+            this.attachmentRepository = attachmentRepository;
+            this.attachmentCollectionService = attachmentCollectionService;
+            this.procurementsUtilityService = procurementsUtilityService;
         }
 
         /// <summary>
@@ -97,7 +114,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             #endregion
-
+            logger.Debug("==> BudgetAdjustmentService TR date: " + budgetAdjustmentDto.TransactionDate + " <==");
             // Initialize the adjustment line entities.
             var adjustmentLineEntities = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
             foreach (var adjustmentLineDto in budgetAdjustmentDto.AdjustmentLines)
@@ -169,59 +186,82 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
 
-            var adjustmentOutputEntity = await budgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
-
-            if (adjustmentOutputEntity == null)
+            try
             {
-                throw new ApplicationException("Budget adjustment must not be null.");
-            }
+                var adjustmentOutputEntity = await budgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
 
-            // If error exists, throw exception with message.
-            if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
-            {
-                throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
-            }
-
-            if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
-            {
-                throw new ApplicationException("Adjustment appears to have succeeded, but no ID was returned.");
-            }
-
-            // Initialize the DTO to return.
-            var adjustmentLineDtos = new List<AdjustmentLine>();
-            foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
-            {
-                adjustmentLineDtos.Add(new AdjustmentLine()
+                if (adjustmentOutputEntity == null)
                 {
-                    GlNumber = adjustmentLineEntity.GlNumber,
-                    FromAmount = adjustmentLineEntity.FromAmount,
-                    ToAmount = adjustmentLineEntity.ToAmount
-                });
-            }
-
-            var adjustmentOutputDto = new BudgetAdjustment()
-            {
-                Id = adjustmentOutputEntity.Id,
-                AdjustmentLines = adjustmentLineDtos,
-                Comments = adjustmentOutputEntity.Comments,
-                Initiator = adjustmentOutputEntity.Initiator,
-                Reason = adjustmentOutputEntity.Reason,
-                TransactionDate = adjustmentOutputEntity.TransactionDate,
-                DraftDeletionSuccessfulOrUnnecessary = adjustmentOutputEntity.DraftDeletionSuccessfulOrUnnecessary,
-            };
-
-            // Get the adapter for the next approver and assign them to the dto.
-            var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
-
-            adjustmentOutputDto.NextApprovers = new List<NextApprover>();
-            if (adjustmentOutputDto.NextApprovers != null && adjustmentInputEntity.NextApprovers != null)
-                foreach (var nextApprover in adjustmentInputEntity.NextApprovers)
-                {
-                    var nextApproverDto = adapterOut.MapToType(nextApprover);
-                    adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
+                    throw new ApplicationException("Budget adjustment must not be null.");
                 }
 
-            return adjustmentOutputDto;
+                // If error exists, throw exception with message.
+                if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
+                {
+                    throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
+                }
+
+                if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
+                {
+                    throw new ApplicationException("Adjustment appears to have succeeded, but no ID was returned.");
+                }
+
+                // If this budget adjustment is being created from a draft and draft has attachments associated, move the attachments to newly created budget adjustment
+                bool moveAttachmentsFromDraftSuccessful = true;
+                if (!string.IsNullOrEmpty(adjustmentInputEntity.DraftBudgetAdjustmentId) && !string.IsNullOrEmpty(adjustmentOutputEntity.Id))
+                {
+                    moveAttachmentsFromDraftSuccessful = await MoveAttachmentsFromDraftBudgetAdjustment(adjustmentInputEntity.DraftBudgetAdjustmentId, adjustmentOutputEntity.Id);
+                }
+
+                // If this budget adjustment is being created from a draft budget adjustment and attachments from draft moved successfully, delete the draft budget adjustment.
+                bool draftDeletionSuccessfulOrUnnecessary = true;
+                if (!string.IsNullOrEmpty(adjustmentInputEntity.DraftBudgetAdjustmentId))
+                {
+                    draftDeletionSuccessfulOrUnnecessary = moveAttachmentsFromDraftSuccessful && await DeleteDraftBudgetAdjustment(adjustmentInputEntity.DraftBudgetAdjustmentId);
+                }
+
+                // Initialize the DTO to return.
+                var adjustmentLineDtos = new List<AdjustmentLine>();
+                foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
+                {
+                    adjustmentLineDtos.Add(new AdjustmentLine()
+                    {
+                        GlNumber = adjustmentLineEntity.GlNumber,
+                        FromAmount = adjustmentLineEntity.FromAmount,
+                        ToAmount = adjustmentLineEntity.ToAmount
+                    });
+                }
+
+                var adjustmentOutputDto = new BudgetAdjustment()
+                {
+                    Id = adjustmentOutputEntity.Id,
+                    AdjustmentLines = adjustmentLineDtos,
+                    Comments = adjustmentOutputEntity.Comments,
+                    Initiator = adjustmentOutputEntity.Initiator,
+                    Reason = adjustmentOutputEntity.Reason,
+                    TransactionDate = adjustmentOutputEntity.TransactionDate,
+                    DraftDeletionSuccessfulOrUnnecessary = draftDeletionSuccessfulOrUnnecessary,
+                    MoveAttachmentsFromDraftSuccessful = moveAttachmentsFromDraftSuccessful
+                };
+
+                // Get the adapter for the next approver and assign them to the dto.
+                var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
+
+                adjustmentOutputDto.NextApprovers = new List<NextApprover>();
+                if (adjustmentOutputDto.NextApprovers != null && adjustmentInputEntity.NextApprovers != null)
+                    foreach (var nextApprover in adjustmentInputEntity.NextApprovers)
+                    {
+                        var nextApproverDto = adapterOut.MapToType(nextApprover);
+                        adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
+                    }
+
+                return adjustmentOutputDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "==> Session expired exception <==");
+                throw;
+            }
         }
 
         /// <summary>
@@ -291,76 +331,84 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
 
-                var adjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntityToUpdate, glAccountStructure.MajorComponentStartPositions);
-
-                if (adjustmentOutputEntity == null)
+                try
                 {
-                    throw new ApplicationException("Budget adjustment must not be null.");
-                }
+                    var adjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntityToUpdate, glAccountStructure.MajorComponentStartPositions);
 
-                // If error exists, throw exception with message.
-                if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
-                {
-                    throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
-                }
-
-                if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
-                {
-                    throw new ApplicationException("Budget Adjustment update appears to have succeeded, but no ID was returned.");
-                }
-
-                // Initialize the DTO to return.
-                var adjustmentLineDtos = new List<AdjustmentLine>();
-                if (adjustmentOutputEntity.AdjustmentLines != null)
-                {
-                    foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
+                    if (adjustmentOutputEntity == null)
                     {
-                        adjustmentLineDtos.Add(new AdjustmentLine()
+                        throw new ApplicationException("Budget adjustment must not be null.");
+                    }
+
+                    // If error exists, throw exception with message.
+                    if (adjustmentOutputEntity.ErrorMessages != null && adjustmentOutputEntity.ErrorMessages.Count > 0)
+                    {
+                        throw new ApplicationException(String.Join("<>", adjustmentOutputEntity.ErrorMessages));
+                    }
+
+                    if (string.IsNullOrEmpty(adjustmentOutputEntity.Id))
+                    {
+                        throw new ApplicationException("Budget Adjustment update appears to have succeeded, but no ID was returned.");
+                    }
+
+                    // Initialize the DTO to return.
+                    var adjustmentLineDtos = new List<AdjustmentLine>();
+                    if (adjustmentOutputEntity.AdjustmentLines != null)
+                    {
+                        foreach (var adjustmentLineEntity in adjustmentOutputEntity.AdjustmentLines)
                         {
-                            GlNumber = adjustmentLineEntity.GlNumber,
-                            FromAmount = adjustmentLineEntity.FromAmount,
-                            ToAmount = adjustmentLineEntity.ToAmount
-                        });
+                            adjustmentLineDtos.Add(new AdjustmentLine()
+                            {
+                                GlNumber = adjustmentLineEntity.GlNumber,
+                                FromAmount = adjustmentLineEntity.FromAmount,
+                                ToAmount = adjustmentLineEntity.ToAmount
+                            });
+                        }
                     }
-                }
 
-                var adjustmentOutputDto = new BudgetAdjustment()
-                {
-                    Id = adjustmentOutputEntity.Id,
-                    AdjustmentLines = adjustmentLineDtos,
-                    Comments = adjustmentOutputEntity.Comments,
-                    Initiator = adjustmentOutputEntity.Initiator,
-                    Reason = adjustmentOutputEntity.Reason,
-                    TransactionDate = adjustmentOutputEntity.TransactionDate,
-                    DraftDeletionSuccessfulOrUnnecessary = adjustmentOutputEntity.DraftDeletionSuccessfulOrUnnecessary,
-                };
-
-                // Get the adapter for the next approver and assign them to the dto.
-                var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
-
-                adjustmentOutputDto.NextApprovers = new List<NextApprover>();
-                if (adjustmentOutputDto.NextApprovers != null && budgetAdjustmentEntityToUpdate.NextApprovers != null)
-                {
-                    foreach (var nextApprover in budgetAdjustmentEntityToUpdate.NextApprovers)
+                    var adjustmentOutputDto = new BudgetAdjustment()
                     {
-                        var nextApproverDto = adapterOut.MapToType(nextApprover);
-                        adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
-                    }
-                }
+                        Id = adjustmentOutputEntity.Id,
+                        AdjustmentLines = adjustmentLineDtos,
+                        Comments = adjustmentOutputEntity.Comments,
+                        Initiator = adjustmentOutputEntity.Initiator,
+                        Reason = adjustmentOutputEntity.Reason,
+                        TransactionDate = adjustmentOutputEntity.TransactionDate,
+                        DraftDeletionSuccessfulOrUnnecessary = adjustmentOutputEntity.DraftDeletionSuccessfulOrUnnecessary,
+                    };
 
-                // Get the adapter for the approver and assign them to the dto.
-                var approverAdapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>();
+                    // Get the adapter for the next approver and assign them to the dto.
+                    var adapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>();
 
-                adjustmentOutputDto.Approvers = new List<Approver>();
-                if (adjustmentOutputDto.Approvers != null && budgetAdjustmentEntityToUpdate.Approvers != null)
-                {
-                    foreach (var approver in budgetAdjustmentEntityToUpdate.Approvers)
+                    adjustmentOutputDto.NextApprovers = new List<NextApprover>();
+                    if (adjustmentOutputDto.NextApprovers != null && budgetAdjustmentEntityToUpdate.NextApprovers != null)
                     {
-                        var approverDto = approverAdapterOut.MapToType(approver);
-                        adjustmentOutputDto.Approvers.Add(approverDto);
+                        foreach (var nextApprover in budgetAdjustmentEntityToUpdate.NextApprovers)
+                        {
+                            var nextApproverDto = adapterOut.MapToType(nextApprover);
+                            adjustmentOutputDto.NextApprovers.Add(nextApproverDto);
+                        }
                     }
+
+                    // Get the adapter for the approver and assign them to the dto.
+                    var approverAdapterOut = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.Approver, Dtos.ColleagueFinance.Approver>();
+
+                    adjustmentOutputDto.Approvers = new List<Approver>();
+                    if (adjustmentOutputDto.Approvers != null && budgetAdjustmentEntityToUpdate.Approvers != null)
+                    {
+                        foreach (var approver in budgetAdjustmentEntityToUpdate.Approvers)
+                        {
+                            var approverDto = approverAdapterOut.MapToType(approver);
+                            adjustmentOutputDto.Approvers.Add(approverDto);
+                        }
+                    }
+                    return adjustmentOutputDto;
                 }
-                return adjustmentOutputDto;
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Debug(csee, "==> Session expired exception <==");
+                    throw;
+                }
             }
             else
             {
@@ -506,11 +554,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     // Strip out GL accounts that the approver does not have access to based on their GL User access.
                     var expenseAndRevenueAccounts = generalLedgerUser.RevenueAccounts.Union(generalLedgerUser.ExpenseAccounts);
 
+                    // If the user has access to all the GL accounts through the GL access role,
+                    // don't bother adding any additional GL accounts they may have access through
+                    // approval roles.
+                    IEnumerable<string> allAccessAndApprovalAccounts = expenseAndRevenueAccounts;
+                    if (generalLedgerUser.GlAccessLevel != Domain.ColleagueFinance.Entities.GlAccessLevel.Full_Access)
+                    {
+                        // Check if budget entries use approval roles.
+                        Domain.ColleagueFinance.Entities.ApprovalConfiguration approvalConfiguration = await approvalConfigurationRepository.GetApprovalConfigurationAsync();
+                        if (approvalConfiguration == null)
+                        {
+                            throw new ApplicationException("approvalConfiguration must be defined.");
+                        }
+
+                        // Use the approval roles to see if they have access to additional GL accounts.
+                        if (approvalConfiguration.BudgetEntriesUseApprovalRoles)
+                        {
+                            allAccessAndApprovalAccounts = await generalLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(CurrentUser.PersonId, expenseAndRevenueAccounts);
+                        }
+                        // If the user does NOT have any GL access accounts but they HAVE approval 
+                        // access accounts, change the GL access level from NO access to possible access.
+                        if (allAccessAndApprovalAccounts != null && allAccessAndApprovalAccounts.Any())
+                        {
+                            generalLedgerUser.SetGlAccessLevel(Domain.ColleagueFinance.Entities.GlAccessLevel.Possible_Access);
+                        }
+                    }
+
                     foreach (var adjustmentLine in budgetAdjustmentDto.AdjustmentLines)
                     {
                         costCenterIds.Add(GlAccountUtility.GetCostCenterId(adjustmentLine.GlNumber, costCenterStructure, glAccountStructure.MajorComponentStartPositions));
 
-                        if (!expenseAndRevenueAccounts.Contains(adjustmentLine.GlNumber))
+                        if (!allAccessAndApprovalAccounts.Contains(adjustmentLine.GlNumber))
                         {
                             adjustmentLine.Hidden = true;
                             adjustmentLine.FromAmount = 0m;
@@ -707,15 +781,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             }
 
-            // Approve the budget adjustment. The current user approval may not be enough to approve 
-            // this budget adjustment, so it may not go to a complete status.
-            var budgetAdjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
-
-            if (budgetAdjustmentOutputEntity == null)
+            try
             {
-                var message = "Budget adjustment must not be null.";
-                logger.Error(message);
-                throw new ApplicationException(message);
+                // Approve the budget adjustment. The current user approval may not be enough to approve 
+                // this budget adjustment, so it may not go to a complete status.
+                var budgetAdjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
+
+                if (budgetAdjustmentOutputEntity == null)
+                {
+                    var message = "Budget adjustment must not be null.";
+                    logger.Error(message);
+                    throw new ApplicationException(message);
+                }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "==>Session expired exception <==");
+                throw;
             }
 
             return budgetAdjustmentApprovalDto;
@@ -739,9 +821,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Update the dtos with the information from the domain entities.
             if (budgetAdjustmentSummaryEntities != null && budgetAdjustmentSummaryEntities.Any())
             {
+                //attachments
+                var draftBudgetAdjustmentIds = budgetAdjustmentSummaryEntities.Where(x=>!string.IsNullOrEmpty(x.DraftBudgetAdjustmentId)).Select(x => x.DraftBudgetAdjustmentId);
+
+                string draftBudgetAdjustmentPrefix = ColleagueFinanceConstants.DraftBudgetAdjustmentAttachmentTagOnePrefix;
+                List<Attachment> draftBudgetAdjustmentAttachmentsList = await procurementsUtilityService.GetAttachmentsAsync(null, draftBudgetAdjustmentPrefix, draftBudgetAdjustmentIds);
+
+                var budgetAdjustmentIds = budgetAdjustmentSummaryEntities.Where(x => !string.IsNullOrEmpty(x.BudgetAdjustmentNumber)).Select(x => x.BudgetAdjustmentNumber);
+                string budgetAdjustmentPrefix = ColleagueFinanceConstants.BudgetAdjustmentAttachmentTagOnePrefix;
+                List<Attachment> budgetAdjustmentAttachmentsList = await procurementsUtilityService.GetAttachmentsAsync(null, budgetAdjustmentPrefix, budgetAdjustmentIds);
+
+
                 var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustmentSummary, Dtos.ColleagueFinance.BudgetAdjustmentSummary>();
                 foreach (var adjustmentSummary in budgetAdjustmentSummaryEntities)
-                {
+                {                    
                     if (adjustmentSummary != null)
                     {
                         // Validate that the current user is the same person ID as the one obtained from the repository.
@@ -749,6 +842,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         {
                             // Convert the domain entity into a DTO.
                             var summaryDto = adapter.MapToType(adjustmentSummary);
+                            if (!string.IsNullOrEmpty(summaryDto.DraftBudgetAdjustmentId))
+                            {
+                                summaryDto.AttachmentsIndicator = HasAttachments(draftBudgetAdjustmentPrefix, summaryDto.DraftBudgetAdjustmentId, draftBudgetAdjustmentAttachmentsList);
+                            }
+                            else if (!string.IsNullOrEmpty(summaryDto.BudgetAdjustmentNumber))
+                            {
+                                summaryDto.AttachmentsIndicator = HasAttachments(budgetAdjustmentPrefix, summaryDto.BudgetAdjustmentNumber, budgetAdjustmentAttachmentsList);
+                            }
 
                             // Add the dto to the list of budget adjustment summary DTOs.
                             budgetAdjustmentSummaryDtos.Add(summaryDto);
@@ -762,7 +863,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
 
-            return budgetAdjustmentSummaryDtos;
+            return budgetAdjustmentSummaryDtos;            
         }
 
         /// <summary>
@@ -774,31 +875,39 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Check the permission code to view budget adjustments pending approval.
             CheckViewBudgetAdjustmentPendingApprovalPermission();
 
-            // Obtain the list of budget adjustments pending approval for the current user.
-            var budgetAdjustmentSummaryEntities = await budgetAdjustmentRepository.GetBudgetAdjustmentsPendingApprovalSummaryAsync(CurrentUser.PersonId);
-
-            // Initialize the budget adjustment summary dtos.
-            var budgetAdjustmentSummaryDtos = new List<BudgetAdjustmentPendingApprovalSummary>();
-
-            // Update the dtos with the information from the domain entities.
-            if (budgetAdjustmentSummaryEntities != null && budgetAdjustmentSummaryEntities.Any())
+            try
             {
-                var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustmentPendingApprovalSummary, Dtos.ColleagueFinance.BudgetAdjustmentPendingApprovalSummary>();
-                foreach (var adjustmentSummary in budgetAdjustmentSummaryEntities)
+                // Obtain the list of budget adjustments pending approval for the current user.
+                var budgetAdjustmentSummaryEntities = await budgetAdjustmentRepository.GetBudgetAdjustmentsPendingApprovalSummaryAsync(CurrentUser.PersonId);
+
+                // Initialize the budget adjustment summary dtos.
+                var budgetAdjustmentSummaryDtos = new List<BudgetAdjustmentPendingApprovalSummary>();
+
+                // Update the dtos with the information from the domain entities.
+                if (budgetAdjustmentSummaryEntities != null && budgetAdjustmentSummaryEntities.Any())
                 {
-                    if (adjustmentSummary != null)
+                    var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustmentPendingApprovalSummary, Dtos.ColleagueFinance.BudgetAdjustmentPendingApprovalSummary>();
+                    foreach (var adjustmentSummary in budgetAdjustmentSummaryEntities)
                     {
-                        // Convert the domain entity into a DTO.
-                        var summaryDto = adapter.MapToType(adjustmentSummary);
+                        if (adjustmentSummary != null)
+                        {
+                            // Convert the domain entity into a DTO.
+                            var summaryDto = adapter.MapToType(adjustmentSummary);
 
-                        // Add the dto to the list of budget adjustment summary DTOs.
-                        budgetAdjustmentSummaryDtos.Add(summaryDto);
+                            // Add the dto to the list of budget adjustment summary DTOs.
+                            budgetAdjustmentSummaryDtos.Add(summaryDto);
 
+                        }
                     }
                 }
-            }
 
-            return budgetAdjustmentSummaryDtos;
+                return budgetAdjustmentSummaryDtos;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "==> Session expired exception <==");
+                throw;
+            }
         }
 
         /// <summary>
@@ -870,12 +979,109 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 budgetAdjustmentDto.ValidationResults = new List<string>();
 
-                var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
-                if (validationMessages != null && validationMessages.Any())
+                try
                 {
-                    budgetAdjustmentDto.ValidationResults.AddRange(validationMessages);
+                    var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
+                    if (validationMessages != null && validationMessages.Any())
+                    {
+                        budgetAdjustmentDto.ValidationResults.AddRange(validationMessages);
+                    }
+                }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Debug(csee, "==> Session expired exception <==");
+                    throw;
                 }
             }
+        }
+
+        /// <summary>
+        /// Move attachments from draft budget adjustment to newly added budget adjustment.
+        /// </summary>
+        /// <param name="draftBudgetAdjustmentId"></param>
+        /// <param name="budgetAdjustmentId"></param>
+        /// <returns>true if successful</returns>
+        private async Task<bool> MoveAttachmentsFromDraftBudgetAdjustment(string draftBudgetAdjustmentId, string budgetAdjustmentId)
+        {
+            bool moveAttachmentSuccessfulOrUnnecessary = true;
+            if (!string.IsNullOrEmpty(draftBudgetAdjustmentId) && !string.IsNullOrEmpty(budgetAdjustmentId))
+            {
+                try
+                {
+                    var cfWebConfiguration = await cfWebConfigRepository.GetColleagueFinanceWebConfigurations();
+                    if (cfWebConfiguration != null && !string.IsNullOrEmpty(cfWebConfiguration.JournalBudgetEntryAttachmentCollectionId))
+                    {
+                        var attachmentCollectionId = cfWebConfiguration.JournalBudgetEntryAttachmentCollectionId;
+                        var draftbudgetAdjustmentAttachmentTag = ColleagueFinanceConstants.DraftBudgetAdjustmentAttachmentTagOnePrefix + draftBudgetAdjustmentId;
+                        var attachments = await attachmentRepository.GetAttachmentsAsync(null, attachmentCollectionId, draftbudgetAdjustmentAttachmentTag);
+                        if (attachments != null && attachments.Any())
+                        {
+                            try
+                            {
+                                var attachmentCollectionEffectivePermissions = await attachmentCollectionService.GetEffectivePermissionsAsync(attachmentCollectionId);
+                                if (attachmentCollectionEffectivePermissions.CanCreateAttachments)
+                                {
+                                    foreach (var attachment in attachments)
+                                    {
+                                        attachment.TagOne = ColleagueFinanceConstants.BudgetAdjustmentAttachmentTagOnePrefix + budgetAdjustmentId;
+                                        await attachmentRepository.PutAttachmentAsync(attachment);
+                                    }
+                                }
+                                else
+                                {
+                                    string message = "User does not have permissions to create the attachments associated to draft budget adjustment.";
+                                    logger.Error(string.Format("{0} attachments in collection - {1} & TagOne - {2}",
+                                        message, attachmentCollectionId, draftbudgetAdjustmentAttachmentTag));
+                                    return false;
+
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                var message = string.Format("Unable to Update attachments from draft budget adjustment id {0} to budget adjustment id {1}", draftBudgetAdjustmentId, budgetAdjustmentId);
+                                logger.Error(ex, message);
+                                return false;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var message = string.Format("Unable to move attachments from draft budget adjustment id {0} to budget adjustment id {1}", draftBudgetAdjustmentId, budgetAdjustmentId);
+                    logger.Error(ex, message);
+                }
+            }
+            return moveAttachmentSuccessfulOrUnnecessary;
+        }
+
+        /// <summary>
+        /// Delete draft budget adjustment.
+        /// </summary>
+        /// <param name="draftBudgetAdjustmentId"></param>
+        /// <returns>true if successful</returns>
+        private async Task<bool> DeleteDraftBudgetAdjustment(string draftBudgetAdjustmentId)
+        {
+            bool draftDeletionSuccessfulOrUnnecessary = true;
+            // Just log any errors that occur with deleting the budget adjustment.
+            if (!string.IsNullOrEmpty(draftBudgetAdjustmentId))
+            {
+                try
+                {
+                    await draftBudgetAdjustmentsRepository.DeleteAsync(draftBudgetAdjustmentId);
+                }
+                catch (Exception)
+                {
+                    logger.Error("Unable to delete draft budget adjustment");
+                    draftDeletionSuccessfulOrUnnecessary = false;
+                }
+
+            }
+            return draftDeletionSuccessfulOrUnnecessary;
+        }
+
+        private bool HasAttachments(string attachmentTagOnePrefix, string documentId, List<Attachment> attachmentsList)
+        {
+            return attachmentsList != null && attachmentsList.Any() ? attachmentsList.Any(attach => attach.TagOne == attachmentTagOnePrefix + documentId) : false;
         }
     }
 }

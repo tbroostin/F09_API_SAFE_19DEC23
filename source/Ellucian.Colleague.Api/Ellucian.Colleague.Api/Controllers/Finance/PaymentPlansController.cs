@@ -18,6 +18,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Filters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -149,6 +150,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.ApprovePaymentPlanTerms(approval);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -183,6 +189,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetPaymentPlanApproval(approvalId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

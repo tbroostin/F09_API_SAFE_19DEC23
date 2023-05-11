@@ -166,5 +166,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests
         {
             return Task.FromResult("n/a");
         }
+
+        public Task<IEnumerable<Attachment>> QueryAttachmentsAsync(string owner, string collectionId, List<string> tagOnesList)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

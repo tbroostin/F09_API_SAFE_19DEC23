@@ -14,6 +14,7 @@ using Ellucian.Colleague.Data.Base.Transactions;
 using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {

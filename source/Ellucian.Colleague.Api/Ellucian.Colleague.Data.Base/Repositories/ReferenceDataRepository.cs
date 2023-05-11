@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -21,6 +21,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -619,10 +620,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                             }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
                             // if the valcode is not public, don't throw, but return an empty list
                             //throw new ApplicationException("Anonymous data reader request denied. Table is not public.");
+                            logger.Error(ex.Message, "Valcode is not public.");
                         }
                         return bldgTypes;
                     }
@@ -982,6 +984,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     corewebDefaultsRecord = GetCorewebDefaults();
                 }
+                catch (ColleagueSessionExpiredException csee)
+                {
+                    logger.Error(csee, "Colleague session expired while retrieving COREWEB.DEFAULTS record");
+                    throw;
+                }
                 catch (Exception e)
                 {
                     //If COREWEB.DEFAULTS doesn't exist (possibility for newer clients, clients who
@@ -1018,6 +1025,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             ccRecord.CcUrlsEntityAssociation.Select(urlRecord =>
                                                 new CommunicationCodeHyperlink(urlRecord.CcUrlAssocMember, urlRecord.CcTitleAssocMember)).ToList()
                                 });
+                            }
+                            catch (ColleagueSessionExpiredException csee)
+                            {
+                                logger.Error(csee, "Colleague session expired while creating CommunicationCode");
+                                throw;
                             }
                             catch (Exception e)
                             {
@@ -1116,8 +1128,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         public async Task<IEnumerable<Country>> GetCountryCodesAsync(bool ignoreCache = false)
         {
-            return await GetCodeItemAsync<Countries, Country>("AllCountries", "COUNTRIES",
-                c => new Country(c.Recordkey, c.CtryDesc, c.CtryIsoCode, c.CtryIsoAlpha3Code, c.CtryNotInUseFlag.ToUpper() == "Y"), bypassCache: ignoreCache);
+            try
+            {
+                return await GetCodeItemAsync<Countries, Country>("AllCountries", "COUNTRIES",
+                        c => new Country(c.Recordkey, c.CtryDesc, c.CtryIsoCode, c.CtryIsoAlpha3Code, c.CtryNotInUseFlag.ToUpper() == "Y"), bypassCache: ignoreCache);
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired while retrieving countries.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving countries.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -1385,7 +1411,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         Division = departmentRecord.DeptsDivision,
                         School = departmentRecord.DeptsSchool,
                         InstitutionId = departmentRecord.DeptsInstitutionsId,
-                        DepartmentType = departmentRecord.DeptsType
+                        DepartmentType = departmentRecord.DeptsType,
+                        DepartmentalOversightIds = departmentRecord.DeptsOversight
                     };
 
                     departmentEntities.Add(dept);
@@ -1779,7 +1806,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("Language ISO Code", languageIsoCode.Recordkey, languageIsoCodeData, ex);
+                        LogDataError("Language ISO Code", languageIsoCode.Recordkey, null, ex);
                     }
                 }
             }
@@ -2585,8 +2612,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             return await GetGuidValcodeAsync<PhoneType>("CORE", "PHONE.TYPES",
                 (e, g) => new PhoneType(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
-                    ConvertPhoneTypeCodeToPhoneType(e.ValActionCode3AssocMember)), bypassCache: ignoreCache);
-
+                    ConvertPhoneTypeCodeToPhoneType(e.ValActionCode3AssocMember), string.Equals(e.ValActionCode1AssocMember, "P", StringComparison.OrdinalIgnoreCase) ), bypassCache: ignoreCache);
         }
 
         /// <summary>
@@ -2785,7 +2811,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                    if (invalidPrefixEntries.Count > 0)
                    {
                        const string prefixErrorMessage = "Prefix data defined in Colleague contains some incomplete entries; please access the Prefix & Suffix Definition (PPS) form to correct these incomplete entries";
-                       LogDataError("Prefixes", "PREFIXES", invalidPrefixEntries, null, prefixErrorMessage);
+                       LogDataError("Prefixes", "PREFIXES",null, null, prefixErrorMessage);
                    }
 
                    return prefixList;
@@ -3293,8 +3319,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         public async Task<IEnumerable<State>> GetStateCodesAsync()
         {
-            return await GetCodeItemAsync<States, State>("AllStates", "STATES",
-                 c => new State(c.Recordkey, c.StDesc, c.StCountry));
+            try
+            {
+                return await GetCodeItemAsync<States, State>("AllStates", "STATES",
+                         c => new State(c.Recordkey, c.StDesc, c.StCountry));
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired while retrieving states.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving states.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -3331,7 +3371,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (invalidSuffixEntries.Count > 0)
                     {
                         string suffixErrorMessage = "Suffix data defined in Colleague contains some incomplete entries; please access the Prefix & Suffix Definition (PPS) form to correct these incomplete entries";
-                        LogDataError("Suffixes", "SUFFIXES", invalidSuffixEntries, null, suffixErrorMessage);
+                        LogDataError("Suffixes", "SUFFIXES", null, null, suffixErrorMessage);
                     }
 
                     return suffixList;
@@ -3365,7 +3405,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (invalidSuffixEntries.Count > 0)
                     {
                         const string suffixErrorMessage = "Suffix data defined in Colleague contains some incomplete entries; please access the Prefix & Suffix Definition (PPS) form to correct these incomplete entries";
-                        LogDataError("Suffixes", "SUFFIXES", invalidSuffixEntries, null, suffixErrorMessage);
+                        LogDataError("Suffixes", "SUFFIXES", null, null, suffixErrorMessage);
                     }
 
                     return suffixList;
@@ -3553,9 +3593,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         school.AddLocationCode(dtcd);
                     }
-                    catch (Exception)
+
+                    catch (Exception ex)
                     {
                         // Do nothing since we really don't care about null or duplicate items
+                        logger.Error(ex.Message, "Null or duplicate school location.");
                     }
                 }
                 foreach (var dtcd in dt.SchoolsDepts)
@@ -3564,9 +3606,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         school.AddDepartmentCode(dtcd);
                     }
-                    catch (Exception)
+
+                    catch (Exception ex)
                     {
                         // Do nothing since we really don't care about null or duplicate items
+                        logger.Error(ex.Message, "Null or duplicate school department.");
                     }
                 }
                 foreach (var dtcd in dt.SchoolsDivisions)
@@ -3575,15 +3619,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         school.AddDivisionCode(dtcd);
                     }
-                    catch (Exception)
+
+                    catch (Exception ex)
                     {
                         // Do nothing since we really don't care about null or duplicate items
+                        logger.Error(ex.Message, "Null or duplicate division code.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogDataError("Restriction", dt.Recordkey, dt, ex);
+                LogDataError("Restriction", dt.Recordkey, null, ex);
                 return null;
             }
 
@@ -3630,9 +3676,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 school.AddLocationCode(dtcd);
                             }
-                            catch (Exception)
+
+                            catch (Exception ex)
                             {
                                 // Do nothing since we really don't care about null or duplicate items
+                                logger.Error(ex.Message, "Null or duplicate location code.");
                             }
                         }
                         foreach (var dtcd in dt.SchoolsDepts)
@@ -3641,9 +3689,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 school.AddDepartmentCode(dtcd);
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
                                 // Do nothing since we really don't care about null or duplicate items
+                                logger.Error(ex.Message, "Null or duplicate department code.");
                             }
                         }
                         foreach (var dtcd in dt.SchoolsDivisions)
@@ -3661,8 +3710,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("School", dt.SchoolsInstitutionsId, dt, ex);
-                        //throw new ArgumentException("Error occurred when trying to build schools " + dt.Recordkey);
+                        LogDataError("School", dt.SchoolsInstitutionsId, null, ex);
                     }
                 }
                 return schools;
@@ -4735,7 +4783,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("Place", place.Recordkey, placeData, ex);
+                        LogDataError("Place", place.Recordkey, null, ex);
                     }
                 }
             }

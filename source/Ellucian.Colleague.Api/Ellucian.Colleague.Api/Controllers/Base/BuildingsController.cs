@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,6 +24,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -61,19 +62,33 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="Building">Building codes and descriptions.</see></returns>
         public async Task<IEnumerable<Building>> GetBuildingsAsync()
         {
-            var buildingCollection = await _referenceDataRepository.BuildingsAsync();
-
-            // Get the right adapter for the type mapping
-            var buildingDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Building, Building>();
-
-            // Map the building entity to the building DTO
-            var buildingDtoCollection = new List<Building>();
-            foreach (var bldg in buildingCollection)
+            try
             {
-                buildingDtoCollection.Add(buildingDtoAdapter.MapToType(bldg));
-            }
+                var buildingCollection = await _referenceDataRepository.BuildingsAsync();
 
-            return buildingDtoCollection.OrderBy(s => s.Description);
+                // Get the right adapter for the type mapping
+                var buildingDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Building, Building>();
+
+                // Map the building entity to the building DTO
+                var buildingDtoCollection = new List<Building>();
+                foreach (var bldg in buildingCollection)
+                {
+                    buildingDtoCollection.Add(buildingDtoAdapter.MapToType(bldg));
+                }
+
+                return buildingDtoCollection.OrderBy(s => s.Description);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw;
+            }
         }
 
         //[CacheControlFilter(MaxAgeHours = 1, Pubilc = true, Revalidate = true)]
@@ -211,14 +226,14 @@ namespace Ellucian.Colleague.Api.Controllers
         [Authorize]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Building2>> GetHedmBuildings2Async()
         {
-            bool bypassCache = false; 
+            bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
                 if (Request.Headers.CacheControl.NoCache)
                 {
                     bypassCache = true;
                 }
-            }          
+            }
             try
             {
                 var items = await _institutionService.GetBuildings2Async(bypassCache);

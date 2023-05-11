@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -66,7 +66,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Warn("Unexpected null domainPayableDepositDirectives returned from payableDepositDirectiveRepository.GetPayableDepositDirectivesAsync");
                 return new List<PayableDepositDirective>();
             }
-
+            logger.Debug(string.Format("************Start- Service to Get Payable Deposit Directive for {0}- Start************", CurrentUser.PersonId));
             var dtoPayableDepositDirectives = new List<PayableDepositDirective>();
             var payableDepositDirectiveEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PayableDepositDirective, Dtos.Base.PayableDepositDirective>();
 
@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 dtoPayableDepositDirectives.Add(payableDepositDirectiveEntityToDtoAdapter.MapToType(directive));
             }
-
+            logger.Debug(string.Format("************End- Service to Get Payable Deposit Directive for {0} - End************", CurrentUser.PersonId));
             return dtoPayableDepositDirectives;
 
         }
@@ -88,9 +88,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (string.IsNullOrEmpty(payableDepositDirectiveId))
             {
+                logger.Debug("************Payable Deposit Directive Id must be provided ************");
                 throw new ArgumentNullException("payableDepositDirectiveId");
             }
-
+            logger.Debug(string.Format("************Start- Service to Get Payable Deposit Directive for {0} - Start************",CurrentUser.PersonId));
             var domainPayableDepositDirectiveListOfOne = await payableDepositDirectiveRepository.GetPayableDepositDirectivesAsync(CurrentUser.PersonId, payableDepositDirectiveId);
             if (domainPayableDepositDirectiveListOfOne == null || !domainPayableDepositDirectiveListOfOne.Any())
             {
@@ -100,7 +101,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             var payableDepositDirectiveEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PayableDepositDirective, PayableDepositDirective>();
-
+            logger.Debug(string.Format("************End- Service to Get Payable Deposit Directive for {0} - End************", CurrentUser.PersonId));
             return payableDepositDirectiveEntityToDtoAdapter.MapToType(domainPayableDepositDirectiveListOfOne.First());
 
         }
@@ -115,6 +116,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (newPayableDepositDirective == null)
             {
+                logger.Debug("************New Payable Deposit Directive must be provided ************");
                 throw new ArgumentNullException("newPayableDepositDirective");
             }
 
@@ -139,10 +141,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var payableDepositDirectiveDtoToEntityAdapter = _adapterRegistry.GetAdapter<PayableDepositDirective, Domain.Base.Entities.PayableDepositDirective>();
             var inputPayableDepositDirectiveEntity = payableDepositDirectiveDtoToEntityAdapter.MapToType(newPayableDepositDirective);
 
+            logger.Debug("************Start- Service to Create Payable Deposit Directive - Start************");
             //pass new payableDepositDirective domain entity to repository
             var newPayableDepositDirectiveEntity = await payableDepositDirectiveRepository.CreatePayableDepositDirectiveAsync(inputPayableDepositDirectiveEntity);
 
-            //await bankingAuthenticationClaimRepository.Delete(bankingAuthenticationToken.Token);
+           
 
             if (newPayableDepositDirectiveEntity == null)
             {
@@ -153,7 +156,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             //convert the Domain entity to DTO
             var payableDepositDirectiveEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PayableDepositDirective, PayableDepositDirective>();
-
+            logger.Debug("************End- Service to Create Payable Deposit Directive - End************");
             return payableDepositDirectiveEntityToDtoAdapter.MapToType(newPayableDepositDirectiveEntity);
         }
 
@@ -166,15 +169,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (inputPayableDepositDirective == null)
             {
+                logger.Debug("************Payable Deposit Directive Object must be provided ************");
                 throw new ArgumentNullException("inputPayableDepositDirective");
             }
 
             if (string.IsNullOrEmpty(inputPayableDepositDirective.Id))
             {
+                logger.Debug("************Id of input directive must be provided ************");
                 throw new ArgumentException("id of input directive is required", "inputPayableDepositDirective");
             }
             if (string.IsNullOrEmpty(inputPayableDepositDirective.PayeeId))
             {
+                logger.Debug("************Payee Id of input directive is required ************");
                 throw new ArgumentException("payee Id of input directive is required", "inputPayableDepositDirective");
             }
 
@@ -196,11 +202,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             await VerifyAuthenticationTokenAsync(token);
-
+            logger.Debug("************Start- Service to Update Payable Deposit Directive - Start************");
             //convert the PayableDepositDirective DTO to a PayableDepositDirective Domain entity using a custom adapter
             var payableDepositDirectiveDtoToEntityAdapter = _adapterRegistry.GetAdapter<PayableDepositDirective, Domain.Base.Entities.PayableDepositDirective>();
             var payableDepositDirectiveEntityToUpdate = payableDepositDirectiveDtoToEntityAdapter.MapToType(inputPayableDepositDirective);
 
+            logger.Debug("************ Fetching payable deposit directives ************");
             var currentPayableDepositDirectiveListOfOne = await payableDepositDirectiveRepository.GetPayableDepositDirectivesAsync(inputPayableDepositDirective.PayeeId, inputPayableDepositDirective.Id);
             if (currentPayableDepositDirectiveListOfOne == null || !currentPayableDepositDirectiveListOfOne.Any())
             {
@@ -208,10 +215,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(message);
                 throw new KeyNotFoundException(message);
             }
-
+            logger.Debug("************ Successfully Fetched payable deposit directives ************");
 
             var currentPayableDepositDirective = currentPayableDepositDirectiveListOfOne.First();
-
+            logger.Debug("************ Updating payable deposit directive ************");
             var updatedPayableDepositDirectiveEntity = await payableDepositDirectiveRepository.UpdatePayableDepositDirectiveAsync(payableDepositDirectiveEntityToUpdate);
 
             if (updatedPayableDepositDirectiveEntity == null)
@@ -220,10 +227,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug("************ Successfully Updated payable deposit directive ************");
             //convert the Domain entity to DTO
             var payableDepositDirectiveEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PayableDepositDirective, PayableDepositDirective>();
-
+            logger.Debug("************End- Service to Update Payable Deposit Directive - End************");
             return payableDepositDirectiveEntityToDtoAdapter.MapToType(updatedPayableDepositDirectiveEntity);
 
         }
@@ -237,6 +244,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (string.IsNullOrEmpty(payableDepositDirectiveId))
             {
+                logger.Debug("************Payable Deposit Directive Id must be provided ************");
                 throw new ArgumentNullException("payableDepositDirectiveId");
             }
 
@@ -247,9 +255,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
+            logger.Debug("************Start- Service to Delete Payable Deposit Directive - Start************");
             await VerifyAuthenticationTokenAsync(token);
 
+            logger.Debug("************ Fetching payable deposit directives ************");
             var payableDepositDirectiveListOfOne = await payableDepositDirectiveRepository.GetPayableDepositDirectivesAsync(CurrentUser.PersonId, payableDepositDirectiveId);
             if (payableDepositDirectiveListOfOne == null || !payableDepositDirectiveListOfOne.Any())
             {
@@ -257,7 +266,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(message);
                 throw new KeyNotFoundException(message);
             }
-
+            logger.Debug("************ Successfully Fetched payable deposit directives ************");
             var deletedPayableDepositDirective = payableDepositDirectiveListOfOne.First();
 
             if (!CurrentUser.IsPerson(deletedPayableDepositDirective.PayeeId))
@@ -266,8 +275,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
-
+            logger.Debug("************ Deleting payable deposit directive ************");
             await payableDepositDirectiveRepository.DeletePayableDepositDirectiveAsync(payableDepositDirectiveId);
+            logger.Debug("************ Successfully Deleted payable deposit directive ************");
+            logger.Debug("************End- Service to Delete Payable Deposit Directive - End************");
         }
 
         /// <summary>
@@ -282,13 +293,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var bankingInformationConfiguration = await bankingInformationConfigurationRepository.GetBankingInformationConfigurationAsync();
             if (bankingInformationConfiguration == null)
             {
+                logger.Debug("************Unable to retrieve banking information configuration while processing payable deposit directive authentication request. ************");
                 throw new ApplicationException("Unable to retrieve banking information configuration while processing payable deposit directive authentication request.");
             }
             if (bankingInformationConfiguration.IsAccountAuthenticationDisabled)
             {
+                logger.Debug("************Cannot process payable deposit step-up authentication request. Step-up authentication is disabled. ************");
                 throw new ApplicationException("Cannot process payable deposit step-up authentication request. Step-up authentication is disabled.");
             }
-
+            logger.Debug("************Start- Service to Authenticate Payable Deposit Directive - Start************");
             var depositDirectiveEntities = await payableDepositDirectiveRepository.GetPayableDepositDirectivesAsync(CurrentUser.PersonId);
 
             //the depositDirective id is allowed to be null or empty when the Current User has no existing directives.
@@ -302,6 +315,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 if (hasAdressSpecificDirectives)
                 {
+                    logger.Debug("************Current User must authenticate with an existing deposit directive ************");
                     throw new PermissionsException("Current User must authenticate with an existing deposit directive");
                 }
             }
@@ -309,6 +323,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 if (string.IsNullOrWhiteSpace(accountId))
                 {
+                    logger.Debug("************ Account Id cannot be null or empty ************");
                     throw new ArgumentNullException(accountId);
                 }
 
@@ -316,13 +331,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 if (depositDirectiveEntities == null ||
                     depositDirectiveEntities.FirstOrDefault(d => d.Id == depositDirectiveId) == null)
                 {
-
+                    logger.Debug("************ Current user is not authorized to update Deposit Directive Id ************");
                     throw new PermissionsException("Current user is not authorized to update depositDirectiveId");
                 }
             }
 
             var authenticationTokenEntity = await payableDepositDirectiveRepository.AuthenticatePayableDepositDirectiveAsync(CurrentUser.PersonId, depositDirectiveId, accountId, addressId);
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.BankingAuthenticationToken, BankingAuthenticationToken>();
+            logger.Debug("************End- Service to Authenticate Payable Deposit Directive - End************");
             return adapter.MapToType(authenticationTokenEntity);
         }
 
@@ -337,19 +353,22 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var bankingInformationConfiguration = await bankingInformationConfigurationRepository.GetBankingInformationConfigurationAsync();
             if (bankingInformationConfiguration == null)
             {
+                logger.Debug("************ Unable to retrieve banking information configuration during token authentication. ************");
                 throw new ApplicationException("Unable to retrieve banking information configuration during token authentication.");
             }
             if (!bankingInformationConfiguration.IsAccountAuthenticationDisabled)
             {
-
+                logger.Debug("************Start- Service to Verify authentication token - Start************");
                 if (string.IsNullOrWhiteSpace(token))
                 {
+                    logger.Debug("************ Token cannot be null or empty ************");
                     throw new ArgumentNullException("token");
                 }
 
                 Guid parsedToken;
                 if (!Guid.TryParse(token, out parsedToken))
                 {
+                    logger.Debug("************ token format is invalid. must be a guid ************");
                     throw new ArgumentException("token format is invalid. must be a guid", "token");
                 }
 
@@ -360,13 +379,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 catch (Exception e)
                 {
+                    logger.Debug("************ Token is invalid ************");
                     throw new PermissionsException("Token is invalid\n" + e.Message, e);
                 }
 
                 if (authenticationToken.ExpirationDateTimeOffset < DateTimeOffset.Now)
                 {
+                    logger.Debug("************ Token is expired ************");
                     throw new PermissionsException("Token is expired");
                 }
+                logger.Debug("************End- Service to Verify authentication token - End************");
             }
         }
     }

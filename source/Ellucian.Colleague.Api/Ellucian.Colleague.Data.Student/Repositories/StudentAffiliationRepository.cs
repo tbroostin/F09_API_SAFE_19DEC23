@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,6 +10,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Utility;
 using slf4net;
 using Ellucian.Data.Colleague.DataContracts;
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access CAMPUS.ORG.MEMBER.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -92,7 +93,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = "Unable to access ORG.TYPES code table.";
                 logger.Info(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
             return OrgTypesTable;
         }
@@ -177,7 +178,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             if (error && studentAffiliations.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No student affiiation records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No student affiiation records returned. Check API error log.");
 
             return studentAffiliations;
         }

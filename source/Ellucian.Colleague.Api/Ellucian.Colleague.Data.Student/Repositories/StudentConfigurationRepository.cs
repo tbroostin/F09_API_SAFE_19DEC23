@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,9 +8,11 @@ using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -25,6 +27,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class StudentConfigurationRepository : BaseStudentRepository, IStudentConfigurationRepository
     {
         private const string _preferredHierarchyCode = "PREFERRED";
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         public StudentConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -34,23 +37,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<StudentConfiguration> GetStudentConfigurationAsync()
         {
-            StudentConfiguration studentConfiguration = await GetOrAddToCacheAsync<StudentConfiguration>("StudentConfiguration",
-                async () =>
-                {
-                    var studentConfig = new StudentConfiguration();
-                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                    if (stwebDefaults == null)
+            try
+            {
+                StudentConfiguration studentConfiguration = await GetOrAddToCacheAsync<StudentConfiguration>("StudentConfiguration",
+                    async () =>
                     {
-                        var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
-                        logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
-                    }
-                    studentConfig.FacultyEmailTypeCode = stwebDefaults.StwebProfileFacEmailType;
-                    studentConfig.FacultyPhoneTypeCode = stwebDefaults.StwebProfileFacPhoneType;
-                    studentConfig.EnforceTranscriptRestriction = stwebDefaults.StwebTranVerifyRestr.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false;
-                    return studentConfig;
-                });
-            return studentConfiguration;
+                        var studentConfig = new StudentConfiguration();
+                        Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                        if (stwebDefaults == null)
+                        {
+                            var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                            logger.Info(errorMessage);
+                            throw new ColleagueWebApiException(errorMessage);
+                        }
+                        studentConfig.FacultyEmailTypeCode = stwebDefaults.StwebProfileFacEmailType;
+                        studentConfig.FacultyPhoneTypeCode = stwebDefaults.StwebProfileFacPhoneType;
+                        studentConfig.EnforceTranscriptRestriction = stwebDefaults.StwebTranVerifyRestr.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false;
+                        return studentConfig;
+                    });
+                return studentConfiguration;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting student configuration");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN CDM</remarks>
@@ -110,13 +126,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access DEFAULTS from CORE.PARMS table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    if (daDefaults == null)
                    {
                        var errorMessage = "Unable to access DA.DEFAULTS from ST.PARMS table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    return BuildGraduationConfiguration(stwebDefaults, graduationQuestions, defaultData.DefaultWebEmailType, daDefaults, valCodes);
                });
@@ -130,28 +146,43 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>The StudentRequestConfiguration entity</returns>
         public async Task<StudentRequestConfiguration> GetStudentRequestConfigurationAsync()
         {
-            StudentRequestConfiguration studentRequestConfiguration = await GetOrAddToCacheAsync<StudentRequestConfiguration>("StudentRequestConfiguration",
-               async () =>
-               {
-                   Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                   Ellucian.Colleague.Data.Base.DataContracts.Defaults defaultData = await DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
+            try
+            {
+                StudentRequestConfiguration studentRequestConfiguration = await GetOrAddToCacheAsync<StudentRequestConfiguration>("StudentRequestConfiguration",
+                       async () =>
+                       {
+                           Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                           Ellucian.Colleague.Data.Base.DataContracts.Defaults defaultData = await DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
 
-                   if (stwebDefaults == null)
-                   {
-                       var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
-                       logger.Info(errorMessage);
-                       stwebDefaults = new StwebDefaults();
-                   }
-                   if (defaultData == null)
-                   {
-                       var errorMessage = "Unable to access DEFAULTS from CORE.PARMS table.";
-                       logger.Info(errorMessage);
-                       defaultData = new Defaults();
-                   }
-                   return BuildStudentRequestConfiguration(stwebDefaults, defaultData.DefaultWebEmailType);
-               });
+                           if (stwebDefaults == null)
+                           {
+                               var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                               logger.Info(errorMessage);
+                               stwebDefaults = new StwebDefaults();
+                           }
+                           if (defaultData == null)
+                           {
+                               var errorMessage = "Unable to access DEFAULTS from CORE.PARMS table.";
+                               logger.Info(errorMessage);
+                               defaultData = new Defaults();
+                           }
+                           return BuildStudentRequestConfiguration(stwebDefaults, defaultData.DefaultWebEmailType);
+                       });
 
-            return studentRequestConfiguration;
+                return studentRequestConfiguration;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student request configuration information.";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message = "An exception occurred while retrieving student request configuration information.";
+                logger.Error(ex, message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -184,6 +215,51 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                });
 
             return configuration;
+        }
+
+        /// <summary>
+        /// Get the faculty grading configuration information
+        /// </summary>
+        /// <returns>The FacultyGradingConfiguration2 entity</returns>
+        public async Task<FacultyGradingConfiguration2> GetFacultyGradingConfiguration2Async()
+        {
+            try
+            {
+                FacultyGradingConfiguration2 configuration2 = await GetOrAddToCacheAsync<FacultyGradingConfiguration2>("FacultyGradingConfiguration2",
+                   async () =>
+                   {
+                       Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                       Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2 stwebDefaults2 = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2");
+
+                       if (stwebDefaults == null)
+                       {
+                           var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                           logger.Info(errorMessage);
+                           stwebDefaults = new StwebDefaults();
+                       }
+
+
+                       if (stwebDefaults2 == null)
+                       {
+                           var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.2";
+                           logger.Info(errorMessage);
+                           stwebDefaults2 = new StwebDefaults2();
+                       }
+                       return await BuildFacultyGradingConfiguration2Async(stwebDefaults, stwebDefaults2);
+                   });
+
+                return configuration2;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving faculty grading configuration information.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -260,7 +336,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                async () =>
                {
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("ST.PARMS", "CATALOG.SEARCH.DEFAULTS");
                    CourseCatalogConfiguration result;
                    if (stwebDefaults == null)
                    {
@@ -283,7 +359,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                    if (catalogSearchDefaults == null)
                    {
-                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       var errorMessage = "Unable to access catalog search defaults from ST.PARMS: CATALOG.SEARCH.DEFAULTS.";
                        logger.Info(errorMessage);
                    }
                    else
@@ -351,13 +427,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Get the course catalog configuration information needed for course catalog searches
         /// </summary>
         /// <returns>The CourseCatalogConfiguration2 entity</returns>
+        [Obsolete("Obsolete. Use GetCourseCatalogConfiguration3Async.")]
         public async Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration2Async()
         {
             CourseCatalogConfiguration configuration = await GetOrAddToCacheAsync<CourseCatalogConfiguration>("CourseCatalogConfiguration2",
                async () =>
                {
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("ST.PARMS", "CATALOG.SEARCH.DEFAULTS");
                    CourseCatalogConfiguration result;
                    if (stwebDefaults == null)
                    {
@@ -379,7 +456,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                    if (catalogSearchDefaults == null)
                    {
-                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       var errorMessage = "Unable to access catalog search defaults from ST.PARMS: CATALOG.SEARCH.DEFAULTS.";
                        logger.Info(errorMessage);
                    }
                    else
@@ -457,7 +534,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                async () =>
                {
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("ST.PARMS", "CATALOG.SEARCH.DEFAULTS");
                    CourseCatalogConfiguration result;
                    if (stwebDefaults == null)
                    {
@@ -494,7 +571,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                    if (catalogSearchDefaults == null)
                    {
-                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       var errorMessage = "Unable to access catalog search defaults from ST.PARMS: CATALOG.SEARCH.DEFAULTS.";
                        logger.Info(errorMessage);
                    }
                    else
@@ -605,7 +682,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                async () =>
                {
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("ST.PARMS", "CATALOG.SEARCH.DEFAULTS");
                    CourseCatalogConfiguration result;
                    if (stwebDefaults == null)
                    {
@@ -642,7 +719,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                    if (catalogSearchDefaults == null)
                    {
-                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       var errorMessage = "Unable to access catalog search defaults from ST.PARMS: CATALOG.SEARCH.DEFAULTS.";
                        logger.Info(errorMessage);
                    }
                    else
@@ -754,75 +831,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                });
 
-            return configuration;
-        }
-
-        /// <summary>
-        /// Retrieves the configuration information needed for registration processing asynchronously.
-        /// </summary>
-        public async Task<RegistrationConfiguration> GetRegistrationConfigurationAsync()
-        {
-            RegistrationConfiguration result;
-            RegistrationConfiguration configuration = await GetOrAddToCacheAsync<RegistrationConfiguration>("RegistrationConfiguration",
-              async () =>
-              {
-                  Ellucian.Colleague.Data.Student.DataContracts.RegDefaults regDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS");
-                  Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                  if (regDefaults == null)
-                  {
-                      var errorMessage = "Unable to access registration defaults from ST.PARMS. REG.DEFAULTS. Default values will be assumed for purpose of building registration configuration in API." + Environment.NewLine
-                      + "You can build a REG.DEFAULTS record by accessing the RGPD form in Colleague UI.";
-                      logger.Info(errorMessage);
-                      return new RegistrationConfiguration(false, 0);
-                  }
-                  else
-                  {
-                      //Add Authorization is required only if the flag is Y or y.
-                      bool requireAddAuthorization = (!string.IsNullOrEmpty(regDefaults.RgdRequireAddAuthFlag) && regDefaults.RgdRequireAddAuthFlag.ToUpper() == "Y");
-                      int offsetDays = 0;
-                      // Offset days are only applicable if require add authorization is true.
-                      if (requireAddAuthorization)
-                      {
-                          offsetDays = regDefaults.RgdAddAuthStartOffset.HasValue ? regDefaults.RgdAddAuthStartOffset.Value : 0;
-                      }
-                      if (stwebDefaults == null)
-                      {
-                          var errorMessage = "Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS.";
-                          logger.Info(errorMessage);
-                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays);
-                      }
-                      else
-                      {
-                          var quickRegistrationIsEnabled = !string.IsNullOrEmpty(stwebDefaults.StwebEnableQuickReg) && stwebDefaults.StwebEnableQuickReg.ToUpper() == "Y" ? true : false;
-                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays, quickRegistrationIsEnabled);
-                          result.PromptForDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnPromptFlag) && stwebDefaults.StwebDropRsnPromptFlag.ToUpper() == "Y" ? true : false;
-                          result.RequireDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnRequiredFlag) && stwebDefaults.StwebDropRsnRequiredFlag.ToUpper() == "Y" ? true : false;
-                          result.ShowBooksOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowBksOnSchedPrt) && stwebDefaults.StwebShowBksOnSchedPrt.ToUpper() == "Y" ? true : false;
-                          result.ShowCommentsOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowCmntOnSchedPrt) && stwebDefaults.StwebShowCmntOnSchedPrt.ToUpper() == "Y" ? true : false;
-                          result.AddDefaultTermsToDegreePlan = !string.IsNullOrEmpty(stwebDefaults.StwebAddDfltTermsToDp) && stwebDefaults.StwebAddDfltTermsToDp.ToUpper() == "N" ? false : true;
-                          result.AllowFacultyAddAuthFromWaitlist = (!string.IsNullOrEmpty(regDefaults.RgdAllowAddAuthWaitlist) && regDefaults.RgdAllowAddAuthWaitlist.ToUpper() == "Y");
-                          if (stwebDefaults.StwebQuickRegTerms != null)
-                          {
-                              foreach (var termCode in stwebDefaults.StwebQuickRegTerms)
-                              {
-                                  try
-                                  {
-                                      result.AddQuickRegistrationTerm(termCode);
-                                  }
-                                  catch (Exception ex)
-                                  {
-                                      logger.Info(ex, string.Format("Unable to add termCode '{0}' to list of quick registration terms.", termCode));
-                                  }
-                              }
-                          }
-                      }
-
-
-
-                  }
-                  return result;
-
-              });
             return configuration;
         }
 
@@ -1183,9 +1191,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         configuration.AddGradingTerm(term.Code);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         // Ignore duplicates.
+                        logger.Error(ex, "Duplicate grading term.");
                     }
 
                 }
@@ -1215,6 +1224,79 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return configuration;
         }
 
+        /// <summary>
+        /// Build the Faculty Grading Configuration2
+        /// </summary>
+        /// <param name="webDefaults">StWebDefault record</param>
+        /// <returns>FacultyGradingConfiguration2</returns>
+        private async Task<FacultyGradingConfiguration2> BuildFacultyGradingConfiguration2Async(StwebDefaults webDefaults, StwebDefaults2 webDefaults2)
+        {
+            FacultyGradingConfiguration2 configuration2 = new FacultyGradingConfiguration2();
+            if (webDefaults != null)
+            {
+                configuration2.IncludeCrosslistedStudents = !string.IsNullOrEmpty(webDefaults.StwebGradeInclXlist) && (webDefaults.StwebGradeInclXlist.ToUpper() == "Y");
+                configuration2.IncludeDroppedWithdrawnStudents = !string.IsNullOrEmpty(webDefaults.StwebGradeDropsFlag) && (webDefaults.StwebGradeDropsFlag.ToUpper() == "Y");
+                configuration2.LimitMidtermGradingToAllowedTerms = !string.IsNullOrEmpty(webDefaults.StwebMidGradeTermsFlag) && (webDefaults.StwebMidGradeTermsFlag.ToUpper() == "Y");
+                configuration2.ProvideMidtermGradingCompleteFeature = !string.IsNullOrEmpty(webDefaults.StwebMidGradeCmplFlag) && (webDefaults.StwebMidGradeCmplFlag.ToUpper() == "Y");
+                configuration2.LockMidtermGradingWhenComplete = !string.IsNullOrEmpty(webDefaults.StwebMidGradeLockFlag) && (webDefaults.StwebMidGradeLockFlag.ToUpper() == "Y");
+                configuration2.FinalGradesLastDateAttendedDisplayBehavior = ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(webDefaults.StwebLdaFinalGrading);
+                configuration2.MidtermGradesLastDateAttendedDisplayBehavior = ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(webDefaults.StwebLdaMidtermGrading);
+                configuration2.FinalGradesNeverAttendedDisplayBehavior = ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(webDefaults.StwebNaFinalGrading);
+                configuration2.MidtermGradesNeverAttendedDisplayBehavior = ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(webDefaults.StwebNaMidtermGrading);
+                configuration2.RequireLastDateAttendedOrNeverAttendedFlagBeforeFacultyDrop = !string.IsNullOrEmpty(webDefaults.StwebRequireLdanaFacDrop) && (webDefaults.StwebRequireLdanaFacDrop.ToUpper() == "Y");
+                configuration2.ShowPassAudit = !string.IsNullOrEmpty(webDefaults.StwebShowPassAudit) && (webDefaults.StwebShowPassAudit.ToUpper() == "Y");
+                configuration2.ShowRepeated = !string.IsNullOrEmpty(webDefaults.StwebShowRepeated) && (webDefaults.StwebShowRepeated.ToUpper() == "Y");
+            }
+
+            if (webDefaults2 != null)
+            {
+                configuration2.IsGradingAllowedForDroppedWithdrawnStudents = (!string.IsNullOrEmpty(webDefaults2.Stweb2DisallowGrdeDrpWth) && webDefaults2.Stweb2DisallowGrdeDrpWth.ToUpper() == "Y") ? false : true;//On GRWP if the flag(DisallowGradingForDroppedWithdrawn) is Yes then it means faculty is not allowed to grade
+                configuration2.IsGradingAllowedForNeverAttendedStudents = (!string.IsNullOrEmpty(webDefaults2.Stweb2DisallowGrdeNvrAtd) && webDefaults2.Stweb2DisallowGrdeNvrAtd.ToUpper() == "Y") ? false : true;//On GRWP if the flag(DisallowGradingForNeverAttended) is Yes then it means faculty is not allowed to grade
+            }
+
+            var allowedGradingTerms = await GetAllowedGradingTermsAsync();
+            if (allowedGradingTerms != null && allowedGradingTerms.Any())
+            {
+                foreach (var term in allowedGradingTerms)
+                {
+                    try
+                    {
+                        configuration2.AddGradingTerm(term.Code);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Ignore duplicates.
+                        logger.Error(ex, "Duplicate grading term.");
+                    }
+
+                }
+            }
+
+            configuration2.VerifyGrades = !string.IsNullOrEmpty(webDefaults.StwebVerifyGrades) ? webDefaults.StwebVerifyGrades.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false : default(bool?);
+            // Catch and log exception if the either the STWEB.MIDTERM.GRADE.COUNT is not a number or if it isn't between 0 - 6. But continue either way and let it default to zero.
+            if (!string.IsNullOrEmpty(webDefaults.StwebMidtermGradeCount))
+            {
+                try
+                {
+                    int midtermGradeCount;
+                    if (int.TryParse(webDefaults.StwebMidtermGradeCount, out midtermGradeCount))
+                    {
+                        configuration2.NumberOfMidtermGrades = midtermGradeCount;
+                    }
+                    else
+                    {
+                        logger.Info("Unable to convert STWEB.MIDTERM.GRADE.COUNT " + webDefaults.StwebMidtermGradeCount + "to an integer");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    logger.Info(ex.Message);
+                }
+            }
+            return configuration2;
+        }
+
         private async Task<IEnumerable<GradingTerm>> GetAllowedGradingTermsAsync()
         {
             return await GetValcodeAsync<GradingTerm>("ST", "GRADING.TERMS", r =>
@@ -1231,7 +1313,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 async () =>
                 {
                     StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
-                    Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                    StwebDefaults2 stwebDefaults2 = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2");
+                    Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("ST.PARMS", "CATALOG.SEARCH.DEFAULTS");
                     if (stwebDefaults == null)
                     {
                         var errorMessage = "Error while retrieving Colleague Self-Service instant enrollment configuration information; unable to retrieve ST.PARMS > STWEB.DEFAULTS.";
@@ -1304,9 +1387,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         string registrationUserRole = stwebDefaults.StwebCeRegUserRole;
                         DateTime? searchEndDate = stwebDefaults.StwebCeEndDate;
                         bool showInstantEnrollmentBookstoreLink = !string.IsNullOrEmpty(stwebDefaults.StwebCeShowBkstrLnkFlag) && stwebDefaults.StwebCeShowBkstrLnkFlag.ToUpperInvariant() == "Y";
+                        bool allowNonCitizenRegistration = false;
+
+                        if (stwebDefaults2 == null)
+                        {
+                            var errorMessage = "Unable to access Instant Enrollment configuration information from ST.PARMS > STWEB.DEFAULTS.2.";
+                            logger.Info(errorMessage);
+                        }
+                        else
+                        {
+                            allowNonCitizenRegistration = !string.IsNullOrEmpty(stwebDefaults2.Stweb2CeAllowNoncitznReg) && stwebDefaults2.Stweb2CeAllowNoncitznReg.ToUpperInvariant() == "Y";
+                        }
 
                         result = new InstantEnrollmentConfiguration(behavior, options, paymentDistributionCode, citizenshipHomeCountryCode, webPaymentsImplemented,
-                            registrationUserRole, searchEndDate, showInstantEnrollmentBookstoreLink, demographicFields);
+                            registrationUserRole, searchEndDate, showInstantEnrollmentBookstoreLink, demographicFields, allowNonCitizenRegistration);
                         // Add CE Subjects from CECS into the configuration object
                         if (stwebDefaults.StwebCeSubjects != null && stwebDefaults.StwebCeSubjects.Any())
                         {
@@ -1318,7 +1412,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         // Add Instant Enrollment catalog search options from CATALOG.SEARCH.DEFAULTS
                         if (catalogSearchDefaults == null)
                         {
-                            var errorMessage = "Unable to access Instant Enrollment catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                            var errorMessage = "Unable to access Instant Enrollment catalog search defaults from ST.PARMS: CATALOG.SEARCH.DEFAULTS.";
                             logger.Info(errorMessage);
                         }
                         else
@@ -1424,32 +1518,45 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>The Unofficial Transcript Configuration entity</returns>
         public async Task<UnofficialTranscriptConfiguration> GetUnofficialTranscriptConfigurationAsync()
         {
-            UnofficialTranscriptConfiguration result = new UnofficialTranscriptConfiguration();
-            UnofficialTranscriptConfiguration configuration = await GetOrAddToCacheAsync<UnofficialTranscriptConfiguration>("UnofficialTranscriptConfiguration",
-           async () =>
-           {
-               StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+            try
+            {
+                UnofficialTranscriptConfiguration result = new UnofficialTranscriptConfiguration();
+                UnofficialTranscriptConfiguration configuration = await GetOrAddToCacheAsync<UnofficialTranscriptConfiguration>("UnofficialTranscriptConfiguration",
+               async () =>
+               {
+                   StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
 
-               if (stwebDefaults == null)
-               {
-                   var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
-                   logger.Info(errorMessage);
-                   stwebDefaults = new StwebDefaults();
-               }
-               else
-               {
-                   result.IsUseTanscriptFormat = string.IsNullOrEmpty(stwebDefaults.StwebStUtUseFormatFlag) || stwebDefaults.StwebStUtUseFormatFlag.ToUpper() != "N";
-                   result.FontSize = (stwebDefaults.StwebStUtReportFont.HasValue) ? stwebDefaults.StwebStUtReportFont.ToString() : "0";
-                   result.PageHeight = (stwebDefaults.StwebStUtReportHeight.HasValue) ? stwebDefaults.StwebStUtReportHeight.ToString() : "0";
-                   result.PageWidth = (stwebDefaults.StwebStUtReportWidth.HasValue) ? stwebDefaults.StwebStUtReportWidth.ToString() : "0";
-                   result.TopMargin = (stwebDefaults.StwebStUtReportTMargin.HasValue) ? stwebDefaults.StwebStUtReportTMargin.ToString() : "0";
-                   result.RightMargin = (stwebDefaults.StwebStUtReportRMargin.HasValue) ? stwebDefaults.StwebStUtReportRMargin.ToString() : "0";
-                   result.BottomMargin = (stwebDefaults.StwebStUtReportBMargin.HasValue) ? stwebDefaults.StwebStUtReportBMargin.ToString() : "0";
-                   result.LeftMargin = (stwebDefaults.StwebStUtReportLMargin.HasValue) ? stwebDefaults.StwebStUtReportLMargin.ToString() : "0";
-               }
-               return result;
-           });
-            return configuration;
+                   if (stwebDefaults == null)
+                   {
+                       var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                       logger.Info(errorMessage);
+                       stwebDefaults = new StwebDefaults();
+                   }
+                   else
+                   {
+                       result.IsUseTanscriptFormat = !string.IsNullOrEmpty(stwebDefaults.StwebStUtUseFormatFlag) && stwebDefaults.StwebStUtUseFormatFlag.ToUpper() != "N";
+                       result.FontSize = (stwebDefaults.StwebStUtReportFont.HasValue) ? stwebDefaults.StwebStUtReportFont.ToString() : "0";
+                       result.PageHeight = (stwebDefaults.StwebStUtReportHeight.HasValue) ? stwebDefaults.StwebStUtReportHeight.ToString() : "0";
+                       result.PageWidth = (stwebDefaults.StwebStUtReportWidth.HasValue) ? stwebDefaults.StwebStUtReportWidth.ToString() : "0";
+                       result.TopMargin = (stwebDefaults.StwebStUtReportTMargin.HasValue) ? stwebDefaults.StwebStUtReportTMargin.ToString() : "0";
+                       result.RightMargin = (stwebDefaults.StwebStUtReportRMargin.HasValue) ? stwebDefaults.StwebStUtReportRMargin.ToString() : "0";
+                       result.BottomMargin = (stwebDefaults.StwebStUtReportBMargin.HasValue) ? stwebDefaults.StwebStUtReportBMargin.ToString() : "0";
+                       result.LeftMargin = (stwebDefaults.StwebStUtReportLMargin.HasValue) ? stwebDefaults.StwebStUtReportLMargin.ToString() : "0";
+                   }
+                   return result;
+               });
+                return configuration;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while getting the unofficial transcript configurations");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -1468,7 +1575,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access DA.DEFAULTS from ST.PARMS table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
                    if (stwebDefaults2 == null)
                    {
@@ -1480,7 +1587,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    bool hideProgressBarOverallProgressFlag = (!string.IsNullOrEmpty(stwebDefaults2.Stweb2HidePrgsBrTotPrgs) && stwebDefaults2.Stweb2HidePrgsBrTotPrgs.ToUpper() == "Y") ? true : false;
                    bool hideProgressBarTotalCreditsFlag = (!string.IsNullOrEmpty(stwebDefaults2.Stweb2HidePrgsBrTotCred) && stwebDefaults2.Stweb2HidePrgsBrTotCred.ToUpper() == "Y") ? true : false;
                    bool hideProgressBarInstitutionalCreditsFlag = (!string.IsNullOrEmpty(stwebDefaults2.Stweb2HidePrgsBrInCred) && stwebDefaults2.Stweb2HidePrgsBrInCred.ToUpper() == "Y") ? true : false;
-                   MyProgressConfiguration config = new MyProgressConfiguration(showAcadLevelStandingFlag, hideProgressBarOverallProgressFlag, hideProgressBarTotalCreditsFlag, hideProgressBarInstitutionalCreditsFlag);
+                   bool showPseudoCoursesInRequirements = (!string.IsNullOrEmpty(daDefaults.DaShowPseudoCrsesInReqs) && daDefaults.DaShowPseudoCrsesInReqs.ToUpper() == "Y") ? true : false;
+
+                   MyProgressConfiguration config = new MyProgressConfiguration(showAcadLevelStandingFlag,
+                       hideProgressBarOverallProgressFlag,
+                       hideProgressBarTotalCreditsFlag,
+                       hideProgressBarInstitutionalCreditsFlag,
+                       showPseudoCoursesInRequirements);
 
                    return config;
                });
@@ -1538,6 +1651,60 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionCensusConfiguration;
         }
 
+        /// <summary>
+        /// Retrieves the section census configuration information needed for Colleague Self-Service
+        /// </summary>
+        public async Task<SectionCensusConfiguration2> GetSectionCensusConfiguration2Async()
+        {
+            SectionCensusConfiguration2 sectionCensusConfiguration2 = await GetOrAddToCacheAsync<SectionCensusConfiguration2>("SectionCensusConfiguration2",
+                async () =>
+                {
+                    SectionCensusConfiguration2 configuration2;
+                    StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                    if (stwebDefaults == null)
+                    {
+                        var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                        logger.Info(errorMessage);
+                        throw new ApplicationException(errorMessage);
+                    }
+
+                    LastDateAttendedNeverAttendedFieldDisplayType lastDateAttendedCensusRoster =
+                        ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(stwebDefaults.StwebLdaCensusRoster);
+                    LastDateAttendedNeverAttendedFieldDisplayType neverAttendedCensusRoster =
+                        ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(stwebDefaults.StwebNaCensusRoster);
+
+                    var censusDatePositionSubmissions = new List<CensusDatePositionSubmission>();
+                    if (stwebDefaults.CensusDatePositionsEntityAssociation != null)
+                    {
+                        foreach (var censusDateSubmission in stwebDefaults.CensusDatePositionsEntityAssociation)
+                        {
+                            if (censusDateSubmission != null)
+                            {
+                                try
+                                {
+                                    CensusDatePositionSubmission censusDatePositionSubmission = new CensusDatePositionSubmission(
+                                        position: censusDateSubmission.StwebCensusDatePositionsAssocMember,
+                                        label: censusDateSubmission.StwebCensusDateLabelsAssocMember,
+                                        certifyDaysBeforeOffset: censusDateSubmission.StwebCensusDateDaysPriorAssocMember);
+
+                                    censusDatePositionSubmissions.Add(censusDatePositionSubmission);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Info(ex, string.Format("Census date position submission '{0}' is not a valid census date position submission.", censusDateSubmission.StwebCensusDatePositionsAssocMember));
+                                }
+                            }
+                        }
+                    }
+
+                    configuration2 = new SectionCensusConfiguration2(lastDateAttendedCensusRoster: lastDateAttendedCensusRoster,
+                        neverAttendedCensusRoster: neverAttendedCensusRoster,
+                        censusDatePositionSubmissions: censusDatePositionSubmissions, facultyDropReasonCode: stwebDefaults.StwebDfltFctyDropReason);
+                    return configuration2;
+                });
+            return sectionCensusConfiguration2;
+        }
+
         private LastDateAttendedNeverAttendedFieldDisplayType ConvertStringToLastDateAttendedNeverAttendedFieldDisplayType(string ldaNaFieldDisplayType)
         {
             //default to editable when not set
@@ -1580,7 +1747,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        var errorMessage = "Unable to access AC.DEFAULTS from ST.PARMS table.";
                        logger.Info(errorMessage);
-                       throw new Exception(errorMessage);
+                       throw new ColleagueWebApiException(errorMessage);
                    }
 
                    AnonymousGradingType anonymousGradingType = AnonymousGradingType.None;
@@ -1602,5 +1769,84 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return academicRecordConfiguration;
         }
 
+        /// <summary>
+        /// Get the faculty attendance configuration information
+        /// </summary>
+        /// <returns>The FacultyAttendanceConfiguration entity</returns>
+        public async Task<FacultyAttendanceConfiguration> GetFacultyAttendanceConfigurationAsync()
+        {
+            try
+            {
+                FacultyAttendanceConfiguration facultyAttendanceConfiguration = await GetOrAddToCacheAsync<FacultyAttendanceConfiguration>("FacultyAttendanceConfiguration",
+                    async () =>
+                    {
+                        var configuration = new FacultyAttendanceConfiguration();
+
+                        var stwebDefaults2 = await DataReader.ReadRecordAsync<StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2");
+                        if (stwebDefaults2 == null)
+                        {
+                            var errorMessage = "Unable to access faculty attendance web defaults from ST.PARMS STWEB.DEFAULTS.2";
+                            logger.Info(errorMessage);
+                            throw new ColleagueWebApiException(errorMessage);
+                        }
+                        configuration.CloseAttendanceCensusTrackNumber = stwebDefaults2.Stweb2ClsAttCensusNum;
+                        configuration.CloseAttendanceNumberOfDaysPastCensusTrackDate = stwebDefaults2.Stweb2ClsAttDaysPastCen;
+                        configuration.CloseAttendanceNumberOfDaysPastSectionEndDate = stwebDefaults2.Stweb2ClsAttDaysPastSec;
+                        return configuration;
+
+                    });
+                return facultyAttendanceConfiguration;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving faculty attendance configuration information.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "An exception occurred while retrieving faculty attendance configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the student records release configuration information
+        /// </summary>
+        /// <returns>The StudentRecordsReleaseConfig entity</returns>
+        public async Task<StudentRecordsReleaseConfig> GetStudentRecordsReleaseConfigAsync()
+        {
+            try
+            {
+                var studentRecordReleaseConfiguration = new StudentRecordsReleaseConfig();
+
+                var stwebDefaults2 = await DataReader.ReadRecordAsync<StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2", false);               
+                if (stwebDefaults2 == null)
+                {
+                    var errorMessage = "Unable to access student records release configuration information from ST.PARMS STWEB.DEFAULTS.2";
+                    logger.Info(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
+                }
+                //replace two _vms with a new line and replace remaining single vms with a space. 
+                if (!string.IsNullOrEmpty(stwebDefaults2.Stweb2StRecRelText))
+                {
+                    string[] vmString = { _VM.ToString() + " " + _VM.ToString(), _VM.ToString() + _VM.ToString() };
+                    studentRecordReleaseConfiguration.Text = stwebDefaults2.Stweb2StRecRelText.Split(vmString, StringSplitOptions.None).Select(a => a.Replace(_VM, ' ')).ToList();
+                }
+                studentRecordReleaseConfiguration.IsPinRequired = (!string.IsNullOrEmpty(stwebDefaults2.Stweb2StRecRelPinReq) && stwebDefaults2.Stweb2StRecRelPinReq.ToUpper() == "Y") ? true : false;
+
+                return studentRecordReleaseConfiguration;
+
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving student records release configuration information.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "An exception occurred while retrieving student records release configuration information.");
+                throw;
+            }
+        }
     }
 }

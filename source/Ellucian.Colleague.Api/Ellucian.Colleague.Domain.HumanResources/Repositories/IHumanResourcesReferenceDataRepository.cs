@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Collections.Generic;
@@ -263,5 +263,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns>Collection of TimeUnits Entities</returns>
         Task<IEnumerable<TimeUnits>> GetTimeUnitsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Gets the Configuration values from HRSS Defaults Entity in the database        
+        /// </summary>
+        /// <returns>HrssConfiguration Entity</returns>
+        Task<HRSSConfiguration> GetHrssConfigurationAsync();
     }
 }

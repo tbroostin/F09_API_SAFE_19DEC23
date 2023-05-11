@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using slf4net;
 using Ellucian.Web.Adapters;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -69,6 +70,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error(kex, message);
                 throw;
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while adding office hours";
+                logger.Error(ce, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to create office Hours ";
@@ -107,6 +114,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error(kex, message);
                 throw;
             }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while updating office hours";
+                logger.Error(ce, message);
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to update office Hours ";
@@ -143,6 +156,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var message = "Record not found for delete";
                 logger.Error(kex, message);
+                throw;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while deleting office hours";
+                logger.Error(ce, message);
                 throw;
             }
             catch (Exception ex)

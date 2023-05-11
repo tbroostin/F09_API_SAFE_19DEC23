@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student
@@ -12,5 +12,7 @@ namespace Ellucian.Colleague.Domain.Student
         public const string UpdateRegistrations = "UPDATE.REGISTRATIONS";
         // Authority to view registrations
         public const string ViewRegistrations = "VIEW.REGISTRATIONS";
+        // Authority to perform registration checks
+        public const string PerformRegistrationChecks = "PERFORM.REGISTRATION.CHECKS";
     }
 }

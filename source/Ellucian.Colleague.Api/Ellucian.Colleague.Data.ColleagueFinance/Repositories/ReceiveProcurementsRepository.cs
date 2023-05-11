@@ -1,18 +1,19 @@
-﻿using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Web.Cache;
-using Ellucian.Data.Colleague;
-using slf4net;
-using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
-using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
-using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -186,7 +187,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch (Exception ex)
                     {
-                        throw ex;
+                        throw;
                     }
                 }
             }
@@ -221,10 +222,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 response.WarningOccurred = createResponse.WarningOccurred  ? true : false;
                 response.WarningMessages = (createResponse.WarningMessages != null || createResponse.WarningMessages.Any()) ? createResponse.WarningMessages : new List<string>();
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             return response;

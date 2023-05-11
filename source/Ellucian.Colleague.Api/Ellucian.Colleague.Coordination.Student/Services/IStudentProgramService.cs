@@ -30,5 +30,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="studentAcademicProgram">Student Academic program information</param>
         /// <returns><see cref="Dtos.Student.StudentProgram2">Updated student program</returns>
         Task<Dtos.Student.StudentProgram2> UpdateStudentProgram(Dtos.Student.StudentAcademicProgram studentAcademicProgram);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="applicantId"></param>
+        /// <param name="includeInactivePrograms"></param>
+        /// <param name="currentOnly"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Dtos.Student.ApplicantStudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = false, bool currentOnly = true);
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
@@ -35,8 +35,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <summary>
         /// Name of the employee who raised this leave request
         /// </summary>
-        public string EmployeeName { get; set; }
-
+        public string EmployeeName { get { return employeeName; } }
+        private readonly string employeeName;
         /// <summary>
         /// Start date for this leave request
         /// </summary>
@@ -72,16 +72,28 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         private DateTime? endDate;
 
         /// <summary>
-        /// Identifier of the approver for this leave request
+        /// Identifier of the actioner for this leave request
         /// </summary>
         public string ApproverId { get { return approverId; } }
         private readonly string approverId;
 
         /// <summary>
-        /// Name of the approver for this leave request
+        /// Name of the actioner for this leave request
         /// </summary>
         public string ApproverName { get { return approverName; } }
         private readonly string approverName;
+
+        /// <summary>
+        /// Flag which indicates whether this LR is Withdrawn or not.
+        /// </summary>
+        public bool IsWithdrawn { get { return isWithdrawn; } }
+        private readonly bool isWithdrawn;
+
+        /// <summary>
+        /// The value of HRSS.LR.UNSUBMIT.WDRW option in LVSS form when the Leave Request is Withdrawn.
+        /// </summary>
+        public string WithdrawOption { get { return withdrawOption; } }
+        private readonly string withdrawOption;
 
         /// <summary>
         /// Current status of this leave request        
@@ -99,6 +111,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// List of all comments object associated wih this leave request
         /// </summary>
         public List<LeaveRequestComment> LeaveRequestComments { get; set; }
+
+        /// <summary>
+        /// True when leave request is created by same supervisor user
+        /// </summary>
+        public bool EnableDeleteForSupervisor { get { return enableDeleteForSupervisor; } }
+        private readonly bool enableDeleteForSupervisor;
+
+        /// <summary>
+        /// True when a withdraw request has pending supervisor approval
+        /// </summary>
+        public bool IsWithdrawPendingApproval { get { return isWithdrawPendingApproval; } }
+        private readonly bool isWithdrawPendingApproval;
         #endregion
 
         /// <summary>
@@ -111,9 +135,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="endDate"></param>
         /// <param name="approverId"></param>
         /// <param name="approverName"></param>
+        /// <param name="employeeName"></param>
         /// <param name="status"></param>
         /// <param name="leaveRequestDetails"></param>
         /// <param name="leaveRequestComments"></param>
+        /// <param name="isWithdrawPendingApproval"></param>
+        /// <param name="isWithdrawn"></param>
+        /// <param name="withdrawOption"></param
+        /// <param name="enableDeleteForSupervisor">optional</param>
         public LeaveRequest(string id,
             string perLeaveId,
             string employeeId,
@@ -121,9 +150,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             DateTime? endDate,
             string approverId,
             string approverName,
+            string employeeName,
             LeaveStatusAction status,
             List<LeaveRequestDetail> leaveRequestDetails,
-            List<LeaveRequestComment> leaveRequestComments)
+            List<LeaveRequestComment> leaveRequestComments,
+            bool isWithdrawPendingApproval,
+            bool isWithdrawn = false,
+            string withdrawOption = null,
+            bool enableDeleteForSupervisor = false)
         {
             if (string.IsNullOrEmpty(perLeaveId))
             {
@@ -149,6 +183,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentNullException("leaveRequestDetails");
             }
+
             if (!leaveRequestDetails.Any())
             {
                 throw new ArgumentException("At least one leaveRequestDetails record is required for a LeaveRequest object.");
@@ -161,9 +196,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             EndDate = endDate;
             this.approverId = approverId;
             this.approverName = approverName;
+            this.employeeName = employeeName;
             this.status = status;
+            this.isWithdrawn = isWithdrawn;
+            this.withdrawOption = withdrawOption;
             LeaveRequestDetails = leaveRequestDetails;
             LeaveRequestComments = leaveRequestComments;
+            this.enableDeleteForSupervisor = enableDeleteForSupervisor;
+            this.isWithdrawPendingApproval = isWithdrawPendingApproval;
         }
 
         /// <summary>
@@ -190,12 +230,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         }
 
         /// <summary>
-        /// The string representation of this LeaveRequest object using Id, PerLeaveId, EmployeeId, StartDate, EndDate, ApproverId, ApproverName and Status
+        /// The string representation of this LeaveRequest object using Id, PerLeaveId, EmployeeId, StartDate, EndDate, ApproverId, ApproverName, EmployeeName and Status
         /// </summary>
         /// <returns></returns>
         public override string ToString()
         {
-            return string.Format("{0}-{1}-{2}-{3}-{4}-{5}-{6}-{7}", Id, PerLeaveId, EmployeeId, StartDate, EndDate, ApproverId, ApproverName, Status);
+            return string.Format("{0}-{1}-{2}-{3}-{4}-{5}-{6}-{7}-{8}", Id, PerLeaveId, EmployeeId, StartDate, EndDate, ApproverId, ApproverName, EmployeeName, Status, WithdrawOption);
         }
     }
 }

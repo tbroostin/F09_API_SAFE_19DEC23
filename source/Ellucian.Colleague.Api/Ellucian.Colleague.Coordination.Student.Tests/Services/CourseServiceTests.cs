@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Data.Base;
@@ -464,7 +464,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 configurationRepoMock = new Mock<IStudentConfigurationRepository>();
                 configurationRepo = configurationRepoMock.Object;
-
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
 
@@ -671,6 +670,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ILogger logger;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Domain.Student.Entities.CourseCatalogConfiguration catalogConfiguration;
 
             [TestInitialize]
             public async void Initialize()
@@ -719,8 +719,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(allSections));
 
+
+                catalogConfiguration = new Domain.Student.Entities.CourseCatalogConfiguration(null, null);
+                catalogConfiguration.BypassApiCacheForAvailablityData = true;
+
                 configurationRepoMock = new Mock<IStudentConfigurationRepository>();
                 configurationRepo = configurationRepoMock.Object;
+                configurationRepoMock.Setup(repo => repo.GetCourseCatalogConfiguration4Async()).Returns(Task.FromResult(catalogConfiguration));
+
 
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
@@ -1940,14 +1946,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 openSection1.TermId = "2013/SP";
                 var openSeats1 = new Domain.Student.Entities.SectionSeats("1");
                 openSeats1.SectionCapacity = 5;
-                openSeats1.ActiveStudentIds.Add("student1");
-                openSeats1.ActiveStudentIds.Add("student2");
+                openSeats1.AddActiveStudents(new List<string>() { "student1", "student2" });
                 // Section 2, with unlimited capacity and sme registered students - OPEN
                 var openSection2 = new Ellucian.Colleague.Domain.Student.Entities.Section("2", "110", "02", DateTime.Now.AddDays(-100), 3.0m, null, "Section 2 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 openSection2.TermId = "2013/SP";
                 var openSeats2 = new Domain.Student.Entities.SectionSeats("2");
-                openSeats2.ActiveStudentIds.Add("student1");
-                openSeats2.ActiveStudentIds.Add("student2");
+                openSeats2.AddActiveStudents(new List<string>() { "student1", "student2" });
                 // Section 3, with no student's registered and no capacity - OPEN
                 var openSection3 = new Ellucian.Colleague.Domain.Student.Entities.Section("3", "110", "03", DateTime.Now.AddDays(-100), 3.0m, null, "Section 3 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 openSection3.TermId = "2013/SP";
@@ -1962,45 +1966,33 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 closedSection5.TermId = "2013/SP";
                 var openSeats5 = new Domain.Student.Entities.SectionSeats("5");
                 openSeats5.SectionCapacity = 5;
-                openSeats5.ActiveStudentIds.Add("student1");
-                openSeats5.ActiveStudentIds.Add("student2");
-                openSeats5.ActiveStudentIds.Add("student3");
-                openSeats5.ActiveStudentIds.Add("student4");
-                openSeats5.ActiveStudentIds.Add("student5");
+                openSeats5.AddActiveStudents(new List<string>() { "student1", "student2", "student3","student4", "student5" });
                 // Section 6, over capacity - CLOSED
                 var closedSection6 = new Ellucian.Colleague.Domain.Student.Entities.Section("6", "110", "06", DateTime.Now.AddDays(-100), 3.0m, null, "Section 6 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 closedSection6.TermId = "2013/SP";
                 var openSeats6 = new Domain.Student.Entities.SectionSeats("6");
                 openSeats6.SectionCapacity = 5;
-                openSeats6.ActiveStudentIds.Add("student1");
-                openSeats6.ActiveStudentIds.Add("student2");
-                openSeats6.ActiveStudentIds.Add("student3");
-                openSeats6.ActiveStudentIds.Add("student4");
-                openSeats6.ActiveStudentIds.Add("student5");
-                openSeats6.ActiveStudentIds.Add("student6");
+                openSeats6.AddActiveStudents(new List<string>() { "student1", "student2", "student3", "student4", "student5", "student6" });
                 // Section 7, seat available but waitlist exists - CLOSED
                 var closedSection7 = new Ellucian.Colleague.Domain.Student.Entities.Section("7", "110", "07", DateTime.Now.AddDays(-100), 3.0m, null, "Section 7 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 closedSection7.TermId = "2013/SP";
-                var openSeats7 = new Domain.Student.Entities.SectionSeats("7");
+                var openSeats7 = new Domain.Student.Entities.SectionSeats("7", true);
                 openSeats7.SectionCapacity = 3;
-                openSeats7.ActiveStudentIds.Add("student1");
-                openSeats7.ActiveStudentIds.Add("student2");
+                openSeats7.AddActiveStudents(new List<string>() { "student1", "student2" });
                 openSeats7.NumberOnWaitlist = 1;
                 // Section 8, between registered students and reserved seats class is closed - CLOSED
                 var closedSection8 = new Ellucian.Colleague.Domain.Student.Entities.Section("8", "110", "08", DateTime.Now.AddDays(-100), 3.0m, null, "Section 8 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 closedSection8.TermId = "2013/SP";
                 var openSeats8 = new Domain.Student.Entities.SectionSeats("8");
                 openSeats8.SectionCapacity = 5;
-                openSeats8.ActiveStudentIds.Add("student1");
-                openSeats8.ActiveStudentIds.Add("student2");
+                openSeats8.AddActiveStudents(new List<string>() { "student1", "student2" });
                 openSeats8.ReservedSeats = 3;
                 // Section 9 , it is open itself, but its cross listsed sections have reached global capacity so it is really closed
                 var closedSection9 = new Ellucian.Colleague.Domain.Student.Entities.Section("9", "110", "09", DateTime.Now.AddDays(-100), 3.0m, null, "Section 9 Title", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false);
                 closedSection9.TermId = "2013/SP";
                 var openSeats9 = new Domain.Student.Entities.SectionSeats("9");
                 openSeats9.SectionCapacity = 5;
-                openSeats9.ActiveStudentIds.Add("student1");
-                openSeats9.ActiveStudentIds.Add("student2");
+                openSeats9.AddActiveStudents(new List<string>() { "student1", "student2" });
                 openSeats9.GlobalCapacity = 7;
                 openSeats9.CrossListedSections.Add(openSeats5);
                 // Section 10 , full with waitlist
@@ -2008,8 +2000,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 closedSection10.TermId = "2013/SP";
                 var openSeats10 = new Domain.Student.Entities.SectionSeats("10");
                 openSeats10.SectionCapacity = 2;
-                openSeats10.ActiveStudentIds.Add("student1");
-                openSeats10.ActiveStudentIds.Add("student2");
+                openSeats10.AddActiveStudents(new List<string>() { "student1", "student2" });
                 openSeats10.NumberOnWaitlist = 3;
                 IEnumerable<Domain.Student.Entities.Section> testSections = new List<Domain.Student.Entities.Section>() { openSection1, openSection2, openSection3, openSection4, closedSection5, closedSection6, closedSection7, closedSection8, closedSection9, closedSection10 };
                 List<Domain.Student.Entities.SectionSeats> testSectionSeats = new List<Domain.Student.Entities.SectionSeats>() { openSeats1, openSeats2, openSeats3, openSeats4, openSeats5, openSeats6, openSeats7, openSeats8, openSeats9, openSeats10 };
@@ -11772,7 +11763,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 "BANK",
                 "US",
                 true,
-                "CEUSER", null, false, demographicFields);
+                "CEUSER", null, false, demographicFields, false);
             foreach (var subj in allSubjects)
             {
                 ieConfig.AddSubjectCodeToDisplayInCatalog(subj.Code);
@@ -13018,7 +13009,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 "BANK",
                 "US",
                 true,
-                "CEUSER", null, false, demographicFields);
+                "CEUSER", null, false, demographicFields, false);
             foreach (var subj in allSubjects)
             {
                 ieConfig.AddSubjectCodeToDisplayInCatalog(subj.Code);

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -48,7 +49,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         private TxUpdateBudgetAdjustmentResponse budgetAdjustmentResponse;
         private GetHierarchyNamesForIdsResponse getNamesforIdsResponse;
-        private TxDeleteDraftBudgetAdjustmentResponse deleteDraftResponse;
 
         // This is the budget adjustment returned by the CTX when creating one.
         private string journalNumber = "B123456";
@@ -205,65 +205,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     x.NextApproverId == nextApprover.NextApproverId);
                 Assert.IsNotNull(outputNextApprover);
             }
-        }
-
-        [TestMethod]
-        public async Task CreateAsync_DraftNotDeleted()
-        {
-            var transactionDate = DateTime.Now.Date;
-            var initiator = "Andy Kleehammer";
-            var reason = "more money";
-            var comments = "additional justificaton";
-            var personId = "0000001";
-            var draftId = "2";
-            var adjustmentLines = new List<AdjustmentLine>()
-            {
-                new AdjustmentLine("11_10_00_01_20601_51001", 100.00m, 0.00m),
-                new AdjustmentLine("11_10_00_01_20601_51000", 0m, 100.00m)
-            };
-
-            var adjustmentInputEntity = new BudgetAdjustment(transactionDate, reason, personId, adjustmentLines);
-            adjustmentInputEntity.Initiator = initiator;
-            adjustmentInputEntity.Comments = comments;
-            adjustmentInputEntity.DraftBudgetAdjustmentId = draftId;
-            var nextApprovers = new List<NextApprover>()
-            {
-                new NextApprover("AER"),
-                new NextApprover("MEL")
-            };
-            adjustmentInputEntity.NextApprovers = nextApprovers;
-            adjustmentInputEntity.Approvers = new List<Approver>();
-
-            // Set up the failure response.
-            deleteDraftResponse.AErrorCode = "MissingRecord";
-            deleteDraftResponse.AErrorMessage = "Record Locked - unable to delete DRAFT.BUDGET.ENTRIES record for ID = <V.A.DRAFT.BE.ID>";
-
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, majorComponentStartPositions);
-
-            Assert.AreEqual(journalNumber, adjustmentOutputEntity.Id);
-            Assert.AreEqual(transactionDate, adjustmentOutputEntity.TransactionDate);
-            Assert.AreEqual(initiator, adjustmentOutputEntity.Initiator);
-            Assert.AreEqual(reason, adjustmentOutputEntity.Reason);
-            Assert.AreEqual(comments, adjustmentOutputEntity.Comments);
-            Assert.AreEqual(false, adjustmentOutputEntity.DraftDeletionSuccessfulOrUnnecessary);
-            Assert.AreEqual(null, adjustmentOutputEntity.ErrorMessages);
-
-            foreach (var adjustmentLine in adjustmentInputEntity.AdjustmentLines)
-            {
-                var outputAdjustmentLine = adjustmentOutputEntity.AdjustmentLines.FirstOrDefault(x =>
-                    x.GlNumber == adjustmentLine.GlNumber
-                    && x.FromAmount == adjustmentLine.FromAmount
-                    && x.ToAmount == adjustmentLine.ToAmount);
-                Assert.IsNotNull(outputAdjustmentLine);
-            }
-
-            foreach (var nextApprover in adjustmentInputEntity.NextApprovers)
-            {
-                var outputNextApprover = adjustmentOutputEntity.NextApprovers.FirstOrDefault(x =>
-                    x.NextApproverId == nextApprover.NextApproverId);
-                Assert.IsNotNull(outputNextApprover);
-            }
-        }
+        }        
 
         [TestMethod]
         public async Task CreateAsync_ErrorReturned()
@@ -1547,18 +1489,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             transManagerMock.Setup(txio => txio.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
             {
                 return Task.FromResult(getNamesforIdsResponse);
-            });
-
-            deleteDraftResponse = new TxDeleteDraftBudgetAdjustmentResponse()
-            {
-                AErrorCode = "",
-                AErrorMessage = ""
-            };
-
-            transManagerMock.Setup(tio => tio.ExecuteAsync<TxDeleteDraftBudgetAdjustmentRequest, TxDeleteDraftBudgetAdjustmentResponse>(It.IsAny<TxDeleteDraftBudgetAdjustmentRequest>())).Returns(() =>
-            {
-                return Task.FromResult(deleteDraftResponse);
-            });
+            });            
 
             // Mock ReadRecord to return a pre-defined Opers data contract.
             // Mock bulk read UT.OPERS bulk read
@@ -1683,7 +1614,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     budgetEntriesDataContract.BgteStatus.Add("U");
                     break;
                 default:
-                    throw new Exception("Invalid status specified in BudgetAdjustmentRepositoryTests");
+                    throw new ColleagueWebApiException("Invalid status specified in BudgetAdjustmentRepositoryTests");
             }
             budgetEntriesDataContract.BudgetEntriesAddopr = "0000001";
 

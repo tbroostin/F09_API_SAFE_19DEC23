@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,7 @@ using slf4net;
 using Moq;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
 {
@@ -155,7 +156,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
                         var val2 = prop2.GetValue(output);
                         if((val1 == null || val2 == null) && val1 != val2)
                         {
-                            throw new Exception(string.Format("{0} and {1} are not equal",prop1.Name,prop2.Name));
+                            throw new ColleagueWebApiException(string.Format("{0} and {1} are not equal",prop1.Name,prop2.Name));
                         }
                         else if (val1 != null && val2 != null)
                         {

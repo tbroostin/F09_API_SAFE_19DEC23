@@ -1,9 +1,10 @@
-﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Mvc.Controller;
 using Ellucian.Web.Resource;
 using Newtonsoft.Json;
@@ -150,8 +151,10 @@ namespace Ellucian.Colleague.Api.Controllers
                 try
                 {
                     username = HttpContext.User.Identity.Name;
-                }catch(Exception)
+                }
+                catch (Exception ex)
                 {
+                    logger.Error(ex.Message, "Error at user identity name");
                 }
 
                 try
@@ -187,7 +190,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     var cookieValue = cookie == null ? null : cookie.Value;
                     if (string.IsNullOrEmpty(cookieValue))
                     {
-                        throw new Exception("Log in first");
+                        throw new ColleagueWebApiException("Log in first");
                     }
                     var baseUrl = cookieValue.Split('*')[0];
                     var token = cookieValue.Split('*')[1];

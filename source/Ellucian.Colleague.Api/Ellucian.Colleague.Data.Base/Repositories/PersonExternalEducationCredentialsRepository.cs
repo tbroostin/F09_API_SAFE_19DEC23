@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -26,8 +26,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonExternalEducationCredentialsRepository : BaseColleagueRepository, IPersonExternalEducationCredentialsRepository
     {
-        public RepositoryException exception = new RepositoryException();
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private RepositoryException exception = new RepositoryException();
+        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
         
         public PersonExternalEducationCredentialsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)

@@ -13,6 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -441,7 +442,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 expectedRepository.AwardLetterHistoryRecordsData = new List<TestStudentAwardYearRepository.AwardLetterHistoryRecord>();
                 actualStudentAwardYears = (await actualRepository.GetStudentAwardYearsAsync(studentId, currentOfficeService)).ToList();
                 Assert.IsTrue(actualStudentAwardYears.All(y => !y.AwardLetterHistoryItemsForYear.Any()));
-                loggerMock.Verify(l => l.Info(string.Format("Student Id {0} has no award letter history records", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student Id {0} has no award letter history records", studentId)));
             }
 
             [TestMethod]
@@ -916,7 +917,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             /// the transaction response is different than a record lock
             /// </summary>           
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void DifferentErrorMessage_NoExceptionThrownTest()
             {
                 expectedRepository.transactionResponseData.ErrorMessage = "Different error message";
@@ -1040,7 +1041,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             /// the transaction response is different than a record lock
             /// </summary>           
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task DifferentErrorMessage_NoExceptionThrownTest()
             {
                 expectedRepository.transactionResponseData.ErrorMessage = "Different error message";

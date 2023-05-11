@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -1593,7 +1593,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("GetAccountingStringByFilterAsync", routeData.Values["Action"]);
         }
 
-       
+
 
         [TestMethod]
         public void Route_AccountingStrings_GetAccountingStringsByType_7()
@@ -3059,6 +3059,17 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("addresses/{id}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Addresses", routeData.Values["Controller"]);
             Assert.AreEqual("DeleteAddressAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetPersonAddresses2Async_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/addresses/personId", "application/vnd.ellucian.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("addresses/{personId}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Addresses", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPersonAddresses2Async", routeData.Values["Action"]);
         }
 
         #endregion Addresses
@@ -8981,17 +8992,6 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         [TestMethod]
-        public void DefaultRoute_Configuration_GetFacultyGradingConfiguration()
-        {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-grading", _mediaTypeHeaderVersion1);
-            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
-            Assert.IsNotNull(routeData);
-            Assert.AreEqual("configuration/faculty-grading", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
-            Assert.AreEqual("GetFacultyGradingConfigurationAsync", routeData.Values["Action"]);
-        }
-
-        [TestMethod]
         public void DefaultRoute_Configuration_GetStudentProfileConfigurationAsync_v1()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/student-profile", _mediaTypeHeaderVersion1);
@@ -9339,6 +9339,39 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         [TestMethod]
+        public void DefaultRoute_Configuration_GetFacultyGradingConfiguration_GET()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-grading");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/faculty-grading", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultyGradingConfiguration2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Configuration_GetFacultyGradingConfiguration_GET_V2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-grading", _mediaTypeHeaderVersion2);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/faculty-grading", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultyGradingConfiguration2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Configuration_GetFacultyGradingConfiguration_GET_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-grading", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/faculty-grading", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultyGradingConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void DefaultRoute_GetSectionCensusConfigurationAsync_GET()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-census");
@@ -9346,9 +9379,19 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.IsNotNull(routeData);
             Assert.AreEqual("configuration/section-census", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
-            Assert.AreEqual("GetSectionCensusConfigurationAsync", routeData.Values["Action"]);
+            Assert.AreEqual("GetSectionCensusConfiguration2Async", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void Route_GetSectionCensusConfigurationAsync_GET_V2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-census", _mediaTypeHeaderVersion2);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/section-census", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionCensusConfiguration2Async", routeData.Values["Action"]);
+        }
 
         [TestMethod]
         public void Route_GetSectionCensusConfigurationAsync_GET_V1()
@@ -9381,6 +9424,50 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("configuration/academic-record", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
             Assert.AreEqual("GetAcademicRecordConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_GetSectionAvailabilityInformationConfigurationAsync_GET()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-availability-information");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/section-availability-information", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionAvailabilityInformationConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetSectionAvailabilityInformationConfigurationAsync_GET_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-availability-information", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/section-availability-information", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionAvailabilityInformationConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Configuration_GetFacultyAttendanceConfiguration_GET()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-attendance");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/faculty-attendance", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultyAttendanceConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Configuration_GetFacultyAttendanceConfiguration_GET_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/faculty-attendance", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/faculty-attendance", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultyAttendanceConfigurationAsync", routeData.Values["Action"]);
         }
 
         #endregion Configuration
@@ -17318,13 +17405,13 @@ namespace Ellucian.Colleague.Api.Routing.Tests
 
         [TestMethod]
         public void Default_Route_FiscalYearsByGuid_UnsupportedVersion()
-            {
-                var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-years/guid", "application/vnd.hedtech.integration.v2+json");
-                RouteData routeData = routes.GetRouteData(httpContextMock.Object);
-                Assert.IsNotNull(routeData);
-                Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
-                Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
-            }
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-years/guid", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
 
         [TestMethod]
         public void Route_FiscalYearsByGuid_V11()
@@ -19646,6 +19733,17 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("Initiator", routeData.Values["Controller"]);
             Assert.AreEqual("GetInitiatorByKeywordAsync", routeData.Values["Action"]);
         }
+
+        [TestMethod]
+        public void DefaultRoute_Initiator_QueryInitiatorByKeywordAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/initiator", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/initiator", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Initiator", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryInitiatorByKeywordAsync", routeData.Values["Action"]);
+        }
         #endregion
 
         #region Institutions
@@ -19770,7 +19868,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
-            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);           
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         /*
@@ -23590,6 +23688,17 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("next-approvers-search/{queryKeyword}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Approvers", routeData.Values["Controller"]);
             Assert.AreEqual("GetNextApproverByKeywordAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_NextApprovers_QueryNextApproverByKeywordAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/next-approvers-search", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/next-approvers-search", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Approvers", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryNextApproverByKeywordAsync", routeData.Values["Action"]);
         }
 
         #endregion
@@ -28683,14 +28792,14 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         #region PhoneNumbers
 
         [TestMethod]
-        public void DefaultRoute_PhoneNumbers_GetPersonPhones()
+        public void DefaultRoute_PhoneNumbers_GetPersonPhonesAsync()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/phone-numbers/personId");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("phone-numbers/{personId}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("PhoneNumbers", routeData.Values["Controller"]);
-            Assert.AreEqual("GetPersonPhones", routeData.Values["Action"]);
+            Assert.AreEqual("GetPersonPhonesAsync", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28874,7 +28983,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         [TestMethod]
         public void DefaultRoute_PlanningStudents_QueryEvaluations3()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/students/id/evaluation",  _mediaTypeHeaderVersion3);
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/students/id/evaluation", _mediaTypeHeaderVersion3);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("qapi/students/{id}/evaluation", GetRouteTemplate(routeData.Route));
@@ -38585,14 +38694,36 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         [TestMethod]
-        public void DefaultRoute_Students_GetRegistrationEligibility2()
+        public void Route_Students_GetRegistrationEligibility_2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/registration-eligibility", _mediaTypeHeaderVersion2);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/registration-eligibility", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetRegistrationEligibility2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Students_GetRegistrationEligibility_3()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/registration-eligibility", _mediaTypeHeaderVersion3);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/registration-eligibility", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetRegistrationEligibility3Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Students_GetRegistrationEligibility3()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/registration-eligibility");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("students/{studentId}/registration-eligibility", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Students", routeData.Values["Controller"]);
-            Assert.AreEqual("GetRegistrationEligibility2Async", routeData.Values["Action"]);
+            Assert.AreEqual("GetRegistrationEligibility3Async", routeData.Values["Action"]);
         }
 
 
@@ -39640,6 +39771,64 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("GetStudentRequestFeeAsync", routeData.Values["Action"]);
         }
         #endregion StudentRequests
+
+        #region Student Release Access
+
+        [TestMethod]
+        public void DefaultRoute_StudentRecordsRelease_GetStudentReleaseAccessCodesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-release-access-code");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("student-release-access-code", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentRecordsRelease", routeData.Values["Controller"]);
+            Assert.AreEqual("GetStudentReleaseAccessCodesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_StudentRecordsRelease_GetStudentRecordsReleaseConfigAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/student-records-release");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/student-records-release", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentRecordsRelease", routeData.Values["Controller"]);
+            Assert.AreEqual("GetStudentRecordsReleaseConfigAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_StudentRecordsRelease_GetStudentRecordsReleaseInformation()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/{studentId}/student-records-release-info");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/student-records-release-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentRecordsRelease", routeData.Values["Controller"]);
+            Assert.AreEqual("GetStudentRecordsReleaseInformationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_StudentRecordsRelease_GetStudentRecordsReleaseDenyAccess()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/{studentId}/student-records-release-deny-access");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/student-records-release-deny-access", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentRecordsRelease", routeData.Values["Controller"]);
+            Assert.AreEqual("GetStudentRecordsReleaseDenyAccessAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_StudentRecordsRelease_DenyStudentRecordsReleaseAccess()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/deny-student-records-release-access");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("deny-student-records-release-access", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentRecordsRelease", routeData.Values["Controller"]);
+            Assert.AreEqual("DenyStudentRecordsReleaseAccessAsync", routeData.Values["Action"]);
+        }
+        #endregion
 
         #region Subjects
 
@@ -40949,7 +41138,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.IsNotNull(routeData);
             Assert.AreEqual("users/{userId}/proxy-permissions", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Users", routeData.Values["Controller"]);
-            Assert.AreEqual("PostUserProxyPermissionsAsync", routeData.Values["Action"]);
+            Assert.AreEqual("PostUserProxyPermissionsV2Async", routeData.Values["Action"]);
         }
 
         [TestMethod]

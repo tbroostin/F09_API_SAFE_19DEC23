@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -6,11 +6,21 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using System;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.Base.Tests
 {
     public class TestConfigurationRepository : IConfigurationRepository
     {
+        /// <summary>
+        /// Get the Denied and Secured Data Properties from the CTX call.
+        /// </summary>
+        /// <returns>Returns a Tuple with the secure flag and list of denied data fields and list of secure data fields.</returns>
+        public Tuple<bool, List<string>, List<string>> GetSecureDataDefinition()
+        {
+            return new Tuple<bool, List<string>, List<string>>(false, new List<string>(), new List<string>());
+        }
+
         /// <summary>
         /// Dictionary of string, string that contains the Ethos Extended Data to send into the CTX
         /// key is column name
@@ -45,6 +55,37 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 AdapterDebugLevel.Debug, 10, new List<ResourceBusinessEventMapping>());
         }
 
+        public async Task<IEnumerable<AuditLogConfiguration>> GetAuditLogConfigurationAsync(bool bypassCache = false)
+        {
+            return new List<AuditLogConfiguration>()
+            {
+                { new AuditLogConfiguration("F6738651-11F0-46B7-ACB1-DF5B318398CE", "Authentication", "Authentication Event Logging", true) },
+                { new AuditLogConfiguration("5F7EE117-2C22-4D35-8972-61A3910A69D2", "Authorization", "Authorization Event Logging", true ) },
+                { new AuditLogConfiguration("3233E4B1-7A88-4430-ACBA-6E1765831B1D", "DataOperation", "DataOperation Event Logging", true ) },
+                { new AuditLogConfiguration("FDE3112B-CDD5-4EB1-AC4D-3F8EFEB58164", "Configuration", "Configuration Event Logging", true ) },
+                { new AuditLogConfiguration("9F2BB023-7219-40F9-843C-534EA1F70D00", "RoleManagement", "RoleManagement Event Logging", true ) },
+                { new AuditLogConfiguration("9D0BE906-C3BD-4012-93D5-6CA9F0F19FDD", "UserManagement", "UserManagement Event Logging", true ) },
+            };
+        }
+
+        public async Task<IEnumerable<AuditLogCategory>> GetAuditLogCategoriesAsync(bool ignoreCache)
+        {
+            return new List<AuditLogCategory>()
+            {
+                { new AuditLogCategory("F6738651-11F0-46B7-ACB1-DF5B318398CE", "Authentication", "Authentication") },
+                { new AuditLogCategory("5F7EE117-2C22-4D35-8972-61A3910A69D2", "Authorization", "Authorization") },
+                { new AuditLogCategory("3233E4B1-7A88-4430-ACBA-6E1765831B1D", "DataOperation", "DataOperation" ) },
+                { new AuditLogCategory("FDE3112B-CDD5-4EB1-AC4D-3F8EFEB58164", "Configuration", "Configuration" ) },
+                { new AuditLogCategory("9F2BB023-7219-40F9-843C-534EA1F70D00", "RoleManagement", "RoleManagement" ) },
+                { new AuditLogCategory("9D0BE906-C3BD-4012-93D5-6CA9F0F19FDD", "UserManagement", "UserManagement" ) },
+            };
+        }
+
+        public async Task<AuditLogConfiguration> UpdateAuditLogConfigurationAsync(AuditLogConfiguration auditLogConfiguration)
+        {
+            return (await GetAuditLogConfigurationAsync(false)).FirstOrDefault();
+        }
+
         public async Task<UserProfileConfiguration> GetUserProfileConfigurationAsync()
         {
             var upc = new UserProfileConfiguration()
@@ -67,7 +108,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 CanUpdateAddressWithoutPermission = true,
                 CanUpdateEmailWithoutPermission = true,
                 CanUpdatePhoneWithoutPermission = true,
-                Text = "Test User Profile Configuration Text"
+                Text = "Test User Profile Configuration Text",
+                AuthorizePhonesForText = true
             };
             upc.UpdateAddressTypeConfiguration(true, null, null, null);
             upc.UpdateEmailTypeConfiguration(false, new List<string>() { "COL" }, false, new List<string>() { "COL" });
@@ -115,7 +157,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return null;
         }
 
-        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false)
+        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, Dictionary<string, Dictionary<string, string>> allColumnData = null, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false, bool returnRestrictedFields = false)
         {
             var ethosExtensibleData = new List<EthosExtensibleData>();
 
@@ -153,7 +195,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return null;
         }
 
-        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false)
+        public async Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, bool bypassCache = false, bool readRtFields = false)
         {
             var dataRow = new EthosExtensibleDataRow("LAST.NAME", "PERSON", "lastName", "/name/", "string", "Bennett", 35);
             var dataRows = new List<EthosExtensibleDataRow>() { dataRow };
@@ -162,7 +204,17 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return ethosExtensibleData;
         }
 
-        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false)
+        public async Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntitiesByResource(string resourceName, bool customOnly = true, bool bypassCache = false)
+        {
+            var ethosExtensibleDatas = new List<Domain.Base.Entities.EthosExtensibleData> ();
+            var dataRow = new EthosExtensibleDataRow("LAST.NAME", "PERSON", "lastName", "/name/", "string", "Bennett", 35);
+            var dataRows = new List<EthosExtensibleDataRow>() { dataRow };
+            var ethosExtensibleData = new EthosExtensibleData(resourceName,"1", "", resourceName, "", dataRows);
+            ethosExtensibleDatas.Add(ethosExtensibleData);
+            return ethosExtensibleDatas;
+        }
+
+        public async Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false, string requestedVersion = "")
         {
             return "1.0.0";
         }
@@ -171,6 +223,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
         {
             var ethosApiConfiguration = new EthosApiConfiguration()
             {
+                ApiType = "A",
                 ResourceName = resourceName,
                 PrimaryEntity = "PERSON",
                 PrimaryGuidFileName = "PERSON",
@@ -179,10 +232,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 SelectFileName = "PERSON",
                 SelectionCriteria = new List<EthosApiSelectCriteria>() { new EthosApiSelectCriteria("WITH", "PERSON.CORP.INDICATOR", "NE", "''") },
                 HttpMethods = new List<EthosApiSupportedMethods>() {
-                    new EthosApiSupportedMethods("GET", "VIEW.ANY.PERSON"),
-                    new EthosApiSupportedMethods("POST", "UPDATE.PERSON"),
-                    new EthosApiSupportedMethods("PUT", "UPDATE.PERSON"),
-                    new EthosApiSupportedMethods("DELETE", "DELETE.PERSON.CONTACT")
+                    new EthosApiSupportedMethods("GET", "VIEW.ANY.PERSON", "Get all respurces", "Get all respurces"),
+                    new EthosApiSupportedMethods("POST", "UPDATE.PERSON", "Create new resource",  "Create new resource"),
+                    new EthosApiSupportedMethods("PUT", "UPDATE.PERSON", "Update existing resource", "Update existing resource"),
+                    new EthosApiSupportedMethods("DELETE", "DELETE.PERSON.CONTACT", "Delete existing resource", "Delete existing resource")
                 }
             };
 
@@ -246,6 +299,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             upc.CanViewUpdateNickname = UserProfileViewUpdateOption.Viewable;
             upc.CanViewUpdatePronoun = UserProfileViewUpdateOption.Viewable;
             upc.Text = "Test User Profile Configuration Text";
+            upc.AuthorizePhonesForText = true;
             return upc;
         }
 

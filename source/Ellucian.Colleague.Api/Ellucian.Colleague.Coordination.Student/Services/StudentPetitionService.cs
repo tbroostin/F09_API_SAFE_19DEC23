@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -71,6 +71,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     studentPetitionsDto.AddRange(studentPetitionsEntity.Select(s => studentPetitionDtoAdapter.MapToType(s)));
                 }
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read student petitions from repository using student id " + studentId;
@@ -106,6 +111,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var studentPetitionDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentOverloadPetition, Ellucian.Colleague.Dtos.Student.StudentOverloadPetition>();
                     studentOverloadPetitionsDto.AddRange(studentPetitionsEntity.Select(s => studentPetitionDtoAdapter.MapToType(s)));
                 }
+            }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

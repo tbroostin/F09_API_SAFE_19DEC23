@@ -20,6 +20,7 @@ using System.Runtime.Caching;
 using System.Linq;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -186,7 +187,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AddRetentionAlertCase_WithAllNull()
             {
                 var retentionAlertCaseEntity = AddRetentionAlertCase_WithNullValues();
@@ -197,7 +198,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AddOrUpdateRetentionAlertCase_ResponseHasErrorMessage()
             {
                 var retentionAlertCaseEntity = AddRetentionAlertCase_WithNullValues();
@@ -306,7 +307,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateRetentionAlertCase_WithAllNull()
             {
                 var retentionAlertCaseEntity = UpdateRetentionAlertCase_WithNullValues();
@@ -317,7 +318,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateRetentionAlertCase_ResponseHasErrorMessage()
             {
                 var retentionAlertCaseEntity = UpdateRetentionAlertCase_WithNullValues();
@@ -601,7 +602,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetRetentionAlertCaseDetail_ResponseHasErrorMessage()
             {
                 GetRaCaseDetailsResponse getResponse = new GetRaCaseDetailsResponse()

@@ -127,5 +127,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             }
             return Task.FromResult(shoppingSheetRuleTables.AsEnumerable());
         }
+
+        public Task GetCustomVerbiageAsync(ShoppingSheetRuleTable ruleTable, string studentId)
+        {
+            return null;
+        }
     }
 }

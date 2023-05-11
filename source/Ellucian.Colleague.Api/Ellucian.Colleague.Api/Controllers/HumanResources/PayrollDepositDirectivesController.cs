@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -18,6 +18,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Ellucian.Data.Colleague.Exceptions;
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
     /// <summary>
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     public class PayrollDepositDirectivesController : BaseCompressedApiController
     {
         private const string stepUpAuthenticationHeaderKey = "X-Step-Up-Authentication";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         private readonly ILogger logger;
         private readonly IPayrollDepositDirectiveService payrollDepositDirectiveService;
@@ -53,9 +55,17 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await payrollDepositDirectiveService.GetPayrollDepositDirectivesAsync();
+                logger.Debug("************Start- Process to get Payroll Deposit Directives - Start************");
+                var response = await payrollDepositDirectiveService.GetPayrollDepositDirectivesAsync();
+                logger.Debug("************End- Process to get Payroll Deposit Directives - End************");
+                return response;
             }
 
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (KeyNotFoundException knfe)
             {
                 var message = "Unable to find current user in payroll file";
@@ -86,11 +96,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                throw CreateHttpResponseException("PayrollDepositDirective Id must me provided in the URI", HttpStatusCode.BadRequest);
+                logger.Debug("************ Payroll Deposit Directive Id must be provided ************");
+                throw CreateHttpResponseException("PayrollDepositDirective Id must be provided in the URI", HttpStatusCode.BadRequest);
             }
             try
             {
-                return await payrollDepositDirectiveService.GetPayrollDepositDirectiveAsync(id);
+                logger.Debug("************Start- Process to get Payroll Deposit Directive - Start************");
+                var response = await payrollDepositDirectiveService.GetPayrollDepositDirectiveAsync(id);
+                logger.Debug("************End- Process to get Payroll Deposit Directive - End************");
+                return response;
             }
             catch (KeyNotFoundException knfe)
             {
@@ -128,6 +142,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (payrollDepositDirectives == null)
             {
+                logger.Debug("************ Payroll Deposit Directives cannot be null when updating Payroll deposit directives ************");
                 throw CreateHttpResponseException("PayrollDepositDirectives cannot be null when updating PayrollDepositDirectives",
                     HttpStatusCode.BadRequest);
             }
@@ -136,7 +151,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-                return await payrollDepositDirectiveService.UpdatePayrollDepositDirectivesAsync(token, payrollDepositDirectives);
+                logger.Debug("************Start- Process to Update Payroll Deposit Directives - Start************");
+                var response = await payrollDepositDirectiveService.UpdatePayrollDepositDirectivesAsync(token, payrollDepositDirectives);
+                logger.Debug("************End- Process to Update Payroll Deposit Directives - End************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {
@@ -176,16 +199,19 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                logger.Debug("************ Id cannot be null when updating Payroll Deposit Directives ************");
                 throw CreateHttpResponseException("Identifier cannot be null when updating PayrollDepositDirectives",
                     HttpStatusCode.BadRequest);
             }
             if (payrollDepositDirective == null)
             {
-                throw CreateHttpResponseException("PayrollDepositDirectives cannot be null when updating PayrollDepositDirectives",
+                logger.Debug("************ Payroll deposit directive cannot be null when updating Payroll Deposit Directive ************");
+                throw CreateHttpResponseException("PayrollDepositDirectives cannot be null when updating PayrollDepositDirective",
                     HttpStatusCode.BadRequest);
             }
             if (id != payrollDepositDirective.Id)
             {
+                logger.Debug("************ ID provided must match Id in directive ************");
                 throw CreateHttpResponseException("Id in URI must match Id in directive",
                     HttpStatusCode.BadRequest);
             }
@@ -194,7 +220,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                logger.Debug("************Start- Process to Update Payroll Deposit Directive - Start************");
                 return await payrollDepositDirectiveService.UpdatePayrollDepositDirectiveAsync(token, payrollDepositDirective);
+                logger.Debug("************End- Process to Update Payroll Deposit Directive - End************");
             }
             catch (KeyNotFoundException knfe)
             {
@@ -233,16 +261,24 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (payrollDepositDirective == null)
             {
+                logger.Debug("************ Payroll deposit directive cannot be null when updating Payroll Deposit Directives ************");
                 throw CreateHttpResponseException("payrollDepositDirective cannot be null when creating PayrollDepositDirectives",
                     HttpStatusCode.BadRequest);
             }
             var token = GetStepUpAuthenticationHeaderValue();
             try
             {
+                logger.Debug("************ Start- Process to Create Payroll Deposit Directive - Start ************");
                 var createdDirective = await payrollDepositDirectiveService.CreatePayrollDepositDirectiveAsync(token, payrollDepositDirective);
                 var response = Request.CreateResponse<PayrollDepositDirective>(HttpStatusCode.Created, createdDirective);
                 SetResourceLocationHeader("GetPayrollDepositDirective", new { id = createdDirective.Id });
+                logger.Debug("************ End - Process to Create Payroll Deposit Directive - End ************");
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {
@@ -282,21 +318,34 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                logger.Debug("************ Payroll deposit directive Id must be provided ************");
                 throw CreateHttpResponseException("PayrollDepositDirective Id must me provided in the URI", HttpStatusCode.BadRequest);
             }
             var token = GetStepUpAuthenticationHeaderValue();
             try
             {
+                logger.Debug("************ Start- Process to Delete Payroll Deposit Directive - Start ************");
                 var isSuccess = await payrollDepositDirectiveService.DeletePayrollDepositDirectiveAsync(token, id);
                 if (isSuccess)
                 {
+                    logger.Debug("************ Successfully deleted Payroll deposit directive ************");
+                    logger.Debug("************ End - Process to Delete Payroll Deposit Directive - End ************");
                     return Request.CreateResponse(HttpStatusCode.NoContent);
                 }
                 else
                 {
+                    logger.Debug("************ Failed to delete Payroll deposit directive ************");
+                    logger.Debug("************ End - Process to Delete Payroll Deposit Directive - End ************");
                     throw CreateHttpResponseException("Unable to delete payroll deposit directieve", HttpStatusCode.BadRequest);
                 }
+                
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (KeyNotFoundException knfe)
             {
                 var message = string.Format("Unable to find requested deposit {0} in payroll file", id);
@@ -345,22 +394,34 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (!id.Any())
             {
-                throw CreateHttpResponseException("One or more PayrollDepositDirective Ids must me provided in the uri", HttpStatusCode.BadRequest);
+                logger.Debug("************ One or more Payroll Deposit Directive must be provided ************");
+                throw CreateHttpResponseException("One or more PayrollDepositDirective Ids must be provided in the uri", HttpStatusCode.BadRequest);
             }
 
             var token = GetStepUpAuthenticationHeaderValue();
 
             try
             {
+                logger.Debug("************ Start- Process to Delete Multiple Payroll Deposit Directives - Start ************");
                 var isSuccess = await payrollDepositDirectiveService.DeletePayrollDepositDirectivesAsync(token, id);
                 if (isSuccess)
                 {
+                    logger.Debug("************ Successfully deleted Payroll deposit directives ************");
+                    logger.Debug("************ End - Process to Delete Multiple Payroll Deposit Directives - End ************");
                     return Request.CreateResponse(HttpStatusCode.NoContent);
                 }
                 else
                 {
+                    logger.Debug("************ Failed to delete Payroll deposit directives ************");
+                    logger.Debug("************ End - Process to Delete Multiple Payroll Deposit Directives - End ************");
                     throw CreateHttpResponseException("Unable to delete payroll deposit directives", HttpStatusCode.BadRequest);
                 }
+                
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (KeyNotFoundException knfe)
             {
@@ -393,16 +454,26 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                logger.Debug("************ Payroll Deposit Directive id must be provided ************");
                 throw CreateHttpResponseException("id of PayrollDepositDirective is required in request URI", HttpStatusCode.BadRequest);
             }
             if (string.IsNullOrWhiteSpace(value))
             {
+                logger.Debug("************ Authentication value/ account id is required in request body ************");
                 throw CreateHttpResponseException("authentication value is required in request body");
             }
 
             try
             {
-                return await payrollDepositDirectiveService.AuthenticateCurrentUserAsync(id, value);
+                logger.Debug("************ Start- Process to Post Payroll Deposit Directive Authentication - Start ************");
+                var response = await payrollDepositDirectiveService.AuthenticateCurrentUserAsync(id, value);
+                logger.Debug("************ End - Process to Post Payroll Deposit Directive Authentication - End ************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -419,7 +490,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await payrollDepositDirectiveService.AuthenticateCurrentUserAsync(null, null);
+                logger.Debug("************ Start- Process to Authenticate current user - Start ************");
+                var response = await payrollDepositDirectiveService.AuthenticateCurrentUserAsync(null, null);
+                logger.Debug("************ End - Process to Authenticate current user - End ************");
+                return response;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

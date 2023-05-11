@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Text;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -97,7 +98,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             buyer.Id = source.Guid;
             if (string.IsNullOrWhiteSpace(source.Name))
             {
-                throw new Exception("The name was not found for this Staff record, Entity: Staff, Record ID: " + source.RecordKey);
+                throw new ColleagueWebApiException("The name was not found for this Staff record, Entity: Staff, Record ID: " + source.RecordKey);
             }
 
             var buyerPersonName = new Dtos.DtoProperties.NamePersonDtoProperty();

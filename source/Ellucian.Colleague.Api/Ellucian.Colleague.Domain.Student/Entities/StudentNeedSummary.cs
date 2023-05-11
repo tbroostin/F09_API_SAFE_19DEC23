@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// The number of months for which the budget is applicable.
         /// </summary>
-        public decimal? BudgetDuration;
+        public decimal? BudgetDuration { get; set; }
 
         /// <summary>
         /// Federal total expenses

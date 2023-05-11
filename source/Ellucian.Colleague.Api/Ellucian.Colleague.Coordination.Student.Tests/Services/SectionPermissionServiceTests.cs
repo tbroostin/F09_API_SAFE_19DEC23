@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,12 +11,15 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using slf4net;
 using Moq;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -68,6 +71,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentRepository studentRepository;
             private IStudentReferenceDataRepository referenceDataRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
             private ISectionPermissionService sectionPermissionService;
             private SectionPermission sectionPermissionResponseData;
             private Section sectionData;
@@ -89,12 +94,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
 
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
+
                 logger = new Mock<ILogger>().Object;
 
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
 
                 // Mock Section Permission response
                 sectionPermissionResponseData = BuildSectionPermissionRepositoryResponse();
@@ -108,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
             }
 
             [TestCleanup]
@@ -126,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionPermissionAsync_ThrowsExceptionIfSectionStringNull()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync(null);
             }
 
@@ -134,15 +142,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionPermissionAsync_ThrowsExceptionIfSectionStringEmpty()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetSectionPermissionAsync_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>())).Throws(new ApplicationException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
             }
 
@@ -151,7 +159,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task GetSectionPermissionAsync_ThrowsKeyNotFoundExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>())).Returns(Task.FromResult(nullSection));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
             }
 
@@ -167,7 +175,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
 
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
 
@@ -180,17 +188,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetSectionPermissionAsync_ThrowsExceptionIfAdapterErrorOccurs()
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
 
                 // Null adapter registry to force adapter error
                 ITypeAdapter<Domain.Student.Entities.SectionPermission, Dtos.Student.SectionPermission> nullAdapter = null;
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionPermission, Dtos.Student.SectionPermission>()).Returns(nullAdapter);
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
 
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
             }
@@ -200,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData)); ;
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData)); ;
 
                 // Mock empty response from section permission respository
                 //Task<Dtos.Student.SectionPermission> nullResponse = null;
@@ -263,11 +271,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentRepository studentRepository;
             private IStudentReferenceDataRepository referenceDataRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
             private ISectionPermissionService sectionPermissionService;
             private Dtos.Student.StudentPetition badPetitionDto;
             private Dtos.Student.StudentPetition goodPetitionDto;
             private Dtos.Student.StudentPetition goodConsentDto;
             private Domain.Student.Entities.StudentPetition studentPetitionEntityAdded;
+            private Section section;
 
             [TestInitialize]
             public void Initialize()
@@ -288,6 +299,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
 
                 logger = new Mock<ILogger>().Object;
 
@@ -315,7 +329,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 referenceDataRepositoryMock.Setup(x => x.GetStudentPetitionReasonsAsync()).Returns(Task.FromResult(petitionReasons.AsEnumerable()));
                 var statusCodes = BuildStatusCodes();
                 referenceDataRepositoryMock.Setup(x => x.GetPetitionStatusesAsync()).Returns(Task.FromResult(statusCodes.AsEnumerable()));
-
+                var departments = BuildDepartments();
+                baseReferenceDataRepositoryMock.Setup(x => x.DepartmentsAsync()).Returns(Task.FromResult(departments.AsEnumerable()));
                 // Mock Section Permission response
                 studentPetitionEntityAdded = new StudentPetition("1", "courseId", "sectionId", "studentId", StudentPetitionType.FacultyConsent, "A") { Comment = "MultiLineComment/nLine2", ReasonCode = "REASON" };
                 sectionPermissionRepositoryMock.Setup(repository => repository.AddStudentPetitionAsync(studentPetitionEntityAdded)).Returns(Task.FromResult(studentPetitionEntityAdded));
@@ -328,7 +343,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
             }
 
             [TestCleanup]
@@ -469,7 +484,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AddStudentPetition_ThrowsArgumentExceptionIfStatusCodeInvalid()
             {
                 // Set up faculty as the current user.
@@ -488,7 +503,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AddStudentPetition_ThrowsArgumentExceptionIfPetitionReasonInvalid()
             {
                 // Set up faculty as the current user.
@@ -507,7 +522,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task AddStudentPetition_ThrowsExceptionIfNoReasonOrComment()
             {
                 // Set up faculty as the current user.
@@ -544,7 +559,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Null adapter registry to force adapter error
                 ITypeAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition> nullAdapter = null;
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition>()).Returns(nullAdapter);
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
 
                 var sectionPermissionDto = await sectionPermissionService.AddStudentPetitionAsync(newPetitionDto);
             }
@@ -556,8 +571,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up faculty as the current user.
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
                 facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition));                
                 roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
 
+                // Mock section response
+                section = new TestSectionRepository().GetAsync().Result.First();
+                section.AddFaculty("0000011");
+                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false)).Returns(Task.FromResult(section));
                 var addedPetitionDto = await sectionPermissionService.AddStudentPetitionAsync(goodPetitionDto);
                 Assert.AreEqual(goodPetitionDto.StudentId, addedPetitionDto.StudentId);
                 Assert.AreEqual(goodPetitionDto.SectionId, addedPetitionDto.SectionId);
@@ -582,6 +602,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 return results;
             }
 
+            private List<Domain.Base.Entities.Department> BuildDepartments()
+            {
+                var results = new List<Domain.Base.Entities.Department>();
+                results.Add(new Domain.Base.Entities.Department("1C3B805D-CFE6-483B-86C3-4C20562F8C14", "D1", "Department 1", true));
+                results.Add(new Domain.Base.Entities.Department("1C3B805D-CFE6-483B-86C3-4C20562F8C15", "D2", "Department 2", true));
+                return results;
+            }
+
         }
 
         [TestClass]
@@ -600,6 +628,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
             private IStudentReferenceDataRepository referenceDataRepository;
             private ISectionPermissionService sectionPermissionService;
             private Section section;
@@ -623,6 +653,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepository = sectionRepoMock.Object;
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
                 petitionId = "3";
@@ -633,7 +665,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = new TestSectionRepository().GetAsync().Result.First();
                 section.AddFaculty("1111100");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Mock Section  Permissions response
                 petitionResponse = BuildSectionPermissionRepoResponse();
@@ -648,7 +680,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepo, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepo, logger);
             }
 
             [TestCleanup]
@@ -698,7 +730,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentPetition_ThrowsExceptionIfOtherExceptionThrownByRepositoryGet()
             {
                 sectionPermissionRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<StudentPetitionType>())).Throws(new Exception());
@@ -706,19 +738,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentPetition_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Throws(new ApplicationException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentPetition_ThrowsExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>())).Returns(Task.FromResult(nullSection));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
             }
 
@@ -730,7 +762,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentPetition_ThrowsExceptionIfsectionPermissionRepoThrowsException()
             {
                 sectionPermissionRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>(), It.IsAny<string>(), StudentPetitionType.StudentPetition)).Throws(new ArgumentNullException());
@@ -742,7 +774,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1")).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
 
                 // Act
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
@@ -790,11 +822,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStudentRepository studentRepository;
             private IStudentReferenceDataRepository referenceDataRepository;
             private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            private IReferenceDataRepository baseReferenceDataRepository;
+            private Mock<IReferenceDataRepository> baseReferenceDataRepositoryMock;
             private ISectionPermissionService sectionPermissionService;
             private Dtos.Student.StudentPetition badPetitionDto;
             private Dtos.Student.StudentPetition goodPetitionDto;
             private Dtos.Student.StudentPetition goodConsentDto;
             private Domain.Student.Entities.StudentPetition studentPetitionEntityUpdated;
+            private Section section;
 
             [TestInitialize]
             public void Initialize()
@@ -815,6 +850,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                baseReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                baseReferenceDataRepository = baseReferenceDataRepositoryMock.Object;
 
                 logger = new Mock<ILogger>().Object;
 
@@ -842,6 +880,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 referenceDataRepositoryMock.Setup(x => x.GetStudentPetitionReasonsAsync()).Returns(Task.FromResult(petitionReasons.AsEnumerable()));
                 var statusCodes = BuildStatusCodes();
                 referenceDataRepositoryMock.Setup(x => x.GetPetitionStatusesAsync()).Returns(Task.FromResult(statusCodes.AsEnumerable()));
+                var departments = BuildDepartments();
+                baseReferenceDataRepositoryMock.Setup(x => x.DepartmentsAsync()).Returns(Task.FromResult(departments.AsEnumerable()));
 
                 // Mock Section Permission response
                 studentPetitionEntityUpdated = new StudentPetition("1", "courseId", "sectionId", "studentId", StudentPetitionType.FacultyConsent, "A") { Comment = "MultiLineComment/nLine2", ReasonCode = "REASON" };
@@ -855,7 +895,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
             }
 
             [TestCleanup]
@@ -994,7 +1034,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfStatusCodeInvalid()
             {
                 // Set up faculty as the current user.
@@ -1013,7 +1053,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfPetitionReasonInvalid()
             {
                 // Set up faculty as the current user.
@@ -1032,7 +1072,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task UpdateStudentPetition_ThrowsExceptionIfNoReasonOrComment()
             {
                 // Set up faculty as the current user.
@@ -1069,7 +1109,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Null adapter registry to force adapter error
                 ITypeAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition> nullAdapter = null;
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition>()).Returns(nullAdapter);
-                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, baseReferenceDataRepository, currentUserFactory, roleRepository, logger);
 
                 var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
             }
@@ -1080,8 +1120,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up faculty as the current user.
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
                 facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(DepartmentalOversightPermissionCodes.CreateSectionStudentPetition));
                 roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
 
+                // Mock section response
+                section = new TestSectionRepository().GetAsync().Result.First();
+                section.AddFaculty("0000011");
+                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false)).Returns(Task.FromResult(section));
                 var updatedPetitionDto = await sectionPermissionService.UpdateStudentPetitionAsync(goodPetitionDto);
                 Assert.AreEqual(goodPetitionDto.StudentId, updatedPetitionDto.StudentId);
                 Assert.AreEqual(goodPetitionDto.SectionId, updatedPetitionDto.SectionId);
@@ -1103,6 +1148,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var results = new List<StudentPetitionReason>();
                 results.Add(new StudentPetitionReason("REASON", "Audition"));
                 results.Add(new StudentPetitionReason("NO", "No Audition"));
+                return results;
+            }
+            private List<Domain.Base.Entities.Department> BuildDepartments()
+            {
+                var results = new List<Domain.Base.Entities.Department>();
+                results.Add(new Domain.Base.Entities.Department("1C3B805D-CFE6-483B-86C3-4C20562F8C14", "D1", "Department 1", true));
+                results.Add(new Domain.Base.Entities.Department("1C3B805D-CFE6-483B-86C3-4C20562F8C15", "D2", "Department 2", true));
                 return results;
             }
 

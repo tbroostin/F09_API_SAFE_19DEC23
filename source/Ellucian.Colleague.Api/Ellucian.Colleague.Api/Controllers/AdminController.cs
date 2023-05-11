@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
@@ -28,6 +28,7 @@ using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Configuration;
 using System.Web.Hosting;
+using Ellucian.Web.Http.Exceptions;
 using System.Web.Mvc;
 using Serilog.Core;
 
@@ -189,6 +190,35 @@ namespace Ellucian.Colleague.Api.Controllers
             PerformBackupConfig();
             RecycleApp();
             return RedirectToAction("SettingsConfirmation");
+        }
+
+        /// <summary>
+        /// Desiged as an API method to allow for a simple change for the log level.
+        /// </summary>
+        /// <param name="loggingLevel">One of the valid options: Off, Error, Warning, Information, Verbose</param>
+        /// <returns>OK or BadRequest</returns>
+        [HttpPut]
+        public ActionResult LoggingLevel(string loggingLevel)
+        {
+            var domainSettings = settingsRepository.Get();
+            var model = BuildSettingsModel(domainSettings);
+
+            var validLogLevel = model.LogLevels.FirstOrDefault(l => l.Value.Equals(loggingLevel, StringComparison.OrdinalIgnoreCase) 
+                                                                 || l.Text.Equals(loggingLevel, StringComparison.OrdinalIgnoreCase));
+            if (validLogLevel != null)
+            {
+                model.LogLevel = validLogLevel.Text;
+
+                var settings = BuildSettingsDomain(model);
+                settingsRepository.Update(settings);
+                PerformBackupConfig();
+                RecycleApp();
+                return new HttpStatusCodeResult(HttpStatusCode.OK);
+            }
+            else
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
         }
 
         #endregion
@@ -495,7 +525,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];
@@ -696,9 +726,10 @@ namespace Ellucian.Colleague.Api.Controllers
                         // Can't await in finally block (yet)
                         Task.Run(async () => { await dasSession.LogoutAsync(); }).GetAwaiter().GetResult();
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Can ignore exceptions here
+                        logger.Error(ex.Message, "Error DAS session logout");
                     }
                     finally
                     {
@@ -738,8 +769,9 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     username = HttpContext.User.Identity.Name;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    logger.Error(ex.Message, "Error at user identity name");
                 }
 
                 try
@@ -775,7 +807,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     var cookieValue = cookie == null ? null : cookie.Value;
                     if (string.IsNullOrEmpty(cookieValue))
                     {
-                        throw new Exception("Log in first");
+                        throw new ColleagueWebApiException("Log in first");
                     }
                     var baseUrl = cookieValue.Split('*')[0];
                     var token = cookieValue.Split('*')[1];
@@ -814,7 +846,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (UnauthorizedAccessException uae)
             {
-                throw new Exception("The settings were saved, but restarting the application failed. Either manually recycle the application pool, or verify that the web.config file " +
+                throw new ColleagueWebApiException("The settings were saved, but restarting the application failed. Either manually recycle the application pool, or verify that the web.config file " +
                         " is not read only and that the application pool has write permissions.", uae);
             }
         }
@@ -843,7 +875,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var cookieValue = cookie == null ? null : cookie.Value;
             if (string.IsNullOrEmpty(cookieValue))
             {
-                throw new Exception("Log in first");
+                throw new ColleagueWebApiException("Log in first");
             }
             var baseUrl = cookieValue.Split('*')[0];
             var token = cookieValue.Split('*')[1];

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,8 +15,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <param name="personId">Person Id</param>
         /// <returns>PhoneNumber Object</returns>
-        PhoneNumber GetPersonPhones(string personId);
-        
+        Task<PhoneNumber> GetPersonPhonesAsync(string personId);
+
         /// <summary>
         /// Get all current phone numbers for a list of people.
         /// </summary>

@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -17,6 +18,7 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Ellucian.Web.Utility;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
@@ -72,7 +74,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access STUDENT.PROGRAM.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -99,7 +101,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access INST.TYPES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -122,7 +124,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access EDUCATION.GOALS valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return educationGoalsTable;
                 }, Level1CacheTimeoutValue);
@@ -146,7 +148,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = "Unable to access RESIDENCY.STATUSES code table.";
                 logger.Info(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
             return ResidencyStatuses;
         }
@@ -211,7 +213,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = "Unable to access ADMIT.STATUSES code table.";
                 logger.Info(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
             return AdmittedStatuses;
         }
@@ -231,7 +233,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access PERSON.ETHNICS valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -253,7 +255,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access PERSON.RACES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return racesTable;
                 }, Level1CacheTimeoutValue);
@@ -275,7 +277,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access MARITAL.STATUSES valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return statusesTable;
                 }, Level1CacheTimeoutValue);
@@ -297,7 +299,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access PARENT.EDUCATION.LEVEL valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return educationLevel;
                 }, Level1CacheTimeoutValue);
@@ -323,7 +325,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "Unable to access DEFAULTS from CORE.PARMS table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return coreDefaults;
                 }, Level1CacheTimeoutValue);
@@ -351,7 +353,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";
@@ -524,7 +526,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (gradeViewResponse == null)
             {
                 string message = string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", id);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             if (gradeViewResponse.IsRestricted == "N")
             {
@@ -572,7 +574,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (eligibilityReponse == null)
             {
                 string message = string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", id);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             // Return messages regardless of eligibility.
             if (eligibilityReponse.Messages.Count() > 0)
@@ -818,7 +820,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             foreach (var section in request.Sections)
             {
 
-                updateRequest.Sections.Add(new Sections() {SectionIds = section.SectionId, SectionAction = section.Action.ToString(), SectionCredits = section.Credits, SectionDropReasonCode = section.DropReasonCode});
+                updateRequest.Sections.Add(new Sections() {SectionIds = section.SectionId, SectionAction = section.Action.ToString(), SectionCredits = section.Credits, SectionDropReasonCode = section.DropReasonCode, SectionIntentToWithdrawId = section.IntentToWithdrawId});
             }
             RegisterForSectionsResponse updateResponse = null;
             try
@@ -835,7 +837,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if(updateResponse==null)
             {
                 string message= string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", request.StudentId);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
             // If there is any error message - throw an exception 
             if (!string.IsNullOrEmpty(updateResponse.ErrorMessage))
@@ -872,6 +874,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 req = new GetTranscriptHoldsRequest() {APersonId = id};
                 resp = await transactionInvoker.ExecuteAsync<GetTranscriptHoldsRequest, GetTranscriptHoldsResponse>(req);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving transcript restrictions for student with id {0}", id);
+                throw;
             }
             catch (Exception e)
             {
@@ -1175,8 +1182,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         usFormat = String.Format("{0:000-00-0000}", Int32.Parse(governmentId));
                         canadaFormat = String.Format("{0:000-000-000}", Int32.Parse(governmentId));
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        logger.Error(ex, "Government ID doesn't have a dash and isn't numeric.");
                     }
 
                     searchString += " SSN EQ " + Quote + usFormat + Quote + " OR SSN EQ " + Quote + canadaFormat + Quote;
@@ -1421,6 +1429,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 hierarchy = await GetCachedNameAddressHierarchyAsync(stWebDefaults.StwebDisplayNameHierarchy);
                             }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
                             catch (Exception)
                             {
                                 logger.Info("Unable to find name address hierarchy with ID " + stWebDefaults.StwebDisplayNameHierarchy + ". Not calculating hierarchy name.");
@@ -1507,6 +1519,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     {
                                         studentEntity.AddFormattedName(pFormat.PersonFormattedNameTypesAssocMember, pFormat.PersonFormattedNamesAssocMember);
                                     }
+                                    catch (ColleagueSessionExpiredException)
+                                    {
+                                        throw;
+                                    }
                                     catch (Exception)
                                     {
                                         logger.Error("Unable to add formatted name to person " + personContract.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
@@ -1579,6 +1595,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                             {
                                                 studentEntity.AddAdvisor(studentAdvisement.StadFaculty);
                                             }
+                                            catch (ColleagueSessionExpiredException)
+                                            {
+                                                throw;
+                                            }
                                             catch (Exception e)
                                             {
                                                 var message = "Unable to add advisor '" + studentAdvisement.StadFaculty
@@ -1586,9 +1606,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                     + studentAdvisement.StadType + "'";
                                                 logger.Error(e, message);
                                             }
+
                                             try
                                             {
                                                 studentEntity.AddAdvisement(studentAdvisement.StadFaculty, studentAdvisement.StadStartDate, studentAdvisement.StadEndDate, studentAdvisement.StadType);
+                                            }
+                                            catch (ColleagueSessionExpiredException)
+                                            {
+                                                throw;
                                             }
                                             catch (Exception e)
                                             {
@@ -1612,9 +1637,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 {
                                     studentEntity.AddRegistrationPriority(stuRegPriorityId);
                                 }
-                                catch
+                                catch (ColleagueSessionExpiredException)
                                 {
-                                    // Don't bother logging if priority ID is null or this is a duplicate
+                                    throw;
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex, "Priority ID is null or is a duplicate.");
                                 }
                             }
                         }
@@ -1657,9 +1686,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     studentEntity.AddLocation(location, startDate, endDate, isPrimary);
                                 }
-                                catch (Exception e)
+                                catch (ColleagueSessionExpiredException)
                                 {
-                                    //LogDataError("Students", students.Recordkey, sl, e);
+                                    throw;
+                                }
+                                catch (Exception e)
+                                {                   
                                     logger.Error("Unable to retrieve information for student " + students.Recordkey + ". " + e.Message);
                                 }
                             }
@@ -1674,9 +1706,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 {
                                     studentEntity.AddStudentRestriction(stuRestrId);
                                 }
-                                catch
+                                catch (ColleagueSessionExpiredException)
                                 {
-                                    // Don't bother logging if student Id is null or this is a duplicate
+                                    throw;
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex, "Student ID is null or is a duplicate.");
                                 }
                             }
                         }
@@ -1691,6 +1727,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 // Translate to the external representation string
                                 studentEntity.EducationalGoal = (await GetEducationalGoalsAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == currGoal).Select(v => v.ValExternalRepresentationAssocMember).FirstOrDefault();
                             }
+                        }
+                        catch (ColleagueSessionExpiredException)
+                        {
+                            throw;
                         }
                         catch (Exception e)
                         {
@@ -1717,6 +1757,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         {
                                             studentEntity.AddEmailAddress(eAddress);
                                         }
+                                    }
+                                    catch (ColleagueSessionExpiredException)
+                                    {
+                                        throw;
                                     }
                                     catch (Exception e)
                                     {
@@ -1907,6 +1951,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                 }
                             }
+                            catch (ColleagueSessionExpiredException)
+                            {
+                                throw;
+                            }
                             catch (Exception e)
                             {
                                 logger.Error(e, string.Format("Unable to determine the Residency Status for '{0}'", students.Recordkey));
@@ -1924,10 +1972,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         var date = sr.StuResidencyStatusDateAssocMember;
                                         studentEntity.AddResidency(residency, date);
                                     }
+                                    catch (ColleagueSessionExpiredException)
+                                    {
+                                        throw;
+                                    }
                                     catch (Exception e)
                                     {
-                                        logger.Error("Unable to retrieve information for student " + students.Recordkey + ". " + e.Message);
-                                        //LogDataError("Students", students.Recordkey, sr, e);
+                                        logger.Error("Unable to retrieve information for student " + students.Recordkey + ". " + e.Message);                          
                                     }
                                 }
                             }
@@ -2039,6 +2090,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         studentIdsNotFound.Add(studentId);
                     }
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     logger.Error(string.Format("Failed to build student {0}", studentId));
@@ -2148,8 +2203,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
-            catch (NullReferenceException)
+            catch (NullReferenceException nrex)
+
             {
+                logger.Error(nrex, "Null Reference Exception for Academic Awards Reported.");
             }
             ;
 
@@ -2159,16 +2216,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 atsc.StuSchCurrEnrFlag = (order.Request.RequestedStudent.Attendance.CurrentEnrollmentIndicator != null && order.Request.RequestedStudent.Attendance.CurrentEnrollmentIndicator.ToUpper() == "TRUE");
             }
-            catch (NullReferenceException)
+            catch (NullReferenceException nrex)
+
             {
+                logger.Error(nrex, "Null Reference Exception for Current Enrollment Indicator.");
             }
             ;
             try
             {
                 atsc.StuSchOpeid = order.Request.RequestedStudent.Attendance.School.OPEID ?? "";
             }
-            catch (NullReferenceException)
+            catch (NullReferenceException nrex)
+
             {
+                logger.Error(nrex, "Null Reference Exception for School OPEID.");
             }
             ;
 
@@ -2190,8 +2251,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
             }
-            catch (NullReferenceException)
+            catch (NullReferenceException nrex)
+
             {
+                logger.Error(nrex, "Null Reference Exception for Enrollment Detail.");
             }
             ;
             atsc.StuSchDtlBeginYr = beginyear;
@@ -2273,8 +2336,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 request.RcptAttentionLine = String.Join(" ", order.Request.Recipient.Receiver.RequestorReceiverOrganization.Contacts.FirstOrDefault().Address.AttentionLine.Where(al => !string.IsNullOrEmpty(al))) ?? "";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to get receipt attention line.");
             }
 
             request.RcptCeebact = order.UserDefinedExtensions.ReceivingInstitutionCeebId ?? "";
@@ -2312,8 +2376,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.RcptFaxNumber = order.Request.Recipient.Receiver.RequestorReceiverOrganization.Contacts.FirstOrDefault().FaxPhone.AreaCityCode +
                      order.Request.Recipient.Receiver.RequestorReceiverOrganization.Contacts.FirstOrDefault().FaxPhone.PhoneNumber;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to get receipt fax number.");
             }
 
 
@@ -2629,8 +2694,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                  order.Request.Recipient.RushProcessingRequested.ToUpper() == "T");
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to get rush processing flag.");
             }
 
 
@@ -2931,6 +2997,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(ce, string.Format("Unable to generate transcript text for student: '{0}' and transcript grouping: '{1}'", studentId, transcriptGrouping));
                 throw new ApplicationException("Unable to generate transcript.", ce);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, "Colleague session expired while retrieving transcript for student: '{0}' and transcript grouping: '{1}'",studentId, transcriptGrouping);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
 
             return transcript;
 
@@ -3016,9 +3092,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     AdvisorType = studentAdvisement.StadType
                                 });
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
-                            // Don't bother logging if student Id is null or this is a duplicate advisee.
+                            logger.Error(ex, "Student Id is null or is a duplicate advisee.");
                         }
                     }
                 }
@@ -3191,6 +3267,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 long elapsedTime = stopWatch.ElapsedMilliseconds;
                 Debug.WriteLine(string.Format("Sync Elapsed Time {0}", elapsedTime));
                 return studentEntity;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague session got expired  while retrieving student details for student with id {0}", id);
+                logger.Error(ce, message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -4400,6 +4482,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 await AddOrUpdateCacheAsync<Domain.Student.Entities.Student>((studentCache + student.Recordkey), studentEntity, CacheTimeout);
                             }
                         }
+                        catch (ColleagueSessionExpiredException csee)
+                        {
+                            logger.Error(csee, "Colleague session expired while building Student object for student Id " + student.Recordkey);
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             logger.Error(ex, "Unable to build Student object for student Id " + student.Recordkey);
@@ -4579,7 +4666,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     logger.Error(string.Format("Couldn't find student details from STUDENTS file for the id {0}", studentId));
                 }
             }
-            catch(Exception ex)
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
             {
                 logger.Error(ex, "Exception occured while retrieving academic levels for the student- " + studentId);
                 throw;
@@ -4732,9 +4823,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             student.AddRegistrationPriority(stuRegPriorityId);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Don't bother logging if priority ID is null or this is a duplicate
+                            logger.Error(ex, "Priority Id is null or is a duplicate.");
                         }
                     }
                 }

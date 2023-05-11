@@ -120,9 +120,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
             }
 
-            if ((!string.IsNullOrWhiteSpace(status))
-                && ((!string.Equals(status, "active", StringComparison.OrdinalIgnoreCase))
-                    || (!string.Equals(status, "cancelled", StringComparison.OrdinalIgnoreCase))))
+            if (!string.IsNullOrWhiteSpace(status)
+                && !string.Equals(status, "active", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(status, "cancelled", StringComparison.OrdinalIgnoreCase))
             {
                 return new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(new List<Dtos.PayrollDeductionArrangements>(), 0);
             }

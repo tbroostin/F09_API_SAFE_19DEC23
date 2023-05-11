@@ -16,6 +16,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -168,7 +169,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Create_response_Transaction_throws_Exception()
             {
                 mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).Throws(new Exception());
@@ -180,7 +181,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_is_null()
             {
                 mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(() => null);
@@ -192,7 +193,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             //create response is not null but error  occured
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_is_errored()
             {
                 CreateStudentRequestResponse createResponse = new CreateStudentRequestResponse();
@@ -209,7 +210,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             //create response student logs id is null
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_request_log_id_is_null()
             {
                 CreateStudentRequestResponse createResponse = new CreateStudentRequestResponse();
@@ -337,7 +338,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Create_response_Transaction_throws_Exception()
             {
                 mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).Throws(new Exception());
@@ -349,7 +350,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_is_null()
             {
                 mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(() => null);
@@ -361,7 +362,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             //create response is not null but error  occured
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_is_errored()
             {
                 CreateStudentRequestResponse createResponse = new CreateStudentRequestResponse();
@@ -378,7 +379,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             //create response student logs id is null
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task created_response_request_log_id_is_null()
             {
                 CreateStudentRequestResponse createResponse = new CreateStudentRequestResponse();

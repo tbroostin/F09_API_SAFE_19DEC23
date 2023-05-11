@@ -1,8 +1,9 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -62,7 +63,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perposKeys.Any())
             {
-                logger.Info("No PERPOS keys exist for the given person Ids: " + string.Join(",", personIds));
+                logger.Error("No PERPOS keys exist for the given person Ids: " + string.Join(",", personIds));
             }
 
             //bulkread the records for all the keys
@@ -93,7 +94,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!employeKeys.Any())
             {
-                logger.Info("No EMPLOYES keys exist for the given person Ids: " + string.Join(",", personIds));
+                logger.Error("No EMPLOYES keys exist for the given person Ids: " + string.Join(",", personIds));
             }
 
             //bulkread the records for all the keys
@@ -133,6 +134,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             personPositionEntities.Add(BuildPersonPosition(perposRecord, employeRecord, empTimeHistoryRecord));
                         }
                     }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         LogDataError("Perpos", perposRecord.Recordkey, perposRecord, e, e.Message);
@@ -152,7 +157,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             return personPositionEntities;
-
         }
 
         /// <summary>

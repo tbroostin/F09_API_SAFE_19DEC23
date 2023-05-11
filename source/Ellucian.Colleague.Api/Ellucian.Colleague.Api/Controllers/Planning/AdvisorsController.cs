@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -62,6 +63,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving an advisor by id";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -126,13 +133,22 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return await _advisorService.QueryAdvisorsByPostAsync(advisorIds);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while querying for advisors";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                string message = "User does not have appropriate permissions to query for advisors";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString());
+                string message = "Exception occurred while querying for advisors";
+                _logger.Error(ex, message);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
 
@@ -190,6 +206,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving list of advisors";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

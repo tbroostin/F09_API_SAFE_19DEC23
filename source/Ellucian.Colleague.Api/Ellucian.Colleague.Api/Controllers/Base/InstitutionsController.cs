@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,8 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
+using Ellucian.Data.Colleague.Exceptions;
+
 namespace Ellucian.Colleague.Api.Controllers
 {
     /// <summary>
@@ -45,18 +47,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>List of <see cref="Institution">Institutions</see></returns>
         public IEnumerable<Institution> Get()
         {
-            var institutionCollection = _institutionRepository.Get();
-
-            // Get the right adapter for the type mapping
-            var institutionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Institution, Institution>();
-
-            // Map the institution entity to the institution DTO
             var institutionDtoCollection = new List<Institution>();
-            foreach (var bldg in institutionCollection)
-            {
-                institutionDtoCollection.Add(institutionDtoAdapter.MapToType(bldg));
-            }
 
+            try
+            {
+                var institutionCollection = _institutionRepository.Get();
+
+                // Get the right adapter for the type mapping
+                var institutionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Institution, Institution>();
+
+                // Map the institution entity to the institution DTO
+
+                foreach (var bldg in institutionCollection)
+                {
+                    institutionDtoCollection.Add(institutionDtoAdapter.MapToType(bldg));
+                }
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving all institutions.";
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occured while retrieving all institutions.";
+                throw CreateHttpResponseException(message);
+            }
             return institutionDtoCollection.OrderBy(s => s.InstitutionType);
         }
     }

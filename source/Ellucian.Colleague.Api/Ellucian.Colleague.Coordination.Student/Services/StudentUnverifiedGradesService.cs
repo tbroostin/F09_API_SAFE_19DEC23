@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -243,8 +243,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 studentUnverifiedGradesSubmissionsEntityId = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradesIdFromGuidAsync(studentUnverifiedGradesSubmissions.Id);
             }
-            catch (Exception)
-            { // if the guid is not found then attempt to create
+            catch (Exception ex)
+            {
+                // if the guid is not found then attempt to create
+                logger.Error(ex, "Unable to get guid for studentUnverifiedGradesSubmissionsEntityId.");
             }
 
             if (!string.IsNullOrEmpty(studentUnverifiedGradesSubmissionsEntityId))
@@ -620,13 +622,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var allGrades = await GetGradesAsync(bypassCache);
                 if (allGrades == null)
                 {
-                    throw new Exception("Unable to retrieve grades");
+                    throw new ColleagueWebApiException("Unable to retrieve grades");
                 }
 
                 var finalGrade = allGrades.FirstOrDefault(g => g.Id == source.FinalGrade);
                 if (finalGrade == null)
                 {
-                    throw new Exception(string.Format("Invalid final grade '{0}' for Student Course Sec {1}.", source.FinalGrade, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid final grade '{0}' for Student Course Sec {1}.", source.FinalGrade, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -642,7 +644,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var incompleteGradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == finalGrade.IncompleteGrade);
                     if (finalGrade == null)
                     {
-                        throw new Exception(string.Format("Invalid incomplete grade '{0}' for Student Course Sec {1}.", source.FinalGrade, source.Guid));
+                        throw new ColleagueWebApiException(string.Format("Invalid incomplete grade '{0}' for Student Course Sec {1}.", source.FinalGrade, source.Guid));
                     }
                     studentUnverifiedGradesIncompleteGradeDtoProperty.FinalGrade = new GuidObject2(incompleteGradeGuid.Guid);
                     studentUnverifiedGradesIncompleteGradeDtoProperty.ExtensionDate = source.IncompleteGradeExtensionDate;
@@ -654,7 +656,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade1);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 1 '{0}' for Student Course Sec {1}.", source.MidtermGrade1, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 1 '{0}' for Student Course Sec {1}.", source.MidtermGrade1, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -667,7 +669,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade2);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 2 '{0}' for Student Course Sec {1}.", source.MidtermGrade2, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 2 '{0}' for Student Course Sec {1}.", source.MidtermGrade2, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -680,7 +682,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade3);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 3 '{0}' for Student Course Sec {1}.", source.MidtermGrade3, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 3 '{0}' for Student Course Sec {1}.", source.MidtermGrade3, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -693,7 +695,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade4);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 4 '{0}' for Student Course Sec {1}.", source.MidtermGrade4, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 4 '{0}' for Student Course Sec {1}.", source.MidtermGrade4, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -706,7 +708,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade5);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 5 '{0}' for Student Course Sec {1}.", source.MidtermGrade5, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 5 '{0}' for Student Course Sec {1}.", source.MidtermGrade5, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();
@@ -719,7 +721,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade6);
                 if (gradeGuid == null)
                 {
-                    throw new Exception(string.Format("Invalid midterm grade 6 '{0}' for Student Course Sec {1}.", source.MidtermGrade6, source.Guid));
+                    throw new ColleagueWebApiException(string.Format("Invalid midterm grade 6 '{0}' for Student Course Sec {1}.", source.MidtermGrade6, source.Guid));
                 }
                 if (studentUnverifiedGradesGradeDtoProperty == null)
                     studentUnverifiedGradesGradeDtoProperty = new StudentUnverifiedGradesGradeDtoProperty();

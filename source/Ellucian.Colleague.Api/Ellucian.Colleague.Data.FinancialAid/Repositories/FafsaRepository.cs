@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 
@@ -151,7 +152,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     catch (Exception e)
                     {
                         var message = string.Format("Unable to build Fafsa object with record id {0}, studentId {1}, awardYear {2}.", isirFafsaToUse.Recordkey, isirFafsaToUse.IfafStudentId, isirFafsaToUse.IfafImportYear);
-                        logger.Info(e, message);
+                        logger.Debug(e, message);
                     }
                 }
             }
@@ -252,7 +253,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                 if (isirFafsas.IfafIsirType == "ISIR" || isirFafsas.IfafIsirType == "CPSSG")
                                 {
                                     isirFafsaList.Add(isirFafsas);
-                                    if (isirFafsaList != null && isirFafsaList.Any())
+                                    if (isirFafsaList != null && isirFafsaList.Any() && !string.IsNullOrEmpty(csRecord.CsFc))
                                     {
                                         fafsaEfcList.Add(new ProfileEFC(studentId, awardYear.Code, Convert.ToInt32(csRecord.CsFc)));
                                     }
@@ -379,7 +380,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                         (isirFafsa == null) ?
                                         string.Format("IsirFafsa record is null. Possible database corruption with correction record for studentId {0}", studentId) :
                                         string.Format("Unable to build Fafsa object with record id {0}, studentId {1}, awardYear {2}", isirFafsa.Recordkey, studentId, isirFafsa.IfafImportYear);
-                                    logger.Info(e, message);
+                                    logger.Debug(e, message);
                                 }
                             }
                         }
@@ -394,7 +395,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
             }
             if (error && fafsaDataRecords.Count() == 0)
-                throw new Exception("Unexpected errors occurred. No fafsa records returned. Check API error log.");
+                throw new ColleagueWebApiException("Unexpected errors occurred. No fafsa records returned. Check API error log.");
             return fafsaDataRecords;
         }
 
@@ -442,7 +443,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     }
                     else
                     {
-                        logger.Info("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", studentCsRecord.CsFc, studentId, awardYear);
+                        logger.Debug("Unable to parse CsFc - {0} - for studentId {1}, awardYear {2}", studentCsRecord.CsFc, studentId, awardYear);
                     }
                 }
             }

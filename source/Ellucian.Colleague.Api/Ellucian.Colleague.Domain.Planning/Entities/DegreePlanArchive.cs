@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         private List<DegreePlanNote> _Notes = new List<DegreePlanNote>();
         private List<ArchivedCourse> _ArchivedCourses = new List<ArchivedCourse>();
         private List<StudentProgram> _StudentPrograms = new List<StudentProgram>();
+        private List<ArchivedCoursePlaceholder> _ArchivedCoursePlaceholders = new List<ArchivedCoursePlaceholder>();
 
         /// <summary>
         /// A unique identifier for the plan archive. 0 if a new plan.
@@ -142,6 +143,21 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         }
 
         /// <summary>
+        /// Record of each course placeholder on the archive - along with all associated data
+        /// </summary>
+        public List<ArchivedCoursePlaceholder> ArchivedCoursePlaceholders
+        {
+            get { return _ArchivedCoursePlaceholders; }
+            set
+            {
+                if (value != null)
+                {
+                    _ArchivedCoursePlaceholders = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// Construct a degree plan archive, based on a provided degree plan and current user's ID
         /// </summary>
         /// <param name="degreePlan">a degree plan</param>
@@ -166,8 +182,47 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
             _Version = version;
         }
 
-        public static DegreePlanArchive CreateDegreePlanArchive(DegreePlan degreePlan, string currentUserId, IEnumerable<StudentProgram> studentPrograms, IEnumerable<Course> courses, IEnumerable<Section> sections, IEnumerable<AcademicCredit> academicCredits, IEnumerable<Grade> grades)
+        /// <summary>
+        /// Creates a <see cref="DegreePlanArchive"/>
+        /// </summary>
+        /// <param name="degreePlan">Degree plan</param>
+        /// <param name="currentUserId">Current user ID</param>
+        /// <param name="studentPrograms">Student programs</param>
+        /// <param name="courses">List of courses</param>
+        /// <param name="sections">List of course sections</param>
+        /// <param name="academicCredits">List of academic credits</param>
+        /// <param name="grades">List of grades</param>
+        /// <param name="coursePlaceholders">List of course placeholders</param>
+        /// <returns>A <see cref="DegreePlanArchive"/></returns>
+        public static DegreePlanArchive CreateDegreePlanArchive(DegreePlan degreePlan, string currentUserId, IEnumerable<StudentProgram> studentPrograms, IEnumerable<Course> courses, 
+            IEnumerable<Section> sections, IEnumerable<AcademicCredit> academicCredits, IEnumerable<Grade> grades, IEnumerable<CoursePlaceholder> coursePlaceholders)
         {
+            // Any null collections should be initialized to prevent errors
+            if (courses == null)
+            {
+                courses = new List<Course>();
+            }
+            if (sections == null)
+            {
+                sections = new List<Section>();
+            }
+            if (studentPrograms == null)
+            {
+                studentPrograms = new List<StudentProgram>();
+            }
+            if (academicCredits == null)
+            {
+                academicCredits = new List<AcademicCredit>();
+            }
+            if (grades == null)
+            {
+                grades = new List<Grade>();
+            }
+            if (coursePlaceholders == null)
+            {
+                coursePlaceholders = new List<CoursePlaceholder>();
+            }
+
             DegreePlanArchive degreePlanArchive = new DegreePlanArchive(0, degreePlan.Id, degreePlan.PersonId, degreePlan.Version);
             // These created by fields are going to be reset when the record is created in Colleague.
             degreePlanArchive.CreatedBy = currentUserId;
@@ -200,14 +255,14 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 catch
                 {
                     // Something (probably course Id is missing. Just skip the course
+                    var DoNothing = true; // avoid empty catch block
                 }
             }
 
             foreach (var termCode in degreePlan.TermIds)
             {
                 // get all planned courses excluding course placeholders
-                var plannedCourses = degreePlan.GetPlannedCourses(termCode).Where(c => !string.IsNullOrEmpty(c.CourseId));
-
+                var plannedCourses = degreePlan.GetPlannedCourses(termCode).Where(c => !string.IsNullOrEmpty(c.CourseId)).ToList();
                 foreach (var plannedCourse in plannedCourses)
                 {
                     var course = courses.Where(crs => crs.Id == plannedCourse.CourseId).FirstOrDefault();
@@ -225,7 +280,32 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                     catch
                     {
                         // Something (probably course Id is missing. Just skip the course
+                        var DoNothing = true; // avoid empty catch block
                     }
+                }
+
+                // get all planned course placeholders
+                var plannedPlaceholders = degreePlan.GetPlannedCourses(termCode).Where(c => !string.IsNullOrEmpty(c.CoursePlaceholderId)).ToList();
+                foreach (var plannedCourse in plannedPlaceholders)
+                {
+                    var coursePlaceholder = coursePlaceholders.Where(csph => csph.Id == plannedCourse.CoursePlaceholderId).FirstOrDefault();
+
+                    if (coursePlaceholder != null)
+                    {
+                        try
+                        {
+                            ArchivedCoursePlaceholder archivedPlaceholder = new ArchivedCoursePlaceholder(coursePlaceholder.Id, coursePlaceholder.Title,
+                                coursePlaceholder.CreditInformation, coursePlaceholder.AcademicRequirement, termCode);
+                            archivedPlaceholder.AddedBy = plannedCourse.AddedBy;
+                            archivedPlaceholder.AddedOn = plannedCourse.AddedOn;
+                            degreePlanArchive.ArchivedCoursePlaceholders.Add(archivedPlaceholder);
+                        }
+                        catch
+                        {
+                            // Something is missing. Just skip the course placeholder
+                            var DoNothing = true; // avoid empty catch block
+                        }
+                    }                    
                 }
             }
             // Also add any academic credits that were not planned
@@ -255,6 +335,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                     catch
                     {
                         // Something (probably course Id is missing. Just skip the course
+                        var DoNothing = true; // avoid empty catch block
                     }
                 }
             }

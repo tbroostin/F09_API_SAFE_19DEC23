@@ -12,11 +12,15 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
     /// </summary>
     public interface IEthosApiBuilderRepository : IEthosExtended
     {
+        Tuple<bool, List<string>, List<string>> GetSecureDataDefinition();
+
         Task<Tuple<IEnumerable<Entities.EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool bypassCache);
 
         Task<Entities.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string id, EthosApiConfiguration configuration);
 
         Task<Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration);
+
+        Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields);
 
         Task DeleteEthosApiBuilderAsync(string id, EthosApiConfiguration configuration);
 

@@ -1,4 +1,4 @@
-﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// Timestamp metadata
         /// </summary>
         public Timestamp Timestamp { get; set; }
+
+        /// <summary>
+        /// The value of HRSS.LR.UNSUBMIT.WDRW option in LVSS form when the Leave Request is Withdrawn.
+        /// </summary>
+        public string WithdrawOption { get; set; }
+
         #endregion
 
         /// <summary>

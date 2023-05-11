@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Data.Colleague.Repositories;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -141,7 +142,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         var errorMessage = "Unable to access ORG.ROLE.TYPES valcode table.";
                         logger.Error(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiException(errorMessage);
                     }
                     return roleTypesTable;
                 }, Level1CacheTimeoutValue);

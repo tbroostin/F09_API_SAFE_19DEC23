@@ -84,7 +84,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var limitationDtoCollection = new List<Dtos.FinancialAid.StudentLoanLimitation>();
             if (limitationEntityCollection == null || !limitationEntityCollection.Any())
             {
-                logger.Info(string.Format("No LoanLimitations exist for student {0}", studentId));
+                logger.Debug(string.Format("No LoanLimitations exist for student {0}", studentId));
                 return limitationDtoCollection;
             }
 
@@ -134,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var limitationEntity = (await studentLoanLimitationRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { activeStudentAwardYear })).FirstOrDefault();
             if (limitationEntity == null)
             {
-                logger.Info("StudentLoanLimitationRepository returned null from GetAwardLetters(string studentId).");
+                logger.Debug("StudentLoanLimitationRepository returned null from GetAwardLetters(string studentId) for student {0} and year {1}.", studentId, year);
                 throw new KeyNotFoundException(string.Format("year {0} is not a valid award year for student {1}", year, studentId));
             }
 

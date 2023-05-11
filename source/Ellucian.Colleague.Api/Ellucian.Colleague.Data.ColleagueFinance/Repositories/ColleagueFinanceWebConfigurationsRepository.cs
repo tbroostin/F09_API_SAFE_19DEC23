@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
@@ -95,7 +95,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 if (!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrApprovalFlag))
                 {
-                    requestPaymentConfiguration.IsVoucherApprovalNeeded = cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "Y" || cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "A";
+                    // 03/25/2022: Added "R" as a supported approval flag for "Routing".
+                    requestPaymentConfiguration.IsVoucherApprovalNeeded = cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "Y" || cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "A" || cfWebDefaults.CfwebCkrApprovalFlag.ToUpper() == "R";
                 }
                 if(cfWebDefaults.CfwebCkrApTypes != null && cfWebDefaults.CfwebCkrApTypes.Any())
                 {
@@ -108,8 +109,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     cfWebConfigurationEntity.PurchasingDefaults = new PurchasingDefaults();
                     cfWebConfigurationEntity.PurchasingDefaults.DefaultShipToCode = purchaseDefaults.PurShipToCode;
-                    cfWebConfigurationEntity.PurchasingDefaults.IsRequisitionApprovalNeeded = purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "A";
-                    cfWebConfigurationEntity.PurchasingDefaults.IsPOApprovalNeeded = purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "A";
+                    // 06/13/2022: Added "R" as a supported approval flag for "Routing" (PO and Requisitions).
+                    cfWebConfigurationEntity.PurchasingDefaults.IsRequisitionApprovalNeeded = purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "A" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "R";
+                    cfWebConfigurationEntity.PurchasingDefaults.IsPOApprovalNeeded = purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "A" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "R";
+                    cfWebConfigurationEntity.PurchasingDefaults.IsApprovalReturnsEnabled = purchaseDefaults.PurApprAllowReturnFlag.ToUpper() == "Y";
                 }
 
                 if (attachmentParameters != null)
@@ -117,6 +120,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     cfWebConfigurationEntity.VoucherAttachmentCollectionId = attachmentParameters.CfDocAttachVoucherCol;
                     cfWebConfigurationEntity.PurchaseOrderAttachmentCollectionId = attachmentParameters.CfDocAttachPoCol;
                     cfWebConfigurationEntity.RequisitionAttachmentCollectionId = attachmentParameters.CfDocAttachReqCol;
+                    cfWebConfigurationEntity.ProjectsAccountingAttachmentCollectionId = attachmentParameters.CfDocAttachPaCol;
+                    cfWebConfigurationEntity.JournalBudgetEntryAttachmentCollectionId = attachmentParameters.CfDocAttachJbeCol;
                     cfWebConfigurationEntity.AreVoucherAttachmentsRequired = attachmentParameters.CfDocAttachVoucherReqd != null && attachmentParameters.CfDocAttachVoucherReqd.ToUpper() == "Y";
                     cfWebConfigurationEntity.ArePurchaseOrderAttachmentsRequired = attachmentParameters.CfDocAttachPoReqd != null && attachmentParameters.CfDocAttachPoReqd.ToUpper() == "Y";
                     cfWebConfigurationEntity.AreRequisitionAttachmentsRequired = attachmentParameters.CfDocAttachReqReqd != null && attachmentParameters.CfDocAttachReqReqd.ToUpper() == "Y";
@@ -158,6 +163,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 logger.Debug("cfWebConfigurationEntity.VoucherAttachmentCollectionId ==>" + cfWebConfigurationEntity.VoucherAttachmentCollectionId);
                 logger.Debug("cfWebConfigurationEntity.PurchaseOrderAttachmentCollectionId ==>" + cfWebConfigurationEntity.PurchaseOrderAttachmentCollectionId);
                 logger.Debug("cfWebConfigurationEntity.RequisitionAttachmentCollectionId ==>" + cfWebConfigurationEntity.RequisitionAttachmentCollectionId);
+                logger.Debug("cfWebConfigurationEntity.ProjectsAccountingAttachmentCollectionId ==>" + cfWebConfigurationEntity.ProjectsAccountingAttachmentCollectionId);
                 logger.Debug("cfWebConfigurationEntity.AreVoucherAttachmentsRequired ==>" + cfWebConfigurationEntity.AreVoucherAttachmentsRequired);
                 logger.Debug("cfWebConfigurationEntity.ArePurchaseOrderAttachmentsRequired ==>" + cfWebConfigurationEntity.ArePurchaseOrderAttachmentsRequired);
                 logger.Debug("cfWebConfigurationEntity.AreRequisitionAttachmentsRequired ==>" + cfWebConfigurationEntity.AreRequisitionAttachmentsRequired);
@@ -169,6 +175,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 logger.Debug("cfWebConfigurationEntity.RequisitionFieldRequirements ==>" + cfWebConfigurationEntity.RequisitionFieldRequirements);
                 logger.Debug("cfWebConfigurationEntity.PurchaseOrderFieldRequirements ==>" + cfWebConfigurationEntity.PurchaseOrderFieldRequirements);
                 logger.Debug("cfWebConfigurationEntity.VoucherFieldRequirements ==>" + cfWebConfigurationEntity.VoucherFieldRequirements);
+
+                if(cfWebConfigurationEntity.RequestPaymentDefaults != null)
+                {
+                    logger.Debug("cfWebConfigurationEntity.RequestPaymentDefaults.DefaultAPTypeCode ==> " + cfWebConfigurationEntity.RequestPaymentDefaults.DefaultAPTypeCode);
+                    logger.Debug("cfWebConfigurationEntity.RequestPaymentDefaults.IsInvoiceEntryRequired ==> " + cfWebConfigurationEntity.RequestPaymentDefaults.IsInvoiceEntryRequired);
+                    logger.Debug("cfWebConfigurationEntity.RequestPaymentDefaults.AllowMiscVendor ==> " + cfWebConfigurationEntity.RequestPaymentDefaults.AllowMiscVendor);
+                    logger.Debug("cfWebConfigurationEntity.RequestPaymentDefaults.GlRequiredForVoucher ==> " + cfWebConfigurationEntity.RequestPaymentDefaults.GlRequiredForVoucher);
+                    logger.Debug("cfWebConfigurationEntity.RequestPaymentDefaults.IsVoucherApprovalNeeded ==> " + cfWebConfigurationEntity.RequestPaymentDefaults.IsVoucherApprovalNeeded);
+                }
             }
             return cfWebConfigurationEntity;
         }

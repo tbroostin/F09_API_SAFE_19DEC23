@@ -1,5 +1,6 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -10,6 +11,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -26,26 +28,36 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     public class BudgetAdjustmentServiceTests
     {
         #region Initialize and Cleanup
+
         public Mock<IAdapterRegistry> adapterRegistryMock;
         public Mock<ILogger> loggerMock;
 
-        private BudgetAdjustmentService service;
+        public BudgetAdjustmentService service;
         private BudgetAdjustmentService baSummaryService;
         private BudgetAdjustmentService budgetAdjustmentService;
         private BudgetAdjustmentService baServiceForCurrentUserNotInitiator;
         private BudgetAdjustmentService serviceForViewPermission;
         private BudgetAdjustmentService serviceForNoPermission;
         private BudgetAdjustmentService approvalBudgetAdjustmentService;
+        private BudgetAdjustmentService budgetAdjustmentApprovalRolesService;
 
         private Mock<IBudgetAdjustmentsRepository> repositoryMock = new Mock<IBudgetAdjustmentsRepository>();
         private Mock<IBudgetAdjustmentsRepository> repositoryMock2 = new Mock<IBudgetAdjustmentsRepository>();
         private Mock<IBudgetAdjustmentsRepository> repositoryApproveMock;
         private Mock<IBudgetAdjustmentsRepository> repositoryApproveNullDomainMock;
+        private Mock<IBudgetAdjustmentsRepository> expiredRepositoryMock = new Mock<IBudgetAdjustmentsRepository>();
         private Mock<IGeneralLedgerConfigurationRepository> configurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
         private Mock<IGeneralLedgerUserRepository> generalLedgerUserRepositoryMock = new Mock<IGeneralLedgerUserRepository>();
         private Mock<IApproverRepository> approverRepositoryMock = new Mock<IApproverRepository>();
         private Mock<IStaffRepository> staffRepositoryMock = new Mock<IStaffRepository>();
         private Mock<IStaffRepository> approverStaffRepositoryMock = new Mock<IStaffRepository>();
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
+        private Mock<IDraftBudgetAdjustmentsRepository> draftBudgetAdjustmentRepositoryMock = new Mock<IDraftBudgetAdjustmentsRepository>();
+        private Mock<IColleagueFinanceWebConfigurationsRepository> cfWebConfigRepositoryMock = new Mock<IColleagueFinanceWebConfigurationsRepository>();
+        private Mock<IAttachmentRepository> attachmentServiceMock = new Mock<IAttachmentRepository>();
+        private Mock<IAttachmentCollectionService> attachmentCollectionServiceMock = new Mock<IAttachmentCollectionService>();
+        private Mock<IProcurementsUtilityService> procurementUtilityService = new Mock<IProcurementsUtilityService>();
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private Mock<IRoleRepository> roleRepositoryMock1;
@@ -205,6 +217,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 return Task.FromResult(costCenterStructure);
             });
 
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                BudgetEntriesUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                BudgetEntriesUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
+
             // Mock the budget adjustment exclusions.
             exclusions = new BudgetAdjustmentAccountExclusions();
             exclusions.ExcludedElements = new List<BudgetAdjustmentExcludedElement>();
@@ -275,29 +300,47 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             // Build the service object.
             service = new BudgetAdjustmentService(repositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerMock.Object);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerMock.Object);
 
             // Build the service for budget adjustment summary information object.
             baSummaryService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             // Build the budgetAdjustmentService object.
             budgetAdjustmentService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             userFactory2 = new GeneralLedgerCurrentUser.UserFactoryAll();
 
             // Setup the service that is going to make currentUser.PersonId different for the security test.
             baServiceForCurrentUserNotInitiator = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, userFactory2, roleRepository, loggerObject);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory2, roleRepository, loggerObject);
 
             // Build a service for a user that has the budget adjustor role but only view permissions
             serviceForViewPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, baViewUserFactory, roleRepository1, loggerObject);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, baViewUserFactory, roleRepository1, loggerObject);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, noPermissionsUser, roleRepository1, loggerObject);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, noPermissionsUser, roleRepository1, loggerObject);
+
+            // Build the budgetAdjustmentApprovalRolesService object.
+            budgetAdjustmentApprovalRolesService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             #region PostBudgetAdjustmentApprovalAsync
             /////////////////////////////////////////////////////
@@ -350,12 +393,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             // Build a service to approve a budget adjustment.
             approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                approverStaffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
+                approverStaffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             ///////////////////////////////////////////////
             // End of area for approve a budget adjustment.
             ///////////////////////////////////////////////
             #endregion
+
         }
 
         [TestCleanup]
@@ -393,10 +439,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             budgetAdjustmentToApproveEntity = null;
             staffRepositoryMock = null;
             approverStaffRepositoryMock = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
+            budgetAdjustmentApprovalRolesService = null;
         }
         #endregion
 
         #region CreateBudgetAdjustmentAsync
+
         [TestMethod]
         public async Task CreateBudgetAdjustmentAsync_Success()
         {
@@ -1471,6 +1521,63 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
             Assert.AreEqual(expectedMessage, actualMessage);
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task CreateBudgetAdjustmentAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = "Pass",
+                Reason = "reason",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.AdjustmentLine(adjustmentLineDto.GlNumber, adjustmentLineDto.FromAmount, adjustmentLineDto.ToAmount));
+            }
+
+            adjustmentSuccessEntity = new Domain.ColleagueFinance.Entities.BudgetAdjustment("B000001", inputDto.TransactionDate, inputDto.Reason, userFactory.CurrentUser.PersonId, adjustmentLines);
+            adjustmentSuccessEntity.Comments = inputDto.Comments;
+            adjustmentSuccessEntity.Initiator = inputDto.Initiator;
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.CreateAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions))
+                .Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("timeout");
+                });
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await service.CreateBudgetAdjustmentAsync(inputDto);
+        }
+
         #endregion
 
         #region UpdateBudgetAdjustmentAsync
@@ -1842,6 +1949,60 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(expectedMessage, actualMessage);
         }
 
+        public async Task UpdateAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "B111111",
+                Initiator = "initiator",
+                Reason = "reason",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.AdjustmentLine(adjustmentLineDto.GlNumber, adjustmentLineDto.FromAmount, adjustmentLineDto.ToAmount));
+            }
+
+            var budgetAdjustmentEntity = new Domain.ColleagueFinance.Entities.BudgetAdjustment("B000001", inputDto.TransactionDate, inputDto.Reason, userFactory.CurrentUser.PersonId, adjustmentLines);
+            budgetAdjustmentEntity.Comments = inputDto.Comments;
+            adjustmentSuccessEntity.Initiator = inputDto.Initiator;
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.UpdateAsync("B000001", budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions))
+                .Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("timeout");
+                });
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await service.UpdateBudgetAdjustmentAsync("B000001", inputDto);
+        }
+
         #endregion
 
         #region PostBudgetAdjustmentApprovalAsync
@@ -1924,7 +2085,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 staffRepositoryMock = new Mock<IStaffRepository>();
                 staffRepositoryMock.Setup(z => z.GetStaffLoginIdForPersonAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException("Could not find Staff information for the user."));
                 approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                    staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+                    staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                    cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                    adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
                 await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
             }
@@ -1942,7 +2105,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             // Mock the service to a return a null budget adjustment.
             approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var exceptionCaught = false;
             try
@@ -2119,6 +2284,88 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
         }
 
+        public async Task PostBudgetAdjustmentApprovalAsync_RepositoryUpdateAsyncReturnsColleagueExpiredException()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.AdjustmentLine(adjustmentLineDto.GlNumber, adjustmentLineDto.FromAmount, adjustmentLineDto.ToAmount));
+            }
+
+            var budgetAdjustmentEntity = new Domain.ColleagueFinance.Entities.BudgetAdjustment("B333333", DateTime.Now, "reason", userFactory.CurrentUser.PersonId, adjustmentLines);
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.UpdateAsync("B333333", budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions))
+                .Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("timeout");
+                });
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
+        }
+
+        public async Task PostBudgetAdjustmentApprovalAsync_RepositoryValidateBudgetAdjustmentAsyncReturnsColleagueExpiredException()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.AdjustmentLine(adjustmentLineDto.GlNumber, adjustmentLineDto.FromAmount, adjustmentLineDto.ToAmount));
+            }
+
+            var budgetAdjustmentEntity = new Domain.ColleagueFinance.Entities.BudgetAdjustment("B333333", DateTime.Now, "reason", userFactory.CurrentUser.PersonId, adjustmentLines);
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions))
+                .Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("timeout");
+                });
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
+        }
+
         #endregion
 
         #region Get budget adjustment
@@ -2142,7 +2389,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             // Mock the service to a return a null budget adjustment.
             budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync("B000111");
 
@@ -2158,7 +2407,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task PostBudgetAdjustmentApprovalAsync_CurrentUserIsNotInitiator()
+        public async Task GetBudgetAdjustmentAsync_CurrentUserIsNotInitiator()
         {
             var exceptionCaught = false;
             try
@@ -2184,7 +2433,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 return Task.FromResult(new List<string>() { "Validation error" });
             });
             budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+                staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync("B000111");
 
@@ -2215,6 +2466,47 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     && x.ToAmount == adjustmentLineDto.ToAmount);
                 Assert.IsNotNull(matchingLine);
             }
+        }
+
+        public async Task GetBudgetAdjustmentAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.AdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.AdjustmentLine(adjustmentLineDto.GlNumber, adjustmentLineDto.FromAmount, adjustmentLineDto.ToAmount));
+            }
+
+            var budgetAdjustmentEntity = new Domain.ColleagueFinance.Entities.BudgetAdjustment("B333333", DateTime.Now, "reason", userFactory.CurrentUser.PersonId, adjustmentLines);
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions))
+                .Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("timeout");
+                });
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await approvalBudgetAdjustmentService.GetBudgetAdjustmentAsync("B000111");
         }
 
         #endregion
@@ -2312,7 +2604,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
             }
-            catch(ApplicationException e)
+            catch (ApplicationException e)
             {
                 Assert.AreEqual("Error retrieving GL class configuration.", e.Message);
             }
@@ -2335,7 +2627,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_GetStaffLoginIdForPersonAsync_Fails()
         {
-            
+
             try
             {
                 var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
@@ -2366,6 +2658,108 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("");
         }
+
+
+        #region Tests for GetVoucher2Async with GL approval roles functionality
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_FullGlAccess()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.Full_Access);
+            //glUser.AddExpenseAccounts(new string[] { "11_10_00_01_20601_51000", "11_10_00_01_20601_51001" });
+
+            var budgetAdjustmentDto = await budgetAdjustmentApprovalRolesService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+            //var budgetAdjustmentEntity = await this.testBudgetAdjustmentRepository.GetBudgetAdjustmentAsync("B000333");
+
+            //Assert.AreEqual(budgetAdjustmentEntity.AdjustmentLines.Count(), budgetAdjustmentDto.AdjustmentLines.Count());
+            Assert.IsTrue(glUser.GlAccessLevel == GlAccessLevel.Full_Access);
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_PartialGlAccessAndApprovalAccess()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>() { "11_10_00_01_20601_51000" };
+
+            generalLedgerUserRepositoryMock.Setup(repo => repo.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).
+                Returns(Task.FromResult(allAccessAndApprovalAccounts));
+            var adapterRegistryObject = adapterRegistryMock.Object;
+            var loggerObject = loggerMock.Object;
+            budgetAdjustmentApprovalRolesService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
+                approverRepositoryMock.Object, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
+
+            var budgetAdjustmentDto = await budgetAdjustmentApprovalRolesService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+
+            Assert.IsTrue(glUser.GlAccessLevel == GlAccessLevel.Possible_Access);
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NullGlAccessAndApprovalAccess()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
+
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>() { "11_10_00_01_20601_51000" };
+
+            generalLedgerUserRepositoryMock.Setup(repo => repo.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).
+                Returns(Task.FromResult(allAccessAndApprovalAccounts));
+            var adapterRegistryObject = adapterRegistryMock.Object;
+            var loggerObject = loggerMock.Object;
+            budgetAdjustmentApprovalRolesService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
+                approverRepositoryMock.Object, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
+
+            var budgetAdjustmentDto = await budgetAdjustmentApprovalRolesService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+
+            Assert.IsTrue(glUser.GlAccessLevel == GlAccessLevel.Possible_Access);
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NoGlAccessAndNoApprovalAccess()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.No_Access);
+
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>();
+
+            generalLedgerUserRepositoryMock.Setup(repo => repo.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).
+                Returns(Task.FromResult(allAccessAndApprovalAccounts));
+            var adapterRegistryObject = adapterRegistryMock.Object;
+            var loggerObject = loggerMock.Object;
+            budgetAdjustmentApprovalRolesService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
+                approverRepositoryMock.Object, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
+
+            var budgetAdjustmentDto = await budgetAdjustmentApprovalRolesService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+
+            Assert.IsTrue(glUser.GlAccessLevel == GlAccessLevel.No_Access);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NullApprovalConfiguration()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.AddExpenseAccounts(new string[] { "11_10_00_01_20601_51000", "11_10_00_01_20601_51001" });
+
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+            var adapterRegistryObject = adapterRegistryMock.Object;
+            var loggerObject = loggerMock.Object;
+            budgetAdjustmentApprovalRolesService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
+                approverRepositoryMock.Object, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                adapterRegistryObject, userFactory, roleRepository, loggerObject);
+
+            await budgetAdjustmentApprovalRolesService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+        }
+
+        #endregion
 
         #endregion
 
@@ -2464,6 +2858,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Assert.AreEqual(dto.ToAmount, matchingbaSummaryEntity.ToAmount);
                 Assert.AreEqual(dto.TransactionDate, matchingbaSummaryEntity.TransactionDate);
             }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task GetBudgetAdjustmentPendingApprovalSummaryAsync_RepositoryReturnsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            expiredRepositoryMock.Setup(exs => exs.GetBudgetAdjustmentsPendingApprovalSummaryAsync(It.IsAny<string>())).Returns(() =>
+            {
+                throw new ColleagueSessionExpiredException("timeout");
+            });
+
+
+            // Build a service for a Colleague expired session.
+            service = new BudgetAdjustmentService(expiredRepositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                                                  staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, draftBudgetAdjustmentRepositoryMock.Object, 
+                                                  cfWebConfigRepositoryMock.Object, attachmentServiceMock.Object, attachmentCollectionServiceMock.Object, procurementUtilityService.Object,
+                                                  adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
+
+            await service.GetBudgetAdjustmentsPendingApprovalSummaryAsync();
         }
 
         #endregion

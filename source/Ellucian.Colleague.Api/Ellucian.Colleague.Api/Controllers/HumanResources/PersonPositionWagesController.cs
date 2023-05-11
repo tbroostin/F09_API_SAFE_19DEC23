@@ -1,8 +1,9 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -27,6 +28,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly IPersonPositionWageService personPositionWageService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedErrorMessage = "Unexpected error occurred while getting leave request details";
 
         /// <summary>
         /// Constructor
@@ -60,10 +63,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 return await personPositionWageService.GetPersonPositionWagesAsync(effectivePersonId, lookupStartDate);
             }
-            catch(Exception e)
+            catch (ColleagueSessionExpiredException csse)
             {
-                logger.Error(e, "Unknown error getting person position wages");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(unexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
         }
     }

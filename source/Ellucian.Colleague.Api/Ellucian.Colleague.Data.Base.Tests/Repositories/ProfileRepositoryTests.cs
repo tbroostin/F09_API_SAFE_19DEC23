@@ -1,24 +1,17 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
-using System.Collections.Generic;
-using System.Linq;
-using Moq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Data.Colleague;
-using System.Runtime.Caching;
-using System.Collections.ObjectModel;
-using Ellucian.Colleague.Data.Base.Repositories;
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
-using slf4net;
-using Ellucian.Web.Cache;
-using System;
-using Ellucian.Data.Colleague.DataContracts;
-using System.Threading.Tasks;
-using System.Threading;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -70,10 +63,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                        };
 
             private string[,] _phoneData = {
-                                               {"703-332-9004","CP",""},
-                                               {"304-899-4565","HO",""},
-                                               {"0-1-9989-998-348","BU","4339"},
-                                               {"414-335-9005","FX",""}
+                                               {"703-332-9004","CP","", "Y"},
+                                               {"304-899-4565","HO","", ""},
+                                               {"0-1-9989-998-348","BU","4339", ""},
+                                               {"414-335-9005","CP","", "n"}
                                        };
 
             #endregion
@@ -107,9 +100,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual("USofA", address.Country);
                 Assert.AreEqual("USA", address.CountryCode);
                 Assert.AreEqual(4, address.PhoneNumbers.Count());
-                Assert.AreEqual("304-899-4565", address.PhoneNumbers.ElementAt(1).Number);
+                Assert.AreEqual("414-335-9005", address.PhoneNumbers.ElementAt(1).Number);
                 Assert.AreEqual("703-332-9004", address.PhoneNumbers.ElementAt(0).Number);
-                Assert.AreEqual("HO", address.PhoneNumbers.ElementAt(1).TypeCode);
+                Assert.AreEqual("CP", address.PhoneNumbers.ElementAt(1).TypeCode);
                 Assert.AreEqual("CP", address.PhoneNumbers.ElementAt(0).TypeCode);
                 Assert.AreEqual("HO", address.TypeCode);
                 Assert.AreEqual("Home", address.Type);
@@ -120,6 +113,36 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Address> addresses = await profileRepo.GetPersonAddressesAsync("0000304");
                 Assert.AreEqual(3, addresses.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonPhonesAsync_CheckAllProperties()
+            {
+                Ellucian.Colleague.Domain.Base.Entities.PhoneNumber phoneNumbers = await profileRepo.GetPersonPhonesAsync("0000304");
+                Assert.AreEqual(4, phoneNumbers.PhoneNumbers.Count());
+                var phone1 = phoneNumbers.PhoneNumbers.ElementAt(0);
+                Assert.AreEqual("703-332-9004", phone1.Number);
+                Assert.AreEqual("CP", phone1.TypeCode);
+                Assert.AreEqual(true, phone1.IsAuthorizedForText);
+
+
+                var phone4 = phoneNumbers.PhoneNumbers.ElementAt(1);
+                Assert.AreEqual("414-335-9005", phone4.Number);
+                Assert.AreEqual("CP", phone4.TypeCode);
+                Assert.AreEqual(string.Empty, phone4.Extension);
+                Assert.AreEqual(false, phone4.IsAuthorizedForText);
+
+                var phone2 = phoneNumbers.PhoneNumbers.ElementAt(2);
+                Assert.AreEqual("304-899-4565", phone2.Number);
+                Assert.AreEqual("HO", phone2.TypeCode);
+                Assert.IsNull(phone2.IsAuthorizedForText);
+
+                var phone3 = phoneNumbers.PhoneNumbers.ElementAt(3);
+                Assert.AreEqual("0-1-9989-998-348", phone3.Number);
+                Assert.AreEqual("BU", phone3.TypeCode);
+                Assert.AreEqual("4339", phone3.Extension);
+                Assert.IsNull(phone3.IsAuthorizedForText);
+
             }
 
             [TestMethod]
@@ -610,18 +633,22 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     record.PersonalPhoneNumber = new List<string>();
                     record.PersonalPhoneType = new List<string>();
                     record.PersonalPhoneExtension = new List<string>();
-                    int phoneCount = phoneData.Length / 3;
+                    record.PersonalPhoneTextAuth = new List<string>();
+                    int phoneCount = phoneData.Length / 4;
                     for (int ii = 0; ii < phoneCount; ii++)
                     {
                         string number = phoneData[ii, 0].TrimEnd();
                         string type = (phoneData[ii, 1] == null) ? String.Empty : phoneData[ii, 1].TrimEnd();
                         string ext = (phoneData[ii, 2] == null) ? String.Empty : phoneData[ii, 2].TrimEnd();
+                        string auth = (phoneData[ii, 3] == null) ? String.Empty : phoneData[ii, 3].TrimEnd();
+
                         // Cell Phone is the only phone type stored in Personal Phone fields.
                         if (type == "CP")
                         {
                             record.PersonalPhoneNumber.Add(number);
                             record.PersonalPhoneType.Add(type);
                             record.PersonalPhoneExtension.Add(ext);
+                            record.PersonalPhoneTextAuth.Add(auth);
                         }
                     }
 
@@ -678,12 +705,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     response.AddressPhones = new List<string>();
                     response.AddressPhoneType = new List<string>();
                     response.AddressPhoneExtension = new List<string>();
-                    int phoneCount = phoneData.Length / 3;
+                    int phoneCount = phoneData.Length / 4;
                     for (int ii = 0; ii < phoneCount; ii++)
                     {
                         string number = phoneData[ii, 0].TrimEnd();
                         string type = (phoneData[ii, 1] == null) ? String.Empty : phoneData[ii, 1].TrimEnd();
                         string ext = (phoneData[ii, 2] == null) ? String.Empty : phoneData[ii, 2].TrimEnd();
+                        // Text authorize is not applicable in the address phones.
                         // Cell phone is defined as a personal phone and stored with person.
                         if (type != "CP")
                         {

@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -78,6 +78,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string RecurringVoucherNumber { get; set; }
 
         /// <summary>
+        /// Flag to indicate if document has attachment/s associated
+        /// </summary>
+        public bool AttachmentsIndicator { get; set; }
+
+        /// <summary>
         /// List of purchase orders.
         /// </summary>
         public List<PurchaseOrderLinkSummary> PurchaseOrders { get; set; }
@@ -86,6 +91,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of Approvers associated to this voucher
         /// </summary>
         public List<Approver> Approvers { get; set; }
+
+        /// <summary>
+        /// Flag to indicate if document has returned from approval
+        /// </summary>
+        public bool ApprovalReturnedIndicator { get; set; }
 
     }
 }

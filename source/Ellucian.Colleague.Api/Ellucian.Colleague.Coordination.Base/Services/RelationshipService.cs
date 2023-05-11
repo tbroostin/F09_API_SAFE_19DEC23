@@ -1,5 +1,6 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -24,7 +25,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private class OrderedRelationship : Dtos.Base.Relationship
         {
             // integer to indicate the original retrieved order
-            public int Seq;
+            public int Seq { get; set; }
 
             // static method to generate a Relationship from an OrderedRelationship
             public static Dtos.Base.Relationship RelFromOrdRel(OrderedRelationship ord)
@@ -85,8 +86,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("id");
             }
 
-            // A user can only see their own relationships
-            if (!CurrentUser.IsPerson(id))
+            // A user can only see their own relationships.
+            // Proxy admins can access anyone's relationships.
+            if (!CurrentUser.IsPerson(id) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 string message = CurrentUser + " cannot view relationship information for person " + id;
                 logger.Error(message);
@@ -205,7 +207,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             // A user can only see their own relationships
-            if (!CurrentUser.IsPerson(id))
+            if (!CurrentUser.IsPerson(id) && !HasPermission(BasePermissionCodes.AddAllEmployeeProxy))
             {
                 string message = CurrentUser + " cannot view relationship information for person " + id;
                 logger.Error(message);

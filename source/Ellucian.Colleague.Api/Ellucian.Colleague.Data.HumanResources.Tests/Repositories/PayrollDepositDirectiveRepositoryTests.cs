@@ -189,7 +189,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             {
                 testData.employeeRecords.First().directives = new List<TestPayrollDepositDirectivesRepository.PayrollRecord>();
                 await repositoryUnderTest.GetPayrollDepositDirectivesAsync("24601");
-                loggerMock.Verify(l => l.Info(It.IsAny<string>()));
+                loggerMock.Verify(l => l.Error(It.IsAny<string>()));
             }
             [TestMethod, ExpectedException(typeof(ApplicationException))]
             public async Task NoBankRecordsExceptionTest()

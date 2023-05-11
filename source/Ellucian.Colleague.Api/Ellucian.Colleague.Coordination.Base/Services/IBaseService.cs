@@ -9,6 +9,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 {
     public interface IBaseService
     {
+        Tuple<bool, List<string>, List<string>> GetSecureDataDefinition();
 
         /// <summary>
         /// Check for permissions and build error message.
@@ -59,7 +60,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="resourceName"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false);
+        Task<string> GetEthosExtensibilityResourceDefaultVersion(string resourceName, bool bypassCache = false, string requestedVersion = "");
 
         /// <summary>
         /// Gets the extended configuration available on a resource, returns an empty list if there are none
@@ -76,11 +77,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<EthosExtensibleData> GetBulkExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false);
 
         /// <summary>
-        /// Gets  all extended configurations, returns null if there are none
+        /// Gets  all extended configurations , returns null if there are none
         /// </summary>
         /// <param name="bypassCache">bypassCache </param>
         /// <returns>List with all of the extended configurations if available. Returns an null if none available or none configured</returns>
-        Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false);
+        Task<List<Domain.Base.Entities.EthosExtensibleData>> GetAllExtendedEthosConfigurations(bool bypassCache = false, bool customOnly = true);
 
         /// <summary>
         /// Gets the extended configuration available on a resource, returns an empty list if there are none

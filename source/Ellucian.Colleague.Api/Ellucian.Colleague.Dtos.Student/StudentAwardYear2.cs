@@ -58,7 +58,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// This is the total amount that the student has been awarded minus denied and rejected awards.
         /// </summary>
         public decimal TotalAwardedAmount { get; set; }
-
+        /// <summary>
+        /// Flag indicating whether or not FA Credits are visible
+        /// </summary>
+        public bool AreFaCreditsVisible { get; set; }
         /// <summary>
         /// Collection of AwardLetterHistoryItem DTOs for the year
         /// </summary>

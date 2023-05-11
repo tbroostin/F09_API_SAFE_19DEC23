@@ -5,6 +5,7 @@ using Ellucian.Colleague.Coordination.Finance;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.Payments;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
@@ -57,6 +58,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.GetPaymentControl(id);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -79,6 +85,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetStudentPaymentControls(studentId);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -104,6 +115,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.GetPaymentControlDocument(id, documentId);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -127,6 +143,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.ApproveRegistrationTerms(approval);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -148,6 +169,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.ApproveRegistrationTerms2(approval);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -171,6 +197,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.GetPaymentOptions(id);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -192,6 +223,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.UpdatePaymentControl(rpcDto);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -217,6 +253,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 return _service.GetPaymentSummary(id, payMethod, amount);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
@@ -238,6 +279,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.StartRegistrationPayment(payment);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -309,6 +355,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetProposedPaymentPlan(payControlId, receivableType);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {

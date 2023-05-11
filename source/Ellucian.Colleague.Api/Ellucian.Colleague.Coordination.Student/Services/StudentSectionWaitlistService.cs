@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -89,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var waitEntity = await _sectionRepository.GetWaitlistFromGuidAsync(guid);
                 if (waitEntity == null)
                 {
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
 
                 }
                 return ConvertStudentSectionWaitlistsEntityToDto(waitEntity);

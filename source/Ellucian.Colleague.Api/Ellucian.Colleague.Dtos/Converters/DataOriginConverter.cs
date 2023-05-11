@@ -1,10 +1,11 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Dtos.Converters
 {
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Dtos.Converters
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             if (objectType != typeof(string))
-                throw new Exception(string.Format("Unexpected value when reading string.  Expected string, got {0}", objectType.ToString()));
+                throw new ColleagueWebApiDtoException(string.Format("Unexpected value when reading string.  Expected string, got {0}", objectType.ToString()));
 
             // allow the value to be null
             if (reader == null || reader.Value == null)
@@ -64,7 +65,7 @@ namespace Ellucian.Colleague.Dtos.Converters
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             if (value.GetType() != typeof(string))
-                throw new Exception(string.Format("Unexpected value when writing string.  Expected string, got {0}", value.GetType().ToString()));                
+                throw new ColleagueWebApiDtoException(string.Format("Unexpected value when writing string.  Expected string, got {0}", value.GetType().ToString()));                
             
             if (string.IsNullOrEmpty(value.ToString()))
                 writer.WriteValue(DataOrigin);

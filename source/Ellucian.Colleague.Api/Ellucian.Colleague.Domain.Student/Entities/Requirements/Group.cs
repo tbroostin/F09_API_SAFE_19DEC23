@@ -8,9 +8,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
     [Serializable]
     public class Group : BlockBase
     {
-        public Subrequirement SubRequirement;
-        public GroupType GroupType;
-        public bool SkipGroup;  // When "skipping" a group, evaluate it to see what is related, but don't "apply" any credits.
+        public Subrequirement SubRequirement { get; set; }
+        public GroupType GroupType { get; set; }
+        public bool SkipGroup { get; set; }  // When "skipping" a group, evaluate it to see what is related, but don't "apply" any credits.
 
         #region Ceilings (Maximums)
 
@@ -257,7 +257,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             Exclusions = new List<string>();
         }
 
-        public GroupResult Evaluate(IEnumerable<AcadResult> acadresults, List<Override> overrides, IEnumerable<Course> courses, List<AcademicCredit> creditsExcludedFromTranscriptGrouping = null, bool showRelatedCourses=false,  bool skipgroup = false)
+        public GroupResult Evaluate(IEnumerable<AcadResult> acadresults, List<Override> overrides, IEnumerable<Course> courses, List<AcademicCredit> creditsExcludedFromTranscriptGrouping = null, bool showRelatedCourses=false,bool disableLookaheadOptimization=false,  bool skipgroup = false)
         {
             SkipGroup = skipgroup;
             GroupResult groupResult = new GroupResult(this, showRelatedCourses);
@@ -283,6 +283,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                         creditresult.Result = Result.Applied;
                         creditresult.GroupId = this.Id;
                         groupResult.ForceAppliedAcademicCreditIds.Add(creditresult.GetAcadCredId());
+                        groupResult.EvalDebug.Add("Forced applied academic credit due to overrides but were excluded from transcript grouping "+ creditresult.GetAcadCredId());
                         groupResult.Results.Add(creditresult);
                     }
 
@@ -306,7 +307,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                                 acadresult.Result = Result.Applied;
                                 acadresult.GroupId = this.Id;
                                 groupResult.ForceAppliedAcademicCreditIds.Add(acadcredid);
-
+                                groupResult.EvalDebug.Add("Forced applied academic credit due to overrides " + acadcredid);
                             }
                         }
                     }
@@ -689,7 +690,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 }
 
 
-                // Min GPA lookahead optimization
+                // Min GPA lookahead optimization only when lookahead optimization is not disabled(which is default value)
                 //
                 // if there is a Min GPA requirement on this group       AND
                 // we have not applied any planned courses to this group AND
@@ -700,7 +701,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 // would drag us back under it                           THEN
                 // don't apply it.
 
-                if (MinGpa != null)
+                if (MinGpa != null && disableLookaheadOptimization==false)
                 {
                     if (groupResult.GetApplied().Where(ap => ap.GetAcadCred() == null).Count() == 0)
                     {
@@ -1376,9 +1377,92 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// </summary>
         private Result CheckCredit(AcadResult acadResult, List<Course> equatedCourses)
         {
+            
+            Result result = Result.Untested;
+            result = CheckCreditsSteps(acadResult, equatedCourses);
+            //if resut is related then it means have passed through all the clauses in syntax then perform last step to verify if it is repeated course and if it will be Replaced in progress because
+            //there is another repeated course which is considered as possible replacement. 
+            if(result==Result.Related)
+            {
+                result = CheckCreditForReplaceInProgressStep5(acadResult);
+
+            }
+            return result;
+        }
+        /// <summary>
+        /// Going to pass academic credit and its equated courses for checks on cluases like Courses, From Courses, From Subjects, From Departments, ButNots , rules and exceptions
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <param name="equatedCourses"></param>
+        /// <returns></returns>
+        private Result CheckCreditsSteps(AcadResult acadResult, List<Course> equatedCourses)
+        {
+            Result result = Result.Untested;
+            //check for FromCourseException, EligibilityRules, Courses list, FromCourses list, rules. If the course or an equated course is in FromCoursesEXception then it is considered as Related and returns.
+            //there is no need to further look into other clauses in syntax
+            //If academic credit fails rules or is not in courses or from courses list OR acadmeic credit's equated courses re not in Courses or FromCourses list then no need to go further to look
+            //other clauses in syntax
+            result = CheckCreditStep1(acadResult);
+            if(result==Result.RelatedFromCourseException)
+            {
+                return Result.Related;
+            }
+            if (result != Result.Related)
+                return result;
+
+            //you will reach here when a  course on academic credit or any of the equated course have passed through step 1(as described above) such as result is marked Related. 
+            //Even though result is marked as Related, it is not truely related because there could be other clauses in syntax
+
+            //Go to step 2 of checks- which is FromDeparments, FromSubjects, FromLevels
+            if (FromDepartments.Any() || FromSubjects.Any() || FromLevels.Any())
+            {
+                //reset the result back to untested. 
+                result = Result.Untested;
+                //Check the course on  current academic credit belongs to from department or from subject or from level clause. 
+                result = CheckCreditFromClauseOnAcadResultStep2(acadResult);
+                //If result is related then it means course on acad credit satisfy or passes from clause. In case it has not then take each equated course and validates if each individual equated course
+                //belongs to From subjects, From deaprtments, From levels clause
+                if (result != Result.Related)
+                {
+
+                    foreach (Course course in equatedCourses)
+                    {
+                        result = Result.Untested;
+                        result = CheckCreditFromClauseOnEquatedCourseStep3(course);
+                        //result is related means one of the equated course belongs to from subject/from dept/from level list then no need to further look into other equated courses
+                        if (result == Result.Related)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            //if acad credit or equated courses belongs to Courses, FromCourses but have failed to be in FromSubjects, FromDepatrments, FromLevels then jst return the result
+            if (result != Result.Related)
+                return result;
+
+            //We will reach here if we have passed through step 1 or step 2 or step 3
+            if (ButNotCourseLevels.Any() || ButNotCourses.Any() || ButNotDepartments.Any() || ButNotSubjects.Any())
+            {
+                //reset the result so that we can check on ButNot for course levels, courses, departments, subjects. courses, depts, subjects are also checked on equated courses
+                result = Result.Untested;
+                result = CheckCreditButNotStep4(acadResult, equatedCourses);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// This checks course on academic credit for FromCoursesException (Exception to allow additional courses), Eligibility Rules, 
+        /// Coursesm From Courses, Rules
+        /// Equated course Ids are also looked for FromCoursesException, Courses and Fro courses clauses
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <returns></returns>
+        private Result CheckCreditStep1(AcadResult acadResult)
+        {
             // Check up the tree for rules to evaluate
             List<RequirementRule> EligibilityRules = new List<RequirementRule>();
-             if (this.SubRequirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.AcademicCreditRules); }
+            if (this.SubRequirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.AcademicCreditRules); }
             if (this.SubRequirement.Requirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.Requirement.AcademicCreditRules); }
             if (this.SubRequirement.Requirement.ProgramRequirements != null)
             {
@@ -1395,7 +1479,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 if ((FromCoursesException.Contains(acadResult.GetCourse().Id)) ||
                     (FromCoursesException.Intersect(acadResult.GetCourse().EquatedCourseIds).Count() > 0))
                 {
-                    return Result.Related;
+                    return Result.RelatedFromCourseException;
                 }
             }
 
@@ -1466,11 +1550,22 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 }
             }
 
+
+            return Result.Related;
+        }
+        /// <summary>
+        /// This checks if course on academic credit belongs to From Daprtments list or From Levels list or From Subjects list
+        /// If a course passes through all the from clauses then it is marked as Related course
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <returns></returns>
+        private Result CheckCreditFromClauseOnAcadResultStep2(AcadResult acadResult)
+        {
+
             // Check the departments listed for the academic result's course but also accept if one of the equated courses has one of these departments.
             if (FromDepartments.Count > 0)
             {
-                if (FromDepartments.Intersect(acadResult.GetDepartments()).Count() == 0 &&
-                    FromDepartments.Intersect(equatedCourses.SelectMany(eq => eq.DepartmentCodes)).Count() == 0)
+                if (FromDepartments.Intersect(acadResult.GetDepartments()).Count() == 0 )
                 {
                     return Result.FromWrongDepartment;
                 }
@@ -1479,8 +1574,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             // Check the course levels listed for the academic result's course but also accept if any equated course has one of these levels
             if (FromLevels.Count > 0)
             {
-                if (FromLevels.Intersect(acadResult.GetCourseLevels()).Count() == 0 &&
-                    FromLevels.Intersect(equatedCourses.SelectMany(eq => eq.CourseLevelCodes)).Count() == 0)
+                if (FromLevels.Intersect(acadResult.GetCourseLevels()).Count() == 0)
                 {
                     return Result.FromWrongLevel;
                 }
@@ -1489,12 +1583,63 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             // Check FromSubjects against the subject in the academic result's course but also accept if any equated course has one of these subjects
             if (FromSubjects.Count > 0)
             {
-                if (!FromSubjects.Contains(acadResult.GetSubject()) &&
-                    FromSubjects.Intersect(equatedCourses.Select(eq => eq.SubjectCode)).Count() == 0)
+                if (!FromSubjects.Contains(acadResult.GetSubject()) )
                 {
                     return Result.FromWrongSubject;
                 }
             }
+
+           
+
+            return Result.Related;
+        }
+        /// <summary>
+        /// This checks if an equated belongs to From Daprtments list or From Levels list or From Subjects list
+        /// If a course passes through all the from clauses then it is marked as Related course
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <returns></returns>
+        private Result CheckCreditFromClauseOnEquatedCourseStep3(Course equatedCourse)
+        {
+                // Check the departments listed for the academic result's course but also accept if one of the equated courses has one of these departments.
+                if (FromDepartments.Count > 0)
+                {
+                    if (FromDepartments.Intersect(equatedCourse.DepartmentCodes).Count() == 0)
+                    {
+                        return Result.FromWrongDepartment;
+                    }
+                }
+
+                // Check the course levels listed for the academic result's course but also accept if any equated course has one of these levels
+                if (FromLevels.Count > 0)
+                {
+                    if ( FromLevels.Intersect(equatedCourse.CourseLevelCodes).Count() == 0)
+                    {
+                        return Result.FromWrongLevel;
+                    }
+                }
+
+                // Check FromSubjects against the subject in the academic result's course but also accept if any equated course has one of these subjects
+                if (FromSubjects.Count > 0)
+                {
+                    if (!FromSubjects.Contains(equatedCourse.SubjectCode))
+                    {
+                        return Result.FromWrongSubject;
+                    }
+                }
+
+
+            return Result.Related;
+        }
+        /// <summary>
+        /// This step checks for ButNot clause on academic credits course and all the equated courses
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <param name="equatedCourses"></param>
+        /// <returns></returns>
+        private Result CheckCreditButNotStep4(AcadResult acadResult, List<Course> equatedCourses)
+        {
+
 
             // If a NOT course level is found in the course of the academic result, exclude this item
             // Note that a NOT course level found in any *equated* courses for the course of the academic result are not considered
@@ -1512,25 +1657,34 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 }
             }
 
-            // if a NOT department is found in the course of the academic result, or any of the equated courses, exclude this item
-            if (ButNotDepartments.Intersect(acadResult.GetDepartments()).Count() > 0 ||
-                ButNotDepartments.Intersect(equatedCourses.SelectMany(eq => eq.DepartmentCodes)).Count() > 0)
+            // if a NOT department is found in the course of the academic result, exclude this item. We are not going to look into equated courses
+            if (ButNotDepartments.Intersect(acadResult.GetDepartments()).Count() > 0)
             {
                 return Result.DepartmentExcluded;
             }
 
-            // If a NOT subject is found in the course of the academic result, or any of its equated courses, exclude this item
-            if (ButNotSubjects.Contains(acadResult.GetSubject()) ||
-                ButNotSubjects.Intersect(equatedCourses.Select(eq => eq.SubjectCode)).Count() > 0)
+            // If a NOT subject is found in the course of the academic result, exclude this item. We are not going to look into equated courses.
+            if (ButNotSubjects.Contains(acadResult.GetSubject()))
             {
                 return Result.SubjectExcluded;
             }
 
+            return Result.Related;
+        }
+        /// <summary>
+        /// Validate if academic credit is repeat such as this credit or planned course in particular was possible replace in progress
+        /// </summary>
+        /// <param name="acadResult"></param>
+        /// <returns></returns>
+        private Result CheckCreditForReplaceInProgressStep5(AcadResult acadResult)
+        {
+            // Check up the tree for rules to evaluate
+
 
             // Repeat - if credit has replaceInprogress flag then don't count that acad cred record for group evaluation
-            if(acadResult!=null && acadResult.GetAcadCred()!=null && acadResult.GetAcadCred().ReplacedStatus == ReplacedStatus.ReplaceInProgress)
+            if (acadResult != null && acadResult.GetAcadCred() != null && acadResult.GetAcadCred().ReplacedStatus == ReplacedStatus.ReplaceInProgress)
             {
-                return Result.ReplaceInProgress; 
+                return Result.ReplaceInProgress;
             }
             //If planned course is replaced in progress then do not pass it for group evaluation
             if (acadResult != null && acadResult.GetAcadCred() == null && acadResult.GetCourse() != null && ((CourseResult)acadResult).PlannedCourse.ReplacedStatus == ReplacedStatus.ReplaceInProgress)
@@ -1542,6 +1696,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             return Result.Related;
         }
 
+      
         public override string ToString()
         {
             return Id + " " + Code;

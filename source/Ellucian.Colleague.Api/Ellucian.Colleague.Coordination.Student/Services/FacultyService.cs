@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -268,7 +269,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                                join term in allTerms
                                                    on termcode equals term.Code
                                                    into joinNonRegTerms
-                                                   from resultTerm in joinNonRegTerms
+                                               from resultTerm in joinNonRegTerms
                                                select resultTerm).ToList();
 
 
@@ -368,7 +369,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 // If a date range is not specified figure out which terms are on  
                 // Class Schedule Web Parameters (CSWP) and Grading Web Parameters (GRWP) but that are not on RGWP.
-                var gradingConfiguration = await _configurationRepository.GetFacultyGradingConfigurationAsync();
+                var gradingConfiguration = await _configurationRepository.GetFacultyGradingConfiguration2Async();
                 var gradingTerms = gradingConfiguration != null && gradingConfiguration.AllowedGradingTerms != null ? gradingConfiguration.AllowedGradingTerms.ToList() : new List<string>();
                 var scheduleTermsValcodes = await _studentReferenceDataRepository.GetAllScheduleTermsAsync(false);
                 var scheduleTerms = scheduleTermsValcodes != null ? scheduleTermsValcodes.Select(st => st.Code).ToList() : new List<string>();
@@ -409,7 +410,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-            return BuildPrivacyWrappedSection4Dto(sectionEntities);
+            return await BuildPrivacyWrappedSection4DtoAsync(sectionEntities);
         }
 
 
@@ -448,9 +449,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         facultyDtos.Add(await BuildFacultyDtoAsync(faculty));
                     }
-                    catch
+                    catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
                     {
-                        // do not throw for a dto conversion error, simply move on
+                        throw;
+                    }
+
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Faculty dto conversion error.");
                     }
                 }
             }
@@ -484,7 +490,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<IEnumerable<string>> SearchFacultyIdsAsync(bool facultyOnlyFlag, bool advisorOnlyFlag)
         {
-            if (!HasPermission(PlanningPermissionCodes.ViewAnyAdvisee))
+            if (!HasPermission(PlanningPermissionCodes.ViewAssignedAdvisees) && !HasPermission(PlanningPermissionCodes.ViewAnyAdvisee) && !HasPermission(PlanningPermissionCodes.ReviewAnyAdvisee) && !HasPermission(PlanningPermissionCodes.ReviewAssignedAdvisees) && !HasPermission(PlanningPermissionCodes.UpdateAnyAdvisee) && !HasPermission(PlanningPermissionCodes.UpdateAssignedAdvisees) && !HasPermission(PlanningPermissionCodes.AllAccessAnyAdvisee) && !HasPermission(PlanningPermissionCodes.AllAccessAssignedAdvisees))
             {
                 throw new PermissionsException("User does not have permissions to access to this function");
             }
@@ -545,9 +551,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 AdrelTypes = _referenceDataRepository.AddressRelationTypes.Where(adt => adt.SpecialProcessingAction2 == "FAC");
             }
-            catch
+            catch (ColleagueSessionExpiredException)
             {
-                // No Code found with FAC in special processing
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "No Code found with FAC in special processing");
             }
             if (AdrelTypes.Count() > 0)
             {
@@ -600,13 +610,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Info("GetFacultyPermissions2: GetUserPermissionCodesAsync returned " + String.Join(", ", permissionCodes.ToArray()));
 
                 Domain.Student.Entities.FacultyPermissions permissionsEntity = new Domain.Student.Entities.FacultyPermissions(
-                    permissionCodes: permissionCodes, 
-                    isEligibleToDrop: facultyDropRegistrationPermissions.IsEligibleToDrop, 
+                    permissionCodes: permissionCodes,
+                    isEligibleToDrop: facultyDropRegistrationPermissions.IsEligibleToDrop,
                     hasEligibilityOverrides: facultyDropRegistrationPermissions.HasEligibilityOverrides);
 
                 ITypeAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions> entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions>();
                 Dtos.Student.FacultyPermissions permissionsDto = entityToDtoAdapter.MapToType(permissionsEntity);
                 return permissionsDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -632,17 +646,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 IEnumerable<Domain.Student.Entities.FacultyOfficeHours> facultyOfficeHours = await GetFacultyOfficeHourAsync(facultyIds);
                 List<Dtos.Student.FacultyOfficeHours> facultyOfficeHoursDTOList = new List<Dtos.Student.FacultyOfficeHours>();
-                foreach (Domain.Student.Entities.FacultyOfficeHours domainFacultyOfficeHours in facultyOfficeHours )
-                {                    
+                foreach (Domain.Student.Entities.FacultyOfficeHours domainFacultyOfficeHours in facultyOfficeHours)
+                {
                     ITypeAdapter<Domain.Student.Entities.FacultyOfficeHours, Dtos.Student.FacultyOfficeHours> entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.FacultyOfficeHours, Dtos.Student.FacultyOfficeHours>();
-                    Dtos.Student.FacultyOfficeHours dtoFacultyOfficeHours = entityToDtoAdapter.MapToType(domainFacultyOfficeHours);                
+                    Dtos.Student.FacultyOfficeHours dtoFacultyOfficeHours = entityToDtoAdapter.MapToType(domainFacultyOfficeHours);
                     facultyOfficeHoursDTOList.Add(dtoFacultyOfficeHours);
                 }
                 return facultyOfficeHoursDTOList;
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
-            {                
-                logger.Error(ex, "An error occurred while retrieving faculty office hours.");                
+            {
+                logger.Error(ex, "An error occurred while retrieving faculty office hours.");
                 throw new ApplicationException("An error occurred while retrieving faculty office hours.");
             }
         }
@@ -742,21 +760,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sections">A set of section domain objects</param>
         /// <returns>A set of Section DTOs</returns>
-        private PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section4>> BuildPrivacyWrappedSection4Dto(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections)
+        private async Task<PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section4>>> BuildPrivacyWrappedSection4DtoAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections)
         {
             var sectionDtoAdapter = new SectionEntityToStudentSection4DtoAdapter(_adapterRegistry, logger);
             var hasPrivacyRestriction = false;
             List<Dtos.Student.Section4> sectionDtos = new List<Dtos.Student.Section4>();
 
+            var allDepartments = await _referenceDataRepository.DepartmentsAsync();
             foreach (var section in sections)
             {
                 if (section != null)
                 {
                     Dtos.Student.Section4 sectionDto = sectionDtoAdapter.MapToType(section);
-                    if (section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId))
+
+                    bool canAccessActiveStudents = false;
+                    if (section != null && section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId))
+                    {
+                        canAccessActiveStudents = true;
+                    }
+                    else
+                    {
+                        // Check if the requestor is a departmental oversight member for this section
+                        if (CheckDepartmentalOversightAccessForSection(section, allDepartments))
+                        {
+                            canAccessActiveStudents = true;
+                        }
+                    }
+
+                    if (!canAccessActiveStudents)
                     {
                         hasPrivacyRestriction = true;
                         sectionDto.ActiveStudentIds = new List<string>();
+                    }
+
+                    if (section.Departments != null && section.Departments.Any())
+                    {
+                        sectionDto.DepartmentCodes = section.Departments.Select(x => x.AcademicDepartmentCode).ToList();
                     }
                     sectionDtos.Add(sectionDto);
                 }

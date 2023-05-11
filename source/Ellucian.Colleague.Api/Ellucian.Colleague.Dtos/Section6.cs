@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.EnumProperties;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -209,6 +210,12 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("alternateIds", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<SectionsAlternateIdsDtoProperty> AlternateIds { get; set; }
+
+        /// <summary>
+        /// Describes whether the section is visible in the course catalog.
+        /// </summary>
+        [JsonProperty("catalogDisplay", NullValueHandling = NullValueHandling.Ignore)]
+        public SectionCatalogDisplay? CatalogDisplay { get; set; }
 
         /// <summary>
         /// Section constructor

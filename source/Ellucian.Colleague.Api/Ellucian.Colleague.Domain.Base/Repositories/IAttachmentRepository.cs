@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="tagOne">TagOne value to get attachments for</param>
         /// <returns>List of <see cref="Attachment">Attachments</see></returns>
         Task<IEnumerable<Attachment>> GetAttachmentsAsync(string owner, string collectionId, string tagOne);
-
+               
         /// <summary>
         /// Get the attachment by ID
         /// </summary>
@@ -47,7 +47,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="attachment">The attachment</param>
         /// <returns>Path to the attachment's temp file location</returns>
         Task<string> GetAttachmentContentAsync(Attachment attachment);
-
+               
         /// <summary>
         /// Query attachments
         /// </summary>
@@ -59,6 +59,15 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>List of <see cref="Attachment">Attachments</see></returns>
         Task<IEnumerable<Attachment>> QueryAttachmentsAsync(bool includeActiveOnly, string owner, DateTime? modifyStartDate,
             DateTime? modifyEndDate, IEnumerable<string> collectionIds);
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="owner">The attachment owner to query by</param>
+        /// <param name="collectionId">Collection Id to query by</param>
+        /// <param name="tagOnesList">List of TagOne values to query by</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        Task<IEnumerable<Attachment>> QueryAttachmentsAsync(string owner, string collectionId, List<string> tagOnesList);
 
         /// <summary>
         /// Create the new attachment

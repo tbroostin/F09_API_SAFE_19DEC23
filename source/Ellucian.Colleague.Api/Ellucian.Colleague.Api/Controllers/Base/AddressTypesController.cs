@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,6 +15,8 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using System.Threading.Tasks;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -26,10 +28,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
     [EllucianLicenseModule(ModuleConstants.Base)]
     public class AddressTypesController : BaseCompressedApiController
     {
-        
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly IAddressTypeService _addressTypeService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the AddressTypesController class.
@@ -43,7 +45,6 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             _addressTypeService = addressTypeService;
             _logger = logger;
         }
-
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -75,6 +76,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
 
                 return await _addressTypeService.GetAddressTypesAsync(bypassCache);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

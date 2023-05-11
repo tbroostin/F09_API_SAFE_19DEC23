@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -75,6 +75,20 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 Assert.AreEqual(pNumber, ph.Number);
                 Assert.IsNull(ph.TypeCode);
                 Assert.AreEqual(ext, ph.Extension);
+            }
+
+            [TestMethod]
+            public void IsAuthorizedForText_DefaultsNull()
+            {
+                Phone ph = new Phone(pNumber, extension: ext);
+                Assert.IsNull(ph.IsAuthorizedForText);
+            }
+
+            [TestMethod]
+            public void IsAuthorizedForText_SetToTrue()
+            {
+                Phone ph = new Phone(pNumber, extension: ext, isAuthorizedForText: true);
+                Assert.AreEqual(true, ph.IsAuthorizedForText);
             }
         }
 
@@ -165,7 +179,6 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
                 Phone phoneWithNull = new Phone(pNumber, typeCode, null);
                 Assert.IsFalse(phoneWithNull.Equals(testPhone));
             }
-
         }
     }
 }

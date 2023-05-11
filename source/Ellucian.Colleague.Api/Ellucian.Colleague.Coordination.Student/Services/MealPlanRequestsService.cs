@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -174,7 +175,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
 
@@ -217,7 +218,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
 
 
@@ -387,7 +388,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (academicPeriodEntities == null)
                 {
-                    throw new Exception("Unable to retrieve academic periods");
+                    throw new ColleagueWebApiException("Unable to retrieve academic periods");
                 }
                 var term = academicPeriodEntities.FirstOrDefault(mp => mp.Code == source.Term);
                 if (term == null)
@@ -417,7 +418,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var mealPlans = await GetMealPlansAsync(bypassCache);
                 if (mealPlans == null)
                 {
-                    throw new Exception("Unable to retrieve meal plans");
+                    throw new ColleagueWebApiException("Unable to retrieve meal plans");
                 }
                 var mealPlan = mealPlans.FirstOrDefault(mp => mp.Code == source.MealPlan);
                 if (mealPlan == null)
@@ -492,7 +493,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var mealPlans = await GetMealPlansAsync(bypassCache);
                 if (mealPlans == null || !mealPlans.Any())
                 {
-                    throw new Exception("Unable to retrieve meal plans");
+                    throw new ColleagueWebApiException("Unable to retrieve meal plans");
                 }
                 var mealPlan = mealPlans.FirstOrDefault(mp => mp.Guid == source.MealPlan.Id);
                 if (mealPlan == null)
@@ -532,12 +533,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (academicPeriodEntities == null || !academicPeriodEntities.Any())
                 {
-                    throw new Exception("Unable to retrieve academic periods");
+                    throw new ColleagueWebApiException("Unable to retrieve academic periods");
                 }
                 var term = academicPeriodEntities.FirstOrDefault(mp => mp.Guid == source.AcademicPeriod.Id);
                 if (term == null)
                 {
-                    throw new Exception(string.Concat(" Academic Period '", source.AcademicPeriod.Id.ToString(), "' was not found."));
+                    throw new ColleagueWebApiException(string.Concat(" Academic Period '", source.AcademicPeriod.Id.ToString(), "' was not found."));
                 }
                 mealPlanRequests.Term = term.Code;
                 termStartDate = term.StartDate;

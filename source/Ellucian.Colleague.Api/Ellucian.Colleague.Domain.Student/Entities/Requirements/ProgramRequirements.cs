@@ -36,35 +36,35 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// <summary>
         /// Minimum number of overall credits required for program completion
         /// </summary>
-        public decimal? MinimumCredits;
+        public decimal? MinimumCredits { get; set; }
         /// <summary>
         /// Minimum number of institutional credits required for program completion
         /// </summary>
-        public decimal? MinimumInstitutionalCredits;
+        public decimal? MinimumInstitutionalCredits { get; set; }
         /// <summary>
         /// Minimum overall GPA required for program completion
         /// </summary>
-        public decimal? MinOverallGpa;
+        public decimal? MinOverallGpa { get; set; }
         /// <summary>
         /// Minimum institution GPA required for program completion
         /// </summary>
-        public decimal? MinInstGpa;
+        public decimal? MinInstGpa { get; set; }
         /// <summary>
         /// Lowest allowable grade for academic credits to be applied and/or included in the GPA calculation
         /// </summary>
-        public Grade MinGrade;
+        public Grade MinGrade { get; set; }
         /// <summary>
         /// List of additional grades (with a lower value than above or with no value) that may be applied
         /// </summary>
-        public List<Grade> AllowedGrades;   
+        public List<Grade> AllowedGrades { get; set; }
         /// <summary>
         /// Rules used to filter out academic credits or courses from being applied
         /// </summary>
-        public List<RequirementRule> ActivityEligibilityRules;
+        public List<RequirementRule> ActivityEligibilityRules { get; set; }
         /// <summary>
         /// Id of the curriculum track defined as the sample degree plan
         /// </summary>
-        public string CurriculumTrackCode;
+        public string CurriculumTrackCode { get; set; }
         /// <summary>
         /// The maximum number of credits allowed for program completion. Maximum Credits
         /// are used by Financial Aid Academic Progress Evaluations

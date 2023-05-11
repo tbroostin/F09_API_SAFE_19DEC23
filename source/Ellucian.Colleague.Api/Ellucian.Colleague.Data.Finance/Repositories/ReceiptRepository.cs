@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Data.Finance.DataContracts;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -88,10 +89,14 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 response = transactionInvoker.Execute<CreateCashReceiptRequest, CreateCashReceiptResponse>(request);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw ex;
+                throw;
             }
 
             if (response.Messages != null && response.Messages.Count > 0)
@@ -162,18 +167,26 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("id", "Cashier ID must be specified.");
             }
 
-            Cashiers cashier = DataReader.ReadRecord<Cashiers>(id);
-            if (cashier == null)
+            try
             {
-                throw new KeyNotFoundException("Cashier id " + id + " is not valid.");
+                Cashiers cashier = DataReader.ReadRecord<Cashiers>(id);
+                if (cashier == null)
+                {
+                    throw new KeyNotFoundException("Cashier id " + id + " is not valid.");
+                }
+
+                //bool isECommEnabled = (string.IsNullOrEmpty(cashier.CshrEcommerceFlag) ? false : (cashier.CshrEcommerceFlag == "Y"));
+                return new Cashier(cashier.Recordkey, GetPersonLogin(id), cashier.CshrEcommerceFlag == "Y")
+                {
+                    CreditCardLimitAmount = cashier.CshrCrCardAmt,
+                    CheckLimitAmount = cashier.CshrCheckAmt
+                };
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
 
-            //bool isECommEnabled = (string.IsNullOrEmpty(cashier.CshrEcommerceFlag) ? false : (cashier.CshrEcommerceFlag == "Y"));
-            return new Cashier(cashier.Recordkey, GetPersonLogin(id), cashier.CshrEcommerceFlag == "Y")
-            {
-                CreditCardLimitAmount = cashier.CshrCrCardAmt,
-                CheckLimitAmount = cashier.CshrCheckAmt
-            };
         }
 
         // This method is just temporary until the Platform team gives us a method that returns this data

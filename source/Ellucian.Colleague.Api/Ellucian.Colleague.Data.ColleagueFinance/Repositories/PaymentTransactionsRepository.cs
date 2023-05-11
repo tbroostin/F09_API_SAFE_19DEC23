@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
@@ -408,8 +409,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     voucherGuidCollection = await GetPaymentTransactionsGuidsCollectionAsync(new List<string> { voucher.Recordkey }, "VOUCHERS");
                 }
-                catch // the error will be thrown when the guid cannot be found.
-                { }
+                catch (Exception ex)
+                {
+                    // the error will be thrown when the guid cannot be found.
+                    logger.Error(ex, "Unable to get payment transactions by guid.");
+                } 
                 //get the items record
                 if (voucher.VouItemsId != null && voucher.VouItemsId.Any())
                 {
@@ -485,8 +489,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     voucherGuidCollection = await GetPaymentTransactionsGuidsCollectionAsync(vouIds, "VOUCHERS");
                 }
-                catch // the error will be thrown when the guid cannot be found.
-                {  }
+                catch (Exception ex)
+                {
+                    // the error will be thrown when the guid cannot be found.
+                    logger.Error(ex, "Unable to get payment transactions by guid.");
+                }
                 foreach (var voucher in vouchers)
                 {
                     Base.DataContracts.Person person = null;
@@ -1144,7 +1151,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;
@@ -1189,7 +1196,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
             }
 
             return guidCollection;
@@ -1212,8 +1219,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     id = guidRec.PrimaryKey;
                 }
             }
-            catch
-            { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get record by guid.");
+            }
             return id;
             
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using Ellucian.Colleague.Domain.Entities;
 
@@ -10,8 +10,27 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     [Serializable]
     public class AddressRelationType : CodeItem
     {
-        public string SpecialProcessingAction1;
-        public string SpecialProcessingAction2;
+        /// <summary>
+        /// First action code options for the address relation type
+        /// </summary>
+        public string SpecialProcessingAction1 
+        { 
+            get { return _specialProcessingAction1; }
+            set { if (value != null) { _specialProcessingAction1 = value; } }
+
+        }
+        private string _specialProcessingAction1;
+
+        /// <summary>
+        /// Second action code option for the address relation type
+        /// </summary>
+        public string SpecialProcessingAction2 
+        { 
+            get { return _specialProcessingAction2; }
+            set { if (value != null) { _specialProcessingAction2 = value; } }
+        }
+        private string _specialProcessingAction2;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AddressRelationType"/> class.
         /// </summary>
@@ -20,8 +39,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public AddressRelationType(string code, string description, string action1, string action2)
             : base(code, description)
         {
-            SpecialProcessingAction1 = action1;
-            SpecialProcessingAction2 = action2;
+            _specialProcessingAction1 = action1;
+            _specialProcessingAction2 = action2;
         }
     }
 }

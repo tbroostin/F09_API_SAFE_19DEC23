@@ -210,11 +210,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                                             registrationGroup.AddTermRegistrationDate(termRegistrationDate);
                                         }
-                                        catch
+                                        catch (Exception ex)
                                         {
+                                            logger.Error(ex, "Unable to get reg user term.");
 
                                         }
-
                                     }
                                 }
                             }
@@ -251,12 +251,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                                             registrationGroup.AddTermRegistrationDate(termRegistrationDate);
                                         }
-                                        catch
-                                        {
+                                            catch (Exception ex)
+                                            {
+                                                logger.Error(ex, "Unable to get reg user term.");
+                                            }
 
                                         }
-
-                                    }
 
                                 }
                             }

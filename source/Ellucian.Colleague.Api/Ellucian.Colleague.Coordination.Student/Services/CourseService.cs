@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -16,6 +16,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -105,7 +106,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <summary>
         /// Default value for the course delimiter
         /// </summary>
-        public static string CourseDelimiter = "-";
+        public static string CourseDelimiter { get { return courseDelimiter; } set { courseDelimiter = value; } }
+        private static string courseDelimiter = "-";
 
         /// <summary>
         /// Default values for min and max minutes in a day
@@ -133,8 +135,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         private class CourseSectionResult
         {
-            public List<Ellucian.Colleague.Domain.Student.Entities.Course> Courses = new List<Ellucian.Colleague.Domain.Student.Entities.Course>();
-            public List<Ellucian.Colleague.Domain.Student.Entities.Section> Sections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            private List<Ellucian.Colleague.Domain.Student.Entities.Course> courses = new List<Domain.Student.Entities.Course>();
+            public List<Ellucian.Colleague.Domain.Student.Entities.Course> Courses { get { return courses; } set { courses = value; } }
+
+            private List<Ellucian.Colleague.Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>();
+            public List<Ellucian.Colleague.Domain.Student.Entities.Section> Sections { get { return sections; } set { sections = value; } }
         }
 
         /// <summary>
@@ -494,6 +499,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sw = new Stopwatch();
             sw.Start();
             var filterResult = new CourseSectionResult();
+           var courseCatalogConfig=  await _studentConfigRepository.GetCourseCatalogConfiguration4Async();
 
             // Course filters--start with list of courses from search (keyword or requirement)
             filterResult.Courses = searchResult.Courses;
@@ -697,19 +703,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //filter sections that are open 
             if (criteria.OpenSections)
             {
-                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
                 var sectionsDict = filterResult.Sections.Where(s => (s.EndDate.HasValue && s.EndDate.Value >= DateTime.Now) || !s.EndDate.HasValue).ToDictionary(s => s.Id, s => s);
-                await FilterOpenSectionsOnlyAsync(sectionsDict);
+                await FilterOpenSectionsOnlyAsync(sectionsDict, courseCatalogConfig.BypassApiCacheForAvailablityData);
                 filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
                 sectionFiltersUsed = true;
             }
 
             if (criteria.OpenAndWaitlistSections)
             {
-                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
                 filterResult.Sections.RemoveAll(s => (s.EndDate.HasValue && s.EndDate.Value < DateTime.Now));
                 var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
-                await FilterOpenAndWaitlistSectionsAsync(sectionsDict);
+                await FilterOpenAndWaitlistSectionsAsync(sectionsDict, courseCatalogConfig.BypassApiCacheForAvailablityData);
                 filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
                 sectionFiltersUsed = true;
             }
@@ -1345,19 +1349,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return onlineCategoriesDict;
         }
 
-        private async Task FilterOpenSectionsOnlyAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict)
+        private async Task FilterOpenSectionsOnlyAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict, bool bypassCache=true)
         {
-            List<Ellucian.Colleague.Domain.Student.Entities.Section> openSections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            IEnumerable<string> missingSectionIds = null;
             if (sectionDict != null)
             {
                 List<string> sectionIds = sectionDict.Keys.ToList();
                 if (sectionIds != null && sectionIds.Count > 0)
                 {
-                    // Open sections are those with no waitlist and with available seats greater than 0.
-                    var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => (s.Value.Waitlisted == 0) && (s.Value.Available == null || s.Value.Available > 0)).ToList();
+                    //if the API cache is bypassed then real time section's seats counts and availability status is retrieved otherwise section's from cache is read
+                    if (bypassCache == true)
+                    {
+                        // Open sections are those with no waitlist and with available seats greater than 0.
+                        var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => s.Value!=null && s.Value.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Open).ToList();
 
-                    //find the sections that were not open to remove from incoming/original list
-                    IEnumerable<string> missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                        //find the sections that were not open to remove from incoming/original list
+                        missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                    }
+                    else
+                    {
+                        var sections = sectionDict.Values.Where(s =>s!=null && s.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Open).ToList();
+                        missingSectionIds = sectionIds.Except(sections.Select(s => s.Id));
+                    }
                     if (missingSectionIds != null)
                     {
                         foreach (string sec in missingSectionIds.ToList())
@@ -1371,23 +1384,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return;
         }
 
-        private async Task FilterOpenAndWaitlistSectionsAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict)
+        private async Task FilterOpenAndWaitlistSectionsAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict, bool bypassCache = true)
         {
-            List<Ellucian.Colleague.Domain.Student.Entities.Section> openSections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            IEnumerable<string> missingSectionIds = null;
             if (sectionDict != null)
             {
                 List<string> sectionIds = sectionDict.Keys.ToList();
                 if (sectionIds != null && sectionIds.Count > 0)
                 {
-                    // Open sections are those with available seats greater than 0.
-                    var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => (s.Value.Available == null || s.Value.Available > 0)).ToList();
-                    //find the sections that were not open to remove from incoming/original list
-                    IEnumerable<string> missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                  //if the API cache is bypassed then real time section's seats counts and availability status is retrieved otherwise section's from cache is read
+                    if (bypassCache == true)
+                    {
+
+                        var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => s.Value!=null &&( s.Value.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Open || s.Value.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Waitlisted)).ToList();
+                        //find the sections that were not open or not waitlisted to remove from incoming/original list
+                         missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                    }
+                    else
+                    {
+                        var sections= sectionDict.Values.Where(s => s!=null && ( s.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Open || s.AvailabilityStatus == Domain.Student.Entities.SectionAvailabilityStatusType.Waitlisted)).ToList();
+                        missingSectionIds = sectionIds.Except(sections.Select(s => s.Id));
+                    }
                     if (missingSectionIds != null)
                     {
                         foreach (string sec in missingSectionIds.ToList())
                         {
-                            if (!(sectionDict[sec].AllowWaitlist && sectionDict[sec].WaitlistAvailable))
                                 sectionDict.Remove(sec);
                         }
                     }
@@ -2223,12 +2244,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         // Struct used for sorting items returned by search
         struct SearchResultItem
         {
-            public string CourseId;
-            public string SectionId;
-            public string SortName;
-            public float Score;
+            public string CourseId { get; set; }
+            public string SectionId { get; set; }
+            public string SortName { get; set; }
+            public float Score { get; set; }
 
-            public SearchResultItem(string courseId, string sectionId, string sortName, float score)
+            public SearchResultItem(string courseId, string sectionId, string sortName, float score) : this()
             {
                 CourseId = courseId;
                 SectionId = sectionId;
@@ -2518,7 +2539,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             ILogger logger)
         {
             logger.Debug("CourseSearch: Start BuildIndex");
-            string courseDelimiter =  !string.IsNullOrEmpty(courseConfigDelimiter) ? courseConfigDelimiter : CourseDelimiter;
+            string courseDelimiter = !string.IsNullOrEmpty(courseConfigDelimiter) ? courseConfigDelimiter : CourseDelimiter;
             logger.Debug("Course Delimiter selected is:" + courseDelimiter);
 
 
@@ -3124,7 +3145,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return courseCollection;
         }
 
-      
+
         /// <summary>
         /// Gets courses using the given list of course Ids
         /// </summary>
@@ -3149,6 +3170,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         coursesDto.Add(courseDtoAdapter2.MapToType(crs));
                     }
+                    catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
                     catch
                     {
                         logger.Error("Error adapting course " + crs.Id + " " + crs.Name);
@@ -3158,7 +3183,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
-      
+
 
         /// <summary>
         /// Build CourseSearch dto which extents Course dto by simply adding a list of associated section Ids to each course
@@ -4762,7 +4787,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     SortSections(filterResult.Sections, criteria.SortOn, criteria.SortDirection);
                 }
-               List<Dtos.Student.Section4> sectionsDto = ConvertSectionsToSection4Dto(filterResult.Sections);
+                List<Dtos.Student.Section4> sectionsDto = ConvertSectionsToSection4Dto(filterResult.Sections);
 
                 //sort the section before paging happens so that proper page of the resultset is picked.
                 SectionPage2 sectionPage = new SectionPage2(sectionsDto, pageSize, pageIndex);
@@ -4931,7 +4956,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
             }
             return courseCollection.Any() ? new Tuple<IEnumerable<Course3>, int>(courseCollection, totalCount) :
                     new Tuple<IEnumerable<Course3>, int>(new List<Course3>(), 0);
@@ -5907,7 +5932,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
             }
             return courseCollection.Any() ? new Tuple<IEnumerable<Course4>, int>(courseCollection, totalCount) :
                     new Tuple<IEnumerable<Course4>, int>(new List<Course4>(), 0);
@@ -5943,7 +5968,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException("Course must provide a GUID.");
             }
 
-       
+
             _courseRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             //Convert the DTO to an entity, update the course, convert the resulting entity back to a DTO, and return it

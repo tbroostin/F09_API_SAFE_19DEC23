@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -7,6 +7,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -111,7 +112,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = "Unable to access FA.SYS.PARAMS in ST.PARMS.";
                 logger.Info(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
@@ -82,7 +84,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 else
                 {
-                    throw new Exception("Create Bulk Failed to send response");
+                    throw new ColleagueWebApiException("Create Bulk Failed to send response");
                 }
 
                 return bulkRequestResponse;

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,6 +49,12 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public string CountryCallingCode { get; set; }
 
+        /// <summary>
+        /// Person has authorized this phone for texts
+        /// </summary>
+        private bool? _IsAuthorizedForText;
+        public bool? IsAuthorizedForText { get { return _IsAuthorizedForText; } }
+
         // using an optional extension parameter in the constructor.
         /// <summary>
         /// Initializes a new instance of the <see cref="Phone"/> class.
@@ -57,7 +63,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <param name="typeCode">The type code.</param>
         /// <param name="extension">The extension.</param>
         /// <exception cref="System.ArgumentNullException">number;Phones number must be specified</exception>
-        public Phone(string number, string typeCode = null, string extension = null)
+        public Phone(string number, string typeCode = null, string extension = null, bool? isAuthorizedForText = null)
         {
             if (string.IsNullOrEmpty(number))
             {
@@ -66,6 +72,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             _Number = number;
             _TypeCode = typeCode;
             _Extension = extension;
+            _IsAuthorizedForText = isAuthorizedForText;
         }
 
         /// <summary>
@@ -77,6 +84,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </returns>
         public override bool Equals(object obj)
         {
+            //Check for null and compare run-time types.
             if (obj == null)
             {
                 return false;
@@ -88,7 +96,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             }
             return Number.Equals(other.Number) &&
                 (Extension != null ? Extension.Equals(other.Extension) : other.Extension == null) &&
-                (TypeCode != null ? TypeCode.Equals(other.TypeCode) : other.TypeCode == null);
+                (TypeCode != null ? TypeCode.Equals(other.TypeCode) : other.TypeCode == null); 
         }
 
         /// <summary>

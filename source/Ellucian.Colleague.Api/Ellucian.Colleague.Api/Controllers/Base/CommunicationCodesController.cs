@@ -1,4 +1,4 @@
-﻿/* Copyright 2012-2015 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2012-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -12,6 +12,8 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -95,6 +97,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
                 return communicationCodeDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving communication codes resource";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

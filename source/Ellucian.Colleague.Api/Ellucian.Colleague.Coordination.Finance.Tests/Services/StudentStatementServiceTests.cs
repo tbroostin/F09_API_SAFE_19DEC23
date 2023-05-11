@@ -557,6 +557,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             allDepositTypes = TestDepositTypesRepository.DepositTypes;
             allTerms = new TestTermRepository().Get().ToList();
             financeConfiguration = TestFinanceConfigurationRepository.TermFinanceConfiguration;
+            financeConfiguration.ColleagueTimezone = TimeZoneInfo.Local.Id;
             pcfAccountPeriods = TestAccountPeriodRepository.PcfAccountPeriods;
             termAccountPeriods = TestAccountPeriodRepository.TermAccountPeriods;
             nonTermAccountPeriod = TestAccountPeriodRepository.NonTermAccountPeriod;

@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -26,6 +27,7 @@ namespace Ellucian.Colleague.Api.Controllers
     {
         private readonly IAcademicHistoryService _academicHistoryService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the CoursesController class.
@@ -328,9 +330,17 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Section Ids: List of section IDs. Must include at least 1.
         /// CreditStatuses: (Optional) If no statuses are specified all statuses will be included.</param>
         /// <returns><see cref="AcademicCreditsWithInvalidKeys">Academic Credit with Invalid Keys</see> DTO objects. </returns>
-        /// <accessComments>
-        /// The faculty assigned to a section may query academic credits for their sections. 
-        /// </accessComments>
+        /// <accessComments>
+        /// 1. The faculty assigned to a section may query academic credits for their sections.
+        /// 2. A departmental oversight member assigned to the section may query academic credits for their sections with any of the following permission codes
+        /// VIEW.SECTION.ROSTER
+        /// VIEW.SECTION.GRADING
+        /// CREATE.SECTION.GRADING
+        /// VIEW.SECTION.DROP.ROSTER
+        /// CREATE.SECTION.DROP.STUDENT
+        /// VIEW.SECTION.CENSUS
+        /// CREATE.SECTION.CENSUS
+        /// </accessComments>
         [HttpPost]
         public async Task<AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync([FromBody] AcademicCreditQueryCriteria criteria)
         {
@@ -347,19 +357,28 @@ namespace Ellucian.Colleague.Api.Controllers
                 AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = await _academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria, useCache);
                 return academicCreditsWithInvalidKeys;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, "Session has expired while retrieving academic credit details.");
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                var message = "User does not have appropriate permissions to retrieve academic credit details.";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException aex)
             {
-                _logger.Error(aex.Message);
-                throw CreateHttpResponseException(aex.Message, HttpStatusCode.BadRequest);
+                var message = "Must supply a criteria to retrieve academic credit details.";
+                _logger.Error(aex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving academic credit details";
+                _logger.Error(ex ,message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
     }

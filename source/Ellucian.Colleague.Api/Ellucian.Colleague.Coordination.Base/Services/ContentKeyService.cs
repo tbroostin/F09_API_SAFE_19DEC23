@@ -1,10 +1,11 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -74,7 +75,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 string error = "Error occurred encrypting the content key";
                 logger.Error(ce, error);
-                throw new Exception(error);
+                throw new ColleagueWebApiException(error);
             }
         }
 
@@ -109,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 string error = "Error occurred decrypting the content key";
                 logger.Error(ce, error);
-                throw new Exception(error);
+                throw new ColleagueWebApiException(error);
             }
         }
 
@@ -177,13 +178,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 string error = "Error occurred reading the encryption key";
                 logger.Error(icte, error);
-                throw new Exception(error);
+                throw new ColleagueWebApiException(error);
             }
             catch (PemException pe)
             {
                 string error = "Error occurred reading the encryption key";
                 logger.Error(pe, error);
-                throw new Exception(error);
+                throw new ColleagueWebApiException(error);
             }
         }
     }

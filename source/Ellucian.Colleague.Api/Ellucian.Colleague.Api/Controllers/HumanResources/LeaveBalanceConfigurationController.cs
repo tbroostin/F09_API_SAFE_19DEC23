@@ -1,4 +1,4 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,6 +22,7 @@ using System.Linq;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using System.Collections;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -35,6 +36,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly ILeaveBalanceConfigurationService leaveBalanceConfigurationService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// Constructor
@@ -57,10 +60,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 return await leaveBalanceConfigurationService.GetLeaveBalanceConfigurationAsync();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.InternalServerError);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.InternalServerError);
             }            
         }
     }

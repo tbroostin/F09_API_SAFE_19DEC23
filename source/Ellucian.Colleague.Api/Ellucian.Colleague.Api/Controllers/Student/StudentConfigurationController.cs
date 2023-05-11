@@ -1,10 +1,11 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IStudentConfigurationRepository _configurationRepository;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// StudentConfigurationController class constructor
@@ -89,6 +91,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var graduationConfiguration2DtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration, Ellucian.Colleague.Dtos.Student.GraduationConfiguration2>();
                 configuration2Dto = graduationConfiguration2DtoAdapter.MapToType(configuration);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired  while retrieving graduation configuration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (KeyNotFoundException ex)
             {
                 _logger.Error(ex.ToString());
@@ -117,6 +125,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var studentRequestConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentRequestConfiguration, Ellucian.Colleague.Dtos.Student.StudentRequestConfiguration>();
                 configurationDto = studentRequestConfigurationDtoAdapter.MapToType(configuration);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student request configuration information.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -131,6 +145,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The <see cref="FacultyGradingConfiguration">Faculty Grading Configuration</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. NotFound if the required setup is not complete or available.</exception>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        [Obsolete("Obsolete as of API version 1.36, use version 2 of this API")]
         public async Task<FacultyGradingConfiguration> GetFacultyGradingConfigurationAsync()
         {
             FacultyGradingConfiguration configurationDto = null;
@@ -154,6 +169,40 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Retrieves the configuration information needed for faculty grading asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="FacultyGradingConfiguration2">Faculty Grading Configuration2</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. NotFound if the required setup is not complete or available.</exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<FacultyGradingConfiguration2> GetFacultyGradingConfiguration2Async()
+        {
+            FacultyGradingConfiguration2 configuration2Dto = null;
+            try
+            {
+                Ellucian.Colleague.Domain.Student.Entities.FacultyGradingConfiguration2 configuration2 = await _configurationRepository.GetFacultyGradingConfiguration2Async();
+                var configuration2DtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.FacultyGradingConfiguration2, Ellucian.Colleague.Dtos.Student.FacultyGradingConfiguration2>();
+                configuration2Dto = configuration2DtoAdapter.MapToType(configuration2);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving faculty grading configuration information.";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+            return configuration2Dto;
+        }
+
+        /// <summary>
         /// Retrieves the student profile configuration information needed for student profile asynchronously.
         /// </summary>
         /// <returns>The <see cref="StudentProfileConfiguration">Student Profile Configuration</see></returns>
@@ -164,6 +213,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await _configurationService.GetStudentProfileConfigurationAsync();
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+                _logger.Error(csse, invalidSessionErrorMessage);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -235,6 +290,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration, RegistrationConfiguration>();
                 configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving registration configuration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -258,6 +319,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var instantEnrollmentConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration, InstantEnrollmentConfiguration>();
                 configurationDto = instantEnrollmentConfigurationDtoAdapter.MapToType(configuration);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving Colleague Self-Service instant enrollment configuration data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -279,6 +346,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _configurationService.GetCourseCatalogConfiguration3Async();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving course catalog configuration data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Unable to get the course catalog configuration information.");
@@ -297,6 +370,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 return await _configurationService.GetCourseCatalogConfiguration4Async();
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving course catalog configuration data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -320,15 +399,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var myProgressConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MyProgressConfiguration, Ellucian.Colleague.Dtos.Student.MyProgressConfiguration>();
                 configurationDto = myProgressConfigurationDtoAdapter.MapToType(configuration);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired  while retrieving MyProgress configuration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (KeyNotFoundException ex)
             {
-                _logger.Error(ex.ToString());
+                string message = "Key not found while retrieving MyProgress configuration";
+                _logger.Error(ex, message);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.NotFound);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                string message = "Exception occurred while retrieving MyProgress configuration";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
             return configurationDto;
         }
@@ -339,6 +426,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The <see cref="SectionCensusConfiguration"/></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        [Obsolete("Obsolete as of API version 1.36, use version 2 of this API")]
         public async Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync()
         {
             SectionCensusConfiguration configurationDto = null;
@@ -357,6 +445,36 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Retrieves the section census configuration2 information needed for Colleague Self-Service
+        /// </summary>
+        /// <returns>The <see cref="SectionCensusConfiguration2"/></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<SectionCensusConfiguration2> GetSectionCensusConfiguration2Async()
+        {
+            SectionCensusConfiguration2 configuration2Dto = null;
+            try
+            {
+                Domain.Student.Entities.SectionCensusConfiguration2 configuration = await _configurationRepository.GetSectionCensusConfiguration2Async();
+                var sectionCensusConfiguration2EntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionCensusConfiguration2, SectionCensusConfiguration2>();
+                configuration2Dto = sectionCensusConfiguration2EntityToDtoAdapter.MapToType(configuration);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving section census configuration2 information";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                var message = "Could not retrieve Colleague Self-Service section census configuration2 information";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            return configuration2Dto;
+        }
+
+        /// <summary>
         /// Returns course delimiter defined on CDEF
         /// </summary>
         /// <returns>The Course Delimiter string</returns>
@@ -365,10 +483,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         public async Task<string> GetCourseDelimiterConfigurationAsync()
         {
             string defaultCourseDelimiter = "-";//default course delimiter
-            string courseDelimiter = string.Empty; 
+            string courseDelimiter = string.Empty;
             try
             {
                 courseDelimiter = await _configurationRepository.GetCourseDelimiterAsync();
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving course delimiter";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -391,6 +515,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var configuration = await _configurationService.GetAcademicRecordConfigurationAsync();
                 return configuration;
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving academic record configuration";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (Exception ex)
             {
                 _logger.Error(ex, "Unable to get the academic record configuration information.");
@@ -398,5 +529,65 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
         }
 
+        /// <summary>
+        /// Retrieves course section availability information configuration
+        /// </summary>
+        /// <returns>The <see cref="SectionAvailabilityInformationConfiguration">Section availability information configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can retrieve section availability information configuration data.</accessComments>
+        public async Task<SectionAvailabilityInformationConfiguration> GetSectionAvailabilityInformationConfigurationAsync()
+        {
+            SectionAvailabilityInformationConfiguration configurationDto = null;
+            try
+            {
+                Domain.Student.Entities.SectionAvailabilityInformationConfiguration configuration = await _configurationRepository.GetSectionAvailabilityInformationConfigurationAsync();
+                var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionAvailabilityInformationConfiguration, SectionAvailabilityInformationConfiguration>();
+                configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                var message = "Session has expired while retrieving section availability information configuration information";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Could not retrieve section availability information configuration data.";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for Colleague Self-Service faculty attendance
+        /// </summary>
+        /// <returns>The <see cref="FacultyAttendanceConfiguration"/></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.</exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<FacultyAttendanceConfiguration> GetFacultyAttendanceConfigurationAsync()
+        {
+            FacultyAttendanceConfiguration configurationDto = null;
+            try
+            {
+                var configuration = await _configurationRepository.GetFacultyAttendanceConfigurationAsync();
+                var configurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.FacultyAttendanceConfiguration, FacultyAttendanceConfiguration>();
+                configurationDto = configurationDtoAdapter.MapToType(configuration);
+            }
+            catch (ColleagueSessionExpiredException lex)
+            {
+                string message = "Session has expired while retrieving faculty attendance configuration information.";
+                _logger.Error(lex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Unable to retrieve faculty attendance configuration information.";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            return configurationDto;
+        }
     }
 }

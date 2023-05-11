@@ -1,4 +1,5 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,7 @@ using slf4net;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using System.Threading.Tasks;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -391,8 +393,20 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             var invoiceNumber = "IN12345";
             var vendorId = "0001234";
-            
+
             voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+
+            await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_ColleagueSessionExpiredException()
+        {
+            var invoiceNumber = "IN12345";
+            var vendorId = "0001234";
+            
+            voucherServiceMock.Setup(r => r.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
 
             await voucherController.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
         }
@@ -459,6 +473,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VouchersController_QueryVoucherSummariesAsync_Exception()
         {
             voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new Exception());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_ColleagueSessionExpiredException()
+        {
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
             await voucherController.QueryVoucherSummariesAsync(filterCriteria);
         }
 
@@ -556,6 +578,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VouchersController_PostVoucherAsync_Exception()
         {
             voucherServiceMock.Setup(r => r.CreateUpdateVoucherAsync(It.IsAny<VoucherCreateUpdateRequest>())).ThrowsAsync(new Exception());
+            await vouchersController.PostVoucherAsync(createUpdateVoucherRequest);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_PostVoucherAsync_ColleagueSessionExpiredException()
+        {
+            voucherServiceMock.Setup(r => r.CreateUpdateVoucherAsync(It.IsAny<VoucherCreateUpdateRequest>())).ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
             await vouchersController.PostVoucherAsync(createUpdateVoucherRequest);
         }
 
@@ -675,6 +705,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task VouchersController_GetReimbursePersonAddressForVoucherAsync_Exception()
         {
             _vouchersServiceMock.Setup(s => s.GetReimbursePersonAddressForVoucherAsync()).Throws(new Exception());
+            _vouchersController = new VouchersController(_vouchersServiceMock.Object, _loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            var results = await _vouchersController.GetReimbursePersonAddressForVoucherAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_GetReimbursePersonAddressForVoucherAsync_ColleagueSessionExpiredException()
+        {
+            _vouchersServiceMock.Setup(s => s.GetReimbursePersonAddressForVoucherAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
             _vouchersController = new VouchersController(_vouchersServiceMock.Object, _loggerMock.Object)
             {
                 Request = new HttpRequestMessage()

@@ -14,6 +14,7 @@ using Ellucian.Colleague.Coordination.Finance.Adapters;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Finance;
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 
 namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
 {
@@ -45,6 +46,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
         private List<Domain.Finance.Entities.DepositDue> depositsDue;
         private List<Ellucian.Colleague.Domain.Student.Entities.Term> terms;
         private Domain.Finance.Entities.AccountDue.AccountDuePeriod accountDuePeriod;
+        private Domain.Finance.Entities.Configuration.FinanceConfiguration financeConfigurationEntity;
+        private string timezone;
 
         [TestInitialize]
         public void Initialize()
@@ -722,6 +725,50 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 Future = futureAccountDue,
                 PersonName = "Johnny"
             };
+            financeConfigurationEntity = new Domain.Finance.Entities.Configuration.FinanceConfiguration()
+            {
+                ActivityDisplay = Domain.Finance.Entities.Configuration.ActivityDisplay.DisplayByPeriod,
+                ECommercePaymentsAllowed = true,
+                IncludeDetail = true,
+                IncludeHistory = true,
+                IncludeSchedule = true,
+                InstitutionName = "Institution Name",
+                NotificationText = "This is a notification",
+                PartialAccountPaymentsAllowed = true,
+                PartialDepositPaymentsAllowed = true,
+                PartialPlanPaymentsAllowed = Domain.Finance.Entities.Configuration.PartialPlanPayments.Allowed,
+                PaymentDisplay = Domain.Finance.Entities.Configuration.PaymentDisplay.DisplayByPeriod,
+                PaymentMethods = new List<Domain.Finance.Entities.Configuration.AvailablePaymentMethod>()
+                {
+                    new Domain.Finance.Entities.Configuration.AvailablePaymentMethod()
+                    {
+                        Description = "MasterCard",
+                        InternalCode = "MC",
+                        Type = "Credit Card"
+                    },
+                    new Domain.Finance.Entities.Configuration.AvailablePaymentMethod()
+                    {
+                        Description = "ECheck",
+                        InternalCode = "ECHK",
+                        Type = "Electronic Check"
+                    }
+                },
+                PaymentReviewMessage = "Review your payment.",
+                Periods = new List<Domain.Finance.Entities.FinancialPeriod>()
+                {
+                    new Domain.Finance.Entities.FinancialPeriod(Domain.Base.Entities.PeriodType.Past, null, DateTime.Today.AddDays(-30)),
+                    new Domain.Finance.Entities.FinancialPeriod(Domain.Base.Entities.PeriodType.Current, DateTime.Today.AddDays(-29), DateTime.Today.AddDays(29)),
+                    new Domain.Finance.Entities.FinancialPeriod(Domain.Base.Entities.PeriodType.Future, DateTime.Today.AddDays(30), null)
+                },
+                RemittanceAddress = new List<string>() { "123 Main Street", "Fairfax, VA 22033" },
+                SelfServicePaymentsAllowed = true,
+                ShowCreditAmounts = true,
+                SupportEmailAddress = "support@ellucian.edu",
+                StatementTitle = "Student Statement",
+                UseGuaranteedChecks = true,
+                DisplayPotentialD7Amounts = true,
+                ColleagueTimezone = TimeZoneInfo.Local.Id
+        };
         }
 
         private void SetupRepositories()
@@ -751,6 +798,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             configRepo = configRepoMock.Object;
             configRepoMock.Setup(repo => repo.GetFinancialPeriods()).Returns(financialPeriods);
             configRepoMock.Setup(repo => repo.GetDueDateOverrides()).Returns(dueDateOverrides);
+            configRepoMock.Setup(repo => repo.GetFinanceConfiguration()).Returns(financeConfigurationEntity);
 
             userFactoryMock = new Mock<ICurrentUserFactory>();
             userFactory = userFactoryMock.Object;

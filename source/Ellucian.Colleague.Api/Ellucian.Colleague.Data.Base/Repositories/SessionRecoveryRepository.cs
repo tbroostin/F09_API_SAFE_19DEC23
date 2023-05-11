@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -7,6 +7,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 if (recoveryResponse != null && !string.IsNullOrEmpty(recoveryResponse.ErrorOccurred) && recoveryResponse.ErrorOccurred != "0")
                 {
                     logger.Error(string.Format("Error occurred during user ID recovery request: ({0}) {1}", recoveryResponse.ErrorOccurred, string.Join(" - ", recoveryResponse.ErrorMessages)));
-                    throw new Exception("Error occurred during user ID recovery request.");
+                    throw new ColleagueWebApiException("Error occurred during user ID recovery request.");
                 }
             }
             catch (Exception ex)
@@ -93,7 +94,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (tokenRequestResponse != null && !string.IsNullOrEmpty(tokenRequestResponse.ErrorOccurred) && tokenRequestResponse.ErrorOccurred != "0")
             {
                 logger.Error(string.Format("Error occurred during password reset token request: ({0}) {1}", tokenRequestResponse.ErrorOccurred, string.Join(" - ", tokenRequestResponse.ErrorMessages)));
-                throw new Exception("Error occurred during password reset token request.");
+                throw new ColleagueWebApiException("Error occurred during password reset token request.");
             }
         }
 
@@ -127,7 +128,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var resetResponse = await anonymousTransactionInvoker.ExecuteAnonymousAsync<ResetPasswordWithTokenRequest, ResetPasswordWithTokenResponse>(resetRequest);
             if (resetResponse == null)
             {
-                throw new Exception("Could not complete reset password transaction.");
+                throw new ColleagueWebApiException("Could not complete reset password transaction.");
             }
 
             if (resetResponse.ErrorOccurred)
@@ -150,7 +151,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     else if (resetResponse.ErrorCode == "T2")
                     {
                         logger.Error(string.Format("User {0} tried to use an invalid password reset token.", userId));
-                        throw new Exception("Password reset token invalid.");
+                        throw new ColleagueWebApiException("Password reset token invalid.");
                     }
                 }
                 logger.Error("Error occurred in password reset transaction");
@@ -161,7 +162,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         logger.Error(message);
                     }
                 }
-                throw new Exception("Failure in reset password transaction.");
+                throw new ColleagueWebApiException("Failure in reset password transaction.");
             }
 
         }

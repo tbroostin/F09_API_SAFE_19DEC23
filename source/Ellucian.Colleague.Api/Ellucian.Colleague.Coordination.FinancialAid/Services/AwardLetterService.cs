@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -18,6 +18,8 @@ using Ellucian.Colleague.Coordination.FinancialAid.Adapters;
 using Ellucian.Colleague.Domain.Repositories;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -100,13 +102,13 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var fafsaRecords = Task.Run(async() => await GetStudentFafsaRecordsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
+            var fafsaRecords = Task.Run(async () => await GetStudentFafsaRecordsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
 
             var awardLetterEntities = awardLetterRepository.GetAwardLetters(studentId, studentAwardYears, fafsaRecords);
             if (awardLetterEntities == null || awardLetterEntities.Count() == 0)
             {
                 var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
@@ -114,19 +116,19 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (filteredAwardLetters == null || filteredAwardLetters.Count() == 0)
             {
                 var message = string.Format("No award letters are active in configuration for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
-            var filteredAwardLetterAwards = Task.Run(async() => await GetFilteredAwardLetterAwardsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
+            var filteredAwardLetterAwards = Task.Run(async () => await GetFilteredAwardLetterAwardsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
             if (filteredAwardLetterAwards == null || !filteredAwardLetterAwards.Any())
             {
                 var message = string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
-            var studentOrApplicant = Task.Run(async() => await GetStudentOrApplicantAsync(studentId)).GetAwaiter().GetResult();
+            var studentOrApplicant = Task.Run(async () => await GetStudentOrApplicantAsync(studentId)).GetAwaiter().GetResult();
 
             //if the studentOrApplicant is still null, throw an exception
             if (studentOrApplicant == null)
@@ -170,7 +172,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);
             }
 
-            var studentAwardYears = Task.Run(async() => await GetActiveStudentAwardYearEntitiesAsync(studentId)).GetAwaiter().GetResult();
+            var studentAwardYears = Task.Run(async () => await GetActiveStudentAwardYearEntitiesAsync(studentId)).GetAwaiter().GetResult();
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
             {
                 var message = string.Format("Student {0} has no financial aid data or no award years are active in the configuration.", studentId);
@@ -178,13 +180,13 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var fafsaRecords = Task.Run(async() => await GetStudentFafsaRecordsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
+            var fafsaRecords = Task.Run(async () => await GetStudentFafsaRecordsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
 
             var awardLetterEntities = awardLetterRepository.GetAwardLetters(studentId, studentAwardYears, fafsaRecords);
             if (awardLetterEntities == null || awardLetterEntities.Count() == 0)
             {
                 var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
@@ -192,19 +194,19 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (filteredAwardLetters == null || filteredAwardLetters.Count() == 0)
             {
                 var message = string.Format("No award letters are active in configuration for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
-            var filteredAwardLetterAwards = Task.Run(async() => await GetFilteredAwardLetterAwardsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
+            var filteredAwardLetterAwards = Task.Run(async () => await GetFilteredAwardLetterAwardsAsync(studentId, studentAwardYears)).GetAwaiter().GetResult();
             if (filteredAwardLetterAwards == null)
             {
                 var message = string.Format("Student {0} has no awards", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter>();
             }
 
-            var studentOrApplicant = Task.Run(async() => await GetStudentOrApplicantAsync(studentId)).GetAwaiter().GetResult();
+            var studentOrApplicant = Task.Run(async () => await GetStudentOrApplicantAsync(studentId)).GetAwaiter().GetResult();
 
             //if the studentOrApplicant is still null, throw an exception
             if (studentOrApplicant == null)
@@ -390,11 +392,11 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     out encoding,
                     out fileNameExtension,
                     out streams,
-                    out warnings);                
+                    out warnings);
 
                 return renderedBytes;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error(ex, "Unable to generate award letter report.");
                 throw;
@@ -443,7 +445,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);
             }
 
-            var studentAwardYear = Task.Run(async() => await GetActiveStudentAwardYearEntitiesAsync(awardLetter.StudentId)).GetAwaiter().GetResult().FirstOrDefault(y => y.Code == awardLetter.AwardYearCode);
+            var studentAwardYear = Task.Run(async () => await GetActiveStudentAwardYearEntitiesAsync(awardLetter.StudentId)).GetAwaiter().GetResult().FirstOrDefault(y => y.Code == awardLetter.AwardYearCode);
             if (studentAwardYear == null)
             {
                 var message = string.Format("Student has no financial aid data for {0}", awardLetter.AwardYearCode);
@@ -455,9 +457,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var awardLetterDtoAdapter = new AwardLetterDtoToEntityAdapter(_adapterRegistry, logger);
             var inputAwardLetterEntity = awardLetterDtoAdapter.MapToType(awardLetter, studentAwardYear);
 
-            var studentAwards = Task.Run(async() => await GetFilteredAwardLetterAwardsAsync(inputAwardLetterEntity.StudentId, new List<Domain.FinancialAid.Entities.StudentAwardYear>() { studentAwardYear }))
+            var studentAwards = Task.Run(async () => await GetFilteredAwardLetterAwardsAsync(inputAwardLetterEntity.StudentId, new List<Domain.FinancialAid.Entities.StudentAwardYear>() { studentAwardYear }))
                 .GetAwaiter().GetResult();
-                
+
             if (studentAwards == null || studentAwards.Count() == 0)
             {
                 var message = string.Format("Student has no awards or Configuration filtered out all StudentAwards for student {0} and award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
@@ -465,7 +467,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var studentOrApplicantPerson = Task.Run(async() => await GetStudentOrApplicantAsync(inputAwardLetterEntity.StudentId)).GetAwaiter().GetResult();
+            var studentOrApplicantPerson = Task.Run(async () => await GetStudentOrApplicantAsync(inputAwardLetterEntity.StudentId)).GetAwaiter().GetResult();
             if (studentOrApplicantPerson == null)
             {
                 var message = string.Format("Cannot create award letter for non-student/non-applicant person {0}.", inputAwardLetterEntity.StudentId);
@@ -473,7 +475,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new InvalidOperationException(message);
             }
 
-            var fafsaRecord = Task.Run(async() => await GetStudentFafsaRecordsAsync(awardLetter.StudentId, new List<Domain.FinancialAid.Entities.StudentAwardYear>() { studentAwardYear })).GetAwaiter().GetResult()
+            var fafsaRecord = Task.Run(async () => await GetStudentFafsaRecordsAsync(awardLetter.StudentId, new List<Domain.FinancialAid.Entities.StudentAwardYear>() { studentAwardYear })).GetAwaiter().GetResult()
                 .FirstOrDefault(fr => fr.AwardYear == awardLetter.AwardYearCode);
 
             //update the award letter
@@ -482,7 +484,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 var message = string.Format("Null award letter object returned by repository update method for student {0} award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
 
             //get the Entity-to-Dto adapter and return the updatedAwardLetter as a Dto
@@ -556,12 +558,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 var message = string.Format("Null award letter object returned by repository update method for student {0} award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
                 logger.Error(message);
-                throw new Exception(message);
+                throw new ColleagueWebApiException(message);
             }
-            
+
             //get the Entity-to-Dto adapter and return the updatedAwardLetter as a Dto
             var awardLetter2EntityAdapter = new AwardLetter2EntityToDtoAdapter(_adapterRegistry, logger);
-            
+
             return awardLetter2EntityAdapter.MapToType(updatedAwardLetterEntity);
         }
 
@@ -596,12 +598,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new InvalidOperationException(message);
             }
-           
+
             var awardLetterEntities = await awardLetterHistoryRepository.GetAwardLettersAsync(studentId, studentAwardYears, allAwards);
             if (awardLetterEntities == null || awardLetterEntities.Count() == 0)
             {
                 var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter2>();
             }
 
@@ -648,7 +650,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             // Get the full list of award codes
             var allAwards = financialAidReferenceDataRepository.Awards;
-            
+
             // Get the list of active StudentAwardYears
             var studentAwardYears = await GetActiveStudentAwardYearEntitiesAsync(studentId);
             if (studentAwardYears == null || studentAwardYears.Count() == 0)
@@ -657,7 +659,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 logger.Error(message);
                 throw new InvalidOperationException(message);
             }
-            
+
             // Get studentAwardYear for the requested awardYear
             var studentAwardYear = studentAwardYears.FirstOrDefault(s => s.Code == awardYear);
             if (studentAwardYear == null)
@@ -671,12 +673,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (awardLetterEntity == null)
             {
                 var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new Dtos.FinancialAid.AwardLetter2();
             }
 
             var awardLetterEntityAdapter = new AwardLetter2EntityToDtoAdapter(_adapterRegistry, logger);
-            
+
             return awardLetterEntityAdapter.MapToType(awardLetterEntity);
         }
 
@@ -896,7 +898,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var inputAwardLetterEntity = awardLetter3DtoAdapter.MapToType(awardLetter, studentAwardYear);
 
             var studentAwards = await GetFilteredAwardLetterAwardsAsync(inputAwardLetterEntity.StudentId, new List<Domain.FinancialAid.Entities.StudentAwardYear>() { studentAwardYear });
-            if (studentAwards == null || studentAwards.Count() == 0)
+
+            //check if either missing awards or is a zero award definition
+            if (studentAwards == null || studentAwards.Count() == 0 && !inputAwardLetterEntity.AlhZeroAwardFlg)
             {
                 var message = string.Format("Student has no awards or Configuration filtered out all StudentAwards for student {0} and award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
                 logger.Error(message);
@@ -907,18 +911,25 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var studentId = inputAwardLetterEntity.StudentId;
 
             //update the award letter
-            var updatedAwardLetterEntity = await awardLetterHistoryRepository.UpdateAwardLetter2Async(studentId, inputAwardLetterEntity, studentAwardYear, allAwards);
-            if (updatedAwardLetterEntity == null)
+            try
             {
-                var message = string.Format("Null award letter object returned by repository update method for student {0} award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
-                logger.Error(message);
-                throw new Exception(message);
+                var updatedAwardLetterEntity = await awardLetterHistoryRepository.UpdateAwardLetter2Async(studentId, inputAwardLetterEntity, studentAwardYear, allAwards);
+                if (updatedAwardLetterEntity == null)
+                {
+                    var message = string.Format("Null award letter object returned by repository update method for student {0} award year {1}", inputAwardLetterEntity.StudentId, studentAwardYear.Code);
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
+
+                //get the Entity-to-Dto adapter and return the updatedAwardLetter as a Dto
+                var awardLetter3EntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
+
+                return awardLetter3EntityAdapter.MapToType(updatedAwardLetterEntity);
             }
-
-            //get the Entity-to-Dto adapter and return the updatedAwardLetter as a Dto
-            var awardLetter3EntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
-
-            return awardLetter3EntityAdapter.MapToType(updatedAwardLetterEntity);
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
 
@@ -956,7 +967,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (awardLetterEntities == null || !awardLetterEntities.Any())
             {
                 var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Dtos.FinancialAid.AwardLetter3>();
             }
 
@@ -1002,36 +1013,42 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             // Get the full list of award codes
             var allAwards = financialAidReferenceDataRepository.Awards;
-
-            // Get the list of active StudentAwardYears
-            var studentAwardYears = await GetActiveStudentAwardYearEntitiesAsync(studentId);
-            if (studentAwardYears == null || studentAwardYears.Count() == 0)
+            try
             {
-                var message = string.Format("Student {0} has no financial aid data or no award years are active in the configuration.", studentId);
-                logger.Error(message);
-                throw new InvalidOperationException(message);
-            }
+                // Get the list of active StudentAwardYears
+                var studentAwardYears = await GetActiveStudentAwardYearEntitiesAsync(studentId);
+                if (studentAwardYears == null || studentAwardYears.Count() == 0)
+                {
+                    var message = string.Format("Student {0} has no financial aid data or no award years are active in the configuration.", studentId);
+                    logger.Error(message);
+                    throw new InvalidOperationException(message);
+                }
 
-            // Get studentAwardYear for the requested awardYear
-            var studentAwardYear = studentAwardYears.FirstOrDefault(s => s.Code == awardYear);
-            if (studentAwardYear == null)
+                // Get studentAwardYear for the requested awardYear
+                var studentAwardYear = studentAwardYears.FirstOrDefault(s => s.Code == awardYear);
+                if (studentAwardYear == null)
+                {
+                    var message = string.Format("Student {0} has no active award year for the award year {1}", studentId, awardYear);
+                    logger.Error(message);
+                    throw new InvalidOperationException(message);
+                }
+
+                var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetter2Async(studentId, studentAwardYear, allAwards, createAwardLetterHistoryRecord);
+                if (awardLetterEntity == null)
+                {
+                    var message = string.Format("Student {0} has no award letters", studentId);
+                    logger.Debug(message);
+                    return new Dtos.FinancialAid.AwardLetter3();
+                }
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
+
+                return awardLetterEntityAdapter.MapToType(awardLetterEntity);
+            }
+            catch (ColleagueSessionExpiredException)
             {
-                var message = string.Format("Student {0} has no active award year for the award year {1}", studentId, awardYear);
-                logger.Error(message);
-                throw new InvalidOperationException(message);
+                throw;
             }
-
-            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetter2Async(studentId, studentAwardYear, allAwards, createAwardLetterHistoryRecord);
-            if (awardLetterEntity == null)
-            {
-                var message = string.Format("Student {0} has no award letters", studentId);
-                logger.Info(message);
-                return new Dtos.FinancialAid.AwardLetter3();
-            }
-
-            var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
-
-            return awardLetterEntityAdapter.MapToType(awardLetterEntity);
         }
 
         /// <summary>
@@ -1059,26 +1076,33 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
             var allAwards = financialAidReferenceDataRepository.Awards;
 
-            var studentAwardYears = await GetActiveStudentAwardYearEntitiesAsync(studentId);
-            if (studentAwardYears == null || !studentAwardYears.Any())
+            try
             {
-                var message = string.Format("Student {0} has no financial aid data or no award years are active in the configuration.", studentId);
-                logger.Error(message);
-                throw new InvalidOperationException(message);
-            }
+                var studentAwardYears = await GetActiveStudentAwardYearEntitiesAsync(studentId);
+                if (studentAwardYears == null || !studentAwardYears.Any())
+                {
+                    var message = string.Format("Student {0} has no financial aid data or no award years are active in the configuration.", studentId);
+                    logger.Error(message);
+                    throw new InvalidOperationException(message);
+                }
 
-            var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterById2Async(recordId, studentAwardYears,
-                allAwards);
-            //Validate the award letter history record belongs to the student
-            if (awardLetterEntity != null && !string.IsNullOrEmpty(awardLetterEntity.StudentId) && awardLetterEntity.StudentId != studentId)
+                var awardLetterEntity = await awardLetterHistoryRepository.GetAwardLetterById2Async(recordId, studentAwardYears,
+                    allAwards);
+                //Validate the award letter history record belongs to the student
+                if (awardLetterEntity != null && !string.IsNullOrEmpty(awardLetterEntity.StudentId) && awardLetterEntity.StudentId != studentId)
+                {
+                    throw new PermissionsException("Insufficient access to award letter record with the provided id.");
+                }
+
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
+
+                return awardLetterEntityAdapter.MapToType(awardLetterEntity);
+            }
+            catch (ColleagueSessionExpiredException)
             {
-                throw new PermissionsException("Insufficient access to award letter record with the provided id.");
+                throw;
             }
-
-
-            var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(_adapterRegistry, logger);
-
-            return awardLetterEntityAdapter.MapToType(awardLetterEntity);
         }
 
         /// <summary>
@@ -1213,6 +1237,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     parameters.Add(new ReportParameter("IsEFCActive", awardLetterConfigurationDto.IsEfcActive.ToString()));
                     parameters.Add(new ReportParameter("IsALHCostActive", awardLetterConfigurationDto.IsDirectCostActive.ToString()));
                     parameters.Add(new ReportParameter("IsEnrollmentActive", awardLetterConfigurationDto.IsEnrollmentActive.ToString()));
+                    parameters.Add(new ReportParameter("ZeroAwardFlag", awardLetterDto.AlhZeroAwardFlg.ToString()));
+
+
                     if (awardLetterConfigurationDto.IsPellEntitlementActive && awardLetterDto.AlhPellEntitlementList.Any())
                     {
                         parameters.Add(new ReportParameter("PellEntitlementFull", awardLetterDto.AlhPellEntitlementList[0]));
@@ -1235,7 +1262,33 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
                 report.DataSources.Add(new ReportDataSource("AwardLetter3", new List<Dtos.FinancialAid.AwardLetter3>() { awardLetterDto }));
                 report.DataSources.Add(new ReportDataSource("AwardLetterAnnualAwards", awardLetterDto.AwardLetterAnnualAwards));
-                report.DataSources.Add(new ReportDataSource("AwardLetterAwardPeriods", awardLetterAwardPeriods));
+                if (!awardLetterDto.AlhZeroAwardFlg)
+                {
+                    report.DataSources.Add(new ReportDataSource("AwardLetterAwardPeriods", awardLetterAwardPeriods));
+                }
+                else
+                {
+                    // The annual award table is used to create the award period text in the housing/enrollment box
+                    // Since this is null for zero award letters, manually create a storage annual object
+                    // Containing the award periods for the year to synchronize
+                    var zeroCount = 0;
+                    var zeroAwardPeriods = new List<AwardLetterAwardPeriod>();
+                    //var zeroAnnual = new AwardLetterAnnualAward();
+                    //awardLetterDto.AwardLetterAnnualAwards.Add(zeroAnnual);    
+                    foreach (var zeroAwpd in awardLetterDto.ZeroAwardPeriods)
+                    {
+                        var newZeroAwpd = new AwardLetterAwardPeriod(); 
+                        newZeroAwpd.ColumnName = zeroAwpd.ToUpper();
+                        newZeroAwpd.ColumnNumber = zeroCount;
+                        zeroAwardPeriods.Add(newZeroAwpd);
+                        zeroCount++;
+                        
+                    }
+                    // There is only the single AwardLetterAnnualAward that we created locally for zero award letters
+                    //awardLetterDto.AwardLetterAnnualAwards[0].AwardLetterAwardPeriods = zeroAwardPeriods;
+                    //var zeroReturnPeriods = awardLetterDto.AwardLetterAnnualAwards.SelectMany(ala => ala.AwardLetterAwardPeriods);
+                    report.DataSources.Add(new ReportDataSource("AwardLetterAwardPeriods", zeroAwardPeriods));
+                }
                 report.DataSources.Add(new ReportDataSource("StudentAddress", awardLetterDto.StudentAddress));
                 report.DataSources.Add(new ReportDataSource("OfficeAddress", awardLetterDto.ContactAddress));
 
@@ -1288,7 +1341,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (studentAwards == null || studentAwards.Count() == 0)
             {
                 var message = string.Format("Student {0} has no awards", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Domain.FinancialAid.Entities.StudentAward>();
             }
 
@@ -1296,7 +1349,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (filteredAwardLetterAwards == null || filteredAwardLetterAwards.Count() == 0)
             {
                 var message = string.Format("Configuration filtered out all StudentAwards for student {0}", studentId);
-                logger.Info(message);
+                logger.Debug(message);
                 return new List<Domain.FinancialAid.Entities.StudentAward>();
             }
 
@@ -1388,14 +1441,21 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 studentOrApplicant = await studentRepository.GetAsync(personId);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve student.");
+            }
             if (studentOrApplicant == null)
             {
                 try
                 {
                     studentOrApplicant = await applicantRepository.GetApplicantAsync(personId);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    var message = string.Format("An exception occurred while reading applicant info for {0}", personId);
+                    logger.Error(ex, message);
+                }
             }
 
             return studentOrApplicant;

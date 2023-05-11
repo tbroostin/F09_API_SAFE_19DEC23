@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -56,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             try
             {
-                throw new Exception(string.Format("No purchasing-arrangements was found for guid {0}.", guid));
+                throw new ColleagueWebApiException(string.Format("No purchasing-arrangements was found for guid {0}.", guid));
             }
             catch (Exception e)
             {

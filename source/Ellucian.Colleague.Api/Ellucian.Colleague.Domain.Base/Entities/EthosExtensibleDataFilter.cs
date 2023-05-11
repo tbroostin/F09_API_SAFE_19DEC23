@@ -33,6 +33,21 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public int? ColleaguePropertyLength { get; private set; }
 
         /// <summary>
+        /// Position of the Colleague field within the file, primarily used for keys.
+        /// </summary>
+        public int? ColleagueFieldPosition { get; set; }
+
+        /// <summary>
+        /// Indicates whether this field is required 
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Description of the filter
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// Title of the extended property in the Ethos json schema
         /// </summary>
         public string JsonTitle { get; private set; }
@@ -153,6 +168,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public bool NamedQuery { get; set; }
 
         /// <summary>
+        /// Key Query flag
+        /// </summary>
+        public bool KeyQuery { get; set; }
+
+        /// <summary>
         /// constructor for the row of extended data
         /// </summary>
         /// <param name="colColumnName"></param>
@@ -164,7 +184,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <param name="length"></param>
         /// <param name="namedQuery"></param>
         public EthosExtensibleDataFilter(string colColumnName, string colFileName, string jsonTitle, string jsonPath, string jsonPropType, List<string> filterValue, 
-                int? length = null, bool namedQuery = false)
+                int? length = null, bool namedQuery = false, bool keyQuery = false)
         {
             ColleagueColumnName = colColumnName;
             ColleagueFileName = colFileName;
@@ -177,6 +197,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             SortColumns = new List<EthosApiSortCriteria>();
             Enumerations = new List<EthosApiEnumerations>();
             NamedQuery = namedQuery;
+            KeyQuery = keyQuery;
             //build the full json patch path which includes the property itself
             
             var sb = new StringBuilder();
@@ -201,7 +222,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             sb.Append(jsonTitle.StartsWith("/") ? jsonTitle.TrimStart(new char[] {'/'}) : jsonTitle);
 
             FullJsonPath = sb.ToString();
-            FullJsonPath = FullJsonPath.TrimStart(new char[] { '/' }).Replace('/', '.');
+            FullJsonPath = FullJsonPath.TrimStart(new char[] { '/' }).Replace('/', '.').TrimEnd(']').TrimEnd('[');
         }
     }
 

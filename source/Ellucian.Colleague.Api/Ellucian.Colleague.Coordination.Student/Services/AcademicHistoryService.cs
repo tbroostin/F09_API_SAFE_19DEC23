@@ -1,11 +1,14 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -21,20 +24,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly IAcademicCreditRepository _academicCreditRepository;
         private readonly IStudentRepository _studentRepository;
+        private readonly IApplicantRepository _applicantRepository;
         private readonly ITermRepository _termRepository;
         private readonly ISectionRepository _sectionRepository;
         private ILogger _logger;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IReferenceDataRepository _referenceDataRepository;
 
-        public AcademicHistoryService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IAcademicCreditRepository academicCreditRepository, ITermRepository termRepository, ISectionRepository sectionRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository)
+        public AcademicHistoryService(IAdapterRegistry adapterRegistry, IStudentRepository studentRepository, IApplicantRepository applicantRepository,  IAcademicCreditRepository academicCreditRepository, ITermRepository termRepository, ISectionRepository sectionRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository, IReferenceDataRepository referenceDataRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _academicCreditRepository = academicCreditRepository;
             _studentRepository = studentRepository;
+            _applicantRepository = applicantRepository;
             _termRepository = termRepository;
             _sectionRepository = sectionRepository;
             _logger = logger;
             _configurationRepository = configurationRepository;
+            _referenceDataRepository = referenceDataRepository;
         }
 
         public async Task<IEnumerable<Dtos.Student.AcademicHistoryLevel>> QueryAcademicHistoryLevelAsync(Dtos.Student.AcademicHistoryQueryCriteria criteria)
@@ -680,7 +687,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
                 if (error && pilotAcademicHistoryLevelDto.Count() == 0)
-                    throw new Exception("Unexpected errors occurred.  No academic history level records returned.  Check API error log.");
+                    throw new ColleagueWebApiException("Unexpected errors occurred.  No academic history level records returned.  Check API error log.");
             }
             else
             {
@@ -788,7 +795,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
                 if (error && pilotAcademicHistoryLevelDto.Count() == 0)
-                    throw new Exception("Unexpected errors occurred.  No academic history level records returned.  Check API error log.");
+                    throw new ColleagueWebApiException("Unexpected errors occurred.  No academic history level records returned.  Check API error log.");
             }
             else
             {
@@ -1277,35 +1284,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Ellucian.Colleague.Dtos.Student.AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
         {
             Dtos.Student.AcademicHistory4 academicHistory = null;
-            if (string.IsNullOrEmpty(studentId))
-            {
-                string message = "studentId must be provided in order to retrieve student's academic history";
-                logger.Error(message);
-                throw new ArgumentNullException("studentId", message);
-            }
             try
             {
-                Dictionary<string, List<AcademicCredit>> studentAcademicCreditsByStudentId = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { studentId }, bestFit, filter, includeDrops);
-                if(studentAcademicCreditsByStudentId==null || !studentAcademicCreditsByStudentId.ContainsKey(studentId))
+                if (string.IsNullOrEmpty(studentId))
                 {
-                    throw new Exception("Either student academic credits collection was empty or it did no have the student as a key in collection");
+                    string message = "studentId must be provided in order to retrieve student's academic history";
+                    logger.Error(message);
+                    throw new ArgumentNullException("studentId", message);
+                }
+                Dictionary<string, List<AcademicCredit>> studentAcademicCreditsByStudentId = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { studentId }, bestFit, filter, includeDrops);
+                if (studentAcademicCreditsByStudentId == null || !studentAcademicCreditsByStudentId.ContainsKey(studentId))
+                {
+                    throw new ColleagueWebApiException("Either student academic credits collection was empty or it did no have the student as a key in collection");
                 }
                 academicHistory = await ConvertAcademicCreditsToAcademicHistoryDto4Async(studentId, studentAcademicCreditsByStudentId[studentId]);
 
                 // Filter to return only one specific term of data if we have a term filter set
-                if (!string.IsNullOrEmpty(term) && academicHistory!=null && academicHistory.AcademicTerms!=null)
+                if (!string.IsNullOrEmpty(term) && academicHistory != null && academicHistory.AcademicTerms != null)
                 {
-                    List<Dtos.Student.AcademicTerm4> filteredTerms= academicHistory.AcademicTerms.Where(a => a.TermId != null && a.TermId == term).ToList();
+                    List<Dtos.Student.AcademicTerm4> filteredTerms = academicHistory.AcademicTerms.Where(a => a.TermId != null && a.TermId == term).ToList();
                     academicHistory.AcademicTerms = filteredTerms;
                 }
+                return academicHistory;
             }
-            catch(Exception ex)
+            catch (ColleagueSessionExpiredException csee)
             {
-                string message = string.Format("Couldn't retrieve student's academic history for the student - {0}", studentId);
-                logger.Error(ex, message);
+                logger.Error(csee, string.Format("Colleague session expired while retrieving academic history version 5 for student with id {0}", studentId));
                 throw;
             }
-            return academicHistory;
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -1695,6 +1706,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentException("Must supply at least 1 section to query academic credits.");
             }
+
             IEnumerable<string> sectionIds = criteria.SectionIds.Distinct().ToList();
             List<Dtos.Student.AcademicCredit3> academicCreditDtos = new List<Dtos.Student.AcademicCredit3>();
             List<string> invalidAcademicCredits = new List<string>();
@@ -1705,7 +1717,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (useCache)
             {
                 sections = (await _sectionRepository.GetCachedSectionsAsync(sectionIds, false));
-            } else
+            }
+            else
             {
                 sections = (await _sectionRepository.GetNonCachedSectionsAsync(sectionIds, false));
             }
@@ -1713,13 +1726,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 string requestor = CurrentUser.PersonId;
                 List<string> querySectionIds = new List<string>();
+                var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+                var userPermissions = await GetUserPermissionCodesAsync();
 
                 // Determine the actual list of section Ids that should be used for the query. Make sure the requestor has access to see credits for the sections
                 // AND add in any cross listed sections if requested.
                 foreach (var section in sections)
                 {
-                    // Only assigned faculty of a section can get grade information for a section
-                    if (section.FacultyIds.Contains(requestor))
+                    // Only assigned faculty or a departmental oversight member of a section can get grade information for a section
+                    bool canAccessGradeInformation = false;
+                    if (section != null && section.FacultyIds != null && section.FacultyIds.Contains(requestor))
+                    {
+                        canAccessGradeInformation = true;
+                    }
+                    else
+                    {
+                        // Check if the requestor is a departmental oversight member for this section with the required permissions
+                        if (CheckDepartmentalOversightAccessForSection(section, allDepartments) &&
+                           (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionRoster) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionGrading) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionDropRoster) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionDropRoster) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionCensus) ||
+                           userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionCensus)))
+
+                        {
+                            canAccessGradeInformation = true;
+                        }
+                    }
+
+                    if (canAccessGradeInformation)
                     {
                         querySectionIds.Add(section.Id);
                         // Add in any crosslisted section Ids if criteria requests them.
@@ -1730,14 +1767,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                     }
                 }
+
                 if (querySectionIds.Any())
                 {
                     try
                     {
                         // Get all academic credits for these sections (all statuses). They will be filtered below.
                         academicCreditsWithInvalidKeys = await _academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(querySectionIds.Distinct().ToList());
-
-
                         var academicCreditAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AcademicCredit, Dtos.Student.AcademicCredit3>();
                         if (academicCreditsWithInvalidKeys != null)
                         {
@@ -1759,12 +1795,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                                 }
                             }
-                            if (academicCreditsWithInvalidKeys.InvalidAcademicCreditIds!=null)
+                            if (academicCreditsWithInvalidKeys.InvalidAcademicCreditIds != null)
                             {
                                 invalidAcademicCredits = academicCreditsWithInvalidKeys.InvalidAcademicCreditIds.ToList();
                             }
                         }
                         return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -1777,6 +1817,76 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
             return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
+        }
+
+
+        /// <summary>
+        /// Retrieves the academic crdits for an applicant. 
+        /// This retrieves all the raw academic credits which includes:
+        /// academic credits that were imported directly without student being registered to existing section.
+        /// academic credits that were transfer, dropped, withdrawn or non-course credits based upon filter.
+        /// if filter is true then retrieves academic credits that are New, Add, PR, TR, NC, Withdrawn status only.
+        /// </summary>
+        /// <param name="applicantId">Id of the applicant</param>
+        /// <param name="filter">If true, filter academic credits for certain statuses</param>
+        /// <returns><see cref="ApplicantAcademicCredit">Applicant Academic Credit</see> for the applicant.</returns>
+        public async Task<IEnumerable<Dtos.Student.ApplicantAcademicCredit>> GetApplicantAcademicCreditsAsync(string applicantId, bool filter = true, bool includeDrops = false)
+        {
+            List<Dtos.Student.ApplicantAcademicCredit> academicCreditDtos = new List<Dtos.Student.ApplicantAcademicCredit>();
+            try
+            {
+                if (string.IsNullOrEmpty(applicantId))
+                {
+                    string message = "applicant Id must be provided in order to retrieve applicant's academic history.";
+                    logger.Error(message);
+                    throw new ArgumentNullException("applicantId", message);
+                }
+                if(!UserIsSelf(applicantId))
+                {
+                    string message = "User must be self to retrieve applicant's academic history.";
+                    logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+                // validate user should be an applicant
+                Domain.Student.Entities.Applicant applicant;
+                applicant = await _applicantRepository.GetApplicantAsync(applicantId);
+                if (applicant == null)
+                {
+                    throw new KeyNotFoundException("Applicant with ID " + applicantId + " not found in the repository.");
+                }
+                Dictionary<string, List<AcademicCredit>> academicCredits = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { applicantId },false,  filter, includeDrops);
+               
+                if (academicCredits == null )
+                {
+                    throw new ColleagueWebApiException("Either applicant's academic credits collection was empty or it did no have the applicant as a key in collection");
+                }
+                if (academicCredits.Keys.Count == 0)
+                {
+                    academicCredits.Add(applicantId, new List<AcademicCredit>());
+                }
+                if( !academicCredits.ContainsKey(applicantId))
+                {
+                    throw new ColleagueWebApiException("Either applicant's academic credits collection was empty or it did no have the applicant as a key in collection");
+                }
+
+                var academicCreditAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AcademicCredit, Dtos.Student.ApplicantAcademicCredit>();
+                foreach (var credit in academicCredits[applicantId])
+                {
+                    academicCreditDtos.Add(academicCreditAdapter.MapToType(credit));
+                }
+                return academicCreditDtos;
+                
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, string.Format("Colleague session expired while retrieving academic history version 5 for applicant with id {0}", applicantId));
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occurred while retrieving applicant's academic history for applicant Id: " + applicantId);
+                throw;
+            }
         }
 
     }

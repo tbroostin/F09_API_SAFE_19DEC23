@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -12,6 +12,8 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Linq;
+using System.Net;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -26,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly IStudentReferenceDataRepository referenceDataRepository;
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// AdmittedStatusesController constructor
@@ -63,12 +66,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 return gownSizeDtoCollection;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (System.Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve GownSize data");
-                throw CreateHttpResponseException("Unable to retrieve GownSize data");
+                throw CreateHttpResponseException("Unable to retrieve GownSize data", HttpStatusCode.BadRequest);
             }
-
         }
     }
 }

@@ -530,6 +530,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             return GetCFPVersionAsync(studentId, awardYear);
         }
 
+        public int? GetVetBenAmount (string studentId, string awardYear, IEnumerable<string> cfpVersion)
+        {
+            return GetVetBenAmount(studentId, awardYear, cfpVersion);
+        }
+
         public Task<IEnumerable<StudentAward>> UpdateStudentAwardsAsync(StudentAwardYear studentAwardYear, IEnumerable<StudentAward> studentAwards, IEnumerable<Award> awards, IEnumerable<AwardStatus> awardStatuses)
         {
             return Task.FromResult(studentAwards);

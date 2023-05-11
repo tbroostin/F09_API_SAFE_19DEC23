@@ -1,8 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly IAdapterRegistry adapterRegistry;
         private readonly ILogger logger;
         private readonly IPayStatementConfigurationService payStatementConfigurationService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// 
@@ -56,10 +58,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 return await payStatementConfigurationService.GetPayStatementConfigurationAsync();
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error occurred");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
             }
         }
     }

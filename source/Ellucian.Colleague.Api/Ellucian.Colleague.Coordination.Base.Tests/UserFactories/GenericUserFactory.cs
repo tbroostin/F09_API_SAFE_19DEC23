@@ -224,5 +224,47 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.UserFactories
                 }
             }
         }
+
+        public class AddressUserToViewPersonInformation : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "9999999",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "AddressUserToViewPersonInformation",
+                        Roles = new List<string>() { "VIEW.PERSON.INFORMATION" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
+        public class AddressUserToEditVendorInformation : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "9999998",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "AddressUserToEditVendorInformation",
+                        Roles = new List<string>() { "EDIT.VENDOR.BANKING.INFORMATION" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
     }
 }

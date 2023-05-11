@@ -1100,7 +1100,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task DemographicService_GetSocialMediaTypeByIdAsync_ThrowsInvOpExc()
             {
                 refRepoMock.Setup(repo => repo.GetSocialMediaTypesAsync(It.IsAny<bool>())).Throws<KeyNotFoundException>();
@@ -1358,7 +1358,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task DemographicService_GetVisaTypeByIdAsync_ThrowsInvOpExc()
             {
                 refRepoMock.Setup(repo => repo.GetVisaTypesAsync(It.IsAny<bool>())).Throws<KeyNotFoundException>();

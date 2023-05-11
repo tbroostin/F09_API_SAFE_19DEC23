@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class TranscriptCourse
     {
-        public string ErpProspectId;
+        public string ErpProspectId { get; set; }
         public string ErpInstitutionId { get; set; }
         public string Title { get; set; }
         public string Course { get; set; }

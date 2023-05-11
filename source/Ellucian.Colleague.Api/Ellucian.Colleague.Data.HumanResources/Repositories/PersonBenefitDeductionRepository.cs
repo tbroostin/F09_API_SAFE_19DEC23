@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Domain.HumanResources.Repositories;
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
 using System;
@@ -134,7 +135,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                     personBenefitDeductions.AddRange(BuildPersonBenefitDeductions(record));
                 }
-                catch (Exception) { }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Unable to add person bended.");
+                }
             }
 
             return personBenefitDeductions;

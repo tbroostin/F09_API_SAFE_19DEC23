@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -345,7 +346,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
         }

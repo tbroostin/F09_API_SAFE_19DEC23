@@ -111,7 +111,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public void NumberOfKnownPropertiesTest()
             {
                 var applicantProperties = typeof(Applicant).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(22, applicantProperties.Length);
+                Assert.AreEqual(23, applicantProperties.Length);
             }
 
             [TestMethod]

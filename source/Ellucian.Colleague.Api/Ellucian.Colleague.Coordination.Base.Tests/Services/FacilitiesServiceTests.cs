@@ -530,11 +530,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Exception()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Exception()
         {
             var request = new RoomsAvailabilityRequest2();
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
@@ -547,9 +547,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_NoArgument()
+        public async Task FacilitiesService_CheckRoomAvailability3_NoArgument()
         {
-            await _facilitiesService.CheckRoomAvailability2Async(null);
+            await _facilitiesService.CheckRoomAvailability3Async(null);
         }
 
         [TestMethod]
@@ -561,7 +561,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidRoomCapacity()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidRoomCapacity()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -601,11 +601,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-           await _facilitiesService.CheckRoomAvailability2Async(request);    
+           await _facilitiesService.CheckRoomAvailability3Async(request);    
         }
 
         [TestMethod]
-        public async Task FacilitiesService_CheckRoomAvailability2_ValidRooms()
+        public async Task FacilitiesService_CheckRoomAvailability3_ValidRooms()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities); 
@@ -645,7 +645,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            var rooms = await _facilitiesService.CheckRoomAvailability2Async(request);
+            var rooms = await _facilitiesService.CheckRoomAvailability3Async(request);
 
             Assert.AreEqual(4, rooms.Count());
         }
@@ -697,8 +697,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof (ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidRooms()
+        [ExpectedException(typeof (ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidRooms()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(() => null);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
@@ -738,11 +738,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        public async Task FacilitiesService_CheckRoomAvailability2_ValidBuilding()
+        public async Task FacilitiesService_CheckRoomAvailability3_ValidBuilding()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -787,7 +787,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            var rooms = (await _facilitiesService.CheckRoomAvailability2Async(request)).ToList();
+            var rooms = (await _facilitiesService.CheckRoomAvailability3Async(request)).ToList();
             Assert.AreEqual(1, rooms.Count());
             Assert.AreEqual(BuildingId, rooms.FirstOrDefault().BuildingGuid.Id);
           
@@ -795,7 +795,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         [TestMethod]    
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidBuilding()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidBuilding()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -839,12 +839,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof (IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidRoomTypes()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidRoomTypes()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -882,12 +882,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof (IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidSite()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidSite()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -927,11 +927,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        public async Task FacilitiesService_CheckRoomAvailability2_Site()
+        public async Task FacilitiesService_CheckRoomAvailability3_Site()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(_allRoomEntities);
             _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(_allRoomEntities);
@@ -978,7 +978,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     e.GetRoomIdsWithConflicts2(timePeriod.StartOn.Value, timePeriod.EndOn.Value, It.IsAny<IEnumerable<DateTime>>(),
                         It.IsAny<IEnumerable<string>>())).Returns(new List<string>());
 
-            var rooms = await _facilitiesService.CheckRoomAvailability2Async(request);
+            var rooms = await _facilitiesService.CheckRoomAvailability3Async(request);
 
             Assert.AreEqual(rooms.ElementAt(0).SiteGuid.Id, SiteId);
         }
@@ -1036,8 +1036,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }    
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_RepeatRuleNull()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_RepeatRuleNull()
         {
                  var timePeriod = new RepeatTimePeriod2
             {
@@ -1063,12 +1063,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Building = new Building2() { Id = "x" }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Invalid()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Invalid()
         {
              var timePeriod = new RepeatTimePeriod2
             {
@@ -1095,12 +1095,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
            
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidOccupancy()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidOccupancy()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1124,12 +1124,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_InvalidOccupancy_Zero()
+        public async Task FacilitiesService_CheckRoomAvailability3_InvalidOccupancy_Zero()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1156,12 +1156,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Daily_Interval_Zero()
+        public async Task FacilitiesService_CheckRoomAvailability3_Daily_Interval_Zero()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1188,12 +1188,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Daily_Interval_366()
+        public async Task FacilitiesService_CheckRoomAvailability3_Daily_Interval_366()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1220,13 +1220,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Daily_Repetitions_0()
+        public async Task FacilitiesService_CheckRoomAvailability3_Daily_Repetitions_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1253,12 +1253,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Daily_Repetitions_366()
+        public async Task FacilitiesService_CheckRoomAvailability3_Daily_Repetitions_366()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1285,12 +1285,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Daily_RepeatRuleEnds_Null()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Daily_RepeatRuleEnds_Null()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1317,13 +1317,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Weekly_Repetitions_0()
+        public async Task FacilitiesService_CheckRoomAvailability3_Weekly_Repetitions_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1350,12 +1350,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Weekly_Repetitions_366()
+        public async Task FacilitiesService_CheckRoomAvailability3_Weekly_Repetitions_366()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1382,12 +1382,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Weekly_Interval_0()
+        public async Task FacilitiesService_CheckRoomAvailability3_Weekly_Interval_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1414,12 +1414,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Weekly_Interval_55()
+        public async Task FacilitiesService_CheckRoomAvailability3_Weekly_Interval_55()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1446,12 +1446,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Weekly_RepeatRuleEnds_null()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Weekly_RepeatRuleEnds_null()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1484,12 +1484,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_RepeatBy_Null()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_RepeatBy_Null()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1516,12 +1516,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_RepeatBy_Occurence_0()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_RepeatBy_Occurence_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1549,12 +1549,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_RepeatBy_Occurence_5()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_RepeatBy_Occurence_5()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1582,12 +1582,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_RepeatBy_Occurence_null()
+        [ExpectedException(typeof(ColleagueWebApiException))]
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_RepeatBy_Occurence_null()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1615,12 +1615,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_Interval_0()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_Interval_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1648,12 +1648,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_Interval_13()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_Interval_13()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1681,13 +1681,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_DayOfMonth_35()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_DayOfMonth_35()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1715,12 +1715,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_Repetitions_0()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_Repetitions_0()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1748,12 +1748,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task FacilitiesService_CheckRoomAvailability2_Monthly_Repetitions_13()
+        public async Task FacilitiesService_CheckRoomAvailability3_Monthly_Repetitions_13()
         {
             var timePeriod = new RepeatTimePeriod2
             {
@@ -1781,7 +1781,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Recurrence = new Recurrence3 { RepeatRule = repeatRule, TimePeriod = timePeriod }
             };
 
-            await _facilitiesService.CheckRoomAvailability2Async(request);
+            await _facilitiesService.CheckRoomAvailability3Async(request);
         }
 
 
@@ -2344,7 +2344,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Exception()
         {
             var request = new RoomsAvailabilityRequest3();
@@ -2452,7 +2452,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_InvalidRooms()
         {
             _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(() => null);
@@ -2740,7 +2740,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_RepeatRuleNull()
         {
             var timePeriod = new RepeatTimePeriod2
@@ -2771,7 +2771,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Invalid()
         {
             var timePeriod = new RepeatTimePeriod2
@@ -3097,7 +3097,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Weekly_RepeatRuleEnds_null()
         {
             var timePeriod = new RepeatTimePeriod2
@@ -3135,7 +3135,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Monthly_RepeatBy_Null()
         {
             var timePeriod = new RepeatTimePeriod2
@@ -3167,7 +3167,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Monthly_RepeatBy_Occurence_0()
         {
             var timePeriod = new RepeatTimePeriod2
@@ -3233,7 +3233,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task FacilitiesService_CheckRoomAvailability4_Monthly_RepeatBy_Occurence_null()
         {
             var timePeriod = new RepeatTimePeriod2

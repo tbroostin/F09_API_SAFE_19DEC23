@@ -1,4 +1,4 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// Student id
         /// </summary>
-        public string StudentId;
+        public string StudentId { get; set; }
         /// <summary>
         /// Pell Lifetime Eligibility used percentage
         /// </summary>

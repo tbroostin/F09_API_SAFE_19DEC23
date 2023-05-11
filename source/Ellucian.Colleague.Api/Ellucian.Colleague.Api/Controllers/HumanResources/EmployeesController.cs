@@ -7,6 +7,7 @@ using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -37,6 +38,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly ILogger logger;
         private readonly IEmployeeService employeeService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Constructor
@@ -759,6 +761,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// VIEW.ALL.TIME.HISTORY
         /// VIEW.ALL.TOTAL.COMPENSATION
         /// APPROVE.REJECT.LEAVE.REQUEST
+        /// ADD.ALL.HR.PROXY
         /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Dtos.Base.Person>> QueryEmployeeNamesByPostAsync([FromBody] Dtos.Base.EmployeeNameQueryCriteria criteria)
@@ -769,12 +772,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             catch (PermissionsException pe)
             {
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("User doesn't have the permission to query the employee information.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Unknown error occurred while querying the employee information.", HttpStatusCode.BadRequest);
             }
         }
     }

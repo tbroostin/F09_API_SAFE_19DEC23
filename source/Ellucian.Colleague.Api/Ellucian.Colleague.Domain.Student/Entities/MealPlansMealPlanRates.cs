@@ -7,8 +7,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class MealPlansMealPlanRates
     {
-        public Decimal? MealRates;
-        public DateTime? EffectiveDates;
+        public Decimal? MealRates { get; set; }
+        public DateTime? EffectiveDates { get; set; }
         public MealPlansMealPlanRates() { }
         public MealPlansMealPlanRates(
             Decimal? inMealRates,

@@ -1,4 +1,4 @@
-//Copyright 2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base;
@@ -368,7 +368,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 ResourceName = "addresses",
                 ResourceVersionNumber = "1.0.0"
             };
-            _configurationRepoMock.Setup( repo => repo.GetExtendedEthosConfigurationByResource( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>() ) )
+            _configurationRepoMock.Setup( repo => repo.GetExtendedEthosConfigurationByResource( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()) )
                                   .ReturnsAsync( _ethosExtensibleData );
             _addresService = new AddressService( _adapterRegistryMock.Object, null, _configurationRepoMock.Object, null, _currentUserFactory, _roleRepositoryMock.Object, _loggerMock.Object );
             var results = await _addresService.GetExtendedEthosDataByResource( info, new List<string>() { }, false );
@@ -402,7 +402,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 ResourceName = "addresses",
                 ResourceVersionNumber = "1.0.0"
             };
-            _configurationRepoMock.Setup( repo => repo.GetExtendedEthosConfigurationByResource( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>() ) )
+            _configurationRepoMock.Setup( repo => repo.GetExtendedEthosConfigurationByResource( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()) )
                                   .ReturnsAsync( _ethosExtensibleData );
             _addresService = new AddressService( _adapterRegistryMock.Object, null, _configurationRepoMock.Object, null, _currentUserFactory, _roleRepositoryMock.Object, _loggerMock.Object );
             var results = await _addresService.GetExtendedEthosConfigurationByResource( info, false );

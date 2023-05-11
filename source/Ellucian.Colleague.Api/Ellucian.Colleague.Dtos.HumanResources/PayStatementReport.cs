@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 
@@ -108,12 +108,12 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// <summary>
         /// The number of exemptions taken on the federal withholding type tax entry
         /// </summary>
-        public int FederalExemptions { get; set; }
+        public int? FederalExemptions { get; set; }
 
         /// <summary>
         /// The number of exemptions taken on the first state withholding type tax entry.
         /// </summary>
-        public int StateExemptions { get; set; }
+        public int? StateExemptions { get; set; }
 
         /// <summary>
         /// The amount of additional tax withheld for federal taxes

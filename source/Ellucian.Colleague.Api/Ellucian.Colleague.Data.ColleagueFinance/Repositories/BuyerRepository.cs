@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -73,7 +73,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("Error occurred while getting staff records.", ex);
+                    throw new ColleagueWebApiDtoException("Error occurred while getting staff records.", ex);
                 }
             }
             if (repositoryException != null && repositoryException.Errors != null && repositoryException.Errors.Any())

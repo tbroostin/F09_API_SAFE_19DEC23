@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -155,6 +155,24 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var dtos = await controller.GetAsync();
 
                 CollectionAssert.AreEqual(new List<Dtos.Student.NonAcademicAttendanceEventType>(), dtos.ToList());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task NonAcademicAttendanceEventTypesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    studentReferenceDataRepositoryMock.Setup(s => s.GetNonAcademicAttendanceEventTypesAsync(It.IsAny<bool>()))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    await controller.GetAsync();
+
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]

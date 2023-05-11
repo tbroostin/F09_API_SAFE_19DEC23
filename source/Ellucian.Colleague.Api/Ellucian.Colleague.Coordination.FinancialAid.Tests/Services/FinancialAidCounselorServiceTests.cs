@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 inactiveCounselor.IsActive = false;
                 var actualCounselors = await financialAidCounselorService.GetCounselorsByIdAsync(counselorIds);
                 Assert.IsTrue(!actualCounselors.Any(c => c.Id == inactiveCounselor.Id));
-                loggerMock.Verify(l => l.Warn(errorMessage));
+                loggerMock.Verify(l => l.Debug(errorMessage));
             }
             
         }

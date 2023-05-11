@@ -65,7 +65,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             if (!perposwgKeys.Any())
             {
-                logger.Info("No PERPOSWG keys exist for the given person Ids: " + string.Join(",", personIds));
+                logger.Error("No PERPOSWG keys exist for the given person Ids: " + string.Join(",", personIds));
             }
 
             //bulkread the records in chunks for all the keys

@@ -1,5 +1,5 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
 using Ellucian.Colleague.Coordination.HumanResources.Utilities;
@@ -7,16 +7,22 @@ using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
+using PdfSharp.Pdf.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Security.Permissions;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
@@ -40,6 +46,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public const string ZeroFormattedAmount = "0.00";
 
         private IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository;
+        private readonly ILocalReportService reportService;
 
         /// <summary>
         /// Constructor TaxFormPdfService
@@ -48,10 +55,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <param name="currentUserFactory">CurrentUserFactory</param>
         /// <param name="roleRepository">RoleRepository</param>
         /// <param name="logger">Logger</param>
-        public HumanResourcesTaxFormPdfService(IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository,
+        public HumanResourcesTaxFormPdfService(ILocalReportService reportService, IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository,
             IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
+            this.reportService = reportService;
             this.taxFormPdfDataRepository = taxFormPdfDataRepository;
         }
 
@@ -62,6 +70,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task<bool> GetW2GuamFlag()
         {
             return await taxFormPdfDataRepository.GetW2GuamFlag();
+        }
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the American Samoa version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = American Samoa and false = USA</returns>
+        public async Task<bool> GetW2AmericanSamoaFlag()
+        {
+            return await taxFormPdfDataRepository.GetW2AmericanSamoaFlag();
         }
 
         /// <summary>
@@ -95,6 +112,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
 
                 return taxFormPdfData;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -136,6 +157,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 return taxFormPdfData;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 // Log the error and throw the exception that was given
@@ -162,14 +187,19 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             byte[] renderedBytes;
-            var report = new LocalReport();
+
+            var outputDocument = new PdfDocument();
+            PdfSecuritySettings securitySettings = outputDocument.SecuritySettings;
+
+            securitySettings.OwnerPassword = "W2CPdfReport" + new Random().Next(10000000, 99999999);
+            securitySettings.PermitAccessibilityExtractContent = false;
+            securitySettings.PermitAnnotations = false;
+            securitySettings.PermitExtractContent = false;
+            securitySettings.PermitFormsFill = false;
+            securitySettings.PermitModifyDocument = false;
 
             try
             {
-                report.ReportPath = pathToReport;
-                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
-                report.EnableExternalImages = true;
-
                 // Specify the report parameters
                 var utility = new ReportUtility();
                 var parameters = new List<ReportParameter>();
@@ -272,12 +302,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 parameters.Add(utility.BuildReportParameter("Box_20_2_previous", pdfData.Box20Line2Prev));
 
                 // Set the report parameters
-                report.SetParameters(parameters);
+                reportService.SetPath(pathToReport);
+                reportService.SetBasePermissionsForSandboxAppDomain(new PermissionSet(PermissionState.Unrestricted));
+                reportService.EnableExternalImages(true);
+                reportService.SetParameters(parameters);
 
                 // Render the report as a byte array
-                renderedBytes = report.Render(
-                    ReportType,
-                    DeviceInfo);
+                renderedBytes = reportService.RenderReport();
+                using (var pdfStream = PdfReader.Open(new MemoryStream(renderedBytes), PdfDocumentOpenMode.Import))
+                {
+                    foreach (PdfPage page in pdfStream.Pages)
+                    {
+                        outputDocument.AddPage(page);
+                    }
+                }
             }
             catch
             {
@@ -286,11 +324,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             finally
             {
-                report.DataSources.Clear();
-                report.ReleaseSandboxAppDomain();
-                report.Dispose();
+                reportService.ResetReport();
             }
-            return renderedBytes;
+            using (var outputStream = new MemoryStream())
+            {
+                outputDocument.Save(outputStream);
+
+                var reportByteArray = outputStream.ToArray();
+                outputStream.Close();
+                logger.Debug("************PDF generated successfully************");
+                return reportByteArray;
+            }
         }
 
         /// <summary>
@@ -427,6 +471,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
 
                 return taxFormPdfData;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -582,7 +630,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 int counter = 17;
                 int totalBoxCount = 34;
 
-                if (pdfData.TaxYear == "2020" || pdfData.TaxYear == "2021")
+                if (pdfData.TaxYear == "2020" || pdfData.TaxYear == "2021" || pdfData.TaxYear == "2022")
                 {
                     counter = 18;
                     totalBoxCount = 30;
@@ -727,6 +775,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 return taxFormPdfData;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 // Log the error and throw the exception that was given
@@ -823,8 +875,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     parameters.Add(utility.BuildReportParameter("EmployerAddressLine4", pdfData.EmployerAddressLine4));
                     parameters.Add(utility.BuildReportParameter("EmployerAddressLine5", pdfData.EmployerAddressLine5));
 
-                    parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
-
+                    if (pdfData.TaxYear != "2022")
+                    {
+                     parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
+                    }
+                    
                     // Set the report parameters
                     report.SetParameters(parameters);
 

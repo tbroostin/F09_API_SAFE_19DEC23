@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Entities.Payments;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -55,18 +56,25 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("studentId", "A student ID must be specified.");
             }
 
-            var controls = new List<RegistrationPaymentControl>();
-
-            string criteria = String.Format("IPCR.STUDENT EQ '{0}'", studentId);
-
-            var ids = DataReader.Select("IPC.REGISTRATION", criteria).ToList();
-            foreach (var id in ids)
+            try
             {
-                RefreshPaymentControl(id);
-                var ipcr = DataReader.ReadRecord<IpcRegistration>(id);
-                controls.Add(BuildPaymentControl(ipcr));
+                var controls = new List<RegistrationPaymentControl>();
+
+                string criteria = String.Format("IPCR.STUDENT EQ '{0}'", studentId);
+
+                var ids = DataReader.Select("IPC.REGISTRATION", criteria).ToList();
+                foreach (var id in ids)
+                {
+                    RefreshPaymentControl(id);
+                    var ipcr = DataReader.ReadRecord<IpcRegistration>(id);
+                    controls.Add(BuildPaymentControl(ipcr));
+                }
+                return controls;
             }
-            return controls;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -173,26 +181,33 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("regPmtControl", "Cannot update a null Registration Payment Control.");
             }
 
-            // Determine the reg payment status
-            string status = PutPaymentStatus(regPmtControl.PaymentStatus);
+            try
+            {
+                // Determine the reg payment status
+                string status = PutPaymentStatus(regPmtControl.PaymentStatus);
 
-            // Execute the UpdateRegistrationPaymentControl transaction
-            var request = new UpdateRegistrationPaymentControlRequest()
+                // Execute the UpdateRegistrationPaymentControl transaction
+                var request = new UpdateRegistrationPaymentControlRequest()
                 {
                     PaymentIds = regPmtControl.Payments.ToList(),
                     PaymentControlId = regPmtControl.Id,
                     PaymentStatus = status
                 };
-            var response = transactionInvoker.Execute<UpdateRegistrationPaymentControlRequest, UpdateRegistrationPaymentControlResponse>(request);
+                var response = transactionInvoker.Execute<UpdateRegistrationPaymentControlRequest, UpdateRegistrationPaymentControlResponse>(request);
 
-            if (!String.IsNullOrEmpty(response.ErrorMessage))
-            {
-                // Update failed
-                logger.Error(response.ErrorMessage);
-                throw new InvalidOperationException(response.ErrorMessage);
+                if (!String.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    // Update failed
+                    logger.Error(response.ErrorMessage);
+                    throw new InvalidOperationException(response.ErrorMessage);
+                }
+
+                return GetPaymentControl(regPmtControl.Id);
             }
-
-            return GetPaymentControl(regPmtControl.Id);
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -222,15 +237,23 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                     ApprovalDate = acceptance.ApprovalReceived.ToLocalDateTime(_colleagueTimeZone),
                     ApprovalTime = acceptance.ApprovalReceived.ToLocalDateTime(_colleagueTimeZone)
                 };
-            var response = transactionInvoker.Execute<ApproveRegistrationTermsRequest, ApproveRegistrationTermsResponse>(request);
 
-            if (!String.IsNullOrEmpty(response.ErrorMessage))
+            try
             {
-                throw new InvalidOperationException(response.ErrorMessage);
-            }
+                var response = transactionInvoker.Execute<ApproveRegistrationTermsRequest, ApproveRegistrationTermsResponse>(request);
 
-            // Return the new approval
-            return GetTermsApproval(response.RegistrationApprovalId);
+                if (!String.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    throw new InvalidOperationException(response.ErrorMessage);
+                }
+
+                // Return the new approval
+                return GetTermsApproval(response.RegistrationApprovalId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -355,19 +378,26 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 );
             }
 
-            StartStudentPaymentResponse response = transactionInvoker.Execute<StartStudentPaymentRequest, StartStudentPaymentResponse>(request);
-
-            if (!String.IsNullOrEmpty(response.OutErrorMsg))
+            try
             {
-                // Payment post failed
-                logger.Error(response.OutErrorMsg);
-                throw new InvalidOperationException(response.OutErrorMsg);
+                StartStudentPaymentResponse response = transactionInvoker.Execute<StartStudentPaymentRequest, StartStudentPaymentResponse>(request);
+
+                if (!String.IsNullOrEmpty(response.OutErrorMsg))
+                {
+                    // Payment post failed
+                    logger.Error(response.OutErrorMsg);
+                    throw new InvalidOperationException(response.OutErrorMsg);
+                }
+
+                PaymentProvider pmtProvider = new PaymentProvider();
+                pmtProvider.RedirectUrl = response.OutStartUrl;
+
+                return pmtProvider;
             }
-
-            PaymentProvider pmtProvider = new PaymentProvider();
-            pmtProvider.RedirectUrl = response.OutStartUrl;
-
-            return pmtProvider;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
 
         }
 
@@ -420,13 +450,20 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 IpcRegistrationId = id,
             };
-            var response = transactionInvoker.Execute<RefreshIpcRegistrationRequest, RefreshIpcRegistrationResponse>(request);
-
-            if (response.ErrorMessages != null && response.ErrorMessages.Count > 0)
+            try
             {
-                // Update failed
-                logger.Error(response.ErrorMessages.ToString());
-                throw new InvalidOperationException(String.Join("\n", response.ErrorMessages));
+                var response = transactionInvoker.Execute<RefreshIpcRegistrationRequest, RefreshIpcRegistrationResponse>(request);
+
+                if (response.ErrorMessages != null && response.ErrorMessages.Count > 0)
+                {
+                    // Update failed
+                    logger.Error(response.ErrorMessages.ToString());
+                    throw new InvalidOperationException(String.Join("\n", response.ErrorMessages));
+                }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
 
         }

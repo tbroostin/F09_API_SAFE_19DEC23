@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
 using System.Collections.Generic;
@@ -101,6 +101,60 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     perposRecord5,
                     perposRecord6,
                     perposRecord7
+                };
+            }
+        }
+        #endregion
+
+        #region HRPER
+        public HrPerRecord hrperRecord1 = new HrPerRecord
+        {
+            RecordKey = "0009170",
+            HrpNonempPosition = "ZPRTSTPOS"
+        };
+        public HrPerRecord hrperRecord2 = new HrPerRecord
+        {
+            RecordKey = "0009171",
+            HrpNonempPosition = "ZPRTSTPOS2"
+        };
+        public HrPerRecord hrperRecord3 = new HrPerRecord
+        {
+            RecordKey = "0009172",
+            HrpNonempPosition = "ZPRTSTPOS3"
+        };
+        public HrPerRecord hrperRecord4 = new HrPerRecord
+        {
+            RecordKey = "0009173",
+            HrpNonempPosition = "ZPRTSTPOS4"
+        };
+        public HrPerRecord hrperRecord5 = new HrPerRecord
+        {
+            RecordKey = "0009174",
+            HrpNonempPosition = "ZPRTSTPOS5"
+        }; 
+        public HrPerRecord hrperRecord6 = new HrPerRecord
+        {
+            RecordKey = "0009175",
+            HrpNonempPosition = "ZPRTSTPOS6"
+        };
+        public HrPerRecord hrperRecord7 = new HrPerRecord
+        {
+            RecordKey = "0009176",
+            HrpNonempPosition = "ZPRTSTPOS7"
+        };
+        public List<HrPerRecord> HrPerRecords
+        {
+            get
+            {
+                return new List<HrPerRecord>
+                {
+                    hrperRecord1,
+                    hrperRecord2,
+                    hrperRecord3,
+                    hrperRecord4,
+                    hrperRecord5,
+                    hrperRecord6,
+                    hrperRecord7
                 };
             }
         }
@@ -268,9 +322,53 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             return await Task.FromResult(subordinates);
         }
 
-        public Task<Dictionary<string, List<string>>> GetSupervisorIdsForPositionsAsync(IEnumerable<string> positionIds)
+        public async Task<Dictionary<string, List<string>>> GetSupervisorIdsForPositionsAsync(IEnumerable<string> positionIds)
         {
-            throw new NotImplementedException();
+            if (positionIds == null || !positionIds.Any())
+            {
+                throw new ArgumentNullException("positionIds");
+            }
+
+            var positionIdDictionary = positionIds.Distinct().ToDictionary(p => p, p => new List<string>());
+
+            var positionLevelSupervisorPerposRecords = new List<PerposRecord>();
+            var positionLevelSupervisorHrPerRecords = new List<HrPerRecord>();
+
+            positionLevelSupervisorPerposRecords = this.PerposRecords.Where(x => positionIds.Contains(x.PerposPositionId) &&
+            ((x.PerposEndDate.HasValue && x.PerposEndDate.Value >= DateTime.Today) || !x.PerposEndDate.HasValue))
+            .OrderBy(x => x.RecordKey).Distinct().ToList();
+
+            foreach (var perpos in positionLevelSupervisorPerposRecords)
+            {
+                if (positionIdDictionary.ContainsKey(perpos.PerposPositionId))
+                {
+                    if (!positionIdDictionary[perpos.PerposPositionId].Contains(perpos.PerposHrpId))
+                    {
+                        positionIdDictionary[perpos.PerposPositionId].Add(perpos.PerposHrpId);
+                    }
+                }
+            }
+
+            // If there are no Perpos records for the Supervisor positionIds.
+            if (!positionLevelSupervisorPerposRecords.Any())
+            {
+                // Get the ids of the HRPER records that have Non Employee Position IDs equal to one of the given position ids 
+                positionLevelSupervisorHrPerRecords = this.HrPerRecords.Where(x => positionIds.Contains(x.HrpNonempPosition))
+                    .Distinct().ToList();
+
+                foreach (var hrPer in positionLevelSupervisorHrPerRecords)
+                {
+                    if (positionIdDictionary.ContainsKey(hrPer.HrpNonempPosition))
+                    {
+                        if (!positionIdDictionary[hrPer.HrpNonempPosition].Contains(hrPer.RecordKey))
+                        {
+                            positionIdDictionary[hrPer.HrpNonempPosition].Add(hrPer.RecordKey);
+                        }
+                    }
+                }
+            }           
+
+            return await Task.FromResult(positionIdDictionary);
         }
 
         public Task<IEnumerable<string>> GetSupervisorsByPositionIdAsync(string positionId, string superviseeId)
@@ -319,5 +417,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         public string TimeEntryType { get; set; }
 
     }
-
+    public class HrPerRecord
+    {
+        public string RecordKey { get; set; }
+        public string HrpNonempPosition { get; set; }
+    }
 }

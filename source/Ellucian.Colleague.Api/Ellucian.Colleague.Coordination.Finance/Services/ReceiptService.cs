@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Finance;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -120,7 +121,15 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             {
                 throw new ArgumentNullException("id");
             }
-            return _receiptRepository.GetCashier(id);
+            try
+            {
+                return _receiptRepository.GetCashier(id);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
 
@@ -169,6 +178,11 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 var createdReceipt = _receiptRepository.CreateReceipt(entReceipt, entPayments, entDeposits);
                 var entReceiptAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Receipt, Dtos.Finance.Receipt>();
                 return entReceiptAdapter.MapToType(createdReceipt);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
             }
             catch (AutoMapper.AutoMapperMappingException ex)
             {

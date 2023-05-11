@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base;
@@ -107,7 +108,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
             return addressDto;
         }
@@ -193,7 +194,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
             return new Tuple<IEnumerable<Dtos.Addresses>, int>(addressesDto, totalRecords);
         }
@@ -314,7 +315,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
             return addressDto;
         }
@@ -413,9 +414,38 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new ColleagueWebApiException(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get all current addresses for a person
+        /// </summary>
+        /// <param name="personId">Person to get addresses for</param>
+        /// <accessComments>
+        /// Users can retrieve their own addresses or person's with permission VIEW.PERSON.INFORMATION or EDIT.VENDOR.BANKING.INFORMATION can retrieve addresses for other users.
+        /// </accessComments>
+        /// <returns>List of Address Objects <see cref="Ellucian.Colleague.Dtos.Base.Address">Address</see></returns>
+        public async Task<IEnumerable<Dtos.Base.Address>> GetPersonAddresses2Async(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person Id is required to retrieve the person's addresses.");
+            }
+            await CheckGetPersonViewPermission( personId);
+            var addressDtoCollection = new List<Ellucian.Colleague.Dtos.Base.Address>();
+            var addressCollection = await _addressRepository.GetPersonAddressesAsync(personId);
+            // Get the right adapter for the type mapping
+            var addressDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Address, Ellucian.Colleague.Dtos.Base.Address>();
+            // Map the Address entity to the Address DTO
+            foreach (var address in addressCollection)
+            {
+                addressDtoCollection.Add(addressDtoAdapter.MapToType(address));
+            }
+
+            return addressDtoCollection;
+        }
+
 
         /// <summary>
         /// Build a Addresses DTO object from an Address entity
@@ -544,7 +574,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, "For the Country: '", address.CountryCode, "' .ISOCode Not found: ", country.IsoAlpha3Code));
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, "For the Country: '", address.CountryCode, "' .ISOCode Not found: ", country.IsoAlpha3Code));
                     }
 
                     addressCountry.PostalTitle = country.Description.ToUpper();
@@ -1233,6 +1263,23 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view any address.");
                 throw new PermissionsException("User is not authorized to view any address.");
+            }
+        }
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view person information.
+        /// Only a user can retrieve its own address
+        /// Or a user with EDIT.VENDOR.BANKING.INFORMATION or with VIEW.PERSON.INFORMATION can retrieve addresses
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private async Task CheckGetPersonViewPermission(string personId)
+        {
+            IEnumerable<string> userPermissionList = await GetUserPermissionCodesAsync();
+            // Access is ok if the current user has view.address
+            if (!userPermissionList.Contains(BasePermissionCodes.ViewPersonInformation) && !userPermissionList.Contains(BasePermissionCodes.EditVendorBankingInformation) && CurrentUser.PersonId != personId)
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person information.");
+                throw new PermissionsException("User is not authorized to view person information.");
             }
         }
 

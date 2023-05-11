@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
 
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     if (exception == null)
                         exception = new RepositoryException();
                     exception.AddError(new RepositoryError("Bad.Data", "An unexpected error occurred extracting PERLEAVE data."));
-                   
+
                 }
 
             }
@@ -88,7 +88,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", ex.Message));               
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
             }
 
             if (exception != null && exception.Errors != null && exception.Errors.Any())
@@ -199,7 +199,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             DataContracts.Perleave empLeavePlanRecord = null;
             try
             {
-                empLeavePlanRecord = await DataReader.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", empLeaveplanId);                
+                empLeavePlanRecord = await DataReader.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", empLeaveplanId);
             }
             catch (Exception ex)
             {
@@ -322,8 +322,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         perleaveGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch (Exception ex)
                 {
+                    // do not throw error
+                    logger.Error(ex, "Unable to get perleave by guid.");
                 }
             }
 
@@ -352,7 +354,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
         }
 
@@ -540,8 +542,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 leaveAccrualDetails.PlaAccrualHours,
                                 leaveAccrualDetails.PlaAccrualLimit,
                                 leaveAccrualDetails.PlaCarryoverHours,
+                                leaveAccrualDetails.PlaRolloverMaximum,
                                 leavePlan.AccrualMethod,
                                 isPlanYearStartDateDefined,
+                                perLeaveDataContract.PerlvLatestStartBalUpdt,
                                 allowNegative,
                                 includeLeavePlansWithNoEarningsTypes);
 
@@ -567,7 +571,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                                 detailRecord.PldHours ?? 0,
                                                 detailRecord.PldDate.ToPointInTimeDateTimeOffset(detailRecord.PldDate, apiSettings.ColleagueTimeZone).Value, //this is correct. "midnight" of the colleague timezone on the PldDate
                                                 translateTransactionType(detailRecord.PldAction),
-                                                detailRecord.PldForwardingBalance ?? 0);
+                                                detailRecord.PldForwardingBalance ?? 0,
+                                                detailRecord.PldCurrentBalance ?? 0);
 
                                             employeeLeavePlan.AddLeaveTransaction(transaction);
 
@@ -583,12 +588,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                         LogDataError("PERLVDTL", detailRecord.Recordkey, detailRecord, e);
                                     }
                                 }
-                            }
-
-                            if (employeeLeavePlan.PriorPeriodLeaveBalance != employeeLeavePlan.CurrentPlanYearBalance)
-                            {
-                                logger.Info("EmployeeLeavePlan {0} has PriorPayPeriodBalance (PERLV.BALANCE) {1} that does not match the calculated CurrentPlanYearBalance {2} which is the sum of the detail transactions starting on {3}", employeeLeavePlan.Id, employeeLeavePlan.PriorPeriodLeaveBalance, employeeLeavePlan.CurrentPlanYearBalance, employeeLeavePlan.CurrentPlanYearStartDate);
-                                LogDataError("EmployeeLeavePlan", employeeLeavePlan.Id, employeeLeavePlan);
                             }
                         }
                     }
@@ -618,8 +617,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     return LeaveTransactionType.Adjusted;
                 case "L":
                     return LeaveTransactionType.LeaveReporting;
+                case "S":
+                    return LeaveTransactionType.StartingBalanceAdjustment;
+                case "B":
+                    return LeaveTransactionType.StartingBalance;
+                case "C":
+                    return LeaveTransactionType.MidYearBalanceAdjustment;
+                case "R":
+                    return LeaveTransactionType.Rollover;
                 default:
-                    throw new ArgumentException("leave transaction action does not match allowable values, A, U , L or J", "action");
+                    throw new ArgumentException("leave transaction action does not match allowable values, A, U, L, J, S, B, C or R", "action");
             }
         }
 
@@ -634,7 +641,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 EndDate = empLeavePlanRecord.PerlvEndDate
             };
-            
+
         }
     }
 }

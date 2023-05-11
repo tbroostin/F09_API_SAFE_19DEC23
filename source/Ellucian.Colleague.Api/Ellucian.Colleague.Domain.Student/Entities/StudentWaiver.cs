@@ -1,9 +1,10 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Ellucian.Colleague.Domain.Student.Services;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -188,7 +189,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             // There must be at least one item in the list of requisites for this to be a valid section waiver.
             if (RequisiteWaivers == null || RequisiteWaivers.Count() == 0)
             {
-                throw new Exception("A waiver must contain at least one requisite waiver.");
+                throw new ColleagueWebApiException("A waiver must contain at least one requisite waiver.");
             }
 
             // Determine the list of requisites that are currently in effect for the section, and that all of the
@@ -201,7 +202,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             var invalidRequisites = actionedRequisites.Where(rw => !waiverableRequistes.Any(er => er.RequirementCode == rw.RequisiteId));
             if (invalidRequisites.Count() > 0)
             {
-                throw new Exception("Requisites are not eligible for waiver: " + string.Join(", ", invalidRequisites));
+                throw new ColleagueWebApiException("Requisites are not eligible for waiver: " + string.Join(", ", invalidRequisites));
             }
         }
 
@@ -244,7 +245,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                     // throw an exception 
                     if ((!string.IsNullOrEmpty(this.CourseId) && string.IsNullOrEmpty(this.TermCode)) || ((!string.IsNullOrEmpty(item.CourseId) && string.IsNullOrEmpty(item.TermCode))))
                     {
-                        throw new Exception("Cannot compare Waivers. Cannot compare Term against dates");
+                        throw new ColleagueWebApiException("Cannot compare Waivers. Cannot compare Term against dates");
                     }
                 }
                 else

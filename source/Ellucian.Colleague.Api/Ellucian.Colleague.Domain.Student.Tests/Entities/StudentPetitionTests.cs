@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities
 {
@@ -323,7 +324,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
 
             
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void StudentPetition_Equals_ThrowsExceptionWhenTermVsDates()
             {
                 id = "5";
@@ -347,7 +348,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void StudentPetition_Equals_ThrowsExceptionWhenDatesVsTerm()
             {
                 id = "5";

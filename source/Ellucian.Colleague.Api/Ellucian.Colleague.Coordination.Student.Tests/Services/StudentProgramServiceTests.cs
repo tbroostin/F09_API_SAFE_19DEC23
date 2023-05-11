@@ -65,6 +65,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
 
+            private Mock<IApplicantRepository> applicantRepoMock;
+            private IApplicantRepository applicantRepository;
+
+            private Mock<IRequirementRepository> requirementRepoMock;
+            private IRequirementRepository requirmentRepository;
+
             private Mock<IStudentProgramRepository> studentProgramRepositoryMock;
             private IStudentProgramRepository studentProgramRepository;
 
@@ -105,11 +111,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
 
+                applicantRepoMock = new Mock<IApplicantRepository>();
+                applicantRepository = applicantRepoMock.Object;
+
                 studentProgramRepositoryMock = new Mock<IStudentProgramRepository>();
                 studentProgramRepository = studentProgramRepositoryMock.Object;
 
                 termRepositoryMock = new Mock<ITermRepository>();
                 termRepository = termRepositoryMock.Object;
+
+                requirementRepoMock = new Mock<IRequirementRepository>();
+                requirmentRepository = requirementRepoMock.Object;
 
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
@@ -121,7 +133,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
                 configurationRepository = configurationRepositoryMock.Object;
-                service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistry, studentRepository, applicantRepository,  studentProgramRepository, termRepository, requirmentRepository,  currentUserFactory, roleRepository, logger, configurationRepository);
             }
 
             [TestMethod]
@@ -153,7 +165,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(() => null);
 
-                service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistry, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
 
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
@@ -196,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAccesses.ElementAt(2).AddAdvisement(currentUserFactory.CurrentUser.PersonId, null, null, "MAJ");
                 studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(studentAccesses);
 
-                service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistry, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
 
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
@@ -235,7 +247,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAccesses.ElementAt(2).AddAdvisement("NOT_CURRENT_USER", null, null, "MAJ");
                 studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(studentAccesses);
 
-                service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistry, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
 
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
@@ -271,7 +283,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAccesses.ElementAt(0).AddAdvisement("NOT_CURRENT_USER", null, null, "MAJ");
                 studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(studentAccesses);
 
-                service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistry, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
 
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
@@ -291,12 +303,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private StudentProgram studentProgram;
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
-
+            private Mock<IApplicantRepository> applicantRepoMock;
+            private IApplicantRepository applicantRepository;
             private Mock<IStudentProgramRepository> studentProgramRepositoryMock;
             private IStudentProgramRepository studentProgramRepository;
 
             private Mock<ITermRepository> termRepositoryMock;
             private ITermRepository termRepository;
+
+            private Mock<IRequirementRepository> requirementRepoMock;
+            private IRequirementRepository requirmentRepository;
 
             private ICurrentUserFactory currentUserFactory;
 
@@ -321,6 +337,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 loggerMock = new Mock<ILogger>();
                 logger = loggerMock.Object;
+
+                applicantRepoMock = new Mock<IApplicantRepository>();
+                applicantRepository = applicantRepoMock.Object;
+
+                requirementRepoMock = new Mock<IRequirementRepository>();
+                requirmentRepository = requirementRepoMock.Object;
 
                 var addProgramDtoAdapter = new Student.Adapters.StudentAcademicProgramEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
                 adapterRegistryMock.Setup(ar => ar.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>()).Returns(addProgramDtoAdapter);
@@ -353,7 +375,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 // Mock return from the repo
                 studentProgramRepositoryMock.Setup(repo => repo.AddStudentProgram(It.IsAny<StudentAcademicProgram>(), It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(studentProgram);
 
-                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
             }
 
             [TestCleanup]
@@ -445,6 +467,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private StudentProgram studentProgram;
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
+            private Mock<IApplicantRepository> applicantRepoMock;
+            private IApplicantRepository applicantRepository;
+
+            private Mock<IRequirementRepository> requirementRepoMock;
+            private IRequirementRepository requirmentRepository;
 
             private Mock<IStudentProgramRepository> studentProgramRepositoryMock;
             private IStudentProgramRepository studentProgramRepository;
@@ -476,6 +503,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 loggerMock = new Mock<ILogger>();
                 logger = loggerMock.Object;
 
+                applicantRepoMock = new Mock<IApplicantRepository>();
+                applicantRepository = applicantRepoMock.Object;
+
+                requirementRepoMock = new Mock<IRequirementRepository>();
+                requirmentRepository = requirementRepoMock.Object;
+
                 var addProgramDtoAdapter = new Student.Adapters.StudentAcademicProgramEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
                 adapterRegistryMock.Setup(ar => ar.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>()).Returns(addProgramDtoAdapter);
 
@@ -506,7 +539,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 // Mock return from the repo
                 studentProgramRepositoryMock.Setup(repo => repo.UpdateStudentProgram(It.IsAny<StudentAcademicProgram>(), It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(studentProgram);
               
-                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, applicantRepository, studentProgramRepository, termRepository, requirmentRepository, currentUserFactory, roleRepository, logger, configurationRepository);
             }
 
             [TestCleanup]

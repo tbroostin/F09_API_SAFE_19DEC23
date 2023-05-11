@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.Payments;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -117,19 +118,26 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             }
             CheckAccountPermission(studentId);
 
-            var entities = _rbRepository.GetStudentPaymentControls(studentId);
-            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.RegistrationPaymentControl, RegistrationPaymentControl>();
-            var dtos = new List<RegistrationPaymentControl>();
-
-            if (entities != null)
+            try
             {
-                foreach (var item in entities)
-                {
-                    dtos.Add(adapter.MapToType(item));
-                }
-            }
+                var entities = _rbRepository.GetStudentPaymentControls(studentId);
+                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.RegistrationPaymentControl, RegistrationPaymentControl>();
+                var dtos = new List<RegistrationPaymentControl>();
 
-            return dtos;
+                if (entities != null)
+                {
+                    foreach (var item in entities)
+                    {
+                        dtos.Add(adapter.MapToType(item));
+                    }
+                }
+
+                return dtos;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -207,15 +215,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             // Add the user's login ID to the DTO so we can create the entity
             acceptance.ApprovalUserId = CurrentUser.UserId;
+            try
+            {
+                // Convert the DTO to an entity, process the acceptance, convert the resulting entity
+                // back to a DTO, and return it
+                var acceptanceAdapter = _adapterRegistry.GetAdapter<PaymentTermsAcceptance2, Domain.Finance.Entities.PaymentTermsAcceptance>();
+                var acceptanceEntity = acceptanceAdapter.MapToType(acceptance);
+                var approvalEntity = _rbRepository.ApproveRegistrationTerms(acceptanceEntity);
+                string regApprovalId = approvalEntity.Id;
 
-            // Convert the DTO to an entity, process the acceptance, convert the resulting entity
-            // back to a DTO, and return it
-            var acceptanceAdapter = _adapterRegistry.GetAdapter<PaymentTermsAcceptance2, Domain.Finance.Entities.PaymentTermsAcceptance>();
-            var acceptanceEntity = acceptanceAdapter.MapToType(acceptance);
-            var approvalEntity = _rbRepository.ApproveRegistrationTerms(acceptanceEntity);
-            string regApprovalId = approvalEntity.Id;
-
-            return GetTermsApproval2(regApprovalId);
+                return GetTermsApproval2(regApprovalId);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -232,14 +246,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             CheckPaymentPermission(rpcInputDto.StudentId);
 
-            var dtoAdapter = _adapterRegistry.GetAdapter<RegistrationPaymentControl, Domain.Finance.Entities.RegistrationPaymentControl>();
-            var rpcInputEntity = dtoAdapter.MapToType(rpcInputDto);
+            try
+            {
+                var dtoAdapter = _adapterRegistry.GetAdapter<RegistrationPaymentControl, Domain.Finance.Entities.RegistrationPaymentControl>();
+                var rpcInputEntity = dtoAdapter.MapToType(rpcInputDto);
 
-            var rpcOutputEntity = _rbRepository.UpdatePaymentControl(rpcInputEntity);
-            var entityAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.RegistrationPaymentControl, RegistrationPaymentControl>();
-            var rpcOutputDto = entityAdapter.MapToType(rpcOutputEntity);
+                var rpcOutputEntity = _rbRepository.UpdatePaymentControl(rpcInputEntity);
+                var entityAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.RegistrationPaymentControl, RegistrationPaymentControl>();
+                var rpcOutputDto = entityAdapter.MapToType(rpcOutputEntity);
 
-            return rpcOutputDto;
+                return rpcOutputDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -263,66 +284,74 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Check user permissions
             CheckAccountPermission(paymentControl.StudentId);
 
-            // Initialize variables
-            List<Domain.Finance.Entities.Invoice> invoices = null;
-            List<Domain.Finance.Entities.ReceivablePayment> payments = null;
-            List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
-            Dictionary<string, string> distributionMap = null;
-            Domain.Finance.Entities.PaymentRequirement payReq = null;
-            IEnumerable<Domain.Finance.Entities.ChargeCode> chargeCodes = null;
-            Domain.Finance.Entities.PaymentPlanTemplate paymentPlanTemplate = null;
-
-            // Get the necessary data
-            GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
-            var payPlanOption = _ipcService.GetPaymentPlanOption(payReq);
-            string payPlanTemplateId = payPlanOption == null ? null : payPlanOption.TemplateId;
-            DateTime? firstPaymentDate = payPlanOption == null ? (DateTime?)null : payPlanOption.FirstPaymentDate;
-            
-            paymentPlanTemplate = !string.IsNullOrEmpty(payPlanTemplateId) ? _payPlanRepository.GetTemplate(payPlanTemplateId) : null;
-            chargeCodes = _arRepository.ChargeCodes;
-
-            // Call the domain service to perform the business logic
-            var optionsEntity = _ipcService.GetPaymentOptions(paymentControl, invoices, payments, accountTerms, distributionMap, payReq, chargeCodes);
-            var optionsAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ImmediatePaymentOptions, ImmediatePaymentOptions>();
-
-            // Determine if the student can sign up for a payment plan - is the template valid?
-            if (paymentPlanTemplate == null || !_ipcService.IsValidTemplate(paymentPlanTemplate))
-            {
-                return optionsAdapter.MapToType(optionsEntity);
-            }
-
-            // Determine if the Payment Plan template has a terms and conditions document specified, but the document does not contain any text
-            TextDocument termsText = new TextDocument();
             try
             {
-                termsText = GetPaymentControlDocument(paymentControl.Id, paymentPlanTemplate.TermsAndConditionsDocumentId);
+                // Initialize variables
+                List<Domain.Finance.Entities.Invoice> invoices = null;
+                List<Domain.Finance.Entities.ReceivablePayment> payments = null;
+                List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
+                Dictionary<string, string> distributionMap = null;
+                Domain.Finance.Entities.PaymentRequirement payReq = null;
+                IEnumerable<Domain.Finance.Entities.ChargeCode> chargeCodes = null;
+                Domain.Finance.Entities.PaymentPlanTemplate paymentPlanTemplate = null;
+
+                // Get the necessary data
+                GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
+                var payPlanOption = _ipcService.GetPaymentPlanOption(payReq);
+                string payPlanTemplateId = payPlanOption == null ? null : payPlanOption.TemplateId;
+                DateTime? firstPaymentDate = payPlanOption == null ? (DateTime?)null : payPlanOption.FirstPaymentDate;
+
+                paymentPlanTemplate = !string.IsNullOrEmpty(payPlanTemplateId) ? _payPlanRepository.GetTemplate(payPlanTemplateId) : null;
+                chargeCodes = _arRepository.ChargeCodes;
+
+                // Call the domain service to perform the business logic
+                var optionsEntity = _ipcService.GetPaymentOptions(paymentControl, invoices, payments, accountTerms, distributionMap, payReq, chargeCodes);
+                var optionsAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ImmediatePaymentOptions, ImmediatePaymentOptions>();
+
+                // Determine if the student can sign up for a payment plan - is the template valid?
+                if (paymentPlanTemplate == null || !_ipcService.IsValidTemplate(paymentPlanTemplate))
+                {
+                    return optionsAdapter.MapToType(optionsEntity);
+                }
+
+                // Determine if the Payment Plan template has a terms and conditions document specified, but the document does not contain any text
+                TextDocument termsText = new TextDocument();
+                try
+                {
+                    termsText = GetPaymentControlDocument(paymentControl.Id, paymentPlanTemplate.TermsAndConditionsDocumentId);
+                }
+                catch (InvalidOperationException)
+                {
+                    string outFormat = "Terms and Conditions Document {0} on Payment Plan Template {1} does not have any text specified.";
+                    logger.Info(string.Format(outFormat, paymentPlanTemplate.TermsAndConditionsDocumentId, paymentPlanTemplate.Id));
+                    return optionsAdapter.MapToType(optionsEntity);
+                }
+
+                // Calculate the amount of the payment plan and get the receivable type code for the plan
+                string payPlanReceivableTypeCode = null;
+                decimal payPlanAmount = _payPlanProcessor.GetPlanAmount(optionsEntity.RegistrationBalance, optionsEntity.RegistrationBalance, paymentPlanTemplate, invoices, payments, chargeCodes,
+                    true, out payPlanReceivableTypeCode);
+
+                // Payment Plan cannot be created because the calculated plan amount is zero or less - return default options
+                if (payPlanAmount <= 0)
+                {
+                    return optionsAdapter.MapToType(optionsEntity);
+                }
+
+                // Add payment plan to payment options
+                // var planCharges = _payPlanProcessor.GetPlanCharges(payPlanReceivableTypeCode, payPlanAmount, paymentPlanTemplate, invoices);
+                optionsEntity.AddPaymentPlanInformation(paymentPlanTemplate.Id, firstPaymentDate, payPlanAmount, payPlanReceivableTypeCode,
+                    paymentPlanTemplate.CalculateDownPaymentAmount(payPlanAmount), paymentPlanTemplate.DownPaymentDate);
+
+                var optionsDto = optionsAdapter.MapToType(optionsEntity);
+
+                return optionsDto;
             }
-            catch (InvalidOperationException)
+            catch (ColleagueSessionExpiredException csee)
             {
-                string outFormat = "Terms and Conditions Document {0} on Payment Plan Template {1} does not have any text specified.";
-                logger.Info(string.Format(outFormat, paymentPlanTemplate.TermsAndConditionsDocumentId, paymentPlanTemplate.Id));
-                return optionsAdapter.MapToType(optionsEntity);
+                logger.Error(csee, csee.Message);
+                throw;
             }
-
-            // Calculate the amount of the payment plan and get the receivable type code for the plan
-            string payPlanReceivableTypeCode = null;
-            decimal payPlanAmount = _payPlanProcessor.GetPlanAmount(optionsEntity.RegistrationBalance, optionsEntity.RegistrationBalance, paymentPlanTemplate, invoices, payments, chargeCodes,
-                true, out payPlanReceivableTypeCode);
-
-            // Payment Plan cannot be created because the calculated plan amount is zero or less - return default options
-            if (payPlanAmount <= 0)
-            {
-                return optionsAdapter.MapToType(optionsEntity);
-            }
-
-            // Add payment plan to payment options
-            // var planCharges = _payPlanProcessor.GetPlanCharges(payPlanReceivableTypeCode, payPlanAmount, paymentPlanTemplate, invoices);
-            optionsEntity.AddPaymentPlanInformation(paymentPlanTemplate.Id, firstPaymentDate, payPlanAmount, payPlanReceivableTypeCode,
-                paymentPlanTemplate.CalculateDownPaymentAmount(payPlanAmount), paymentPlanTemplate.DownPaymentDate);
-
-            var optionsDto = optionsAdapter.MapToType(optionsEntity);
-
-            return optionsDto;
         }
 
         /// <summary>
@@ -347,37 +376,45 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 throw new ArgumentException("Amount must be a positive number.", "amount");
             }
 
-            // Get the Registration Payment Control using the passed-in ID
-            var paymentControl = _rbRepository.GetPaymentControl(id);
-
-            // Check user permissions
-            CheckPaymentPermission(paymentControl.StudentId);
-
-            // Get the needed data
-            List<Domain.Finance.Entities.Invoice> invoices = null;
-            List<Domain.Finance.Entities.ReceivablePayment> payments = null;
-            List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
-            Dictionary<string, string> distributionMap = null;
-            Domain.Finance.Entities.PaymentRequirement payReq = null;
-            GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
-            var confMap = new Dictionary<string, Domain.Finance.Entities.Payments.PaymentConfirmation>();
-            foreach (string distribution in distributionMap.Values.Distinct())
+            try
             {
-                var ecInfo = _payRepository.GetConfirmation(distribution, payMethod, amount.ToString());
-                confMap.Add(distribution, ecInfo);
-            }
-            var receivableTypes = _arRepository.ReceivableTypes;
+                // Get the Registration Payment Control using the passed-in ID
+                var paymentControl = _rbRepository.GetPaymentControl(id);
 
-            // Call the domain service to perform the business logic, and convert the output to a DTO
-            var summaryEntity = _ipcService.GetPaymentSummary(paymentControl, payMethod, amount, invoices, payments, accountTerms, distributionMap, payReq, confMap, receivableTypes);
-            var summaryAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Payments.Payment, Payment>();
-            var summaryDto = new List<Payment>();
-            foreach (var item in summaryEntity)
+                // Check user permissions
+                CheckPaymentPermission(paymentControl.StudentId);
+
+                // Get the needed data
+                List<Domain.Finance.Entities.Invoice> invoices = null;
+                List<Domain.Finance.Entities.ReceivablePayment> payments = null;
+                List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
+                Dictionary<string, string> distributionMap = null;
+                Domain.Finance.Entities.PaymentRequirement payReq = null;
+                GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
+                var confMap = new Dictionary<string, Domain.Finance.Entities.Payments.PaymentConfirmation>();
+                foreach (string distribution in distributionMap.Values.Distinct())
+                {
+                    var ecInfo = _payRepository.GetConfirmation(distribution, payMethod, amount.ToString());
+                    confMap.Add(distribution, ecInfo);
+                }
+                var receivableTypes = _arRepository.ReceivableTypes;
+
+                // Call the domain service to perform the business logic, and convert the output to a DTO
+                var summaryEntity = _ipcService.GetPaymentSummary(paymentControl, payMethod, amount, invoices, payments, accountTerms, distributionMap, payReq, confMap, receivableTypes);
+                var summaryAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Payments.Payment, Payment>();
+                var summaryDto = new List<Payment>();
+                foreach (var item in summaryEntity)
+                {
+                    summaryDto.Add(summaryAdapter.MapToType(item));
+                }
+
+                return summaryDto.OrderBy(x => x.Distribution);
+            }
+            catch (ColleagueSessionExpiredException csee)
             {
-                summaryDto.Add(summaryAdapter.MapToType(item));
+                logger.Error(csee, csee.Message);
+                throw;
             }
-
-            return summaryDto.OrderBy(x => x.Distribution);
         }
 
         /// <summary>
@@ -395,16 +432,23 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Determine whether current user is the student for which the payment is being made
             CheckPaymentPermission(paymentDto.PersonId);
 
-            // Convert the DTO to an entity and post the payment
-            var adapter = _adapterRegistry.GetAdapter<Payment, Domain.Finance.Entities.Payments.Payment>();
-            var paymentEntity = adapter.MapToType(paymentDto);
+            try
+            {
+                // Convert the DTO to an entity and post the payment
+                var adapter = _adapterRegistry.GetAdapter<Payment, Domain.Finance.Entities.Payments.Payment>();
+                var paymentEntity = adapter.MapToType(paymentDto);
 
-            // Convert the entity to a DTO
-            var providerEntity = _rbRepository.StartRegistrationPayment(paymentEntity);
-            var providerAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Payments.PaymentProvider, PaymentProvider>();
+                // Convert the entity to a DTO
+                var providerEntity = _rbRepository.StartRegistrationPayment(paymentEntity);
+                var providerAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Payments.PaymentProvider, PaymentProvider>();
 
-            // Return the DTO
-            return providerAdapter.MapToType(providerEntity);
+                // Return the DTO
+                return providerAdapter.MapToType(providerEntity);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -491,40 +535,48 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Check user permissions
             CheckPaymentPermission(paymentControl.StudentId);
 
-            // Get the required data
-            List<Domain.Finance.Entities.Invoice> invoices = null;
-            List<Domain.Finance.Entities.ReceivablePayment>payments = null;
-            List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
-            Dictionary<string, string> distributionMap = null;
-            Domain.Finance.Entities.PaymentRequirement payReq = null;
-            GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
+            try
+            {
+                // Get the required data
+                List<Domain.Finance.Entities.Invoice> invoices = null;
+                List<Domain.Finance.Entities.ReceivablePayment> payments = null;
+                List<Domain.Finance.Entities.AccountDue.AccountTerm> accountTerms = null;
+                Dictionary<string, string> distributionMap = null;
+                Domain.Finance.Entities.PaymentRequirement payReq = null;
+                GetPaymentData(paymentControl, out invoices, out payments, out accountTerms, out distributionMap, out payReq);
 
-            // Get the required plan information
-            var payPlanOption = _ipcService.GetPaymentPlanOption(payReq);
-            string templateId = payPlanOption.TemplateId;
-            DateTime? firstDueDate = payPlanOption.FirstPaymentDate;
-            var template = _payPlanRepository.GetTemplate(templateId);
-            
-            // Get the plan amount and receivable type
-            var registrationBalance = invoices.Sum(invoice => invoice.Amount) - payments.Sum(payment => payment.Amount);
-            var termBalance = accountTerms.First(x => x.TermId == paymentControl.TermId).Amount;
-            string planReceivableTypeCode = null;
-            var planAmount = _payPlanProcessor.GetPlanAmount(registrationBalance, termBalance, template, invoices, payments, _arRepository.ChargeCodes, 
-                false, out planReceivableTypeCode);
-            DateTime? downPaymentDate = template.DownPaymentDate;
-            DateTime firstPaymentDate = (firstDueDate.HasValue) ? (firstDueDate.Value.Date < DateTime.Today.Date) ? DateTime.Today : firstDueDate.Value : DateTime.Today;
+                // Get the required plan information
+                var payPlanOption = _ipcService.GetPaymentPlanOption(payReq);
+                string templateId = payPlanOption.TemplateId;
+                DateTime? firstDueDate = payPlanOption.FirstPaymentDate;
+                var template = _payPlanRepository.GetTemplate(templateId);
 
-            // Get the proposed plan
-            var planCharges = _payPlanProcessor.GetPlanCharges(planReceivableTypeCode, planAmount, template, invoices);
-            var proposedPlanEntity = _payPlanProcessor.GetProposedPlan(template, paymentControl.StudentId, planReceivableTypeCode, paymentControl.TermId,
-                planAmount, firstDueDate.Value, planCharges);
-            var scheduleDates = GetPlanScheduleDates(template, proposedPlanEntity, firstPaymentDate);
-            _payPlanProcessor.AddPlanSchedules(template, proposedPlanEntity, scheduleDates);
+                // Get the plan amount and receivable type
+                var registrationBalance = invoices.Sum(invoice => invoice.Amount) - payments.Sum(payment => payment.Amount);
+                var termBalance = accountTerms.First(x => x.TermId == paymentControl.TermId).Amount;
+                string planReceivableTypeCode = null;
+                var planAmount = _payPlanProcessor.GetPlanAmount(registrationBalance, termBalance, template, invoices, payments, _arRepository.ChargeCodes,
+                    false, out planReceivableTypeCode);
+                DateTime? downPaymentDate = template.DownPaymentDate;
+                DateTime firstPaymentDate = (firstDueDate.HasValue) ? (firstDueDate.Value.Date < DateTime.Today.Date) ? DateTime.Today : firstDueDate.Value : DateTime.Today;
 
-            var paymentPlanAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.PaymentPlan, PaymentPlan>();
-            PaymentPlan proposedPlanDto = paymentPlanAdapter.MapToType(proposedPlanEntity);
+                // Get the proposed plan
+                var planCharges = _payPlanProcessor.GetPlanCharges(planReceivableTypeCode, planAmount, template, invoices);
+                var proposedPlanEntity = _payPlanProcessor.GetProposedPlan(template, paymentControl.StudentId, planReceivableTypeCode, paymentControl.TermId,
+                    planAmount, firstDueDate.Value, planCharges);
+                var scheduleDates = GetPlanScheduleDates(template, proposedPlanEntity, firstPaymentDate);
+                _payPlanProcessor.AddPlanSchedules(template, proposedPlanEntity, scheduleDates);
 
-            return proposedPlanDto;
+                var paymentPlanAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.PaymentPlan, PaymentPlan>();
+                PaymentPlan proposedPlanDto = paymentPlanAdapter.MapToType(proposedPlanEntity);
+
+                return proposedPlanDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -636,21 +688,28 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 throw new ArgumentNullException("proposedPlan", "proposed plan cannot be null when building a plan schedule.");
             }
 
-            // Get the schedule dates
-            List<DateTime?> scheduleDates = new List<DateTime?>();
-            if (proposedPlan.Frequency == Domain.Finance.Entities.PlanFrequency.Custom)
+            try
             {
-                scheduleDates = _payPlanRepository.GetPlanCustomScheduleDates(proposedPlan.PersonId, proposedPlan.ReceivableTypeCode, proposedPlan.TermId,
-                    proposedPlan.TemplateId, template.DownPaymentDate, firstPaymentDate, proposedPlan.Id).ToList();
-                proposedPlan.NumberOfPayments = scheduleDates.Count - 1;
-            }
-            else
-            {
-                scheduleDates.Add(template.DownPaymentDate);
-                scheduleDates.AddRange(template.GetPaymentScheduleDates(firstPaymentDate).Select(x => x as DateTime?));
-            }
+                // Get the schedule dates
+                List<DateTime?> scheduleDates = new List<DateTime?>();
+                if (proposedPlan.Frequency == Domain.Finance.Entities.PlanFrequency.Custom)
+                {
+                    scheduleDates = _payPlanRepository.GetPlanCustomScheduleDates(proposedPlan.PersonId, proposedPlan.ReceivableTypeCode, proposedPlan.TermId,
+                        proposedPlan.TemplateId, template.DownPaymentDate, firstPaymentDate, proposedPlan.Id).ToList();
+                    proposedPlan.NumberOfPayments = scheduleDates.Count - 1;
+                }
+                else
+                {
+                    scheduleDates.Add(template.DownPaymentDate);
+                    scheduleDates.AddRange(template.GetPaymentScheduleDates(firstPaymentDate).Select(x => x as DateTime?));
+                }
 
-            return scheduleDates;
+                return scheduleDates;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -671,23 +730,32 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 throw new ArgumentNullException("paymentControl");
             }
 
-            invoices = new List<Domain.Finance.Entities.Invoice>();
-            if (paymentControl.InvoiceIds != null && paymentControl.InvoiceIds.Count > 0)
+            try
             {
-                invoices = _arRepository.GetInvoices(paymentControl.InvoiceIds).ToList();
+                invoices = new List<Domain.Finance.Entities.Invoice>();
+                if (paymentControl.InvoiceIds != null && paymentControl.InvoiceIds.Count > 0)
+                {
+                    invoices = _arRepository.GetInvoices(paymentControl.InvoiceIds).ToList();
+                }
+                payments = new List<Domain.Finance.Entities.ReceivablePayment>();
+                if (paymentControl.Payments != null && paymentControl.Payments.Count > 0)
+                {
+                    payments = _arRepository.GetPayments(paymentControl.Payments).ToList();
+                }
+
+                distributionMap = GetDistributionMap(invoices);
+
+                payReq = GetPaymentRequirement(paymentControl.StudentId, paymentControl.TermId);
+
+                // Get the account terms for calculating the term balance
+
+                accountTerms = GetAccountTerms(paymentControl.StudentId);
             }
-            payments = new List<Domain.Finance.Entities.ReceivablePayment>();
-            if (paymentControl.Payments != null && paymentControl.Payments.Count > 0)
+            catch (ColleagueSessionExpiredException csee)
             {
-                payments = _arRepository.GetPayments(paymentControl.Payments).ToList();
+                logger.Error(csee, csee.Message);
+                throw;
             }
-
-            distributionMap = GetDistributionMap(invoices);
-
-            payReq = GetPaymentRequirement(paymentControl.StudentId, paymentControl.TermId);
-
-            // Get the account terms for calculating the term balance
-            accountTerms = GetAccountTerms(paymentControl.StudentId);
         }
 
         /// <summary>
@@ -755,31 +823,38 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Determine whether the institution is using Term or PCF Mode
             var financeConfig = _configRepository.GetFinanceConfiguration();
             List<AccountTerm> accountTerms = new List<AccountTerm>();
-
-            if (financeConfig.PaymentDisplay == PaymentDisplay.DisplayByPeriod)
+            try
             {
-                // PCF Mode
-                var accountDuePeriod = _adRepository.GetPeriods(studentId);
-                if (accountDuePeriod.Current != null)
+                if (financeConfig.PaymentDisplay == PaymentDisplay.DisplayByPeriod)
                 {
-                    accountTerms.AddRange(accountDuePeriod.Current.AccountTerms);
+                    // PCF Mode
+                    var accountDuePeriod = _adRepository.GetPeriods(studentId);
+                    if (accountDuePeriod.Current != null)
+                    {
+                        accountTerms.AddRange(accountDuePeriod.Current.AccountTerms);
+                    }
+                    if (accountDuePeriod.Future != null)
+                    {
+                        accountTerms.AddRange(accountDuePeriod.Future.AccountTerms);
+                    }
+                    if (accountDuePeriod.Past != null)
+                    {
+                        accountTerms.AddRange(accountDuePeriod.Past.AccountTerms);
+                    }
                 }
-                if (accountDuePeriod.Future != null)
+                else
                 {
-                    accountTerms.AddRange(accountDuePeriod.Future.AccountTerms);
+                    // Term Mode
+                    accountTerms.AddRange(_adRepository.Get(studentId).AccountTerms);
                 }
-                if (accountDuePeriod.Past != null)
-                {
-                    accountTerms.AddRange(accountDuePeriod.Past.AccountTerms);
-                }
-            }
-            else
-            {
-                // Term Mode
-                accountTerms.AddRange(_adRepository.Get(studentId).AccountTerms);
-            }
 
-            return accountTerms;
+                return accountTerms;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
     }
 }

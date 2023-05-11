@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -120,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
         }
 
@@ -146,7 +146,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
         }
 
@@ -172,7 +172,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
             if (IntegrationApiException != null)
                 throw IntegrationApiException;
@@ -232,7 +232,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
 
             var studentTranscriptGrades = (await BuildStudentTranscriptGradesDtoAsync(new List<Domain.Student.Entities.StudentTranscriptGrades>()

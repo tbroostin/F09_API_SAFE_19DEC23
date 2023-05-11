@@ -12,7 +12,7 @@ using Ellucian.Colleague.Dtos.Base;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Web.Http;
-
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -97,6 +97,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var commencementSiteDtos = await commencementSitesController.GetAsync();
             Assert.IsTrue(commencementSiteDtos is IEnumerable<Dtos.Base.CommencementSite>);
             Assert.AreEqual(0, commencementSiteDtos.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommencementSitesController_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(x => x.GetCommencementSitesAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                var commencementSites = await commencementSitesController.GetAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
         }
 
         [TestMethod]

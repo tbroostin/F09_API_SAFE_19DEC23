@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -47,6 +47,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             updateRequest.StudentId = request.StudentId;
             updateRequest.CreateStudentFlag = request.CreateStudentFlag;
+            updateRequest.UpdateFlag = true;
+
             // For every section submitted, add a Sections object to the updateRequest
             foreach (var section in request.Sections)
             {
@@ -1202,6 +1204,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             updateRequest.StudentId = request.StudentId;
             updateRequest.CreateStudentFlag = request.CreateStudentFlag;
+            updateRequest.UpdateFlag = true;
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
             if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -1320,13 +1323,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="request">Registration Request transaction</param>
         /// <returns>Registration Response <see cref="RegistrationResponse"> object</returns>
-        public async Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string studentId, string sectionId, string statusCode)
+        public async Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string studentId, string sectionId, string statusCode, bool updateRegistration = true)
         {
             UpdateSectionRegistrationRequest updateRequest = new UpdateSectionRegistrationRequest();
             updateRequest.RegSections = new List<RegSections>();
 
             updateRequest.StudentId = request.StudentId;
             updateRequest.CreateStudentFlag = request.CreateStudentFlag;
+            updateRequest.UpdateFlag = updateRegistration;
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
             if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(guid))
@@ -1375,7 +1379,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (updateResponse.ErrorOccurred)
             {
                 var errorMessage = string.Format("Error(s) occurred updating section-registrations for Student: '{0}' and Section: '{1}': ", request.StudentId, request.Section.SectionId);
-                var exception = new RepositoryException(errorMessage);
+                // var exception = new RepositoryException(errorMessage);
+                var exception = new RepositoryException();
 
                 exception.AddError(new RepositoryError("sectionRegistrations", updateResponse.ErrorMessage)
                 {
@@ -1397,6 +1402,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     outputMessages.Add(new RegistrationMessage() { Message = message.Message, SectionId = message.MessageSection });
                 }
+            }
+
+            if (!updateRegistration)
+            {
+                return new SectionRegistrationResponse(outputMessages);
             }
 
             var stcKey = string.Empty;
@@ -1443,6 +1453,118 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             };
         }
 
+        /// <summary>
+        /// Check for errors for mock registration attempt
+        /// </summary>
+        /// <param name="request">Registration Request transaction</param>
+        /// <returns>Registration Response <see cref="RegistrationResponse"> object</returns>
+        public async Task<SectionRegistrationResponse> CheckSectionRegistrations(SectionRegistrationsRequest request, string studentId, Dictionary<string, string> sectionGuidCollection)
+        {
+            UpdateSectionRegistrationRequest updateRequest = new UpdateSectionRegistrationRequest();
+            updateRequest.RegSections = new List<RegSections>();
+
+            updateRequest.StudentId = request.StudentId;
+            updateRequest.CreateStudentFlag = request.CreateStudentFlag;
+            updateRequest.UpdateFlag = false;
+
+            if (request.Sections != null)
+            {
+                foreach (var section in request.Sections)
+                {
+                    bool validSection = true;
+                    if (string.IsNullOrEmpty(request.StudentAcadCredId) && section.Action != RegistrationAction.Drop)
+                    {                        
+                        try
+                        {
+                            await CheckForExistingRegistration(studentId, section.SectionId);                   
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            if (ex.Errors != null && ex.Errors.Any())
+                            {
+                                foreach (var error in ex.Errors)
+                                {
+                                    if (!string.IsNullOrEmpty(error.Message))
+                                    {
+                                        exception.AddError(new RepositoryError("Validation.Exception", error.Message)
+                                        {
+                                            SourceId = section.Guid,
+                                            Id = section.SectionId
+                                        });
+                                    }
+                                }                     
+                            }
+                            validSection = false;
+                        }                        
+                    }
+                    if (validSection == true)
+                    {
+                        var requestedSection = new RegSections()
+                        {
+                            SectionIds = section.SectionId,
+                            SectionAction = section.Action.ToString(),
+                            SectionCredits = section.Credits,
+                            SectionCeus = section.Ceus,
+                            SectionDate = section.RegistrationDate,
+                            SectionAcadLevel = section.AcademicLevelCode
+                        };
+                        if (request.InvolvementStartOn != null && request.InvolvementStartOn.HasValue)
+                        {
+                            requestedSection.InvolvementStartOn = request.InvolvementStartOn.Value.Date;
+                        }
+                        if (request.InvolvementEndOn != null && request.InvolvementEndOn.HasValue)
+                        {
+                            requestedSection.InvolvementEndOn = request.InvolvementEndOn.Value.Date;
+                        }
+
+                        updateRequest.RegSections.Add(requestedSection);
+                    }
+                }
+            }
+            if (updateRequest.RegSections.Any())
+            {
+                // Submit the mock registration
+                UpdateSectionRegistrationResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateSectionRegistrationRequest, UpdateSectionRegistrationResponse>(updateRequest);
+
+                // Return any section specific error/warning messages
+                if (updateResponse.RegMessages.Any())
+                {
+                    foreach (var message in updateResponse.RegMessages)
+                    {
+                        if (!string.IsNullOrEmpty(message.Message))
+                        {
+                            var sectionGuid = string.Empty;
+                            if (!string.IsNullOrEmpty(message.MessageSection))
+                            {
+                                sectionGuidCollection.TryGetValue(message.MessageSection, out sectionGuid);
+                            }
+                            exception.AddError(new RepositoryError("Validation.Exception", message.Message)
+                            {
+                                SourceId = sectionGuid,
+                                Id = message.MessageSection
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    // Return any "general" error messages when we have no section-specific errors, like record locks (where a simulated registration could not be attempted)
+                    if (updateResponse.ErrorOccurred && !string.IsNullOrEmpty(updateResponse.ErrorMessage))
+                    {
+                        exception.AddError(new RepositoryError("Validation.Exception", updateResponse.ErrorMessage));
+                    }
+                }
+            }
+
+            // Return all exception errors
+            if (exception != null && exception.Errors.Any())
+            {
+                throw exception;            
+            }
+
+            // No repo errors found if we got this far.  Return null so 204 no content can be returned to request.
+            return null;
+        }
 
         /// <summary>
         /// Get the record key from a GUID

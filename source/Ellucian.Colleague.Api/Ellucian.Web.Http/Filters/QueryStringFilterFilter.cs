@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Web.Http.Controllers;
 using System.Net.Http;
@@ -25,12 +25,18 @@ namespace Ellucian.Web.Http.Filters
     public class QueryStringFilterFilter : System.Web.Http.Filters.ActionFilterAttribute
     {
         private const string CustomMediaType = "X-Media-Type";
-        
+
         /// <summary>
-                                                              /// Gets & Sets the filter group name
-                                                              /// </summary>
-        public string FilterGroupName;
-    
+        /// Gets & Sets the filter group name
+        /// </summary>
+        public string FilterGroupName
+        {
+            get { return _filterGroupName; }
+            set { _filterGroupName = value; }
+        }
+
+        private string _filterGroupName;
+
         /// <summary>
         /// Gets & Sets the value to ignore filter at the action filter
         /// </summary>
@@ -56,7 +62,7 @@ namespace Ellucian.Web.Http.Filters
             }
             FilterType = T;
             IgnoreFilters = false;
-            FilterGroupName = filterGroupName;
+            _filterGroupName = filterGroupName;
         }      
 
         /// <summary>
@@ -94,7 +100,7 @@ namespace Ellucian.Web.Http.Filters
 
                             if (filterConverter.ContainsInvalidFilterProperties())
                             {
-                                throw new Exception(filterConverter.GetInvalidFilterErrorMessage());
+                                throw new ColleagueWebApiException(filterConverter.GetInvalidFilterErrorMessage());
                             }
 
                             if (filterConverter.ContainsEmptyFilterProperties)
@@ -152,7 +158,7 @@ namespace Ellucian.Web.Http.Filters
 
                                 return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
                             }
-                            throw new Exception(ex.Message, ex.InnerException);
+                            throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                         }
                     }                  
                 }

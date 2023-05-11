@@ -141,5 +141,19 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             var facultyElig = new FacultyDropRegistrationPermissions(true, true);
             return await Task.FromResult(facultyElig);
         }
+
+        public Task<IEnumerable<string>> SearchFacultyByNameAsync(string lastName, string firstName = null, string middleName = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetPID2FacultyIdAsync(string facultyId)
+        {
+            throw new NotImplementedException();
+        }
+        public Task<string> GetFacultyNameHierarchy()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

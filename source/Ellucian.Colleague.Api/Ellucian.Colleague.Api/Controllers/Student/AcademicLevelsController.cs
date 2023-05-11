@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -58,19 +59,33 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>All <see cref="AcademicLevel">Academic Level</see> codes and descriptions.</returns>
         public async Task<IEnumerable<AcademicLevel>> GetAsync()
         {
-            var academicLevelCollection = await _studentReferenceDataRepository.GetAcademicLevelsAsync();
-
-            // Get the right adapter for the type mapping
-            var academicLevelDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicLevel, AcademicLevel>();
-
-            // Map the academiclevel entity to the program DTO
-            var academicLevelDtoCollection = new List<AcademicLevel>();
-            foreach (var academicLevel in academicLevelCollection)
+            try
             {
-                academicLevelDtoCollection.Add(academicLevelDtoAdapter.MapToType(academicLevel));
-            }
+                var academicLevelCollection = await _studentReferenceDataRepository.GetAcademicLevelsAsync();
 
-            return academicLevelDtoCollection;
+                // Get the right adapter for the type mapping
+                var academicLevelDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicLevel, AcademicLevel>();
+
+                // Map the academiclevel entity to the program DTO
+                var academicLevelDtoCollection = new List<AcademicLevel>();
+                foreach (var academicLevel in academicLevelCollection)
+                {
+                    academicLevelDtoCollection.Add(academicLevelDtoAdapter.MapToType(academicLevel));
+                }
+
+                return academicLevelDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving academic levels";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 5</remarks>

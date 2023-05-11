@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -710,7 +711,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 // Default - shouldnt hit, but this is a required field
                 else
                 {
-                    throw new Exception("Unable to determine institution position status." + positionEntity.Id);
+                    throw new ColleagueWebApiException("Unable to determine institution position status." + positionEntity.Id);
                 }
 
                 if (currentPositionPay != null)
@@ -871,7 +872,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     logger.Error(ex, "Institution Position exception occurred:");
                 }
-                throw new Exception("Institution Position exception occurred." + ex.Message);
+                throw new ColleagueWebApiException("Institution Position exception occurred." + ex.Message);
             }
         }
 
@@ -970,7 +971,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 // Default - shouldnt hit, but this is a required field
                 else
                 {
-                    throw new Exception("Unable to determine institution position status." + positionEntity.Id);
+                    throw new ColleagueWebApiException("Unable to determine institution position status." + positionEntity.Id);
                 }
 
                 if (currentPositionPay != null)
@@ -1139,7 +1140,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     logger.Error(ex, "Institution Position exception occurred:");
                 }
-                throw new Exception("Institution Position exception occurred." + ex.Message);
+                throw new ColleagueWebApiException("Institution Position exception occurred." + ex.Message);
             }
         }
 
@@ -1248,7 +1249,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     else
                     {
                         IntegrationApiExceptionAddError("Unable to determine institution position status.", "Bad.Data", positionEntity.Guid, positionEntity.Id);
-                        //throw new Exception("Unable to determine institution position status." + positionEntity.Id);
+                        //throw new ColleagueWebApiException("Unable to determine institution position status." + positionEntity.Id);
                     }
 
                     if (currentPositionPay != null)
@@ -1430,7 +1431,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         logger.Error(ex, "Institution Position exception occurred:");
                     }
                     IntegrationApiExceptionAddError(string.Format("Unable to retrieve the institution-positions resource. {0}", ex.Message), "Bad.Data", positionEntity.Guid, positionEntity.Id);
-                    //throw new Exception("Institution Position exception occurred." + ex.Message);
+                    //throw new ColleagueWebApiException("Institution Position exception occurred." + ex.Message);
                 }
             }
 

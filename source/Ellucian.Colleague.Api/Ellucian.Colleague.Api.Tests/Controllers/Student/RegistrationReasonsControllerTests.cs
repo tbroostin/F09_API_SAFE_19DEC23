@@ -1,7 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -103,6 +104,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 Assert.AreEqual(RegistrationReasons2.ElementAt(i).Code, registrationReasonDtos.ElementAt(i).Code);
                 Assert.AreEqual(RegistrationReasons2.ElementAt(i).Description, registrationReasonDtos.ElementAt(i).Description);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RegistrationReasonsController_GetAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetRegistrationReasonsAsync(It.IsAny<bool>())).Throws(new ColleagueSessionExpiredException("session expired"));
+                await RegistrationReasonsController.GetRegistrationReasonsAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw;
             }
         }
 

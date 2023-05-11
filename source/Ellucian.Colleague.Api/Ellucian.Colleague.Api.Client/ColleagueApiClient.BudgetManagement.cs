@@ -190,9 +190,14 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<List<BudgetLineItem>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Could not update the working budget.");
+                throw;
+            }
             catch (Exception e)
             {
-                logger.Error(e, e.Message);
+                logger.Error(e, "Could not update the working budget.");
                 throw;
             }
         }

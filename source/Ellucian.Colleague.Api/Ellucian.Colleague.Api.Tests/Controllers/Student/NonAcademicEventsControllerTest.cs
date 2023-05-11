@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -84,7 +85,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             nonacademicEventRepository = null;
         }
 
-
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task QueryNonAcademicEventsAsync_Null_Ids_and_QueryString()
@@ -93,7 +93,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var eventsResult = await nonacademicEventsController.QueryNonAcademicEventsAsync(criteria);
         }
 
-
         [TestMethod]
         public async Task QueryNonAcademicEventsAsync_Ids()
         {
@@ -101,7 +100,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var eventsResult = await nonacademicEventsController.QueryNonAcademicEventsAsync(criteria);
             Assert.AreEqual(4, eventsResult.Count());
         }
-
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -149,6 +147,47 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             try
             {
                 var eventsResult = await nonacademicEventsController.QueryNonAcademicEventsAsync(new NonAcademicEventQueryCriteria());
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                throw ex;
+            }
+            catch (System.Exception e)
+            {
+                throw e;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task QueryNonAcademicEventsAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+        {
+            try
+            {
+                nonAcademicEventRepositoryMock.Setup(x => x.GetEventsByIdsAsync(eventIds))
+                            .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+               await nonacademicEventsController.QueryNonAcademicEventsAsync(criteria);
+            }
+            catch (HttpResponseException ex)
+            {
+                Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                throw ex;
+            }
+            catch (System.Exception e)
+            {
+                throw e;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task QueryNonAcademicEventsAsync_Generic_Exception()
+        {
+            try
+            {
+                nonAcademicEventRepositoryMock.Setup(x => x.GetEventsByIdsAsync(eventIds)).Throws(new Exception());
+                await nonacademicEventsController.QueryNonAcademicEventsAsync(criteria);
             }
             catch (HttpResponseException ex)
             {

@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -30,7 +31,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         RepositoryException exception = null;
         const string AllStudentFinancialAidAwardsCache = "StudentFinancialAidAwards";
         const int AllStudentFinancialAidAwardsCacheTimeout = 20; // Clear from cache every 20 minutes
-        public static char _VM = Convert.ToChar(DynamicArray.VM);        
+        private static char _VM = Convert.ToChar(DynamicArray.VM);        
 
         /// <summary>
         /// Constructor to instantiate a student FinancialAidAwards repository object
@@ -346,7 +347,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     {
                                         if (record.FaSaYears.Contains(criteriaEntity.AidYearId))
                                         {
-                                            awardYears = new List<string>() { criteriaEntity.AidYearId };
+                                            if (awardYears.Contains(criteriaEntity.AidYearId))
+                                            {
+                                                awardYears = new List<string>() { criteriaEntity.AidYearId };
+                                            }
                                         }
                                         else
                                         {
@@ -355,7 +359,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     else
                                     {
-                                        awardYears = record.FaSaYears;
+                                        awardYears = awardYears.Intersect(record.FaSaYears);
                                     }
                                 }
                             }
@@ -504,9 +508,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 tempTcAcyrIds.Add(tcAcyrId);
                                             }
                                         }
-                                        catch
+                                        catch (Exception ex)
                                         {
-                                            // ignore bogus TA.ACYR unable to extract a student or award                                            
+                                            // ignore bogus TA.ACYR unable to extract a student or award 
+                                            logger.Error(ex, "Unable to extract a student or award.");
                                         }
                                     }
                                     studentFinancialAidAwardIds = tempTcAcyrIds.ToArray();
@@ -816,5 +821,69 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 }, Level1CacheTimeoutValue);
         }
+
+        /// <summary>
+        /// Get a collection of financial aid years.
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of financial aid years</returns>
+        public async Task<IEnumerable<FinancialAidYear>> GetLimitedFinancialAidYearsAsync(bool restricted = false)
+        {          
+            var financialAidYearCollection = new List<FinancialAidYear>();
+            
+            var api = string.Empty;
+            if (restricted == false)
+            {
+                api = "student-financial-aid-awards";
+            }
+            else
+            {
+                api = "restricted-student-financial-aid-awards";
+            }
+            var request = new GetEthosLimitingListRequest
+            {
+                Api = api
+            };
+
+            var response = await transactionInvoker.ExecuteAsync<GetEthosLimitingListRequest, GetEthosLimitingListResponse>(request);
+
+            if (response == null)
+            {
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Get.Exception", "An unexpected error occurred getting financial aid years"));
+                throw exception;
+            }
+
+            if (response.ErrorMessages.Any())
+            {
+                var errorMessage = string.Empty;
+                var exception = new RepositoryException();
+                foreach (var error in response.ErrorMessages)
+                {
+                    errorMessage = errorMessage + error;
+                }
+                exception.AddError(new RepositoryError("Get.Exception", errorMessage));
+                throw exception;
+            }
+            if (response.Ids.Any())
+            {
+                var financialAidYearDataContracts = await DataReader.BulkReadRecordAsync<FaSuites>("FA.SUITES", response.Ids.ToArray());
+                foreach (var dataContract in financialAidYearDataContracts)
+                {
+                    var financialAidYearEntity = new FinancialAidYear(dataContract.RecordGuid, dataContract.Recordkey, dataContract.Recordkey, dataContract.FaSuitesStatus);
+                    financialAidYearCollection.Add(financialAidYearEntity);
+                }
+                if (!financialAidYearCollection.Any())
+                {
+                    // We had IDs returned from a savedlist, but none were valid financial aid years.  Need an error so service
+                    // will not select all years.  
+                    var exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Get.Exception", "No valid FA.SUITES among the record IDs returned from CIGP setup for '" + api + "'."));
+                    throw exception;
+                }
+            }
+            return financialAidYearCollection;
+        }
+        
     }
 }

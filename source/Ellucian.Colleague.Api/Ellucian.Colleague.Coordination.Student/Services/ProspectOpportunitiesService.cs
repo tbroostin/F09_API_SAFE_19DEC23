@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -315,8 +315,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 prospectOpportunitiesSubmissionsEntityId = await _prospectOpportunitiesRepository.GetProspectOpportunityIdFromGuidAsync(prospectOpportunitiesSubmissions.Id);
             }
-            catch (Exception)
-            { // if the guid is not found then attempt to create
+            catch (Exception ex)
+            {
+                logger.Error(ex, "guid not found;  attempt to create.");
             }
 
             if (!string.IsNullOrEmpty(prospectOpportunitiesSubmissionsEntityId))
@@ -365,7 +366,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
                 }
             }
             // perform a create instead
@@ -426,7 +427,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
         }
 

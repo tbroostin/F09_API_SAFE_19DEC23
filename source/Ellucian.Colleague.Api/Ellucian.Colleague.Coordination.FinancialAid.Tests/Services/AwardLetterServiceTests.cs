@@ -18,6 +18,7 @@ using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
@@ -1560,7 +1561,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award letters", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award letters", studentId)));
             }
 
             [TestMethod]
@@ -1574,7 +1575,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award letters", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award letters", studentId)));
             }
 
 
@@ -1612,8 +1613,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Configuration filtered out all StudentAwards for student {0}", studentId)));
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Configuration filtered out all StudentAwards for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
             }
 
             [TestMethod]
@@ -1627,8 +1628,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
 
             }
 
@@ -1643,8 +1644,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards or configuration filtered out all StudentAwards.", studentId)));
             }
 
             [TestMethod]
@@ -2050,7 +2051,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award letters", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award letters", studentId)));
             }
 
             [TestMethod]
@@ -2064,7 +2065,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.AreEqual(0, actualAwardLetters.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award letters", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award letters", studentId)));
             }
 
 
@@ -2079,8 +2080,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.IsTrue(actualAwardLetters.Any());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
             }
 
             [TestMethod]
@@ -2099,8 +2100,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     //Total row always gets added even if there are no awards
                     Assert.IsTrue(letter.AwardTableRows.Count == 1);
                 }
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no awards", studentId)));
             }
 
             [TestMethod]
@@ -2123,7 +2124,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsNotNull(actualAwardLetters);
                 Assert.IsTrue(actualAwardLetters.Any());
-                loggerMock.Verify(l => l.Info(string.Format("Configuration filtered out all StudentAwards for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Configuration filtered out all StudentAwards for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -3129,7 +3130,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public void NullAwardLetterReturnedFromUpdateThrowsExceptionTest()
             {
                 updatedAwardLetterEntity = null;
@@ -3404,7 +3405,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }            
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NoUpdatedAwardLetterEntityReceived_ExceptionThrownTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetterAsync(It.IsAny<string>(), It.IsAny<AwardLetter2>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
@@ -3689,7 +3690,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NoUpdatedAwardLetterEntityReceived_ExceptionThrownTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))

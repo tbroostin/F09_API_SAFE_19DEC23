@@ -216,6 +216,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 catch (IntegrationApiException)
                 {
                     // Continue processing each record and return error collection
+                    logger.Error(IntegrationApiException.Message, "Error converting external education credentials");
                 }
                 catch (Exception ex)
                 {
@@ -290,9 +291,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // get the ID associated with the incoming guid
                 entityId = await _personExternalEducationCredentialsRepository.GetExternalEducationCredentialsIdFromGuidAsync(personExternalEducationCredentials.Id);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // Continue creating a new record using the GUID
+                logger.Error(knfex.Message, "Error getting ID associated to guid");
             }
             catch (RepositoryException ex)
             {

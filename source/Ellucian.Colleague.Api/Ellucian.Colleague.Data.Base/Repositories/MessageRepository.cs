@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -139,7 +139,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             catch (Exception e)
                             {
                                 logger.Error(e.Message);
-                                throw e;
+                                throw;
                             }
 
                             if (updateResponse.AErrorOccurred == "3")
@@ -227,7 +227,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw e;
+                throw;
             }
 
             if (createResponse.AErrorOccurred == "3")

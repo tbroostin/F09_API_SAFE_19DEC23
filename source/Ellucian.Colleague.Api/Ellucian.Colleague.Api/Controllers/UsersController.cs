@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using slf4net;
 using Ellucian.Web.Security;
-
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -28,7 +28,10 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly ILogger logger;
         private readonly IProxyService proxyService;
         private readonly ISelfservicePreferencesService selfservicePreferencesService;
-
+        private const string permissionExceptionMessage = "User does not have permission to access the requested information";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string invalidPermissionsErrorMessage = "The current user does not have the permissions to perform the requested operation.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
         /// <summary>
         /// UsersController constructor
         /// </summary>
@@ -94,9 +97,53 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of <see cref="ProxyAccessPermission">proxy access permissions</see>.</returns>
         /// <accessComments>
-        /// Only the current user can update proxy permissions
+        /// Any logged in user can update their own proxy permissions.       
         /// </accessComments>
+        [Obsolete("Obsolete as of API verson 1.36; use version 2 of this endpoint")]
         public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment, string useEmployeeGroups = "False")
+        {
+            try
+            {
+                bool isEmployeeProxy;
+                if (bool.TryParse(useEmployeeGroups, out isEmployeeProxy))
+                {
+                    // Fix for backward compatability with SS 2.35.1 - Bypassing the ADD.ALL.HR.PROXY permission check.
+                    return await proxyService.PostUserProxyPermissionsAsync(assignment, false);
+                }
+                else
+                {
+                    return await proxyService.PostUserProxyPermissionsAsync(assignment);
+                }
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
+            }
+        }
+
+
+        /// <summary>
+        /// Post changes to a user's proxy permissions
+        /// </summary>
+        /// <param name="assignment">The proxy permissions being changed</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
+        /// <returns>A collection of <see cref="ProxyAccessPermission">proxy access permissions</see>.</returns>
+        /// <accessComments>
+        /// Any logged in user can update their own proxy permissions.
+        /// A user with the permission ADD.ALL.HR.PROXY is considered as an admin and can update proxy permissions of any employee.
+        /// </accessComments>
+        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsV2Async(ProxyPermissionAssignment assignment, string useEmployeeGroups = "False")
         {
             try
             {
@@ -110,15 +157,20 @@ namespace Ellucian.Colleague.Api.Controllers
                     return await proxyService.PostUserProxyPermissionsAsync(assignment);
                 }
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException ex)
             {
-                logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.Unauthorized);
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
-                logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -129,7 +181,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>A collection of proxy access permissions for the supplied person</returns>
         /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <accessComments>
-        /// Only the current user can get their own proxy access permissions. 
+        /// Any logged in user can get their own proxy access permissions. 
+        /// A user with the permission ADD.ALL.HR.PROXY is considered as an admin and can access the proxy access permissions of any employee.
         /// </accessComments>
         public async Task<IEnumerable<ProxyUser>> GetUserProxyPermissionsAsync(string userId, string useEmployeeGroups = "False")
         {
@@ -149,10 +202,20 @@ namespace Ellucian.Colleague.Api.Controllers
                     return await proxyService.GetUserProxyPermissionsAsync(userId);
                 }
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException pex)
+            {
+                logger.Error(pex.ToString());
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -171,15 +234,20 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await proxyService.GetUserProxySubjectsAsync(userId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Ellucian.Web.Security.PermissionsException ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -197,15 +265,20 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await proxyService.PostProxyCandidateAsync(candidate);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 logger.Error(pex.Message);
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -215,7 +288,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="userId">ID of the user granting access</param>
         /// <returns>A collection of proxy candidates</returns>
         /// <accessComments>
-        /// Only the current user can get their proxy candidates.
+        ///  Any logged in user can get their proxy candidates.
+        ///  A user with the permission ADD.ALL.HR.PROXY is considered as an admin and can access the proxy candidates of any employee.
         /// </accessComments>
         public async Task<IEnumerable<ProxyCandidate>> GetUserProxyCandidatesAsync(string userId)
         {
@@ -223,15 +297,20 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await proxyService.GetUserProxyCandidatesAsync(userId);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 logger.Error(pex.Message);
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -246,10 +325,15 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await proxyService.PostPersonProxyUserAsync(user);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -288,6 +372,11 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Error retrieving preference for person " + personId + " of type " + preferenceType + ".");
@@ -314,6 +403,11 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 var updatedPreference = await selfservicePreferencesService.UpdatePreferenceAsync(selfservicePreference.Id, selfservicePreference.PersonId, selfservicePreference.PreferenceType, selfservicePreference.Preferences);
                 return updatedPreference;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -344,6 +438,11 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 await selfservicePreferencesService.DeletePreferenceAsync(personId, preferenceType);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

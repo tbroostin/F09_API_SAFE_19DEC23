@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -16,6 +16,7 @@ using System.Web.Http;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly ICampusOrganizationService _campusOrganizationService;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the CampusOrganizationController class.
@@ -70,6 +72,11 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _campusOrganizationService.GetCampusOrganizations2ByCampusOrgIdsAsync(criteria.CampusOrganizationIds);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

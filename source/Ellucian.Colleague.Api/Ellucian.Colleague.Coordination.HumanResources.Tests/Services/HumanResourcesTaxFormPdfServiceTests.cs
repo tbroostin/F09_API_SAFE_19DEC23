@@ -1,5 +1,6 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -8,6 +9,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -23,6 +25,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     {
         #region Initialize and Cleanup
 
+        private Mock<ILocalReportService> reportRenderServiceMock;
         private HumanResourcesTaxFormPdfService service = null;
         private TestHumanResourcesTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
@@ -49,8 +52,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<FormT4PdfData>>(rep => rep.GetT4PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
-                throw new Exception("An exception occurred.");
+                throw new ColleagueWebApiException("An exception occurred.");
             });
+
+            reportRenderServiceMock = new Mock<ILocalReportService>();
 
             BuildTaxFormPdfService();
         }
@@ -77,7 +82,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             roles.Add(role);
-           
+
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces.
             var roleRepository = new Mock<IRoleRepository>();
@@ -90,7 +95,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>()).Returns(taxFormStatementDtoAdapter);
 
             // Set up the current user with a subset of tax form statements and set up the service.
-            service = new HumanResourcesTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
+            service = new HumanResourcesTaxFormPdfService(reportRenderServiceMock.Object, this.mockTaxFormPdfDataRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,
                 roleRepository.Object,
@@ -145,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task GetT4TaxFormDataAsync_RepositoryThrowsException()
         {
             var pdfData = await service.GetT4TaxFormDataAsync(personId, exceptionString);

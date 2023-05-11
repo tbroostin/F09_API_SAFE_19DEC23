@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -36,6 +37,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly IAdapterRegistry adapterRegistry;
         private readonly IEarningsTypeRepository earningsTypeRepository;
         private readonly IEarningTypesService _earningTypesService;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// EarningsTypesController constructor
@@ -60,16 +63,23 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [HttpGet]
         public async Task<IEnumerable<EarningsType>> GetEarningsTypesAsync()
         {
+            logger.Debug("********* Start - Process to get List of Earning Types - Start *********");
             try
             {
                 var earningsTypeEntities = await earningsTypeRepository.GetEarningsTypesAsync();
                 var entityToDtoAdapter = adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EarningsType, EarningsType>();
+                logger.Debug("********* End - Process to get List of Earning Types - End *********");
                 return earningsTypeEntities.Select(earningsType => entityToDtoAdapter.MapToType(earningsType));
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error occurred");
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -81,6 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EarningTypes>> GetEarningTypesAsync()
         {
+            logger.Debug("********* Start - Process to get List of Earning Types - Start*********");
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -91,12 +102,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                logger.Debug(string.Format("Calling GetEarningTypesAsync service method with BypassCache {0}",bypassCache));
                 var items = await _earningTypesService.GetEarningTypesAsync(bypassCache);
 
                 AddEthosContextProperties(await _earningTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _earningTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               items.Select(a => a.Id).ToList()));
-
+                logger.Debug("********* End - Process to get List of Earning Types - End*********");
                 return items;
             }
             catch (KeyNotFoundException e)
@@ -139,6 +151,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.EarningTypes> GetEarningTypesByGuidAsync(string guid)
         {
+            logger.Debug("********* Start - Process to Get earning types by guid - Start *********");
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -149,11 +162,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             if (string.IsNullOrEmpty(guid))
             {
+                logger.Debug("GUID cannot be null or empty");
                 throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
                     IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
             }
             try
             {
+                logger.Debug(string.Format("Calling GetEarningTypesByGuidAsync service method with guid {0}",guid));
                 var earningType = await _earningTypesService.GetEarningTypesByGuidAsync(guid);
 
                 if (earningType != null)
@@ -163,7 +178,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                               await _earningTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               new List<string>() { earningType.Id }));
                 }
-
+                logger.Debug("********* End - Process to Get earning types by guid - End *********");
                 return earningType;
             }
             catch (KeyNotFoundException e)

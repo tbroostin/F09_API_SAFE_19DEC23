@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -397,7 +397,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     catch (Exception e)
                     {
                         var errorMessage = string.Format("Record key: {0}. {1}", errorKey, "Duplicate GUID found. To resolve errors, run Remove Duplicate GUIDs (RDGU) for PERPOS.");
-                        LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, errorMessage);
+                        LogDataError("InstitutionJobs", perpos.Recordkey, null, e, errorMessage);
                         exception.AddError(new RepositoryError("Bad.Data", errorMessage)
                         {
                             SourceId = perpos.Recordkey,
@@ -1057,9 +1057,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // ignored
+                    logger.Error(ex, "Unable to perstat record.");
                 }
             }
             return primaryInstitutionJobsPoposIds;

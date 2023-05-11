@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using slf4net;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -585,7 +586,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         // Calculate the start/end datetimeoffset value based on the Colleague time zone for the given date
                         if (!cal.CalsDate.HasValue || cal.CalsDate == new DateTime(1968, 1, 1))
                         {
-                            throw new Exception("Calendar item must have at least a date.");
+                            throw new ColleagueWebApiException("Calendar item must have at least a date.");
                         }
                         DateTimeOffset startDateTime = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(cal.CalsStartTime, cal.CalsDate, _colleagueTimeZone).GetValueOrDefault();
                         DateTimeOffset endDateTime = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(cal.CalsEndTime, cal.CalsDate, _colleagueTimeZone).GetValueOrDefault();
@@ -636,7 +637,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             var errorMessage = "Unable to access EVENT.TYPES valcode table.";
                             logger.Info(errorMessage);
-                            throw new Exception(errorMessage);
+                            throw new ColleagueWebApiException(errorMessage);
                         }
                         return eventTypesTable;
                     }, 240);
@@ -676,7 +677,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
                         logger.Info(errorMessage);
                         // If we cannot read the international parameters default to US with a / delimiter.
-                        // throw new Exception(errorMessage);
+                        // throw new ColleagueWebApiException(errorMessage);
                         DataContracts.IntlParams newIntlParams = new DataContracts.IntlParams();
                         newIntlParams.HostShortDateFormat = "MDY";
                         newIntlParams.HostDateDelimiter = "/";
@@ -823,6 +824,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var isHoliday = dayType != null && dayType.ValActionCode1AssocMember != null &&
                 dayType.ValActionCode1AssocMember.Equals("HO", StringComparison.CurrentCultureIgnoreCase);
 
+            //its a payroll holiday if the valcode's special action code 3 equals HO
+            var isPayrollHoliday = dayType != null && dayType.ValActionCode3AssocMember != null &&
+                dayType.ValActionCode3AssocMember.Equals("HO", StringComparison.CurrentCultureIgnoreCase);
+
 
             bool isFullDay;
             DateTimeOffset startDateTime;
@@ -853,7 +858,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 isHoliday,
                 isFullDay,
                 startDateTime,
-                endDateTime);
+                endDateTime,
+                isPayrollHoliday);
 
             return specialDay;
         }

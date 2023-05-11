@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +17,7 @@ using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
-
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -112,13 +112,28 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>The AccountHolder DTO</returns>
         public async Task<PrivacyWrapper<Dtos.Finance.AccountHolder>> GetAccountHolder2Async(string id, bool bypassCache)
         {
-            CheckAccountPermission(id);
+            try
+            {
+                CheckAccountPermission(id);
 
-            var accountHolderEntity = await _arRepository.GetAccountHolderAsync(id, bypassCache);
-            var privacyWrapperWithList = BuildAccountHolderDtos(new List<AccountHolder>() { accountHolderEntity });
-            var accountHolderDto = privacyWrapperWithList.Dto.FirstOrDefault();
-            var privacyWrapper = new PrivacyWrapper<Dtos.Finance.AccountHolder>(accountHolderDto, privacyWrapperWithList.HasPrivacyRestrictions);
-            return privacyWrapper;
+                var accountHolderEntity = await _arRepository.GetAccountHolderAsync(id, bypassCache);
+                var privacyWrapperWithList = BuildAccountHolderDtos(new List<AccountHolder>() { accountHolderEntity });
+                var accountHolderDto = privacyWrapperWithList.Dto.FirstOrDefault();
+                var privacyWrapper = new PrivacyWrapper<Dtos.Finance.AccountHolder>(accountHolderDto, privacyWrapperWithList.HasPrivacyRestrictions);
+                return privacyWrapper;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving account holder.";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message = "An exception occurred while retrieving account holder.";
+                logger.Error(ex, message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -298,15 +313,23 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>Invoice DTO</returns>
         public Dtos.Finance.Invoice GetInvoice(string invoiceId)
         {
-            var invoiceEntity = _arRepository.GetInvoice(invoiceId);
-            CheckAccountPermission(invoiceEntity.PersonId);
+            try
+            {
+                var invoiceEntity = _arRepository.GetInvoice(invoiceId);
+                CheckAccountPermission(invoiceEntity.PersonId);
 
-            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Invoice, Dtos.Finance.Invoice>();
-            Dtos.Finance.Invoice invoiceDto = adapter.MapToType(invoiceEntity);
+                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Invoice, Dtos.Finance.Invoice>();
+                Dtos.Finance.Invoice invoiceDto = adapter.MapToType(invoiceEntity);
 
-            OverrideDueDate(invoiceDto);
+                OverrideDueDate(invoiceDto);
 
-            return invoiceDto;
+                return invoiceDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -317,26 +340,41 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         [Obsolete("Obsolete as of API version 1.12, use QueryInvoicesAsync instead.")]
         public IEnumerable<Dtos.Finance.Invoice> GetInvoices(IEnumerable<string> invoiceIds)
         {
-            var invoiceDtos = new List<Dtos.Finance.Invoice>();
-            if (invoiceIds == null || invoiceIds.Count() == 0)
+            try
             {
+                var invoiceDtos = new List<Dtos.Finance.Invoice>();
+                if (invoiceIds == null || invoiceIds.Count() == 0)
+                {
+                    return invoiceDtos;
+                }
+
+                var invoiceEntities = _arRepository.GetInvoices(invoiceIds);
+                if (invoiceEntities.Any())
+                {
+                    var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Invoice, Dtos.Finance.Invoice>();
+                    foreach (var invoice in invoiceEntities)
+                    {
+                        CheckAccountPermission(invoice.PersonId);
+                        Dtos.Finance.Invoice invoiceDto = adapter.MapToType(invoice);
+                        OverrideDueDate(invoiceDto);
+                        invoiceDtos.Add(invoiceDto);
+                    }
+                }
+
                 return invoiceDtos;
             }
-
-            var invoiceEntities = _arRepository.GetInvoices(invoiceIds);
-            if (invoiceEntities.Any())
+            catch (ColleagueSessionExpiredException tex)
             {
-                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.Invoice, Dtos.Finance.Invoice>();
-                foreach (var invoice in invoiceEntities)
-                {
-                    CheckAccountPermission(invoice.PersonId);
-                    Dtos.Finance.Invoice invoiceDto = adapter.MapToType(invoice);
-                    OverrideDueDate(invoiceDto);
-                    invoiceDtos.Add(invoiceDto);
-                }
+                string message = "Session has expired while retrieving invoices.";
+                logger.Error(tex, message);
+                throw;
             }
-
-            return invoiceDtos;
+            catch (Exception ex)
+            {
+                string message = "An exception occurred while retrieving invoices.";
+                logger.Error(ex, message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -382,25 +420,40 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         public async Task<IEnumerable<Dtos.Finance.InvoicePayment>> QueryInvoicePaymentsAsync(IEnumerable<string> invoiceIds)
         {
             var invoicePaymentDtos = new List<Dtos.Finance.InvoicePayment>();
-            // Using same business logic as originally written in obsolete method GetInvoices
-            if (invoiceIds == null || !invoiceIds.Any())
+            try
             {
-                return invoicePaymentDtos;
-            }
-
-            var invoicePaymentEntities = await _arRepository.QueryInvoicePaymentsAsync(invoiceIds, InvoiceDataSubset.InvoicePayment);
-            if (invoicePaymentEntities.Any())
-            {
-                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.InvoicePayment, Dtos.Finance.InvoicePayment>();
-                foreach (var invoicePayment in invoicePaymentEntities)
+                // Using same business logic as originally written in obsolete method GetInvoices
+                if (invoiceIds == null || !invoiceIds.Any())
                 {
-                    CheckAccountPermission(invoicePayment.PersonId);
-                    Dtos.Finance.InvoicePayment invoicePaymentDto = adapter.MapToType(invoicePayment);
-
-                    OverrideDueDate(invoicePaymentDto);
-
-                    invoicePaymentDtos.Add(invoicePaymentDto);
+                    return invoicePaymentDtos;
                 }
+
+                var invoicePaymentEntities = await _arRepository.QueryInvoicePaymentsAsync(invoiceIds, InvoiceDataSubset.InvoicePayment);
+                if (invoicePaymentEntities.Any())
+                {
+                    var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.InvoicePayment, Dtos.Finance.InvoicePayment>();
+                    foreach (var invoicePayment in invoicePaymentEntities)
+                    {
+                        CheckAccountPermission(invoicePayment.PersonId);
+                        Dtos.Finance.InvoicePayment invoicePaymentDto = adapter.MapToType(invoicePayment);
+
+                        OverrideDueDate(invoicePaymentDto);
+
+                        invoicePaymentDtos.Add(invoicePaymentDto);
+                    }
+                }
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Timeout exception has occurred while requesting InvoicePayment objects.";
+                logger.Error(tex, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message = "An exception occurred while requesting InvoicePayment objects.";
+                logger.Error(ex, message);
+                throw;
             }
 
             return invoicePaymentDtos;
@@ -413,13 +466,20 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>Receivable Payment DTO</returns>
         public Dtos.Finance.ReceivablePayment GetPayment(string paymentId)
         {
-            var paymentEntity = _arRepository.GetPayment(paymentId);
-            CheckAccountPermission(paymentEntity.PersonId);
+            try
+            {
+                var paymentEntity = _arRepository.GetPayment(paymentId);
+                CheckAccountPermission(paymentEntity.PersonId);
 
-            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivablePayment, Dtos.Finance.ReceivablePayment>();
-            Dtos.Finance.ReceivablePayment paymentDto = adapter.MapToType(paymentEntity);
+                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivablePayment, Dtos.Finance.ReceivablePayment>();
+                Dtos.Finance.ReceivablePayment paymentDto = adapter.MapToType(paymentEntity);
 
-            return paymentDto;
+                return paymentDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -435,19 +495,26 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 return paymentDtos;
             }
 
-            var paymentEntities = _arRepository.GetPayments(paymentIds);
-            if (paymentEntities.Count() > 0)
+            try
             {
-                string id = paymentEntities.First().PersonId;
-                CheckAccountPermission(id);
-
-                var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivablePayment, Dtos.Finance.ReceivablePayment>();
-                foreach (var payment in paymentEntities)
+                var paymentEntities = _arRepository.GetPayments(paymentIds);
+                if (paymentEntities.Count() > 0)
                 {
-                    Dtos.Finance.ReceivablePayment paymentDto = adapter.MapToType(payment);
+                    string id = paymentEntities.First().PersonId;
+                    CheckAccountPermission(id);
 
-                    paymentDtos.Add(paymentDto);
+                    var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivablePayment, Dtos.Finance.ReceivablePayment>();
+                    foreach (var payment in paymentEntities)
+                    {
+                        Dtos.Finance.ReceivablePayment paymentDto = adapter.MapToType(payment);
+
+                        paymentDtos.Add(paymentDto);
+                    }
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
 
             return paymentDtos;
@@ -499,18 +566,26 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // User must have proper permissions
             CheckCreateArInvoicePermission();
 
-            // create and validate entity
-            var adapter = _adapterRegistry.GetAdapter<Dtos.Finance.ReceivableInvoice,
-                Domain.Finance.Entities.ReceivableInvoice>();
-            var entity = adapter.MapToType(source);
-            ValidateReceivableInvoice(entity);
+            try
+            {
+                // create and validate entity
+                var adapter = _adapterRegistry.GetAdapter<Dtos.Finance.ReceivableInvoice,
+                    Domain.Finance.Entities.ReceivableInvoice>();
+                var entity = adapter.MapToType(source);
+                ValidateReceivableInvoice(entity);
 
-            var invoice = _arRepository.PostReceivableInvoice(entity);
-            var invoiceAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivableInvoice,
-                Dtos.Finance.ReceivableInvoice>();
-            var outputDto = invoiceAdapter.MapToType(invoice);
+                var invoice = _arRepository.PostReceivableInvoice(entity);
+                var invoiceAdapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.ReceivableInvoice,
+                    Dtos.Finance.ReceivableInvoice>();
+                var outputDto = invoiceAdapter.MapToType(invoice);
 
-            return outputDto;
+                return outputDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -535,9 +610,17 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>The list of retrieved deposits</returns>
         public IEnumerable<Dtos.Finance.Deposit> GetDeposits(IEnumerable<string> depositIds)
         {
-            var newDepositEntities = _arRepository.GetDeposits(depositIds);
-            var adapter = new AutoMapperAdapter<Domain.Finance.Entities.Deposit, Dtos.Finance.Deposit>(_adapterRegistry, logger);
-            return newDepositEntities.Select(x => adapter.MapToType(x));
+            try
+            {
+                var newDepositEntities = _arRepository.GetDeposits(depositIds);
+                var adapter = new AutoMapperAdapter<Domain.Finance.Entities.Deposit, Dtos.Finance.Deposit>(_adapterRegistry, logger);
+                return newDepositEntities.Select(x => adapter.MapToType(x));
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         /// <summary>

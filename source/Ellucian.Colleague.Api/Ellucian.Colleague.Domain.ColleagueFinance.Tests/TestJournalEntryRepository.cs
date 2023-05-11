@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 {
@@ -18,20 +19,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         #region Define all data for journal entries
         private string[,] journalEntriesArray = {
-            //   0              1       2       3               4                      5            6                7           8  
-            //   Number       Status   Type     Entered Date    Entered By Name        Author      Posting Date      Reversal    Comments                          
-            {   "J000001",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" },     
-            {   "J000002",     "N",    "JE",    "04/02/2015",   "Gary Thorne",         "",         "04/16/2015",     "false",    "Comments 2" },
-            {   "J000003",     "U",    "JE",    "04/03/2015",   "Andy Kleehammer",     "",         "04/17/2015",     "false",    "Comments 3" },
+            //   0              1       2       3               4                      5               6                7           8  
+            //   Number       Status   Type     Entered Date    Entered By Name        Author          Posting Date      Reversal    Comments                          
+            {   "J000001",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },     
+            {   "J000002",     "N",    "JE",    "04/02/2015",   "Gary Thorne",         "",              "04/16/2015",     "false",    "Comments 2" },
+            {   "J000003",     "U",    "JE",    "04/03/2015",   "Andy Kleehammer",     "",              "04/17/2015",     "false",    "Comments 3" },
 
-            {   "J000005",     "C",    "JE",    "04/30/2015",   "Teresa Longerbeam",   "",         "04/30/2015",     "false",    ""           },
-            {   "J000006",     "C",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" },
-            {   "J000007",     "U",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" },
-            {   "J000008",     "C",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" },
+            {   "J000005",     "C",    "JE",    "04/30/2015",   "Teresa Longerbeam",   "",              "04/30/2015",     "false",    ""           },
+            {   "J000006",     "C",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },
+            {   "J000007",     "U",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },
+            {   "J000008",     "C",    "AA",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },
 
-            {   "J000111",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" }, 
-            {   "J000112",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" },
-            {   "J000113",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",  "04/15/2015",     "true",     "Comments 1" }  
+            {   "J000111",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" }, 
+            {   "J000112",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },
+            {   "J000113",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author1",       "04/15/2015",     "true",     "Comments 1" },
+            {   "J333333",     "C",    "JE",    "04/01/2015",   "Teresa Longerbeam",   "Author333333",  "04/15/2015",     "false",    "Comments 333333" }
         };
 
         private string[,] journalEntryItemsArray = {
@@ -65,8 +67,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {    "J000113",    "Second Item J113",  "11_00_01_00_33333_54011",    "GL account 54011",    "101",    "TGL-1",    "10102",      "CN",             null,   "2,678.91"},
         {    "J000113",    "Third Item J113",   "11_00_01_00_33333_54030",    "GL account 54030",    "101",    "TGL-1",    "10103",      "OF",       "2,345.56",         null},
         {    "J000113",    "Fourth Item J113",  "11_00_01_00_33333_54400",    "GL account 54400",    "102",    "TGL-2",    "10201",      "MA",         "741.87",         null},
-        {    "J000113",    "Fifth Item J113",   "11_00_01_00_33333_51000",    "GL account 51000",    "103",    "TGL-3",    "10301",      "MA",             null,   "1,643.08"}
-                                                };
+        {    "J000113",    "Fifth Item J113",   "11_00_01_00_33333_51000",    "GL account 51000",    "103",    "TGL-3",    "10301",      "MA",             null,   "1,643.08"},
+
+        {    "J333333",    "First Itm J333333",  "11_00_01_00_33333_51111",   "GL account 51111",    "101",    "TGL-1",    "10101",      "MA",       "1,234.56",         null},
+        {    "J333333",    "Second Itm J333333", "11_00_01_00_33333_52222",   "GL account 52222",    "101",    "TGL-1",    "10102",      "CN",             null,   "2,678.91"},
+        {    "J333333",    "Third Itm J333333",  "11_00_01_00_33333_53333",   "GL account 53333",    "101",    "TGL-1",    "10103",      "OF",       "2,345.56",         null},
+        {    "J333333",    "Fourth Itm J333333", "11_00_01_00_33333_54444",   "GL account 54444",    "102",    "TGL-2",    "10201",      "MA",         "741.87",         null},
+        {    "J333333",    "Fifth Itm J333333",  "11_00_01_00_33333_55555",   "GL account 55555",    "103",    "TGL-3",    "10301",      "MA",             null,   "1,643.08"}
+
+        };
 
         private string[,] approversArray = {
         //  0           1                       2               3
@@ -122,7 +131,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         status = JournalEntryStatus.Unfinished;
                         break;
                     default:
-                        throw new Exception("Invalid status specified in TestJournalEntryRepository.");
+                        throw new ColleagueWebApiException("Invalid status specified in TestJournalEntryRepository.");
                 }
 
                 switch (journalEntriesArray[i, 2])
@@ -134,7 +143,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                         type = JournalEntryType.OpeningBalance;
                         break;
                     default:
-                        throw new Exception("Invalid type specified in TestJournalEntryRepository.");
+                        throw new ColleagueWebApiException("Invalid type specified in TestJournalEntryRepository.");
                 }
 
                 enteredDate = Convert.ToDateTime(journalEntriesArray[i, 3]);

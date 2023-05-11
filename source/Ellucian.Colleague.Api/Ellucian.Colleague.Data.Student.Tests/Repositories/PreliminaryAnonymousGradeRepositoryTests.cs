@@ -93,7 +93,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Recordkey = "1",
                     ScsCourseSection = sectionId,
                     ScsStudentAcadCred = "1",
-                    ScsRandomId = 12345
+                    ScsRandomId = 12345,
+                    ScsMidRandomId=24567
                 },
                 new StudentCourseSec()
                 {
@@ -102,6 +103,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     ScsCourseSection = crossListedSectionIds[0],
                     ScsStudentAcadCred = "2",
                     ScsRandomId = 12346
+                    
                 }
             };
 
@@ -149,13 +151,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 {
                     Recordkey = "0001234*2021/FA*UG",
                     RecordGuid = "78e9c9bd-14f1-437d-a657-14442ecf9b64",
-                    SttrRandomId = 12347
+                    SttrRandomId = 12347,
+                    SttrMidRandomId=23456
                 },
                 new StudentTerms()
                 {
                     Recordkey = "0001235*2021/FA*UG",
                     RecordGuid = "e7fcb291-9c69-4461-9bae-e18ba6b15796",
-                    SttrRandomId = 12348
+                    SttrRandomId = 12348,
+                    
                 },
             };
 
@@ -194,7 +198,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             Assert.IsNotNull(entity);
             Assert.AreEqual(1, entity.AnonymousGradesForSection.Count);
+            Assert.AreEqual("12345",entity.AnonymousGradesForSection[0].AnonymousGradingId);
+            Assert.AreEqual("24567",entity.AnonymousGradesForSection[0].AnonymousMidTermGradingId);
             Assert.AreEqual(1, entity.AnonymousGradesForCrosslistedSections.Count);
+            Assert.AreEqual("12346", entity.AnonymousGradesForCrosslistedSections[0].AnonymousGradingId);
+            Assert.AreEqual("12346", entity.AnonymousGradesForCrosslistedSections[0].AnonymousMidTermGradingId);
             Assert.AreEqual(0, entity.Errors.Count);
         }
 
@@ -208,7 +216,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             Assert.IsNotNull(entity);
             Assert.AreEqual(1, entity.AnonymousGradesForSection.Count);
+            Assert.AreEqual("12347", entity.AnonymousGradesForSection[0].AnonymousGradingId);
+            Assert.AreEqual("23456", entity.AnonymousGradesForSection[0].AnonymousMidTermGradingId);
             Assert.AreEqual(1, entity.AnonymousGradesForCrosslistedSections.Count);
+            Assert.AreEqual("12348", entity.AnonymousGradesForCrosslistedSections[0].AnonymousGradingId);
+            Assert.AreEqual("12348", entity.AnonymousGradesForCrosslistedSections[0].AnonymousMidTermGradingId);
             Assert.AreEqual(0, entity.Errors.Count);
         }
     }

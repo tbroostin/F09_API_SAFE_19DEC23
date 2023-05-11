@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -194,7 +194,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
-                throw new Exception(string.Format("No admission decision type was found for guid {0}.", guid));
+                throw new ColleagueWebApiException(string.Format("No admission decision type was found for guid {0}.", guid));
             }
             catch (Exception e)
             {

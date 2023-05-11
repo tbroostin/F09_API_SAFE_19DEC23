@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ using System.Collections.ObjectModel;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using Ellucian.Dmi.Runtime;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -153,7 +154,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 //won't be modifiable, or the student has no loans
                 loanDisbursementRecordData = new Collection<SlAcyr>();
                 var message = string.Format("No {0} record ids for student {1} award year {2}", slAcyrFile, studentId, studentAwardYear.Code);
-                logger.Info(message);
+                logger.Debug(message);
             }
 
             //Get the year's awardPeriod level data from Colleague
@@ -278,7 +279,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         //report an info message, but don't throw an exception. loans without disbursements
                         //won't be modifiable, or it is not a loan                    
                         var message = string.Format("No loan disbursement data for {0} for student {1} {2} award year", awardCode, studentId, studentAwardYear.Code);
-                        logger.Info(message);
+                        logger.Debug(message);
                     }
                     else
                     {
@@ -379,17 +380,23 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         AwardPeriodStatuses = string.Join(DmiString.sSM, sa.StudentAwardPeriods.Select(p => p.AwardStatus.Code))
                     }).ToList()
             };
-
-            var response = await transactionInvoker.ExecuteAsync<UpdateStudentAwardRequest, UpdateStudentAwardResponse>(request);
-
-            if (!string.IsNullOrEmpty(response.ErrorMessage))
+            try
             {
-                //Whatever the error was, log it
-                logger.Error(response.ErrorMessage);
-                throw new ApplicationException(response.ErrorMessage);
-            }
+                var response = await transactionInvoker.ExecuteAsync<UpdateStudentAwardRequest, UpdateStudentAwardResponse>(request);
 
-            return (await GetStudentAwardsForYearAsync(studentAwardYear.StudentId, studentAwardYear, allAwards, allAwardStatuses)).Where(sa => studentAwards.Contains(sa));
+                if (!string.IsNullOrEmpty(response.ErrorMessage))
+                {
+                    //Whatever the error was, log it
+                    logger.Error(response.ErrorMessage);
+                    throw new ApplicationException(response.ErrorMessage);
+                }
+
+                return (await GetStudentAwardsForYearAsync(studentAwardYear.StudentId, studentAwardYear, allAwards, allAwardStatuses)).Where(sa => studentAwards.Contains(sa));
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -444,7 +451,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     }
                     catch (Exception e)
                     {
-                        logger.Info(e, string.Format("Unable to create StudentAwardPeriod from data. AwardYear: {0} RecordKey {1}", studentAward.StudentAwardYear, studentAwardPeriodRecord.Recordkey));
+                        logger.Debug(e, string.Format("Unable to create StudentAwardPeriod from data. AwardYear: {0} RecordKey {1}", studentAward.StudentAwardYear, studentAwardPeriodRecord.Recordkey));
                     }
                 }
             }
@@ -557,6 +564,92 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
             }
             return studentAwardList;
+        }
+        public int? GetVetBenAmount(string studentId, string awardYear, IEnumerable <string> cfpVersion)
+        {
+            logger.Debug(string.Format("Entering the GetVenBenAmount method to pull student VETS award information from their STUDENT.TERMS records for {0}*{1}",studentId, awardYear));
+
+            if (cfpVersion == null)
+            {
+                throw new ArgumentNullException("cfpVersion");
+            }
+
+            int? vetBenAmount = 0;
+            var saYear = "SA." + awardYear;
+            try
+            {
+                var saAcyrData = DataReader.ReadRecord<SaAcyr>(saYear, studentId);
+                
+                //Get list of all academic levels for the student in this year of either UG or GR level
+                var stuData = DataReader.ReadRecord<Students>(studentId);
+                var acadLevels = new List<string>();
+                if (stuData != null && stuData.StuAcadLevels.Count > 0)
+                {
+                    logger.Debug(string.Format("Retrieved acad levels {0} from STUDENTS record and reducing them to those of type {1}", string.Join(", ", stuData.StuAcadLevels), cfpVersion.FirstOrDefault()));
+                    for (var c = 0; c < stuData.StuAcadLevels.Count; c++)
+                    {
+                        var acadLevelsData = DataReader.ReadRecord<AcadLevels>(stuData.StuAcadLevels[c]);
+                        if (acadLevelsData != null)
+                        {
+                            //If we are looking for UG acad levels and the GR flag is not set, add to list of acad levels to check
+                            if (cfpVersion.FirstOrDefault() == "UG" && acadLevelsData.AclvGradLevelFlag.ToUpper() != "Y")
+                            {
+                                acadLevels.Add(acadLevelsData.Recordkey);
+                            }
+                            //If we are looking for GR acad levels and the GR flag is set, add to list of acad levels to check
+                            if (cfpVersion.FirstOrDefault() == "GR" && acadLevelsData.AclvGradLevelFlag.ToUpper() == "Y")
+                            {
+                                acadLevels.Add(acadLevelsData.Recordkey);
+                            }
+                        }
+                    }
+                }
+
+
+                var stuTerms = new List<string>();
+
+                if (saAcyrData != null)
+                {
+                    //Using for instead of foreach for performance
+                    //Create list of all terms for the student in this FA year
+
+                    for (var x = 0; x < saAcyrData.SaTerms.Count; x++)
+                    {
+                        var awardPeriod = DataReader.ReadRecord<AwardPeriods>("AWARD.PERIODS", saAcyrData.SaTerms[x]);
+                        if (awardPeriod != null)
+                        {
+                            for (var y = 0; y < awardPeriod.AwdpAcadTerms.Count; y++)
+                            {
+                                stuTerms.Add(awardPeriod.AwdpAcadTerms[y]);
+                            }
+                        }
+                    }
+
+                    logger.Debug(string.Format("Checking all STUDENT.TERMS records for terms {0} and acad levels {1} for student {2}", string.Join(", ", stuTerms), string.Join(", ", acadLevels), studentId));
+
+                    for (var z = 0; z < stuTerms.Count; z++)
+                    {
+                        for (var y = 0; y < acadLevels.Count; y++)
+                        {
+                            //Updating logic to account for all acad levels
+                            //var stuTermsId = studentId + "*" + stuTerms[z] + "*" + cfpVersion.First().ToString();
+                            var stuTermsId = studentId + "*" + stuTerms[z] + "*" + acadLevels[y];
+                            var studentTermsData = DataReader.ReadRecord<StudentTerms>("STUDENT.TERMS", stuTermsId);
+                            if (studentTermsData != null && studentTermsData.SttrVetNetAmtCertified != null)
+                            {
+                                vetBenAmount += (int?)studentTermsData.SttrVetNetAmtCertified;
+                            }
+                        }
+                    }
+                }
+                logger.Debug(string.Format("Returning VET amount of {0}", vetBenAmount));
+                return (vetBenAmount != 0 ? vetBenAmount : null);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message);
+                return null;
+            }
         }
     }
 }

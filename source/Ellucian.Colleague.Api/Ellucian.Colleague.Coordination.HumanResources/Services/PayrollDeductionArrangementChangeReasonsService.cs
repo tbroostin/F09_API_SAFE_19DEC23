@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System;
@@ -84,7 +85,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception)
             {
-                throw new Exception("Unknown error getting payroll deduction arrangement change reasons.");
+                throw new ColleagueWebApiException("Unknown error getting payroll deduction arrangement change reasons.");
             }
         }
 

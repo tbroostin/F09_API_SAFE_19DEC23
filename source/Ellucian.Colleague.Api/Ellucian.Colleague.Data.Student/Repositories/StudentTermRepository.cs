@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using System.Web.UI.WebControls;
@@ -109,7 +110,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             if (error && !studentAcademicTerms.Any())
-                throw new Exception("Error prevented partial return of student academic terms batch.");
+                throw new ColleagueWebApiException("Error prevented partial return of student academic terms batch.");
 
             return studentAcademicTerms;
         }

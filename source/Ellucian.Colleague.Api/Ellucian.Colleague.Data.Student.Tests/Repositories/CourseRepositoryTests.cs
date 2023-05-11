@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -820,11 +821,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(acc => acc.SelectAsync("COURSES", "")).Returns(Task.FromResult(coursesResponse.Select(c => c.Recordkey).ToArray()));
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Returns(Task.FromResult(coursesResponse));
             // Act--Get courses from repo
-            var result1 = await courseRepo.GetAsync("186"); // Math 350 has no equates
+            var result1 = await courseRepo.GetAsync("186"); // Math 350 has 2 equates
             var result2 = await courseRepo.GetAsync("306");
             var result3 = await courseRepo.GetAsync("213");
-            // Assert-- Math 350 has no equates
-            Assert.AreEqual(0, result1.EquatedCourseIds.Count());
+            // Assert-- Math 350 has 2 equates to 306 and 213
+            Assert.AreEqual(2, result1.EquatedCourseIds.Count());
             // Math 103 and math 103 have no equates
             Assert.AreEqual(0, result2.EquatedCourseIds.Count());
             Assert.AreEqual(0, result3.EquatedCourseIds.Count());
@@ -840,10 +841,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(acc => acc.SelectAsync("COURSES", "")).Returns(Task.FromResult(coursesResponse.Select(c => c.Recordkey).ToArray()));
             dataAccessorMock.Setup<Task<Collection<Courses>>>(acc => acc.BulkReadRecordAsync<Courses>("COURSES", It.IsAny<string[]>(), true)).Returns(Task.FromResult(coursesResponse));
             // Act--Get courses from repo
-            var result0 = await courseRepo.GetAsync("226"); // MATH 491 has no equates
-            var result4 = await courseRepo.GetAsync("353"); // MATH 371 has no equates
-            // Assert-- Math 491 has no equates
-            Assert.AreEqual(0, result0.EquatedCourseIds.Count());
+            var result0 = await courseRepo.GetAsync("226"); // MATH 491 has 3,4 equates
+            var result4 = await courseRepo.GetAsync("353"); // MATH 371 has 3 equates SO 353 IS SUBSET OF 226 therefore it is equated to 226 but not vice versa
+            // Assert-- Math 491 has 1 equates
+            Assert.AreEqual(1, result0.EquatedCourseIds.Count());
             // Assert-- Math 491 is an equate of Math 371
             Assert.AreEqual(0, result4.EquatedCourseIds.Count());
         }

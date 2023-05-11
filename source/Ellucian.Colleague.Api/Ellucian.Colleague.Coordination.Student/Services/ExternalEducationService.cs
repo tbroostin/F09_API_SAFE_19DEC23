@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -189,7 +190,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("External Education not found for GUID " + guid, ex);
+                throw new ColleagueWebApiException("External Education not found for GUID " + guid, ex);
             }
         }
         #endregion
@@ -248,7 +249,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (InvalidCastException)
             {
-                throw new Exception("Unable to extract credits earned and/or class percentile");
+                throw new ColleagueWebApiException("Unable to extract credits earned and/or class percentile");
             }
 
             if (source.AcadStartDate.HasValue)

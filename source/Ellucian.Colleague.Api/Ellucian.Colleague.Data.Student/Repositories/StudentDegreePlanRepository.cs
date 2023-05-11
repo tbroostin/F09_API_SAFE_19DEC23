@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Text;
@@ -73,7 +73,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         public async Task<DegreePlan> UpdateAsync(DegreePlan newPlan)
-        {
+        {           
             var updateReq = new Transactions.UpdateDegreePlanRequest();
             updateReq.DegreePlanId = newPlan.Id.ToString();
             updateReq.Version = newPlan.Version.ToString();
@@ -84,6 +84,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             updateReq.ReviewRequestedTime = newPlan.ReviewRequestedTime;
             updateReq.AArchiveNotificationDate = newPlan.ArchiveNotificationDate;
             updateReq.IsAdvisorNotes = "Y";
+            updateReq.AAdvisingOfficeEmailId = newPlan.AdvisingOfficeEmailId;
             updateReq.CourseApprovals = new List<Transactions.CourseApprovals>();
             foreach (var item in newPlan.Approvals)
             {

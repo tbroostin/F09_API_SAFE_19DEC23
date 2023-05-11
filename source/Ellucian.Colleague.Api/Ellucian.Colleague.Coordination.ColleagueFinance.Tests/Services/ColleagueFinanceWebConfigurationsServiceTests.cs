@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 CfWebPoGlRequired = true,
                 CfWebPoAllowMiscVendor = true,
                 DefaultTaxCodes = new List<string> { "PS", "GS" },
-                PurchasingDefaults = new PurchasingDefaults { DefaultShipToCode = "MC" },
+                PurchasingDefaults = new PurchasingDefaults { DefaultShipToCode = "MC", IsApprovalReturnsEnabled = true },
                 RequestPaymentDefaults = new VoucherWebConfiguration {
                     DefaultAPTypeCode = "AP",
                     AllowMiscVendor = true,
@@ -91,6 +91,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultTaxCodes.Count(), result.DefaultTaxCodes.Count());
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultAPTypeCode, result.DefaultAPTypeCode);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchasingDefaults.DefaultShipToCode, result.PurchasingDefaults.DefaultShipToCode);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchasingDefaults.IsApprovalReturnsEnabled, result.PurchasingDefaults.IsApprovalReturnsEnabled);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.VoucherAttachmentCollectionId, result.VoucherAttachmentCollectionId);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchaseOrderAttachmentCollectionId, result.PurchaseOrderAttachmentCollectionId);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.RequisitionAttachmentCollectionId, result.RequisitionAttachmentCollectionId);

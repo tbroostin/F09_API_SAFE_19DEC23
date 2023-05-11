@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
@@ -341,7 +342,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Code, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Code, " ", ex.Message));
             }
             return institutionJobs;
         }
@@ -448,7 +449,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Id, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Id, " ", ex.Message));
             }
             return institutionJobs;
         }
@@ -556,7 +557,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Id, " ", ex.Message));
+                throw new ColleagueWebApiException(string.Concat("An error occurred obtaining InstitutionJobSupervisor Id: ", source.Id, " ", ex.Message));
             }
             return institutionJobs;
         }

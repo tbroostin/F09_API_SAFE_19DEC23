@@ -225,7 +225,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NoExistingChecklistLogsInfoMessageTest()
             {
                 await studentChecklistService.CreateStudentChecklistAsync(studentId, inputAwardYear);
-                loggerMock.Verify(l => l.Info(It.IsAny<Exception>(), It.Is<string>(s => s.Contains(string.Format("Student {0} has no checklist for {1}.", studentId, inputAwardYear)))));
+                loggerMock.Verify(l => l.Debug(It.IsAny<Exception>(), It.Is<string>(s => s.Contains(string.Format("Student {0} has no checklist for {1}.", studentId, inputAwardYear)))));
             }
 
             [TestMethod]
@@ -585,7 +585,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualChecklists = (await studentChecklistService.GetAllStudentChecklistsAsync(studentId)).ToList();
                 Assert.IsFalse(actualChecklists.Any());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years for which to get StudentChecklist objects", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years for which to get StudentChecklist objects", studentId)));
 
             }
 
@@ -597,7 +597,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 Assert.IsFalse(actualChecklists.Any());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no award years for which to get StudentChecklist objects", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no award years for which to get StudentChecklist objects", studentId)));
             }
 
             [TestMethod]
@@ -608,7 +608,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualChecklists = (await studentChecklistService.GetAllStudentChecklistsAsync(studentId)).ToList();
                 Assert.IsFalse(actualChecklists.Any());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no checklist items for any award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no checklist items for any award years", studentId)));
             }
 
             [TestMethod]
@@ -618,7 +618,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualChecklists = (await studentChecklistService.GetAllStudentChecklistsAsync(studentId)).ToList();
                 Assert.IsFalse(actualChecklists.Any());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no checklist items for any award years", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no checklist items for any award years", studentId)));
             }
         }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -128,6 +129,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the voucher.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
@@ -207,6 +213,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to create/update the voucher.", HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to create/update the voucher.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -232,6 +243,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to get the person address.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to get the person address.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -263,6 +279,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(peex.Message);
                 throw CreateHttpResponseException("Insufficient permissions to void the voucher.", HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to void the voucher.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
@@ -311,6 +332,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument to query the voucher.", HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - could not get vouchers.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 logger.Error(ex.ToString());
@@ -352,6 +378,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found to search vouchers.", HttpStatusCode.NotFound);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Session expired - unable to search the vouchers.");
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

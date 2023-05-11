@@ -281,7 +281,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         //    }
 
         //    [TestMethod]
-        //    [ExpectedException(typeof(Exception))]
+        //    [ExpectedException(typeof(ColleagueWebApiException))]
         //    public async Task GetPhoneTypeItemByGuid_InvalidPhoneType()
         //    {
         //        refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>())).Throws<Exception>();

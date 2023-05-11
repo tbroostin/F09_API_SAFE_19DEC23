@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +14,7 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -110,7 +111,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionId">The section Id to use to retrieve waivers</param>
         /// <returns>List of <see cref="Dtos.Student.StudentWaiver">Waiver</see> objects</returns>
         /// <accessComments>
-        /// Only an assigned faculty for the section can retrieve student waivers.
+        /// 1. Only an assigned faculty for the section can retrieve student waivers.
+        /// 2. A departmental oversight member assigned to the section may retrieve student waivers with any of the following permission codes
+        /// VIEW.SECTION.PREREQUISITE.WAIVER
+        /// CREATE.SECTION.REQUISITE.WAIVER
         /// </accessComments>
         public async Task<IEnumerable<Dtos.Student.StudentWaiver>> GetSectionStudentWaiversAsync(string sectionId)
         {
@@ -118,20 +122,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _waiverService.GetSectionStudentWaiversAsync(sectionId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                var message = "Session has expired while retrieving section student waivers";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pe)
             {
-                _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException("Access to Section Waivers is forbidden.", System.Net.HttpStatusCode.Forbidden);
+                var message = "Access to Section Waivers is forbidden.";
+                _logger.Error(pe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException knfe)
             {
-                _logger.Error(knfe, knfe.Message);
-                throw CreateHttpResponseException("Invalid section specified.", System.Net.HttpStatusCode.NotFound);
+                var message = "Invalid section specified.";
+                _logger.Error(knfe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.NotFound);
             }
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving waivers for section." + System.Net.HttpStatusCode.BadRequest);
+                var message = "Error occurred retrieving waivers for section.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
             }
         }
 
@@ -145,7 +158,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// also returns resource locator to use to retrieve the existing item.
         /// </returns>
         /// <accessComments>
-        /// A user with CREATE.PREREQUISITE.WAIVER permission can create a new Section Requisite Waiver.
+        /// 1. A faculty member assigned to the section with CREATE.PREREQUISITE.WAIVER permission can create a new Section Requisite Waiver.
+        /// 2. A departmental oversight member assigned to the section with CREATE.SECTION.REQUISITE.WAIVER permission can create a new Section Requisite Waiver.
         /// </accessComments>
         public async Task<HttpResponseMessage> PostStudentWaiverAsync([FromBody]Dtos.Student.StudentWaiver waiver)
         {
@@ -156,20 +170,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 SetResourceLocationHeader("GetStudentWaiver2", new { id = createdWaiverDto.Id });
                 return response;
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                var message = "Session has expired while creating student requisite waiver.";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
-                _logger.Info(peex.ToString());
+                var message = "User does not have appropriate permissions to create student requisite waiver.";
+                _logger.Info(peex, message);
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
             catch (ExistingSectionWaiverException swex)
             {
-                _logger.Info(swex.ToString());
+                var message = "Student requisite waiver already exists.";
+                _logger.Info(swex, message);
                 SetResourceLocationHeader("GetStudentWaiver2", new { id = swex.ExistingSectionWaiverId });
-                throw CreateHttpResponseException(swex.Message, HttpStatusCode.Conflict);
+                throw CreateHttpResponseException(message, HttpStatusCode.Conflict);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString());
+                var message = "Error occurred while creating student requisite waiver.";
+                _logger.Error(ex, message);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -203,15 +226,24 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 return await _waiverService.GetStudentWaiversAsync(studentId);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving student waivers";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
-                _logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException("Access to Section Waivers is forbidden.", System.Net.HttpStatusCode.Forbidden);
+                string message = "Access to Section Waivers is forbidden.";
+                _logger.Error(pe, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Error occurred retrieving waivers for section." + System.Net.HttpStatusCode.BadRequest);
+                string message = "Error occurred retrieving waivers for section.";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
             }
         }
     }

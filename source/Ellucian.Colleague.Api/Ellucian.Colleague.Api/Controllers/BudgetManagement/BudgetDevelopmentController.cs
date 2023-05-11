@@ -1,8 +1,9 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.BudgetManagement.Services;
 using Ellucian.Colleague.Dtos.BudgetManagement;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -80,9 +81,14 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             {
                 return await budgetDevelopmentService.UpdateBudgetDevelopmentWorkingBudgetAsync(budgetLineItemsDto);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Debug(csee, "Colleague session has expired. Could not update the working budget.");
+                throw CreateHttpResponseException("Colleague session has expired. Could not update the working budget.", HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
-                logger.Error(ex.Message);
+                logger.Error(ex, "Unable to update the working budget.");
                 throw CreateHttpResponseException("Unable to update the working budget.", HttpStatusCode.BadRequest);
             }
         }

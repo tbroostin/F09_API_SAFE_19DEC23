@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -108,6 +109,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
+            public async Task PutAddAuthorization_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    addAuthorizationServiceMock.Setup(x => x.UpdateAddAuthorizationAsync(addAuthorizationDto)).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await addAuthorizationsController.PutAddAuthorizationAsync(addAuthorizationDto);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task PutAddAuthorization_AnyOtherException_ReturnsHttpResponseException_BadRequest()
             {
                 try
@@ -121,7 +138,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
         }
 
         [TestClass]
@@ -224,9 +240,25 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetSectionAddAuthorizationsAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    addAuthorizationServiceMock.Setup(x => x.GetSectionAddAuthorizationsAsync(It.IsAny<string>()))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    var response = await addAuthorizationsController.GetSectionAddAuthorizationsAsync(sectionId);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
             public async Task GetSectionAddAuthorizationsAsync_Success()
             {
-
                 addAuthorizationServiceMock.Setup(x => x.GetSectionAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationDtos);
                 var response = await addAuthorizationsController.GetSectionAddAuthorizationsAsync(sectionId);
                 Assert.AreEqual(addAuthorizationDtos.Count(), response.Count());
@@ -236,8 +268,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Assert.AreEqual(expectedDto.StudentId, resultDto.StudentId);
                     Assert.AreEqual(expectedDto.SectionId, resultDto.SectionId);
                 }
-
-
             }
         }
 
@@ -454,6 +484,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PostAddAuthorization_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    addAuthorizationServiceMock.Setup(x => x.CreateAddAuthorizationAsync(addAuthorizationInput))
+                        .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
+                    var addAuthorization = await addAuthorizationsController.PostAddAuthorizationAsync(addAuthorizationInput);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
         }
 
 

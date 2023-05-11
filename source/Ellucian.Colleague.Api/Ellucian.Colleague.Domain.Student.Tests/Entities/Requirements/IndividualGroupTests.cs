@@ -377,8 +377,33 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Assert.AreEqual(GroupExplanation.Satisfied, gr.Explanations.First());
         }
 
+        [TestMethod]
+        public void MinGpaLookAheadOptimization_When_disabled()
+        {
+
+            Subrequirement s = pr.Requirements.First().SubRequirements.First();
+            s.Groups.Clear();
+            Group g = new Group("GroupId", "GroupCode", s);
+            s.Groups.Add(g);
+            g.MinCredits = 9m;
+            g.MinGpa = 3m;
 
 
+            string[] credids = { "7", "8", "24", "30" };  // B, B, D, A
+
+            acadresults = PrepResults(credids);
+
+            GroupResult gr = g.Evaluate(acadresults, overs, equatedCourses, null, false, disableLookaheadOptimization:true);
+
+            foreach (string res in gr.EvalDebug) { Console.WriteLine(res); }
+            Assert.AreEqual(Result.Applied, gr.Results.First(re => re.GetAcadCredId() == "7").Result);
+            Assert.AreEqual(Result.Applied, gr.Results.First(re => re.GetAcadCredId() == "8").Result);
+            Assert.AreEqual(Result.Applied, gr.Results.First(re => re.GetAcadCredId() == "24").Result);
+            Assert.AreEqual(Result.Related, gr.Results.First(re => re.GetAcadCredId() == "30").Result);
+            Assert.AreEqual(GroupExplanation.MinGpa, gr.Explanations.First());
+        }
+
+       
         private List<AcadResult> PrepResults(string[] creditids)
         {
             List<AcadResult> results = new List<AcadResult>();

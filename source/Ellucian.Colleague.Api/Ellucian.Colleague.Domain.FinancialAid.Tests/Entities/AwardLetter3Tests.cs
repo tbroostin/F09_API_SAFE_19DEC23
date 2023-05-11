@@ -77,7 +77,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             public void NumberOfAttributesTest()
             {
                 var properties = typeof(AwardLetter3).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(38, properties.Length);
+                Assert.AreEqual(40, properties.Length);
             }
 
             [TestMethod]

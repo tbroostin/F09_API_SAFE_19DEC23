@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -280,13 +280,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     if (!status.Equals("active") && !status.Equals("frozen") && !status.Equals("cancelled") && !status.Equals("inactive"))
                     {
-                        throw new Exception(
+                        throw new ColleagueWebApiException(
                             string.Format("{0} is an invalid enumeration value", status));
                     }
 
                     if (status.Equals("frozen"))
                     {
-                        throw new Exception(string.Concat("The filter status frozen is not supported in Colleague"));
+                        throw new ColleagueWebApiException(string.Concat("The filter status frozen is not supported in Colleague"));
                     }
                 }
 

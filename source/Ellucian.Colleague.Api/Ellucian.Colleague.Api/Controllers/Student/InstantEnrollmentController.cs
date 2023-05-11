@@ -1,9 +1,10 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly IInstantEnrollmentService _instantEnrollmentService;
         private readonly ICourseService _courseService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the InstantEnrollmentController class.
@@ -42,7 +44,6 @@ namespace Ellucian.Colleague.Api.Controllers
             _courseService = courseService;
             _logger = logger;
         }
-
 
         /// <summary>
         /// Performs a search of sections that are available for Instant Enrollment only.
@@ -66,6 +67,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
                 return sectionPage;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving Colleague Self-Service instant enrollment course search data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString() + ex.StackTrace);
@@ -79,7 +86,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="proposedRegistration">proposed registration of type <see cref="InstantEnrollmentProposedRegistration">InstantEnrollmentProposedRegistration</see></param>
         /// <accessComments>Any authenticated user can complete a proposed registration and retrieve costs for the registered sections for themselves. 
         /// Additionally, users with the IE.ALLOW.ALL permission can can complete a proposed registration and retrieve costs for the registered sections</accessComments>
-        public async Task<InstantEnrollmentProposedRegistrationResult> PostProposedRegistrationForClassesAsync([FromBody]InstantEnrollmentProposedRegistration proposedRegistration)
+        public async Task<InstantEnrollmentProposedRegistrationResult> PostProposedRegistrationForClassesAsync([FromBody] InstantEnrollmentProposedRegistration proposedRegistration)
         {
             try
             {
@@ -94,6 +101,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 InstantEnrollmentProposedRegistrationResult proposedResult = await _instantEnrollmentService.ProposedRegistrationForClassesAsync(proposedRegistration);
                 return proposedResult;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to complete the mock registration for classes selected for instant enrollment";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -111,7 +124,6 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("An invalid argument was supplied for proposed registrations.", HttpStatusCode.BadRequest);
             }
-
             catch (Exception ex)
             {
                 _logger.Error(ex, ex.Message);
@@ -125,7 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="zeroCostRegistration">zero cost registration of type <see cref="InstantEnrollmentZeroCostRegistration">InstantEnrollmentZeroCostRegistration</see></param>
         /// <accessComments>Any authenticated user can register for classes for themselves when the total cost is zero.
         /// Additionally, users with the IE.ALLOW.ALL permission can register for classes when the total cost is zero.</accessComments>
-        public async Task<InstantEnrollmentZeroCostRegistrationResult> PostZeroCostRegistrationForClassesAsync([FromBody]InstantEnrollmentZeroCostRegistration zeroCostRegistration)
+        public async Task<InstantEnrollmentZeroCostRegistrationResult> PostZeroCostRegistrationForClassesAsync([FromBody] InstantEnrollmentZeroCostRegistration zeroCostRegistration)
         {
             try
             {
@@ -133,7 +145,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     throw new ArgumentNullException("zeroCostRegistration", "registration information is required in order to complete a zero cost registration for instant enrollment.");
                 }
-                
+
                 if (zeroCostRegistration.ProposedSections == null || zeroCostRegistration.ProposedSections.Count == 0)
                 {
                     throw new ArgumentException("zeroCostRegistration.ProposedSections", "at least one proposed section is required in order to complete a zero cost registration for instant enrollment.");
@@ -141,6 +153,12 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 var zeroCostRegistrationResult = await _instantEnrollmentService.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
                 return zeroCostRegistrationResult;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to complete the zero cost registration for classes selected for instant enrollment";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -171,8 +189,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="echeckRegistration">echeck registration of type <see cref="InstantEnrollmentEcheckRegistration">InstantEnrollmentEcheckRegistration</see></param>
         /// <accessComments>Any authenticated user can register for classes for themselves and pay the costs for the registered sections using an electronic check.
         /// Additionally, users with the IE.ALLOW.ALL permission can register for classes and pay the costs for the registered sections using an electronic check.</accessComments>
-
-        public async Task<InstantEnrollmentEcheckRegistrationResult> PostEcheckRegistrationForClassesAsync([FromBody]InstantEnrollmentEcheckRegistration echeckRegistration)
+        public async Task<InstantEnrollmentEcheckRegistrationResult> PostEcheckRegistrationForClassesAsync([FromBody] InstantEnrollmentEcheckRegistration echeckRegistration)
         {
             try
             {
@@ -187,6 +204,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 InstantEnrollmentEcheckRegistrationResult echeckResult = await _instantEnrollmentService.EcheckRegistrationForClassesAsync(echeckRegistration);
                 return echeckResult;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to complete the echeck registration for classes selected for instant enrollment";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -218,7 +241,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>A <see cref="InstantEnrollmentStartPaymentGatewayRegistrationResult">InstantEnrollmentStartPaymentGatewayRegistrationResult</see> containing the result of the operation.</returns>
         /// <accessComments>Any authenticated user can register for classes for themselves and pay the costs for the registered sections using a credit card.
         /// Additionally, users with the IE.ALLOW.ALL permission can register for classes and pay the costs for the registered sections using a credit card.</accessComments>
-        public async Task<InstantEnrollmentStartPaymentGatewayRegistrationResult> PostStartInstantEnrollmentPaymentGatewayTransaction([FromBody]InstantEnrollmentPaymentGatewayRegistration proposedRegistration)
+        public async Task<InstantEnrollmentStartPaymentGatewayRegistrationResult> PostStartInstantEnrollmentPaymentGatewayTransaction([FromBody] InstantEnrollmentPaymentGatewayRegistration proposedRegistration)
         {
             try
             {
@@ -233,6 +256,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 InstantEnrollmentStartPaymentGatewayRegistrationResult proposedResult = await _instantEnrollmentService.StartInstantEnrollmentPaymentGatewayTransaction(proposedRegistration);
                 return proposedResult;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to start the payment gateway instant enrollment registration";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -276,6 +305,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _instantEnrollmentService.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to retrieve instant enrollment payment acknowledgement paragraph";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 string exceptionMsg = string.Format("User is not permitted to retrieve instant enrollment payment acknowledgement paragraph text for person {0}", request.PersonId);
@@ -306,6 +341,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _instantEnrollmentService.QueryPersonMatchResultsInstantEnrollmentByPostAsync(criteria);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to query person matches for instant enrollment";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -338,6 +379,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _instantEnrollmentService.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to retrieve instant enrollment cash receipt acknowledgement";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -392,6 +439,12 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _instantEnrollmentService.GetInstantEnrollmentStudentPrograms2Async(studentId, currentOnly);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while attempting to retrieve student programs";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 string exceptionMsg = string.Format("User is not permitted to retrieve student programs for person {0}", studentId);
@@ -405,9 +458,5 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.BadRequest);
             }
         }
-
-
-
-
     }
 }

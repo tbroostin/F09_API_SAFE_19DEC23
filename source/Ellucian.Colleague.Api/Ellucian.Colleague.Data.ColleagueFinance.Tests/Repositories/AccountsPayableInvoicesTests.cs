@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -1600,7 +1601,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     this.voucherDataContract.VouStatus.Add("X");
                     break;
                 default:
-                    throw new Exception("Invalid status specified in VoucherRepositoryTests");
+                    throw new ColleagueWebApiException("Invalid status specified in VoucherRepositoryTests");
             }
             this.voucherDataContract.VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>();
             var statusAssociation = new VouchersVoucherStatus();

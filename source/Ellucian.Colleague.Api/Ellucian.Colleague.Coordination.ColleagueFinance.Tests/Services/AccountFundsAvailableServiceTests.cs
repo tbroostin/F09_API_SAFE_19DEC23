@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using System;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
-                throw new Exception(string.Format("No grade-modes were found for guid {0}.", id));
+                throw new ColleagueWebApiException(string.Format("No grade-modes were found for guid {0}.", id));
             }
             catch (Exception e)
             {

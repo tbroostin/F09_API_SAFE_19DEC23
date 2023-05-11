@@ -18,7 +18,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private readonly string _Code;
         public string Code { get { return _Code; } }
 
-        public string Description;
+        public string Description { get; set; }
         public string SessionId { get; set; }
         
         // Required

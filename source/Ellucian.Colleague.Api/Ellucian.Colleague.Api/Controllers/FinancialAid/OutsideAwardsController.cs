@@ -14,6 +14,8 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -63,6 +65,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 var response = Request.CreateResponse<OutsideAward>(System.Net.HttpStatusCode.Created, newOutsideAward);
                 SetResourceLocationHeader("GetOutsideAwards", new { studentId = newOutsideAward.StudentId, year = newOutsideAward.AwardYearCode });
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {
@@ -119,6 +125,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             {
                 outsideAwards = await outsideAwardsService.GetOutsideAwardsAsync(studentId, year);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentNullException ane)
             {
                 logger.Error(ane, ane.Message);
@@ -163,6 +173,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 await outsideAwardsService.DeleteOutsideAwardAsync(studentId, id);
                 var response = Request.CreateResponse(System.Net.HttpStatusCode.OK);
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {
@@ -213,6 +227,10 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 var updatedOutsideAward = await outsideAwardsService.UpdateOutsideAwardAsync(outsideAward);
                 var response = Request.CreateResponse<OutsideAward>(System.Net.HttpStatusCode.OK, updatedOutsideAward);
                 return response;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                throw CreateHttpResponseException(csee.Message, System.Net.HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException ane)
             {

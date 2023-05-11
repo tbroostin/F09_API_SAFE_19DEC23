@@ -358,7 +358,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException( typeof( Exception ) )]
+            [ExpectedException( typeof(ColleagueWebApiException) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_ArgumentException()
             {
                 faAppRepoMock.Setup( repo => repo.GetAsync( It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<ArgumentException>();
@@ -367,7 +367,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException( typeof( Exception ) )]
+            [ExpectedException( typeof(ColleagueWebApiException) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_KeyNotFoundException()
             {
                 faAppRepoMock.Setup( repo => repo.GetAsync( It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<KeyNotFoundException>();
@@ -383,7 +383,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof( Exception ) )]
+            [ExpectedException(typeof(ColleagueWebApiException) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_InvalidOperationException()
             {
                 faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<InvalidOperationException>();
@@ -391,7 +391,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Exception()
             {
                 faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).Throws<Exception>();

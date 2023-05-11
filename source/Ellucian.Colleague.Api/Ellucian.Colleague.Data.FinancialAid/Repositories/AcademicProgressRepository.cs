@@ -52,19 +52,21 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var financialAidRecord = await DataReader.ReadRecordAsync<FinAid>(studentId);
             if (financialAidRecord == null)
             {
-                logger.Info(string.Format("Student {0} has no financial aid data", studentId));
+                logger.Debug(string.Format("Student {0} has no financial aid data", studentId));
                 return new List<AcademicProgressEvaluationResult>();
             }
             if (financialAidRecord.FaSapResultsId == null || financialAidRecord.FaSapResultsId.Count() == 0)
             {
-                logger.Info(string.Format("Student {0} has no Academic Progress Evaluations", studentId));
+                logger.Debug(string.Format("Student {0} has no Academic Progress Evaluations", studentId));
                 return new List<AcademicProgressEvaluationResult>();
             }
             
             var sapResultsRecords = await DataReader.BulkReadRecordAsync<SapResults>(financialAidRecord.FaSapResultsId.ToArray());
             if (sapResultsRecords == null || sapResultsRecords.Count() == 0)
             {
-                LogDataError("FIN.AID", studentId, financialAidRecord, null, "FaSapResultsId list do not point to existing SapResults records");
+                //Entire dump of FIN.AID is unnecessary, only dump the SAP.RESULTS pointers as a list for troubleshooting
+                //LogDataError("FIN.AID", studentId, financialAidRecord, null, "FaSapResultsId list do not point to existing SapResults records");
+                logger.Error(string.Format("FIN.AID {0} has FA.SAP.RESULTS.ID entries which do not point to existing SAP.RESULTS records: {1}", studentId, String.Join(", ",financialAidRecord.FaSapResultsId)));
                 return new List<AcademicProgressEvaluationResult>();
             }
 

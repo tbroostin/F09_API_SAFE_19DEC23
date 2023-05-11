@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -50,7 +50,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #region Get all reference data
 
-        public IEnumerable<Domain.Student.Entities.FinancialAidYear> _financialAidYears;
+        private IEnumerable<Domain.Student.Entities.FinancialAidYear> _financialAidYears;
         private async Task<IEnumerable<Domain.Student.Entities.FinancialAidYear>> GetFinancialAidYearsAsync(bool bypassCache)
         {
             if (_financialAidYears == null)

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Runtime.Caching;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Student.Exceptions;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -87,7 +88,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                             Assert.AreEqual(response.StpeTerm, studentPetition.TermCode);
                             Assert.AreEqual(response.StpeStartDate, studentPetition.StartDate);
                             Assert.AreEqual(response.StpeEndDate, studentPetition.EndDate);
-                            Assert.AreEqual(responsePetition.StpePetitionStatusSetByAssocMember, studentPetition.UpdatedBy);
+                            Assert.AreEqual(responsePetition.StpePetitionStatusSetByAssocMember, studentPetition.SetBy);
+                            Assert.AreEqual(response.StudentPetitionsChgopr, studentPetition.UpdatedBy);
                             Assert.AreEqual(responsePetition.StpePetitionStatusDateAssocMember, new DateTime(studentPetition.DateTimeChanged.Year, studentPetition.DateTimeChanged.Month, studentPetition.DateTimeChanged.Day));
                             Assert.AreEqual(new TimeSpan(responsePetition.StpePetitionStatusTimeAssocMember.Value.Hour, responsePetition.StpePetitionStatusTimeAssocMember.Value.Minute, responsePetition.StpePetitionStatusTimeAssocMember.Value.Second),
                                 new TimeSpan(studentPetition.DateTimeChanged.Hour, studentPetition.DateTimeChanged.Minute, studentPetition.DateTimeChanged.Second));
@@ -109,7 +111,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                             Assert.AreEqual(response.StpeTerm, facultyConsent.TermCode);
                             Assert.AreEqual(response.StpeStartDate, facultyConsent.StartDate);
                             Assert.AreEqual(response.StpeEndDate, facultyConsent.EndDate);
-                            Assert.AreEqual(responsePetition.StpeFacultyConsentSetByAssocMember, facultyConsent.UpdatedBy);
+                            Assert.AreEqual(responsePetition.StpeFacultyConsentSetByAssocMember, facultyConsent.SetBy);
+                            Assert.AreEqual(response.StudentPetitionsChgopr, facultyConsent.UpdatedBy);
                             Assert.AreEqual(responsePetition.StpeFacultyConsentDateAssocMember, new DateTime(facultyConsent.DateTimeChanged.Year, facultyConsent.DateTimeChanged.Month, facultyConsent.DateTimeChanged.Day));
                             Assert.AreEqual(new TimeSpan(responsePetition.StpeFacultyConsentTimeAssocMember.Value.Hour, responsePetition.StpeFacultyConsentTimeAssocMember.Value.Minute, responsePetition.StpeFacultyConsentTimeAssocMember.Value.Second),
                                 new TimeSpan(facultyConsent.DateTimeChanged.Hour, facultyConsent.DateTimeChanged.Minute, facultyConsent.DateTimeChanged.Second));
@@ -644,7 +647,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(studentPetitionSec1.StpeCoursesAssocMember, studentPetition.CourseId);
                 Assert.AreEqual(studentPetitionSec1.StpePetitionReasonCodeAssocMember, studentPetition.ReasonCode);
                 Assert.AreEqual(studentPetitionSec1.StpePetitionStatusAssocMember, studentPetition.StatusCode);
-                Assert.AreEqual(studentPetitionSec1.StpePetitionStatusSetByAssocMember, studentPetition.UpdatedBy);
+                Assert.AreEqual(studentPetitionSec1.StpePetitionStatusSetByAssocMember, studentPetition.SetBy);
+                Assert.AreEqual(studentPetitionsResponseData.StudentPetitionsChgopr, studentPetition.UpdatedBy);
                 Assert.AreEqual(studentPetitionSec1.StpePetitionStatusDateAssocMember, new DateTime(studentPetition.DateTimeChanged.Year, studentPetition.DateTimeChanged.Month, studentPetition.DateTimeChanged.Day));
                 Assert.AreEqual(new TimeSpan(studentPetitionSec1.StpePetitionStatusTimeAssocMember.Value.Hour, studentPetitionSec1.StpePetitionStatusTimeAssocMember.Value.Minute, studentPetitionSec1.StpePetitionStatusTimeAssocMember.Value.Second),
                     new TimeSpan(studentPetition.DateTimeChanged.Hour, studentPetition.DateTimeChanged.Minute, studentPetition.DateTimeChanged.Second));
@@ -666,7 +670,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(studentPetitionSec1.StpeCoursesAssocMember, studentPetition.CourseId);
                 Assert.AreEqual(studentPetitionSec1.StpeConsentReasonCodeAssocMember, studentPetition.ReasonCode);
                 Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentAssocMember, studentPetition.StatusCode);
-                Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentSetByAssocMember, studentPetition.UpdatedBy);
+                Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentSetByAssocMember, studentPetition.SetBy);
+                Assert.AreEqual(studentPetitionsResponseData.StudentPetitionsChgopr,studentPetition.UpdatedBy);
                 Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentDateAssocMember, new DateTime(studentPetition.DateTimeChanged.Year, studentPetition.DateTimeChanged.Month, studentPetition.DateTimeChanged.Day));
                 Assert.AreEqual(new TimeSpan(studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Hour, studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Minute, studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Second),
                     new TimeSpan(studentPetition.DateTimeChanged.Hour, studentPetition.DateTimeChanged.Minute, studentPetition.DateTimeChanged.Second));
@@ -703,7 +708,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(studentPetitionSec2.StpeCoursesAssocMember, studentPetition.CourseId);
                 Assert.AreEqual(studentPetitionSec2.StpePetitionReasonCodeAssocMember, studentPetition.ReasonCode);
                 Assert.AreEqual(studentPetitionSec2.StpePetitionStatusAssocMember, studentPetition.StatusCode);
-                Assert.AreEqual(studentPetitionSec2.StpePetitionStatusSetByAssocMember, studentPetition.UpdatedBy);
+                Assert.AreEqual(studentPetitionSec2.StpePetitionStatusSetByAssocMember, studentPetition.SetBy);
+                Assert.AreEqual(studentPetitionsResponseData.StudentPetitionsChgopr, studentPetition.UpdatedBy);
                 Assert.AreEqual(studentPetitionSec2.StpePetitionStatusDateAssocMember, new DateTime(studentPetition.DateTimeChanged.Year, studentPetition.DateTimeChanged.Month, studentPetition.DateTimeChanged.Day));
                 Assert.AreEqual(new TimeSpan(studentPetitionSec2.StpePetitionStatusTimeAssocMember.Value.Hour, studentPetitionSec2.StpePetitionStatusTimeAssocMember.Value.Minute, studentPetitionSec2.StpePetitionStatusTimeAssocMember.Value.Second),
                     new TimeSpan(studentPetition.DateTimeChanged.Hour, studentPetition.DateTimeChanged.Minute, studentPetition.DateTimeChanged.Second));
@@ -974,7 +980,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenGetDoesNotReturnPetitionForGivenStudent()
             {
                 petitionToAdd = new StudentPetition(null, null, sectionId, "99999", StudentPetitionType.FacultyConsent, statusCode) { Comment = multiLineComment, ReasonCode = reason, TermCode = termCode };
@@ -982,7 +988,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenGetDoesNotReturnPetitionForGivenSection()
             {
                 petitionToAdd = new StudentPetition(null, null, "9999", studentId, StudentPetitionType.FacultyConsent, statusCode) { Comment = multiLineComment, ReasonCode = reason, TermCode = termCode };
@@ -990,7 +996,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsKeyNotFoundExceptionWhenGetReadRecordReturnsNull()
             {
                 // Set up repo response for null Get request
@@ -1012,7 +1018,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsSimpleExceptionForAllOtherErrors()
             {
                 CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
@@ -1024,7 +1030,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenSuccessfulFlagWithNoIdReturned()
             {
                 CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
@@ -1033,7 +1039,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenTransactionRequestThrowsException()
             {
                 CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
@@ -1042,7 +1048,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task ThrowsExceptionWhenTransactionResponseIsNull()
             {
                 CreateStudentPetitionResponse createResponse = null;

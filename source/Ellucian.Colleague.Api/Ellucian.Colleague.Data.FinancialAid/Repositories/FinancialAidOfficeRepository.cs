@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,9 +10,11 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -42,105 +44,113 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <exception cref="KeyNotFoundException">Thrown if no office records are found in the database.</exception>
         public async Task<IEnumerable<FinancialAidOffice>> GetFinancialAidOfficesAsync()
         {
-            return await GetOrAddToCacheAsync<IEnumerable<FinancialAidOffice>>("AllFinancialAidOffices",
-                    async() =>
-                    {
-                        var faLocationRecords = await DataReader.BulkReadRecordAsync<FaLocations>("");
-                        var officeRecords = await DataReader.BulkReadRecordAsync<FaOffices>("");
-                        var defaultSystemParameters = await GetSystemParametersAsync();
-                        var faOfficeParamRecords = await DataReader.BulkReadRecordAsync<FaOfficeParameters>("");
-                        var faOfficeSapParamRecords = await DataReader.BulkReadRecordAsync<FaOfficeSapParameters>("");
-                        var shoppingSheetParamRecords = await DataReader.BulkReadRecordAsync<FaShopsheetParams>("");                        
-                        
-                        if (officeRecords == null || !officeRecords.Any())
+            try
+            {
+                return await GetOrAddToCacheAsync<IEnumerable<FinancialAidOffice>>("AllFinancialAidOffices",
+                        async() =>
                         {
-                            var message = "Office records not found in database";
-                            logger.Info(message);
-                            return new List<FinancialAidOffice>();
-                        }
-                        
-                        if (faOfficeParamRecords == null || !faOfficeParamRecords.Any())
-                        {
-                            var message = "FA Office parameter records not found in database";
-                            logger.Info(message);
-                            faOfficeParamRecords = new Collection<FaOfficeParameters>();
-                        }
-                        
-                        if (shoppingSheetParamRecords == null || !shoppingSheetParamRecords.Any())
-                        {
-                            var message = "Shopping Sheet Parameter records not found in database";
-                            logger.Info(message);
-                            shoppingSheetParamRecords = new Collection<FaShopsheetParams>();
-                        }
-                        
-                        if (faOfficeSapParamRecords == null || !faOfficeSapParamRecords.Any())
-                        {
-                            var message = "FA Office SAP Parameter records not found in database";
-                            logger.Info(message);
-                            faOfficeSapParamRecords = new Collection<FaOfficeSapParameters>();
-                        }
-                        
-                        
-                        var officeList = new List<FinancialAidOffice>();
-                        foreach (var officeRecord in officeRecords)
-                        {
-                            try
+                            var faLocationRecords = await DataReader.BulkReadRecordAsync<FaLocations>("");
+                            var officeRecords = await DataReader.BulkReadRecordAsync<FaOffices>("");
+                            var defaultSystemParameters = await GetSystemParametersAsync();
+                            var faOfficeParamRecords = await DataReader.BulkReadRecordAsync<FaOfficeParameters>("");
+                            var faOfficeSapParamRecords = await DataReader.BulkReadRecordAsync<FaOfficeSapParameters>("");
+                            var shoppingSheetParamRecords = await DataReader.BulkReadRecordAsync<FaShopsheetParams>("");
+
+                            if (officeRecords == null || !officeRecords.Any())
                             {
-                                var officeAddress = BuildOfficeAddress(officeRecord);
+                                var message = "Office records not found in database";
+                                logger.Info(message);
+                                return new List<FinancialAidOffice>();
+                            }
 
-                                var locationRecords = (faLocationRecords != null) ?
-                                    faLocationRecords.Where(loc => loc.FalocFaOffice == officeRecord.Recordkey) :
-                                    new List<FaLocations>();
+                            if (faOfficeParamRecords == null || !faOfficeParamRecords.Any())
+                            {
+                                var message = "FA Office parameter records not found in database";
+                                logger.Info(message);
+                                faOfficeParamRecords = new Collection<FaOfficeParameters>();
+                            }
 
-                                var office = new FinancialAidOffice(officeRecord.Recordkey)
+                            if (shoppingSheetParamRecords == null || !shoppingSheetParamRecords.Any())
+                            {
+                                var message = "Shopping Sheet Parameter records not found in database";
+                                logger.Info(message);
+                                shoppingSheetParamRecords = new Collection<FaShopsheetParams>();
+                            }
+
+                            if (faOfficeSapParamRecords == null || !faOfficeSapParamRecords.Any())
+                            {
+                                var message = "FA Office SAP Parameter records not found in database";
+                                logger.Info(message);
+                                faOfficeSapParamRecords = new Collection<FaOfficeSapParameters>();
+                            }
+
+
+                            var officeList = new List<FinancialAidOffice>();
+                            foreach (var officeRecord in officeRecords)
+                            {
+                                try
                                 {
-                                    Name = officeRecord.FaofcName,
-                                    AddressLabel = officeAddress,
-                                    DirectorName = officeRecord.FaofcPellFaDirector,
-                                    PhoneNumber = officeRecord.FaofcPellPhoneNumber,
-                                    EmailAddress = officeRecord.FaofcPellInternetAddress,
-                                    LocationIds = locationRecords.Select(l => l.Recordkey).ToList(),
-                                    IsDefault = (defaultSystemParameters != null && defaultSystemParameters.FspMainFaOffice == officeRecord.Recordkey),
-                                    OpeId = (!string.IsNullOrEmpty(officeRecord.FaofcOpeId)) ? officeRecord.FaofcOpeId : defaultSystemParameters.FspOpeId,
-                                    TitleIVCode = (!string.IsNullOrEmpty(officeRecord.FaofcTitleIvCode)) ? officeRecord.FaofcTitleIvCode : defaultSystemParameters.FspTitleIvCode,
-                                    DefaultDisplayYearCode = officeRecord.FaofcSsStartDisplayYear
-                                };
+                                    var officeAddress = BuildOfficeAddress(officeRecord);
+
+                                    var locationRecords = (faLocationRecords != null) ?
+                                        faLocationRecords.Where(loc => loc.FalocFaOffice == officeRecord.Recordkey) :
+                                        new List<FaLocations>();
+
+                                    var office = new FinancialAidOffice(officeRecord.Recordkey)
+                                    {
+                                        Name = officeRecord.FaofcName,
+                                        AddressLabel = officeAddress,
+                                        DirectorName = officeRecord.FaofcPellFaDirector,
+                                        PhoneNumber = officeRecord.FaofcPellPhoneNumber,
+                                        EmailAddress = officeRecord.FaofcPellInternetAddress,
+                                        LocationIds = locationRecords.Select(l => l.Recordkey).ToList(),
+                                        IsDefault = (defaultSystemParameters != null && defaultSystemParameters.FspMainFaOffice == officeRecord.Recordkey),
+                                        OpeId = (!string.IsNullOrEmpty(officeRecord.FaofcOpeId)) ? officeRecord.FaofcOpeId : defaultSystemParameters.FspOpeId,
+                                        TitleIVCode = (!string.IsNullOrEmpty(officeRecord.FaofcTitleIvCode)) ? officeRecord.FaofcTitleIvCode : defaultSystemParameters.FspTitleIvCode,
+                                        DefaultDisplayYearCode = officeRecord.FaofcSsStartDisplayYear
+                                    };
 
                                 //extract the office, shopping sheet and SAP parameters specific to this office.
                                 var officeParameters = faOfficeParamRecords.Where(p => p.FopFaOfficeCode == office.Id);
-                                var shoppingSheetParameters = shoppingSheetParamRecords.Where(p => p.FsspOpeId == office.OpeId);
-                                var academicProgressParameterRecord = faOfficeSapParamRecords.FirstOrDefault(p => p.FospFaOfficeCode == office.Id);
+                                    var shoppingSheetParameters = shoppingSheetParamRecords.Where(p => p.FsspOpeId == office.OpeId);
+                                    var academicProgressParameterRecord = faOfficeSapParamRecords.FirstOrDefault(p => p.FospFaOfficeCode == office.Id);
 
                                 //build a list of award years for which parameter records exist
                                 var parameterYears = officeParameters.Select(p => p.FopYear).Concat(shoppingSheetParameters.Select(p => p.FsspFaYear)).Distinct();
 
                                 //for each year, build a configuration object
                                 var configurations = parameterYears.Select(year =>
-                                        BuildOfficeConfiguration(office.Id, year, officeParameters.FirstOrDefault(p => p.FopYear == year), shoppingSheetParameters.FirstOrDefault(p => p.FsspFaYear == year), defaultSystemParameters)
-                                    );
+                                            BuildOfficeConfiguration(office.Id, year, officeParameters.FirstOrDefault(p => p.FopYear == year), shoppingSheetParameters.FirstOrDefault(p => p.FsspFaYear == year), defaultSystemParameters)
+                                        );
 
-                                office.AddConfigurationRange(configurations);
+                                    office.AddConfigurationRange(configurations);
 
                                 //build the AcademicProgressConfiguration
                                 try
-                                {
-                                    office.AcademicProgressConfiguration = BuildAcademicProgressConfiguration(office.Id, academicProgressParameterRecord);
+                                    {
+                                        office.AcademicProgressConfiguration = BuildAcademicProgressConfiguration(office.Id, academicProgressParameterRecord);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        LogDataError("FaOfficeSapParameters", office.Id, academicProgressParameterRecord, e, "Unable to create Academic Progress Parameters");
+                                    }
+
+                                    officeList.Add(office);
                                 }
                                 catch (Exception e)
                                 {
-                                    LogDataError("FaOfficeSapParameters", office.Id, academicProgressParameterRecord, e, "Unable to create Academic Progress Parameters");
+                                    LogDataError("FaOffices", officeRecord.Recordkey, officeRecord, e, "Also check FaOfficeParameters and FaShopsheetParams");
                                 }
-
-                                officeList.Add(office);
                             }
-                            catch (Exception e)
-                            {
-                                LogDataError("FaOffices", officeRecord.Recordkey, officeRecord, e, "Also check FaOfficeParameters and FaShopsheetParams");
-                            }
-                        }
 
-                        return officeList;
-                    });
+                            return officeList;
+                        });
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -370,6 +380,26 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 singleConfiguration.FaBlankStatusText = officeParametersRecord.FopBlankStatusText;
                 singleConfiguration.FaBlankDueDateText = officeParametersRecord.FopBlankDueDateText;
 
+                //Adding FA Credits Page Parameters
+                singleConfiguration.SuppressCourseCredits = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressCourseCredits) && officeParametersRecord.FopSuppressCourseCredits.ToUpper() == "Y");
+                singleConfiguration.SuppressInstCredits = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressInstCredits) && officeParametersRecord.FopSuppressInstCredits.ToUpper() == "Y");
+                singleConfiguration.SuppressTivCredits = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressTivCredits) && officeParametersRecord.FopSuppressTivCredits.ToUpper() == "Y");
+                singleConfiguration.SuppressPellCredits = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressPellCredits) && officeParametersRecord.FopSuppressPellCredits.ToUpper() == "Y");
+                singleConfiguration.SuppressDlCredits = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressDlCredits) && officeParametersRecord.FopSuppressDlCredits.ToUpper() == "Y");
+
+                singleConfiguration.CourseCreditsExplanation = officeParametersRecord.FopCourseCredExplanation;
+                singleConfiguration.InstCreditsExplanation = officeParametersRecord.FopInstCredExplanation;
+                singleConfiguration.TivCreditsExplanation = officeParametersRecord.FopTivCredExplanation;
+                singleConfiguration.PellCreditsExplanation = officeParametersRecord.FopPellCredExplanation;
+                singleConfiguration.DlCreditsExplanation = officeParametersRecord.FopDlCredExplanation;
+
+                singleConfiguration.FaCreditsVisibilityRule = officeParametersRecord.FopCreditsDisplayRule;
+                singleConfiguration.SuppressProgramDisplay = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressProgram) && officeParametersRecord.FopSuppressProgram.ToUpper() == "Y");
+                singleConfiguration.SuppressDegreeAudit = (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressDegreeAudit) && officeParametersRecord.FopSuppressDegreeAudit.ToUpper() == "Y");
+                singleConfiguration.DegreeAuditExplanation = officeParametersRecord.FopDegreeAuditExplanation;
+                singleConfiguration.EnrolledCreditsPageExplanation = officeParametersRecord.FopEnrolledCreditsExpl;
+                //Done adding FA Credits Page Parameters
+
                 singleConfiguration.ExcludeAwardStatusCategoriesView = TranslateCodeToAwardStatusCategory(officeParametersRecord.FopExclActCatFromView).ToList();
 
                 singleConfiguration.ExcludeAwardCategoriesView = officeParametersRecord.FopExclAwdCatFromView == null ? new List<string>() : officeParametersRecord.FopExclAwdCatFromView;
@@ -410,6 +440,13 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                 singleConfiguration.AllowLoanChanges =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopLoanAmtChanges) && officeParametersRecord.FopLoanAmtChanges.ToUpper() == "Y");
+
+                if (singleConfiguration.AllowLoanChanges)
+                {
+                    singleConfiguration.AllowLoanDecreaseOnly =
+                        (!string.IsNullOrEmpty(officeParametersRecord.FopDecrLoanAmtsOnly) && officeParametersRecord.FopDecrLoanAmtsOnly.ToUpper() == "Y");
+                }
+                else { singleConfiguration.AllowLoanDecreaseOnly = false; }
 
                 singleConfiguration.AllowLoanChangeIfAccepted =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopChangeAcceptedLoans) && officeParametersRecord.FopChangeAcceptedLoans.ToUpper() == "Y");
@@ -567,6 +604,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     SubOriginationFee = shoppingSheetParametersRecord.FsspSubOrigFee,
                     UnsubInterestRate = shoppingSheetParametersRecord.FsspUnsubInterestRate,
                     UnsubOriginationFee = shoppingSheetParametersRecord.FsspUnsubOrigFee,
+                    GradUnsubInterestRate = shoppingSheetParametersRecord.FsspUnsubGrIntRt,
+                    GradUnsubOriginationFee = shoppingSheetParametersRecord.FsspUnsubGrOrigFee,
                     PrivateInterestRate = shoppingSheetParametersRecord.FsspPrivInterestRate,
                     PrivateOriginationFee = shoppingSheetParametersRecord.FsspPrivOrigFee,
                     InstitutionInterestRate = shoppingSheetParametersRecord.FsspInstInterestRate,
@@ -582,7 +621,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     SchoolPaidTuitionBenefits = shoppingSheetParametersRecord.FsspSchoolPdTuitBen,
                     TuitionRemWaiver = shoppingSheetParametersRecord.FsspTuitionRemWaiver,
                     Assistantships = shoppingSheetParametersRecord.FsspAssistantships,
-                    IncomeShare = shoppingSheetParametersRecord.FsspIncomeShareAgreements
+                    IncomeShare = shoppingSheetParametersRecord.FsspIncomeShareAgreements,
+                    VetsAwards = shoppingSheetParametersRecord.FsspVeteransBenefits,
+                    UseVetsData = shoppingSheetParametersRecord.FsspUseVetsData
                 };
             }
 
@@ -636,7 +677,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             {
                 var errorMessage = "Unable to access FA.SYS.PARAMS in ST.PARMS.";
                 logger.Info(errorMessage);
-                throw new Exception(errorMessage);
+                throw new ColleagueWebApiException(errorMessage);
             }
         }
 

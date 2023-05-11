@@ -397,6 +397,74 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public string FspNotificationText { get; set; }
 
         /// <summary>
+        /// Flag indicating if loan amounts are able to be decreased only
+        /// </summary>
+        public bool AllowLoanDecreaseOnly { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not to suppress the Course Credits
+        /// </summary>
+        public bool SuppressCourseCredits { get; set; }
+        /// <summary>
+        /// Flag indicating whether or not to suppress the Inst Credits
+        /// </summary>
+        public bool SuppressInstCredits { get; set; }
+        /// <summary>
+        /// Flag indicating whether or not to suppress the TIV Credits
+        /// </summary>
+        public bool SuppressTivCredits { get; set; }
+        /// <summary>
+        /// Flag indicating whether or not to suppress the Pell Credits
+        /// </summary>
+        public bool SuppressPellCredits { get; set; }
+        /// <summary>
+        /// Flag indicating whether or not to suppress the DL Credits
+        /// </summary>
+        public bool SuppressDlCredits { get; set; }
+        /// <summary>
+        /// User defined text to explain what Course Credits are
+        /// </summary>
+        public string CourseCreditsExplanation { get; set; }
+        /// <summary>
+        /// User defined text to explain what Inst Credits are
+        /// </summary>
+        public string InstCreditsExplanation { get; set; }
+        /// <summary>
+        /// User defined text to explain what TIV Credits are
+        /// </summary>
+        public string TivCreditsExplanation { get; set; }
+        /// <summary>
+        /// User defined text to explain what Pell Credits are
+        /// </summary>
+        public string PellCreditsExplanation { get; set; }
+        /// <summary>
+        /// User defined text to explain what DL Credits are
+        /// </summary>
+        public string DlCreditsExplanation { get; set; }
+        /// <summary>
+        /// Rule table ID to determine if a student can see FA Credits
+        /// </summary>
+        public string FaCreditsVisibilityRule { get; set; }
+        /// <summary>
+        /// Flag indicating whether to suppress the Program display in Enrolled Credits
+        /// </summary>
+        public bool SuppressProgramDisplay { get; set; }
+        /// <summary>
+        /// Flag indicating whether to suppress the Degree Audit column in Enrolled Credits
+        /// </summary>
+        public bool SuppressDegreeAudit { get; set; }
+        /// <summary>
+        /// User defined text to explain the Degree Audit column in Enrolled Credits
+        /// </summary>
+        public string DegreeAuditExplanation { get; set; }
+        /// <summary>
+        /// User defined text to explain the Enrolled Credits page
+        /// </summary>
+        public string EnrolledCreditsPageExplanation { get; set; }
+
+
+
+        /// <summary>
         /// Configuration constructor
         /// </summary>
         /// <param name="officeId">The id of the office to which this configuration applies</param>

@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Repositories;
@@ -65,10 +65,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return coursePlaceholderDtos;
             }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("An error occurred while trying to retrieve course placeholder data for IDs {0}.", string.Join(",", coursePlaceholderIds)));
-                throw ex;
+                throw;
             }
         }
     }

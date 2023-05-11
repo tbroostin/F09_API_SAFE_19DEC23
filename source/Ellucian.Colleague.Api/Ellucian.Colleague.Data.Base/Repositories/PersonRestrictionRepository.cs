@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,6 +10,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
@@ -150,7 +151,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             if (error && personRestrictionsList.Count() == 0)
-                throw new Exception("Errors prevented partial return of person restrictions batch.");
+                throw new ColleagueWebApiException("Errors prevented partial return of person restrictions batch.");
 
             return personRestrictionsList;
         }

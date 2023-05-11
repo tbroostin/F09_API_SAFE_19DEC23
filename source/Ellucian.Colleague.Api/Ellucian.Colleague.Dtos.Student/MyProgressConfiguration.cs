@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -8,8 +8,7 @@ namespace Ellucian.Colleague.Dtos.Student
     /// Contains information that controls how certain information displayed on My Progress page is controlled
     /// </summary>
     public class MyProgressConfiguration
-    {
-       
+    {      
         /// <summary>
         /// Flag indicating whether or not current and active academic levels standing will be shown on My progress page
         /// </summary>
@@ -26,5 +25,9 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Flag to hide the display of progress bar that indicates Total Credits from this School on MyProgress page.
         /// </summary>
         public bool HideProgressBarTotalInstitutionalCredits { get; set; }
+        /// <summary>
+        /// This flag is used to control whether or not Self-Service should show pseudo courses that are referenced in academic program requirements. 
+        /// </summary>
+        public bool ShowPseudoCoursesInRequirements { get; set; }
     }
 }

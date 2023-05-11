@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -506,32 +506,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new KeyNotFoundException("Room not found for ID " + id, ex);
             }
-        }
-
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
-        /// <summary>
-        /// Check for room availability for a given date range, start and end time, and frequency
-        /// </summary>
-        /// <param name="request">Room availability request</param>
-        /// <returns>RoomAvailabilityResponse DTO object</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Room2>> CheckRoomAvailability2Async(Dtos.RoomsAvailabilityRequest2 request)
-        {
-            var availableRooms = (await GetAvailableRoomsAsync(request)).ToList();
-
-            var roomsWithAvailability = new List<Dtos.Room2>();
-            if (availableRooms.Count == 0)
-            {
-                roomsWithAvailability = new List<Dtos.Room2>();
-                return roomsWithAvailability;
-            }
-
-            foreach (var room in availableRooms)
-            {
-                roomsWithAvailability.Add((await ConvertRoomEntityToDto2Async(room)));
-            }
-
-            return roomsWithAvailability;
-        }
+        }        
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
         /// <summary>
@@ -571,7 +546,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
             return roomsWithAvailability;
         }
@@ -616,7 +591,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw new ColleagueWebApiException(ex.Message, ex.InnerException);
             }
             return roomsWithAvailability;
         }
@@ -628,7 +603,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<IEnumerable<Dtos.RoomsMinimumResponse>> GetRoomsMinimumAsync(RoomsAvailabilityRequest2 request)
         {
 
-            var availableRooms = (await GetAvailableRoomsAsync(request)).ToList();
+            var availableRooms = (await GetAvailableRooms2Async(request)).ToList();
 
             var roomsWithAvailability = new List<Dtos.RoomsMinimumResponse>();
             if (availableRooms.Count == 0)
@@ -643,156 +618,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             return roomsWithAvailability;
-        }
-
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
-        /// <summary>
-        /// Get an list of available rooms
-        /// </summary>
-        /// <returns>Room Entity object</returns>
-        private async Task<IEnumerable<Domain.Base.Entities.Room>> GetAvailableRoomsAsync(RoomsAvailabilityRequest2 request)
-        {
-            if (request == null)
-            {
-                // Integration API error InstructionalEvent.NotFound
-                var ex = new IntegrationApiException("Validation exception");
-                ex.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
-                {
-                    Code = "Global.SchemaValidation.Error",
-                    Message = "Unable to parse request."
-                });
-                throw ex;
-            }
-
-            // 1. Validate the request data
-            ValidateRoomAvailabilityRequestData2(request);
-
-            // 2. Get all rooms and filter based on site, location and/or roomtype
-            var allRoomsAsync = await _roomRepository.RoomsAsync();
-
-            Stopwatch watch = null;
-            if (logger.IsInfoEnabled)
-            {
-                watch = new Stopwatch();
-                logger.Info("Facilities Timing: (CheckRoomAvailability) _FilterRoomsByRoomsAvailabilityRequest started");
-                watch.Start();
-            }
-
-            var filteredRoomsList = await FilterRoomsByRoomsAvailabilityRequestAsync(request, allRoomsAsync);
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                watch.Stop();
-                logger.Info(
-                    "Facilities Timing: (CheckRoomAvailability) _FilterRoomsByRoomsAvailabilityRequest completed in " +
-                    watch.ElapsedMilliseconds.ToString() + " ms");
-            }
-
-            // 3. Identify Rooms with sufficient capacity for each occupancy
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                logger.Info("Facilities Timing: (CheckRoomAvailability) Identify rooms with capacity");
-                watch.Restart();
-            }
-            var maxOccupancy = request.Occupancies.Max(o => o.MaximumOccupancy);
-            var roomsWithCapacity = RoomAvailabilityService.GetRoomsWithCapacity(filteredRoomsList, maxOccupancy);
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                watch.Stop();
-                logger.Info("Facilities Timing: (CheckRoomAvailability) Identify rooms with capacity completed in " +
-                            watch.ElapsedMilliseconds.ToString() + " ms");
-            }
-
-            if (roomsWithCapacity == null || !roomsWithCapacity.Any())
-            {
-                // No rooms with sufficient capacity
-                var ex = new IntegrationApiException("Insufficient Room Capacity");
-                ex.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
-                {
-                    Code = "RoomsAvailabilityRequest.InsufficientRoomCapacity",
-                    Message = "No rooms available with a capacity of at least " + maxOccupancy.ToString()
-                });
-                throw ex;
-            }
-
-            // 4. Build list of dates on which rooms must be available
-            var campusCalendarId = _configurationRepository.GetDefaultsConfiguration().CampusCalendarId;
-            var campusCalendar = _eventRepository.GetCalendar(campusCalendarId);
-            var frequency = ConvertFrequencyType2EnumDtoToFrequencyTypeDomainEnum(request.Recurrence.RepeatRule.Type);
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                logger.Info("Facilities Timing: (CheckRoomAvailability) _GetRoomAvailabilityMeetingDates starting");
-                watch.Restart();
-            }
-
-            var meetingDates = RecurrenceUtility.GetRecurrenceDates(request.Recurrence.RepeatRule,
-                request.Recurrence.TimePeriod, frequency, campusCalendar);
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                watch.Stop();
-                logger.Info(
-                    "Facilities Timing: (CheckRoomAvailability) _GetRoomAvailabilityMeetingDates completed in " +
-                    watch.ElapsedMilliseconds.ToString() + " ms");
-            }
-
-            if (meetingDates == null || !meetingDates.Any())
-            {
-                // No meeting dates for the supplied criteria
-                var ex = new IntegrationApiException("No Meeting Dates");
-                ex.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
-                {
-                    Code = "RoomsAvailabilityRequest.NoMeetingDates",
-                    Message = "No meeting dates were identified for "
-                              + request.Recurrence.TimePeriod.StartOn.Value.Date.ToString()
-                              + " to " + request.Recurrence.TimePeriod.EndOn.Value.Date.ToString()
-                              + " between " + request.Recurrence.TimePeriod.StartOn.Value.ToLocalTime().ToString()
-                              + " and " + request.Recurrence.TimePeriod.EndOn.Value.ToLocalTime().ToString()
-                              + " recurring " + frequency.ToString()
-                });
-                throw ex;
-            }
-
-            // 5. Get IDs of rooms with schedule conflicts based on meeting dates and times
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                logger.Info("Facilities Timing: (CheckRoomAvailability) _GetRoomIdsWithConflicts starting");
-                watch.Restart();
-            }
-
-            var roomsWithCapacityForLookup = roomsWithCapacity.Select(r => r.Id).Distinct().ToArray();
-            var roomIdsWithConflicts = _eventRepository.GetRoomIdsWithConflicts2(request.Recurrence.TimePeriod.StartOn.Value,
-                request.Recurrence.TimePeriod.EndOn.Value, meetingDates, roomsWithCapacityForLookup);
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                watch.Stop();
-                logger.Info("Facilities Timing: (CheckRoomAvailability) _GetRoomIdsWithConflicts completed in " +
-                            watch.ElapsedMilliseconds.ToString() + " ms");
-            }
-
-            // 6. Eliminate rooms with conflicts from list of rooms with capacity
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                logger.Info("Facilities Timing: (CheckRoomAvailability) Eliminate rooms with conflicts starting");
-                watch.Restart();
-            }
-
-            var availableRooms = roomsWithCapacity.ToList();
-            if (roomIdsWithConflicts != null && roomIdsWithConflicts.Any())
-            {
-                availableRooms = roomsWithCapacity.Where(r => !roomIdsWithConflicts.Contains(r.Id)).ToList();
-            }
-
-            if ((logger.IsInfoEnabled) && (watch != null))
-            {
-                watch.Stop();
-                logger.Info("Facilities Timing: (CheckRoomAvailability) Eliminate rooms with conflicts completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
-            }
-            return availableRooms;
-        }
+        }       
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
         /// <summary>
@@ -1530,7 +1356,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(string.Concat(ex.Message, "For the Country: '", addressCountry, "'. ISOCode Not found: ", country.IsoAlpha3Code));
+                        throw new ColleagueWebApiException(string.Concat(ex.Message, "For the Country: '", addressCountry, "'. ISOCode Not found: ", country.IsoAlpha3Code));
                     }
 
                     addressCountryDto.PostalTitle = country.Description.ToUpper();
@@ -2268,9 +2094,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                     socialMediaEntries.Add(socialMedia);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Do not include code since we couldn't find a category
+                    logger.Error(ex.Message, "could not find SocialMediaTypeCategory");
                 }
             }
 
@@ -2307,10 +2134,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                         phoneDtos.Add(phoneDto);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // do not fail if we can't find a guid from the code table or category
                         // Just exclude the phone number from the output.
+                        logger.Error(ex.Message, "Could not find guild. Phone number excluded from output.");
                     }
                 }
             }
@@ -2345,10 +2173,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                         emailAddressDtos.Add(addressDto);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // do not fail if we can't find a guid from the code table or translate the cateory
-                        // Just exclude this email address.
+                        // do not fail if we can't find a guid from the code table or category
+                        // Just exclude the phone number from the output.
+                        logger.Error(ex.Message, "Could not find guild. email address excluded from output.");
                     }
                 }
             }
@@ -2376,7 +2205,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                         else
                         {
-                            throw new Exception(string.Concat("Address with id: ", addressEntity.Guid, " does not have a type set."));
+                            throw new ColleagueWebApiException(string.Concat("Address with id: ", addressEntity.Guid, " does not have a type set."));
                         }
 
                         if (addressEntity.IsPreferredResidence) addressDto.Preference = Dtos.EnumProperties.PersonPreference.Primary;

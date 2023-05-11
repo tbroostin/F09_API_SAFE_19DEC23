@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -35,15 +35,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public Decimal? accrualRate;
         public Decimal? accrualLimit;
         public Decimal? accrualMaxCarryOver;
+        public decimal? accrualMaxRollOver;
         public string accrualMethod;
         public bool isPlanYearStartDateDefined;
+        public DateTime? latestCarryoverDate;
+
 
         public List<EmployeeLeaveTransaction> employeeLeaveTransactions;
 
-        public EmployeeLeavePlan employeeLeavePlan
-        {
-            get
-            {
+        public EmployeeLeavePlan employeeLeavePlan {
+            get {
                 return new EmployeeLeavePlan(id,
                     employeeId,
                     startDate,
@@ -64,12 +65,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     accrualRate,
                     accrualLimit,
                     accrualMaxCarryOver,
+                    accrualMaxRollOver,
                     accrualMethod,
                     isPlanYearStartDateDefined,
+                    latestCarryoverDate,
                     allowNegativeBalance);
             }
         }
-
 
         public void BaseInitialize()
         {
@@ -90,13 +92,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             planYearStartMonth = 1;
             planYearStartDay = 1;
             isLeaveReportingPlan = true;
-            isPlanYearStartDateDefined = false;
+            isPlanYearStartDateDefined = true;
             earningTypeIDList = new List<string> { "VAC", "CMTH" };
             accrualRate = 50;
             accrualLimit = 50;
             accrualMaxCarryOver = 80;
+            accrualMaxRollOver = 10;
             accrualMethod = "P";
+            latestCarryoverDate = new DateTime(DateTime.Now.Year, 1, 1);
             var lastYear = DateTime.Today.AddYears(-1).Year;
+
             employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
             {
                 new EmployeeLeaveTransaction(1, leavePlanId, id, 5, new DateTimeOffset(new DateTime(lastYear, 5, 1)), LeaveTransactionType.Earned, 5),
@@ -319,7 +324,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.IsFalse(employeeLeavePlan.SortedLeaveTransactions.Any());
             }
 
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public void EarningTypeIDList_IsNullTest()
@@ -327,7 +331,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 earningTypeIDList = null;
                 var fail = employeeLeavePlan;
             }
-
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -377,11 +380,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             }
 
             [TestMethod]
+            public void AccrualMaxRollOverTest()
+            {
+                Assert.AreEqual(accrualMaxRollOver, employeeLeavePlan.AccrualMaxRollOver);
+            }
+
+            [TestMethod]
             public void IsPlanYearStartDateDefinedTest()
             {
                 Assert.AreEqual(isPlanYearStartDateDefined, employeeLeavePlan.IsPlanYearStartDateDefined);
             }
-
         }
 
         [TestClass]
@@ -410,7 +418,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 var plan2 = employeeLeavePlan;
                 Assert.AreEqual(plan1.GetHashCode(), plan2.GetHashCode());
             }
-
 
             [TestMethod]
             public void NotEqualTest()
@@ -463,47 +470,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 planYearStartDay = 1;
 
                 var expectedStartDate = new DateTime(DateTime.Today.Year, 1, 1);
-                var actualStartDate = employeeLeavePlan.CurrentPlanYearStartDate;
-
-                Assert.AreEqual(expectedStartDate, actualStartDate);
-            }
-
-            //when planYearStartMonth and Day are not Jan1, then we compare the default plan year start date to today
-            //if today is on or after the default start date, then use the default
-            [TestMethod]
-            public void TodayIsOnTheDefaultPlanYearStartDateTest()
-            {
-                planYearStartMonth = DateTime.Today.Month;
-                planYearStartDay = DateTime.Today.Day;
-
-                var expectedStartDate = DateTime.Today;
-                var actualStartDate = employeeLeavePlan.CurrentPlanYearStartDate;
-
-                Assert.AreEqual(expectedStartDate, actualStartDate);
-            }
-
-            [TestMethod]
-            public void TodayIsAfterTheDefaultPlanYearStartDateTest()
-            {
-                planYearStartMonth = DateTime.Today.Month;
-                planYearStartDay = 1; //first of the month
-
-                var expectedStartDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                var actualStartDate = employeeLeavePlan.CurrentPlanYearStartDate;
-
-                Assert.AreEqual(expectedStartDate, actualStartDate);
-            }
-
-            //when planYearStartMonth and Day are not Jan1, then we compare the default plan year start date to today
-            //if today is before the default start date, then the plan year start date is year - 1, month, day
-            [TestMethod]
-            [Ignore]
-            public void TodayIsBeforeTheDefaultPlanYearStartDateTest()
-            {
-                planYearStartMonth = DateTime.Today.AddMonths(1).Month;
-                planYearStartDay = 1; //first of next month
-
-                var expectedStartDate = new DateTime(DateTime.Today.Year, planYearStartMonth, 1);
                 var actualStartDate = employeeLeavePlan.CurrentPlanYearStartDate;
 
                 Assert.AreEqual(expectedStartDate, actualStartDate);
@@ -591,23 +557,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 planWithTransactions = employeeLeavePlan;
                 Assert.IsNull(planWithTransactions.PriorPlanYearEndTransaction);
             }
-
         }
 
         [TestClass]
         public class CurrentPlanYearStartTransactionIndexTests : EmployeeLeavePlanTests
         {
-            public EmployeeLeavePlan planWithTransactions
-            {
-                get
-                {
+            public EmployeeLeavePlan planWithTransactions {
+                get {
                     var plan = employeeLeavePlan;
                     plan.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
                     return plan;
                 }
             }
-
-
 
             [TestInitialize]
             public void Initialize()
@@ -636,17 +597,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         [TestClass]
         public class CurrentPlanYearStartingBalanceTests : EmployeeLeavePlanTests
         {
-            public EmployeeLeavePlan planWithTransactions
-            {
-                get
-                {
+            public EmployeeLeavePlan planWithTransactions {
+                get {
                     var plan = employeeLeavePlan;
                     plan.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
                     return plan;
                 }
             }
-
-
 
             [TestInitialize]
             public void Initialize()
@@ -674,10 +631,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         [TestClass]
         public class CurrentPlanYearBalanceTests : EmployeeLeavePlanTests
         {
-            public EmployeeLeavePlan planWithTransactions
-            {
-                get
-                {
+            public EmployeeLeavePlan planWithTransactions {
+                get {
                     var plan = employeeLeavePlan;
                     plan.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
                     return plan;
@@ -884,7 +839,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.AreEqual(expected, plan.SortedLeaveTransactions.Count);
             }
 
-
             //does not add nonemployeeplan transaction
             [TestMethod]
             public void AddTransactionDoesNotAddTransactionBelongingToDifferentEmployeePlanTest()
@@ -943,6 +897,484 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
                 plan.AddLeaveTransactionRange(notAdded);
                 Assert.AreEqual(expectedCount, plan.SortedLeaveTransactions.Count);
+            }
+        }
+
+        // leave plan has a plan year start day and month and a B record on the current plan year start date.
+        [TestClass]
+        public class TraditionalPlanTests : EmployeeLeavePlanTests
+        {
+            public EmployeeLeavePlan planWithTransactions;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+                employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
+            {
+                new EmployeeLeaveTransaction(1, leavePlanId, id, 15, new DateTimeOffset(new DateTime(DateTime.Today.Year -1 , 5, 1)), LeaveTransactionType.Earned, 15),
+                new EmployeeLeaveTransaction(2, leavePlanId, id, -5, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 6, 1)), LeaveTransactionType.Used, 10),
+                new EmployeeLeaveTransaction(3, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.StartingBalance, 2),
+            };
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+            }
+
+            // Test that the starting balance is the forwarding balance of the sum of B and S transactions on the current plan year start date 1/1
+            [TestMethod]
+            public void StartingBalanceRecordExistsTest()
+            {
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.IsNotNull(planWithTransactions.StartingBalanceTransaction);
+                Assert.AreEqual(planWithTransactions.StartingBalanceTransaction.Id, 3);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 2);
+            }
+
+            // Test that the starting, earned and used hour are what they are expected to be
+            [TestMethod]
+            public void StartingBalanceWithAdjustmentsTest()
+            {
+                // add S transaction on the current plan year start date
+                // add U transaction
+                // add A transaction
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 13, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.StartingBalanceAdjustment, 15),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -2, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Used, 13),
+                    new EmployeeLeaveTransaction(6, leavePlanId, id, 1, new DateTimeOffset(new DateTime(DateTime.Today.Year, 3, 1)), LeaveTransactionType.Earned, 14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 15); // 2 + 13
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 1);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 14);
+            }
+
+            [TestMethod]
+            public void AdjustedHoursTest()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 13, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.StartingBalanceAdjustment, 15),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -2, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Used, 13),
+                    new EmployeeLeaveTransaction(6, leavePlanId, id, 1, new DateTimeOffset(new DateTime(DateTime.Today.Year, 3, 1)), LeaveTransactionType.Earned, 14),
+                    new EmployeeLeaveTransaction(7, leavePlanId, id, 10, new DateTimeOffset(new DateTime(DateTime.Today.Year, 4, 1)), LeaveTransactionType.Adjusted, 24),
+                    new EmployeeLeaveTransaction(8, leavePlanId, id, -4, new DateTimeOffset(new DateTime(DateTime.Today.Year, 4, 15)), LeaveTransactionType.MidYearBalanceAdjustment, 20),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 15);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 1);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 6);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 20);
+            }
+        }
+
+        // leave plan has a plan year start day and month and no B record on current plan year start date
+        [TestClass]
+        public class TraditionalPlanWithoutStartingBalanceTests : EmployeeLeavePlanTests
+        {
+            public EmployeeLeavePlan planWithTransactions;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+
+                employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
+            {
+                new EmployeeLeaveTransaction(1, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year-1 , 12, 1)), LeaveTransactionType.Earned, 5),
+                new EmployeeLeaveTransaction(2, leavePlanId, id, -2, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 2)), LeaveTransactionType.Used, 3),
+                new EmployeeLeaveTransaction(3, leavePlanId, id, -2, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 21)), LeaveTransactionType.Used, 1),
+
+            };
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+            }
+
+            [TestMethod]
+            public void TraditionalPlan_StartingBalanceRecordNotPresent()
+            {
+                Assert.IsNotNull(planWithTransactions.PriorPlanYearEndTransaction);
+                Assert.AreEqual(planWithTransactions.PriorPlanYearEndTransaction.ForwardingBalance, 3);
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 3);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 1);
+            }
+        }
+
+        // testing plans that do not have a current plan year start date
+        [TestClass]
+        public class NonTraditionalPlanTests : EmployeeLeavePlanTests
+        {
+            public EmployeeLeavePlan planWithTransactions;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+                employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
+            {
+                new EmployeeLeaveTransaction(1, leavePlanId, id, 15, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 1)), LeaveTransactionType.Earned, 15),
+                new EmployeeLeaveTransaction(2, leavePlanId, id, -5, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 2)), LeaveTransactionType.Used, 10),
+                new EmployeeLeaveTransaction(3, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 21)), LeaveTransactionType.Adjusted, 2),
+            };
+                isPlanYearStartDateDefined = false;
+                latestCarryoverDate = null;
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_InitialHoursIncluded()
+            {
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 2);
+            }
+
+            #region Starting Balance
+            [TestMethod]
+            public void NonTraditionalPlan_StartingBalanceRecordNotPresent()
+            {
+                Assert.IsNull(planWithTransactions.StartingBalanceTransaction);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+            }
+            #endregion
+
+            #region Earned 
+            [TestMethod]
+            public void NonTraditionalPlan_RetroEarnedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 8, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 2, 1)), LeaveTransactionType.Earned, 10),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, 2, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 2, 2)), LeaveTransactionType.Earned, 12),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 10);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 12);
+            }
+            [TestMethod]
+            public void NonTraditionalPlan_CurrentEarnedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Earned, 10),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, 2, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.Earned, 12),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 10);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 12);
+            }
+            [TestMethod]
+            public void NonTraditionalPlan_FutureEarnedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 8, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 1)), LeaveTransactionType.Earned, 10),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, 2, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 2)), LeaveTransactionType.Earned, 12),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 10);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 12);
+            }
+            [TestMethod]
+            public void NonTraditionalPlan_RetroUsedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 2, 1)), LeaveTransactionType.Used, -6),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 2, 2)), LeaveTransactionType.LeaveReporting, -14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -16);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -14);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitEarnedTransactionsAlreadyIncludedInJRecord()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 0, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 1, 1)), LeaveTransactionType.Adjusted, 2),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 2);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitEarnedTransactionsAlreadyIncludedInPriorPlanYearEndTrx()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 12, 31)), LeaveTransactionType.Adjusted, 7),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 7);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 7);
+            }
+
+            #endregion
+
+            #region Used
+
+            [TestMethod]
+            public void NonTraditionalPlan_CurrentUsedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Used, -6),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.LeaveReporting, -14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -16);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -14);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_FutureUsedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 1)), LeaveTransactionType.Used, -6),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 2)), LeaveTransactionType.Used, -14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -16);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -14);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitUsedTransactionsAlreadyIncludedInJRecord()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 0, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.Adjusted, 2),
+                     new EmployeeLeaveTransaction(5, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Used, 7),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 5);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 7);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitUsedTransactionsAlreadyIncludedInPriorPlanYearEndTrx()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 12, 31)), LeaveTransactionType.Used, 7),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, 3, new DateTimeOffset(new DateTime(DateTime.Today.Year, 4, 1)), LeaveTransactionType.Used, 10),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 7);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 3);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 10);
+            }
+            #endregion
+
+            #region Adjusted
+
+            [TestMethod]
+            public void NonTraditionalPlan_CurrentAdjustedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.Adjusted, -6),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.MidYearBalanceAdjustment, -14),
+                    new EmployeeLeaveTransaction(6, leavePlanId, id, 4, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.Rollover, -14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, -12);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -10);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_FutureAdjustedHoursIncluded()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 1)), LeaveTransactionType.Adjusted, -6),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 2)), LeaveTransactionType.MidYearBalanceAdjustment, -14),
+                    new EmployeeLeaveTransaction(6, leavePlanId, id, 4, new DateTimeOffset(new DateTime(DateTime.Today.Year + 1, 2, 2)), LeaveTransactionType.Rollover, -14),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, -12);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -10);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitAdjustedTransactionsAlreadyIncludedInJRecord()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 0, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.Adjusted, 2),
+                     new EmployeeLeaveTransaction(5, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 1)), LeaveTransactionType.MidYearBalanceAdjustment, 7),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 5);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 7);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlan_OmitAdjustedTransactionsAlreadyIncludedInPriorPlanYearEndTrx()
+            {
+                List<EmployeeLeaveTransaction> transactionsToAdd = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 5, new DateTimeOffset(new DateTime(DateTime.Today.Year - 1, 12, 31)), LeaveTransactionType.Used, 7),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, 3, new DateTimeOffset(new DateTime(DateTime.Today.Year, 4, 1)), LeaveTransactionType.Adjusted, 10),
+                };
+                planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 7);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 3);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 10);
+            }
+
+            #endregion
+        }
+
+        [TestClass]
+        public class NonTraditionalPlanWithoutAdjustmentTests : EmployeeLeavePlanTests
+        {
+            public EmployeeLeavePlan planWithTransactions;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+                employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
+                {
+                    new EmployeeLeaveTransaction(1, leavePlanId, id, 8, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 1)), LeaveTransactionType.Earned, 8),
+                    new EmployeeLeaveTransaction(2, leavePlanId, id, -2, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 15)), LeaveTransactionType.Used, 6),
+                    new EmployeeLeaveTransaction(3, leavePlanId, id, -1, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 15)), LeaveTransactionType.Used, 5),
+                    new EmployeeLeaveTransaction(4, leavePlanId, id, 8, new DateTimeOffset(new DateTime(DateTime.Today.Year, 1, 1)), LeaveTransactionType.StartingBalanceAdjustment, 13),
+                    new EmployeeLeaveTransaction(5, leavePlanId, id, -4, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.Used, 9),
+                    new EmployeeLeaveTransaction(6, leavePlanId, id, 2, new DateTimeOffset(new DateTime(DateTime.Today.Year, 2, 2)), LeaveTransactionType.Earned, 11)
+                };
+                isPlanYearStartDateDefined = false;
+                latestCarryoverDate = null;
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlanWithoutAdjustment_Initial()
+            {
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 13);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -4);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 11);
+            }
+
+            [TestMethod]
+            public void NonTraditionalPlanWithoutAdjustment_PriorPlanYearTransaction()
+            {
+                // ensure that if there are trxs on the same day that the one with the highest ID is used.
+                Assert.AreEqual(planWithTransactions.PriorPlanYearEndTransaction.Id, 3);
+            }
+        }
+
+        [TestClass]
+        public class LatestCarryoverDateTests : EmployeeLeavePlanTests
+        {
+            public EmployeeLeavePlan planWithTransactions;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+                employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
+            {
+                new EmployeeLeaveTransaction(1, leavePlanId, id, 15, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 1)), LeaveTransactionType.Earned, 15),
+                new EmployeeLeaveTransaction(2, leavePlanId, id, -5, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 2)), LeaveTransactionType.Used, 10),
+                new EmployeeLeaveTransaction(3, leavePlanId, id, -8, new DateTimeOffset(new DateTime(DateTime.Today.Year-1, 12, 21)), LeaveTransactionType.Adjusted, 2),
+            };
+            }
+
+            [TestMethod]
+            public void LatestCarryoverDate_DateNotPresent()
+            {
+                isPlanYearStartDateDefined = false;
+                latestCarryoverDate = null;
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartDate, new DateTime(DateTime.Today.Year, 1, 1)); //dete defaults to 1/1 if not set
+            }
+
+            [TestMethod]
+            public void LatestCarryoverDate_DatePresent()
+            {
+                latestCarryoverDate = new DateTime(DateTime.Today.Year, 3, 1);
+                planWithTransactions = employeeLeavePlan;
+                planWithTransactions.AddLeaveTransactionRange(employeeLeaveTransactions.ToArray());
+
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartDate, latestCarryoverDate);
             }
         }
     }

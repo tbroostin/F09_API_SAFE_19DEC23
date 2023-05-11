@@ -296,7 +296,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task ProcurementReceiptsController_GetProcurementReceiptsAsync_InvalidFilter()
         {
             var contextSuffix = "criteria";

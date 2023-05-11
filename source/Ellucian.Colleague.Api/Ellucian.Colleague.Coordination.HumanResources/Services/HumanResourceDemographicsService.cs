@@ -2,10 +2,12 @@
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -27,6 +29,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private readonly ISupervisorsRepository supervisorsRepository;
         private readonly IPersonBaseRepository personBaseRepository;
         private readonly IEmployeeRepository employeeRepository;
+        private readonly IHumanResourcesReferenceDataRepository hrReferenceDataRepository;
 
         /// <summary>
         /// Constructor for Human Resource Demographics Service
@@ -40,6 +43,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
              IPersonBaseRepository personBaseRepository,
             ISupervisorsRepository supervisorsRepository,
             IEmployeeRepository employeeRepository,
+            IHumanResourcesReferenceDataRepository hrReferenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -52,6 +56,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             this.supervisorsRepository = supervisorsRepository;
             this.personBaseRepository = personBaseRepository;
             this.employeeRepository = employeeRepository;
+            this.hrReferenceDataRepository = hrReferenceDataRepository;
         }
         /// <summary>
         /// Gets all HumanResourceDemographics available to the user
@@ -71,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var cumulativeHrPersonIds = new List<string>() { effectivePersonId, CurrentUser.PersonId };
 
-            var supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(effectivePersonId)).ToList();
+            var supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(effectivePersonId)).ToList();            
 
             if (supervisorIds.Any())
             {
@@ -112,11 +117,37 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var hasLastName = true;
 
             var personBaseEntities = await personBaseRepository.GetPersonsBaseAsync(cumulativeHrPersonIds.Distinct().ToList(), hasLastName);
-
+            
             if (personBaseEntities == null)
             {
                 var message = "Null Person Base Entities returned to coordination service";
                 logger.Info(message);
+            }
+            else
+            {
+                var hrssConfiguration = await hrReferenceDataRepository.GetHrssConfigurationAsync();
+
+                if (hrssConfiguration != null && !string.IsNullOrWhiteSpace(hrssConfiguration.HrssDisplayNameHierarchy))
+                {
+                    NameAddressHierarchy nameHierarchy = null;
+                    try
+                    {
+                        nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hrssConfiguration.HrssDisplayNameHierarchy);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", nameHierarchy));
+
+                    }
+                    if (nameHierarchy != null)
+                    {                       
+                        personBaseEntities = GetPersonHierarchyName(personBaseEntities, nameHierarchy);
+                    }
+                }
             }
 
             var personBaseEntityToHumanResourceDemographicsDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>();
@@ -184,6 +215,32 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var message = "Null Person Base Entities returned to coordination service";
                 logger.Info(message);
             }
+            else
+            {
+                var hrssConfiguration = await hrReferenceDataRepository.GetHrssConfigurationAsync();
+
+                if (hrssConfiguration != null && !string.IsNullOrWhiteSpace(hrssConfiguration.HrssDisplayNameHierarchy))
+                {
+                    NameAddressHierarchy nameHierarchy = null;
+                    try
+                    {
+                        nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hrssConfiguration.HrssDisplayNameHierarchy);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", nameHierarchy));
+
+                    }
+                    if (nameHierarchy != null)
+                    {
+                        personBaseEntities = GetPersonHierarchyName(personBaseEntities, nameHierarchy);
+                    }
+                }
+            }
 
             var personBaseEntityToHumanResourceDemographicsDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>();
             return personBaseEntities.Select(pb => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(pb)).ToList();
@@ -231,7 +288,32 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new KeyNotFoundException(string.Format("Unable to find Person {0}", id));
             }
+            else
+            {
+                var hrssConfiguration = await hrReferenceDataRepository.GetHrssConfigurationAsync();
 
+                if (hrssConfiguration != null && !string.IsNullOrWhiteSpace(hrssConfiguration.HrssDisplayNameHierarchy))
+                {
+                    NameAddressHierarchy nameHierarchy = null;
+                    try
+                    {
+                        nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hrssConfiguration.HrssDisplayNameHierarchy);
+                    }
+                    catch (ColleagueSessionExpiredException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", nameHierarchy));
+
+                    }
+                    if (nameHierarchy != null)
+                    {
+                        personBaseEntity.PersonDisplayName = PersonNameService.GetHierarchyName(personBaseEntity, nameHierarchy);
+                    }
+                }
+            }
             var personBaseEntityToHumanResourceDemographicsDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>();
             return personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(personBaseEntity);
         }
@@ -313,5 +395,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return personBases.Select(pb => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(pb)).ToList();
         }
 
+        /// <summary>
+        /// Add Person display name to each person base entity in list based on name heirarchy 
+        /// </summary>
+        /// <param name="personBaseList">contains list of person base enity</param>
+        /// <returns></returns>
+        private IEnumerable<PersonBase> GetPersonHierarchyName(IEnumerable<PersonBase> personBaseList, NameAddressHierarchy nameHierarchy)
+        {
+            if (personBaseList != null && personBaseList.Any())
+            {
+                foreach (var personBase in personBaseList)
+                {
+                    personBase.PersonDisplayName = PersonNameService.GetHierarchyName(personBase, nameHierarchy);
+                }
+            }
+            return personBaseList;
+        }
     }
 }

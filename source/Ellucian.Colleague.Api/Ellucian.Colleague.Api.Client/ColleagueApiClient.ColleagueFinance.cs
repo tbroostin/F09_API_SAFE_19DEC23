@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Rest.Client.Exceptions;
@@ -87,8 +87,14 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(draftBudgetAdjustment, urlPath, headers: headers);
+
                 var resource = JsonConvert.DeserializeObject<DraftBudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in CreateDraftBudgetAdjustmentAsync (service client) <==");
+                throw;
             }
             catch (Exception e)
             {
@@ -116,6 +122,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync(draftBudgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<DraftBudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in UpdateDraftBudgetAdjustmentAsync (service client) <==");
+                throw;
             }
             catch (Exception e)
             {
@@ -178,6 +189,11 @@ namespace Ellucian.Colleague.Api.Client
                 AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in DeleteDraftBudgetAdjustmentAsync (service client) <==");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to delete draft budget adjustment record.");
@@ -205,6 +221,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in CreateBudgetAdjustmentAsync (service client) <==");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
@@ -231,6 +252,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync(budgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in UpdateBudgetAdjustmentAsync (service client) <==");
+                throw;
             }
             catch (Exception e)
             {
@@ -267,6 +293,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get the budget adjustment record {0}.", id);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in GetBudgetAdjustmentAsync (service client) <==");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the budget adjustment record.");
@@ -300,6 +331,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get the budget adjustment record {0}.", id);
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in GetBudgetAdjustmentPendingApprovalDetailAsync (service client) <==");
                 throw;
             }
             catch (Exception e)
@@ -341,6 +377,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException exnf)
             {
                 logger.Error(exnf, "Unable to approve the budget adjustment record {0}.", budgetAdjustmentId);
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in PostBudgetAdjustmentApprovalAsync (service client) <==");
                 throw;
             }
             catch (Exception ex)
@@ -390,6 +431,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = JsonConvert.DeserializeObject<List<BudgetAdjustmentPendingApprovalSummary>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in GetBudgetAdjustmentsPendingApprovalSummaryAsync (service client) <==");
+                throw;
             }
             catch (Exception e)
             {
@@ -513,6 +559,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get filtered cost centers.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get filtered cost centers.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get filtered cost centers.");
@@ -547,6 +598,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var resource = JsonConvert.DeserializeObject<IEnumerable<GlAccount>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to retrieve the GL accounts.");
+                throw;
             }
             catch (Exception e)
             {
@@ -591,6 +647,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<GlAccountValidationResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "==> Login exception in GetGlAccountValidationAsync (service client) <==");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to validate the GL account.");
@@ -633,6 +694,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get GL activity details for the GL account {0} for fiscal year {1}.", criteria.GlAccount, criteria.FiscalYear);
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Expired session: Unable to get GL activity details for the GL account {0} for fiscal year {1}.", criteria.GlAccount, criteria.FiscalYear);
                 throw;
             }
             catch (Exception e)
@@ -687,12 +753,13 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Get the list of approver based on keyword search.
+        /// Get the list of approvers based on keyword search.
         /// </summary>
-        /// <param name="queryKeyword"> The search criteria get list of next Approver.</param>
-        /// <returns> The approver search results</returns>
+        /// <param name="queryKeyword">The search criteria get list of next Approver.</param>
+        /// <returns>The approver search results</returns>
         /// <exception cref="ResourceNotFoundException">Unable to perform next approver search.</exception>
         /// <exception cref="Exception">Unable to perform next approver search.</exception>
+        [Obsolete("Obsolete as of API 1.34. Use QueryNextApproverByKeywordAsync.")]
         public async Task<IEnumerable<NextApprover>> GetNextApproverByKeywordAsync(string queryKeyword)
         {
             if (string.IsNullOrEmpty(queryKeyword))
@@ -712,6 +779,50 @@ namespace Ellucian.Colleague.Api.Client
                 // Use URL path and request data to call the web api method (including query string)
                 AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<NextApprover>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform next approver search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform next approver search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Query the list of approvers based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword">The search criteria used to get the list of matching Next Approvers.</param>
+        /// <returns>The approver search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform next approver search.</exception>
+        /// <exception cref="Exception">Unable to perform next approver search.</exception>
+        public async Task<IEnumerable<NextApprover>> QueryNextApproverByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "next approver query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search next approver by keyword.
+                string[] pathStrings = new string[] { _qapiPath, _searchNextApproversPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                KeywordSearchCriteria nextApproverSearchCriteria = new KeywordSearchCriteria() { Keyword = queryKeyword };
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(nextApproverSearchCriteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<NextApprover>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -983,6 +1094,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get voucher {0}.", voucherId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get voucher.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get voucher.");
@@ -1058,6 +1174,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get purchase order {0}.", purchaseOrderId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get purchase order.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get purchase order.");
@@ -1097,6 +1218,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get blanket purchase order {0}.", blanketPurchaseOrderId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Session expired: unable to get the blanket purchase order.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get blanket purchase order.");
@@ -1131,6 +1257,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get blanket purchase order {0}.", blanketPurchaseOrderId);
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Session expired: unable to get the blanket purchase order.");
                 throw;
             }
             catch (Exception e)
@@ -1208,6 +1339,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get requisition {0}.", requisitionId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get requisition.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get requisition.");
@@ -1283,6 +1419,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get journal entry {0}.", journalEntryId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get journal entry.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get journal entry.");
@@ -1291,7 +1432,6 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         #endregion
-
 
         #region Recurring Vouchers
 
@@ -1612,6 +1752,46 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get the GL account detail transactions based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.FinanceQueryCriteria"> criteria</see> to query by.</param>
+        /// <returns>GL accounts that match the query criteria.</returns>
+        public async Task<IEnumerable<FinanceQueryActivityDetail>> QueryFinanceQueryDetailSelectionByPostAsync(FinanceQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Finance query criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _financeQueryDetailPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent); var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<FinanceQueryActivityDetail>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered finance query detail criteria results.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered finance query detail criteria results.");
+                throw;
+            }
+        }
+
         #endregion
 
         /// <summary>
@@ -1784,6 +1964,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(exnf, "Unable to create requisition.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to create requisition.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to to create requisition.");
@@ -1856,6 +2041,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException exnf)
             {
                 logger.Error(exnf, "Unable to create Purchase Order.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to create purchase order.");
                 throw;
             }
             catch (Exception ex)
@@ -1975,6 +2165,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to perform vendor search.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to perform vendor search.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to perform vendor search.");
@@ -2018,6 +2213,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to perform vendor search.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to perform vendor search.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to perform vendor search.");
@@ -2055,6 +2255,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(exnf, "Unable to create voucher.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to create/update voucher.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to to create voucher.");
@@ -2085,6 +2290,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException exnf)
             {
                 logger.Error(exnf, "Unable to get the reimburse person address.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get the reimburse person address.");
                 throw;
             }
             catch (Exception ex)
@@ -2297,6 +2507,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get purchase orders for receiving {0}.", personId);
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get purchase orders for receiving.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get purchase orders for receiving.");
@@ -2332,6 +2547,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException exnf)
             {
                 logger.Error(exnf, "Unable to receive/return procurement items.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to receive/return procurement items.");
                 throw;
             }
             catch (Exception ex)
@@ -2439,6 +2659,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get document approval.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Unable to get document approval.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get document approval.");
@@ -2480,6 +2705,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(exnf, "Unable to update document approvals.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Unable to update document approvals.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to update document approvals.");
@@ -2517,6 +2747,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get approved documents.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Unable to get approved documents.");
                 throw;
             }
             catch (Exception e)
@@ -2621,6 +2856,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get vendors default tax form info.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get vendors default tax form info.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get vendors default tax form info.");
@@ -2663,12 +2903,13 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Get the list of initiator based on keyword search.
+        /// Get the list of initiators based on keyword search.
         /// </summary>
-        /// <param name="queryKeyword"> The search criteria get list of initiator.</param>
-        /// <returns> The initiator search results</returns>
+        /// <param name="queryKeyword">The search criteria get list of initiator.</param>
+        /// <returns>The initiator search results</returns>
         /// <exception cref="ResourceNotFoundException">Unable to perform staff search.</exception>
         /// <exception cref="Exception">Unable to perform staff search.</exception>
+        [Obsolete("Obsolete as of API 1.34. Use QueryInitiatorByKeywordAsync.")]
         public async Task<IEnumerable<Initiator>> GetInitiatorByKeywordAsync(string queryKeyword)
         {
             if (string.IsNullOrEmpty(queryKeyword))
@@ -2696,6 +2937,60 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to perform initiator search.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to perform initiator search.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to perform initiator search.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Query the list of initiators based on keyword search.
+        /// </summary>
+        /// <param name="queryKeyword">The search criteria used to get the list of matching initiators.</param>
+        /// <returns> The initiator search results</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to perform staff search.</exception>
+        /// <exception cref="Exception">Unable to perform staff search.</exception>
+        public async Task<IEnumerable<Initiator>> QueryInitiatorByKeywordAsync(string queryKeyword)
+        {
+            if (string.IsNullOrEmpty(queryKeyword))
+            {
+                throw new ArgumentNullException("criteria", "initiator query criteria cannot be empty.");
+            }
+            try
+            {
+                // Create and execute a request to get the search initiator by keyword.
+                string[] pathStrings = new string[] { _qapiPath, _initiatorPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                KeywordSearchCriteria initiatorSearchCriteria = new KeywordSearchCriteria() { Keyword = queryKeyword };
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(initiatorSearchCriteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<Initiator>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let the calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to perform initiator search.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to perform initiator search.");
                 throw;
             }
             catch (Exception e)
@@ -2769,12 +3064,17 @@ namespace Ellucian.Colleague.Api.Client
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (ResourceNotFoundException ex)
             {
-                logger.Error(ex, "Unable to get voucher's.");
+                logger.Error(ex, "Unable to get vouchers.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get vouchers.");
                 throw;
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unable to get voucher's.");
+                logger.Error(e, "Unable to get vouchers.");
                 throw;
             }
         }
@@ -2812,6 +3112,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get filtered requisitions.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get filtered requisitions.");
                 throw;
             }
             catch (Exception e)
@@ -2856,6 +3161,11 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to get filtered purchase orders.");
                 throw;
             }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get filtered purchase orders.");
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get filtered purchase orders.");
@@ -2896,6 +3206,11 @@ namespace Ellucian.Colleague.Api.Client
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get filtered vouchers.");
+                throw;
+            }
+            catch (LoginException lex)
+            {
+                logger.Debug(lex, "Session expired - unable to get filtered vouchers.");
                 throw;
             }
             catch (Exception e)

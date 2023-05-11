@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +16,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -51,19 +52,34 @@ namespace Ellucian.Colleague.Api.Controllers
         /// [CacheControlFilter(Public = true, MaxAgeHours = 1, Revalidate = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Term>> GetPlanningTermsAsync()
         {
-            var termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
-
-            var termCollection =await _termRepository.GetAsync();
-            termCollection = termCollection.Where(t => t.ForPlanning == true);
-
-            // Get the entity to Dto adapter
-            var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
-            foreach (var term in termCollection)
+            try
             {
-                termDtoList.Add(termDtoAdapter.MapToType(term));
+                var termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
+
+                var termCollection = await _termRepository.GetAsync();
+                termCollection = termCollection.Where(t => t.ForPlanning == true);
+
+                // Get the entity to Dto adapter
+                var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
+                foreach (var term in termCollection)
+                {
+                    termDtoList.Add(termDtoAdapter.MapToType(term));
+                }
+
+                return termDtoList;
             }
-            
-            return termDtoList;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving planning terms";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception tex)
+            {
+                string message = "Exception occurred while retrieving planning terms";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <summary>
@@ -73,15 +89,31 @@ namespace Ellucian.Colleague.Api.Controllers
         /// [CacheControlFilter(Public = true, MaxAgeHours = 1, Revalidate = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Term>> GetRegistrationTermsAsync()
         {
-            List<Ellucian.Colleague.Dtos.Student.Term> termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> termCollection = await _termRepository.GetRegistrationTermsAsync();
-            // Get the entity to Dto adapter
-            var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
-            foreach (var term in termCollection)
+            try
             {
-                termDtoList.Add(termDtoAdapter.MapToType(term));
+                List<Ellucian.Colleague.Dtos.Student.Term> termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> termCollection = await _termRepository.GetRegistrationTermsAsync();
+                // Get the entity to Dto adapter
+                var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
+                foreach (var term in termCollection)
+                {
+                    termDtoList.Add(termDtoAdapter.MapToType(term));
+                }
+                return termDtoList;
             }
-            return termDtoList;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving registration terms";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception tex)
+            {
+                string message = "Exception occurred while retrieving registration terms";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
         }
 
         /// <summary>
@@ -92,22 +124,36 @@ namespace Ellucian.Colleague.Api.Controllers
         /// [CacheControlFilter(Public = true, MaxAgeHours = 1, Revalidate = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Term>> GetAllTermsAsync(DateTime? startsOnOrAfter = null)
         {
-            List<Ellucian.Colleague.Dtos.Student.Term> termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
-            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> termCollection =await _termRepository.GetAsync();
-
-            // Get the entity to Dto adapter
-            var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
-            foreach (var term in termCollection)
+            try
             {
-                termDtoList.Add(termDtoAdapter.MapToType(term));
-            }
+                List<Ellucian.Colleague.Dtos.Student.Term> termDtoList = new List<Ellucian.Colleague.Dtos.Student.Term>();
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Term> termCollection =await _termRepository.GetAsync();
 
-            if (startsOnOrAfter.HasValue)
-            {
-                return termDtoList.Where(t => t.StartDate >= startsOnOrAfter);
+                // Get the entity to Dto adapter
+                var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
+                foreach (var term in termCollection)
+                {
+                    termDtoList.Add(termDtoAdapter.MapToType(term));
+                }
+
+                if (startsOnOrAfter.HasValue)
+                {
+                    return termDtoList.Where(t => t.StartDate >= startsOnOrAfter);
+                }
+
+                return termDtoList;
             }
-            
-            return termDtoList;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving all terms";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <summary>
@@ -118,16 +164,31 @@ namespace Ellucian.Colleague.Api.Controllers
         /// [CacheControlFilter(Public = true, MaxAgeHours = 1, Revalidate = true)]
         public async Task<Ellucian.Colleague.Dtos.Student.Term> GetAsync(string id)
         {
-            Ellucian.Colleague.Dtos.Student.Term termDto = null;
-
-            var termEntity =await _termRepository.GetAsync(id);
-            if (termEntity == null)
+            try
             {
-                throw CreateHttpResponseException();
+                Ellucian.Colleague.Dtos.Student.Term termDto = null;
+
+                var termEntity = await _termRepository.GetAsync(id);
+                if (termEntity == null)
+                {
+                    throw CreateHttpResponseException();
+                }
+                var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
+                termDto = termDtoAdapter.MapToType(termEntity);
+                return termDto;
             }
-            var termDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Term, Ellucian.Colleague.Dtos.Student.Term>();
-            termDto = termDtoAdapter.MapToType(termEntity);
-            return termDto;
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retreiving a specific term";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occured while retreiving a specific term";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
         }
     }
 }

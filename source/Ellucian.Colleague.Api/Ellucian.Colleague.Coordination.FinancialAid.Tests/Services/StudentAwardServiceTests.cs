@@ -313,7 +313,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 var emptyDtoList = await studentAwardService.GetStudentAwardsAsync(studentId);
                 Assert.AreEqual(0, emptyDtoList.Count());
-                loggerMock.Verify(l => l.Info(string.Format("No awards exist in any of the award years for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("No awards exist in any of the award years for student {0}", studentId)));
             }
 
             [TestMethod]
@@ -324,7 +324,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             .Returns(financialAidOfficeRepository.GetFinancialAidOfficesAsync());
                 var emptyDtoList = await studentAwardService.GetStudentAwardsAsync(studentId);
                 Assert.AreEqual(0, emptyDtoList.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Office Configurations have filtered out all student awards for student {0}", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Office Configurations have filtered out all student awards for student {0}", studentId)));
             }
 
         }
@@ -505,7 +505,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
                 var emptyDtoList = await studentAwardService.GetStudentAwardsAsync(studentId, studentAwardYearEntity.Code);
                 Assert.IsTrue(emptyDtoList.Count() == 0);
-                loggerMock.Verify(l => l.Info(string.Format("awardYear {0} has no awards for student {1}", studentAwardYearEntity.Code, studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("awardYear {0} has no awards for student {1}", studentAwardYearEntity.Code, studentId)));
             }
 
 
@@ -517,7 +517,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             .Returns(financialAidOfficeRepository.GetFinancialAidOfficesAsync());
                 var emptyDtoList = await studentAwardService.GetStudentAwardsAsync(studentId, studentAwardYearEntity.Code);
                 Assert.AreEqual(0, emptyDtoList.Count());
-                loggerMock.Verify(l => l.Info(string.Format("FA Office {0} filtered out all StudentAwards for student {1} awardYear {2}", studentAwardYearEntity.CurrentOffice.Id, studentId, studentAwardYearEntity.Code)));
+                loggerMock.Verify(l => l.Debug(string.Format("FA Office {0} filtered out all StudentAwards for student {1} awardYear {2}", studentAwardYearEntity.CurrentOffice.Id, studentId, studentAwardYearEntity.Code)));
             }       
 
         }
@@ -933,7 +933,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             
                 var updatedAwards = await studentAwardService.UpdateStudentAwardsAsync(studentId, awardYear, inputStudentAwards);
 
-                loggerMock.Verify(l => l.Warn(It.Is<Exception>(e => e.GetType() == exception.GetType()), It.IsAny<string>()));
+                loggerMock.Verify(l => l.Debug(It.Is<Exception>(e => e.GetType() == exception.GetType()), It.IsAny<string>()));
 
             }
 
@@ -953,10 +953,11 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     },
                     StudentId = "0003914"
                 };
+                //No longer filtering on visible periods/awards, adjusting test to account for this
                 var updatedAwards = await studentAwardService.UpdateStudentAwardsAsync(studentId, studentAwardYearEntity.Code, new List<Dtos.FinancialAid.StudentAward> { studentAwardWithExcludedPeriod });
                 Assert.IsTrue(updatedAwards.Any());
-                Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.Count == 1);
-                Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.First().AwardPeriodId != "13/SP");
+                Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.Count == 2);
+                //Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.First().AwardPeriodId != "13/SP");
             }
 
         }

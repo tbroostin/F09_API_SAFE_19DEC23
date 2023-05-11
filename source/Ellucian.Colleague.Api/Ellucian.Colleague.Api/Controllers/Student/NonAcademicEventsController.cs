@@ -1,8 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -28,6 +29,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly INonAcademicEventRepository _eventRepository;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+
         /// <summary>
         /// NonAcademicEventsController constructor
         /// </summary>
@@ -72,6 +75,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     eventDtos.Add(eventDtoAdapter.MapToType(eventEntity));
                 }
                 return eventDtos;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

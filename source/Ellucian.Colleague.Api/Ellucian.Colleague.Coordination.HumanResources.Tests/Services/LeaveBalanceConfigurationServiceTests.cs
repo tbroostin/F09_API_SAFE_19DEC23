@@ -11,6 +11,7 @@ using slf4net;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -91,7 +92,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ColleagueWebApiException))]
         public async Task LeaveBalanceConfigurationService_GetLeaveBalanceConfigurationAsync_Repository_Throws_Exception()
         {
             leaveBalanceConfigurationRepositoryMock.Setup(l => l.GetLeaveBalanceConfigurationAsync()).ThrowsAsync(new Exception());

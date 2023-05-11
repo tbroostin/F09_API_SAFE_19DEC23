@@ -1,18 +1,18 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
-using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -778,6 +778,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(inputGlAccountId, glAccountEntity.Id);
             Assert.AreEqual(inputGlDescription, glAccountEntity.Description);
         }
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task GetAsync_ExpiredColleagueSession()
+        {
+            GetGlAccountDescriptionRequest glAccountDescriptionRequest = new GetGlAccountDescriptionRequest()
+            {
+                GlAccountIds = new List<string>() { "11_00_01_00_20601_51000" },
+                Module = "SS"
+            };
+            var response = new GetGlAccountDescriptionResponse();
+            response.GlDescriptions = new List<string>();
+            transManagerMock.Setup(tio => tio.ExecuteAsync<GetGlAccountDescriptionRequest, GetGlAccountDescriptionResponse>(It.IsAny<GetGlAccountDescriptionRequest>())).Throws(new ColleagueSessionExpiredException("timeout"));
+            var glAccountEntity = await actualRepository.GetAsync("11_00_01_00_20601_51000", new List<string>());
+        }
+
         #endregion
 
         #region Validate Gl Account
@@ -1103,6 +1118,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(activeGlAcctsArray);
             });
         }
+       
         #endregion
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -309,7 +309,7 @@ namespace Ellucian.Web.Http.Configuration
                         {
                             var errorMessage = "Unable to access " + cacheProviderValcodeKey + " valcode table.";
                             logger.Info(errorMessage);
-                            throw new Exception(errorMessage);
+                            throw new ColleagueWebApiDtoException(errorMessage);
                         }
                         return cacheProvidersValcode;
                     }
@@ -342,7 +342,7 @@ namespace Ellucian.Web.Http.Configuration
                     {
                         var errorMessage = "Unable to access " + debugTraceLevelsValcodeKey + " valcode table.";
                         logger.Info(errorMessage);
-                        throw new Exception(errorMessage);
+                        throw new ColleagueWebApiDtoException(errorMessage);
                     }
                     return debugTraceLevelsValcode;
                 }

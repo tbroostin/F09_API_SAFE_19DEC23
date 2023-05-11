@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -29,7 +30,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private List<Section> _instantEnrollmentSections;
 
         public InstantEnrollmentService(IAdapterRegistry adapterRegistry, IInstantEnrollmentRepository instantEnrollmentRepository,
-            ISectionRepository sectionRepository, IStudentProgramRepository studentProgramRepository, 
+            ISectionRepository sectionRepository, IStudentProgramRepository studentProgramRepository,
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger) :
             base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
@@ -59,7 +60,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (proposedRegistration.ProposedSections == null || proposedRegistration.ProposedSections.Count == 0)
                 {
-                    throw new ArgumentException("ProposedSections", "proposed registration  should have proposed sections to register for and retrieve associated cost for instant enrollment");
+                    throw new ArgumentException("ProposedSections", "proposed registration should have proposed sections to register for and retrieve associated cost for instant enrollment");
                 }
                 var proposedSectionIds = proposedRegistration.ProposedSections.Where(s => !string.IsNullOrEmpty(s.SectionId)).Select(ps => ps.SectionId).ToList();
                 await ValidateInstantEnrollmentSections(proposedSectionIds);
@@ -77,13 +78,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return proposedRegistrationResultDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Exception occured while completing mock registration for selected classes in Instant Enrollment");
                 logger.Error(ex, ex.Message);
                 throw;
             }
-
         }
 
         /// <summary>
@@ -124,6 +128,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     zeroCostRegistrationResultDto = zeroCostRegistrationResultEntityToDtoAdapter.MapToType(zeroCostRegistrationResult);
                 }
                 return zeroCostRegistrationResultDto;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -171,6 +179,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return echeckRegistrationResultDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Exception occured while completing echeck registration for selected classes in Instant Enrollment");
@@ -216,6 +228,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return resultDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error("Exception occured while initiating payment gateway registration for selected classes in Instant Enrollment");
@@ -246,6 +262,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 paragraphText.AddRange(textFromRepository);
                 return paragraphText;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 string exceptionMsg = string.Format("An error occurred while attempting to retrieve instant enrollment payment acknowledgement paragraph text for person {0}", request.PersonId);
@@ -257,7 +277,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ApplicationException(exceptionMsg);
             }
         }
-
 
         /// <summary>
         /// Query persons matching the criteria using the ELF duplicate checking criteria configured for Instant Enrollment.
@@ -334,6 +353,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 return cashReceiptAcknowledgementDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 string exceptionMsg = "An error occurred while attempting to retrieve an instant enrollment cash receipt acknowledgement";
@@ -373,8 +396,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // - an active program has a start date less than or equal to today and an end date that is blank or greater than or equal to today
                 if (currentOnly == true)
                 {
-                    studentPrograms = studentPrograms.Where(x => 
-                        (x.StartDate != null && x.StartDate <= DateTime.Today) && 
+                    studentPrograms = studentPrograms.Where(x =>
+                        (x.StartDate != null && x.StartDate <= DateTime.Today) &&
                         (x.EndDate == null || x.EndDate >= DateTime.Today));
                 }
 
@@ -390,6 +413,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 return studentProgramDtos;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 string exceptionMsg = string.Format("An error occurred while attempting to retrieve student programs for person {0}", studentId);
@@ -397,7 +424,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw;
             }
         }
-
 
         /// <summary>
         /// A helper method to determine if the logged in user is the preson whose data is being accessed.
@@ -427,12 +453,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     ieSectionIds = _instantEnrollmentSections.Where(ies => ies != null).Select(cs => cs.Id).ToList();
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 var errorMsg = "Unable to retrieve instant enrollment section information to validate sections.";
                 logger.Error(ex, errorMsg);
                 throw new ApplicationException(errorMsg);
             }
+
             if (sectionIds != null && ieSectionIds.Any() && sectionIds.Any())
             {
                 var invalidSecIds = new List<string>();

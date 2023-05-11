@@ -59,6 +59,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var collectionRecord = await DataReader.ReadRecordAsync<AttachmentCollections>(attachmentCollectionId);
                 return BuildCollections(new List<AttachmentCollections>() { collectionRecord }).FirstOrDefault();
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving attachment collection metadata";
@@ -83,12 +87,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(attachmentCollectionIds.ToArray());
                 return BuildCollections(collectionRecords);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving bulk attachment collection metadata";
                 logger.Error(e, error);
                 throw new RepositoryException(error);
-            }            
+            }
         }
 
         /// <summary>
@@ -125,12 +133,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(criteria.ToString());
                 return BuildCollections(collectionRecords);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving attachment collection metadata by user";
                 logger.Error(e, error);
                 throw new RepositoryException(error);
-            }            
+            }
         }
 
         /// <summary>
@@ -161,6 +173,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw new RepositoryException(error);
                 }
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (ColleagueTransactionException cte)
             {
                 string error = "Exception occurred creating attachment collection";
@@ -181,7 +197,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (attachmentCollection == null)
                 throw new ArgumentNullException("attachmentCollection");
-            
+
             try
             {
                 // call the CTX to update the collection
@@ -199,6 +215,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     logger.Error(string.Format("{0}, collection {1} : error = {2}", error, attachmentCollection.Id, updateResponse.ErrorMsg));
                     throw new RepositoryException(error);
                 }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (ColleagueTransactionException cte)
             {
@@ -224,7 +244,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         // create the entity
                         var collectionEntity = new AttachmentCollection(record.Recordkey, record.AtcolName, record.AtcolOwner)
-                        {                            
+                        {
                             AllowedContentTypes = ConvertCollectionContentTypesToEntities(record.AtcolAllowedContentTypes),
                             AttachmentOwnerActions = ConvertCollectionOwnerActionsToEntities(record.AtcolOwnerActions),
                             Description = record.AtcolDescription,

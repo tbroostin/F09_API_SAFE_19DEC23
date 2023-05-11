@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -42,7 +42,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionAttendance"><see cref="SectionAttendance">Section Attendance</see> DTO that contains the section and the attendance information to be updated.</param>
         /// <returns><see cref="SectionAttendanceResponse">SectionAttendanceResponse</see> DTO.</returns>
-        /// <accessComments>Only a faculty user who is assigned to the associated course section can update student attendance data for that course section.</accessComments>
+        /// <accessComments>1) A faculty user who is assigned to the associated course section can update student attendance data for that course section.
+        /// 2) A departmental oversight person for this section who has CREATE.SECTION.ATTENDANCE permission
+        /// </accessComments>
         [HttpPut]
         public async Task<SectionAttendanceResponse> PutSectionAttendances2Async([FromBody] SectionAttendance sectionAttendance)
         {
@@ -52,31 +54,34 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(errorText);
                 throw CreateHttpResponseException(errorText, HttpStatusCode.BadRequest);
             }
+
             try
             {
                 return await _studentAttendanceService.UpdateSectionAttendance2Async(sectionAttendance);
             }
             catch (PermissionsException pe)
             {
-                _logger.Info(pe.ToString());
+                var message = "User is not authorized to update the section attendance for section id " + sectionAttendance.SectionId;
+                _logger.Error(pe, message);
                 throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                _logger.Info(e.ToString());
+                var message = "Unable to updaet the section attendance for section id " + sectionAttendance.SectionId;
+                _logger.Error(e, message);
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
-
         }
 
-
-    /// <summary>
-    /// Update attendance information for a particular section and meeting instance.
-    /// </summary>
-    /// <param name="sectionAttendance"><see cref="SectionAttendance">Section Attendance</see> DTO that contains the section and the attendance information to be updated.</param>
-    /// <returns><see cref="SectionAttendanceResponse">SectionAttendanceResponse</see> DTO.</returns>
-    /// <accessComments>Only a faculty user who is assigned to the associated course section can update student attendance data for that course section.</accessComments>
-    [HttpPut]
+        /// <summary>
+        /// Update attendance information for a particular section and meeting instance.
+        /// </summary>
+        /// <param name="sectionAttendance"><see cref="SectionAttendance">Section Attendance</see> DTO that contains the section and the attendance information to be updated.</param>
+        /// <returns><see cref="SectionAttendanceResponse">SectionAttendanceResponse</see> DTO.</returns>
+        /// <accessComments>1) A faculty user who is assigned to the associated course section can update student attendance data for that course section.
+        /// 2)A departmental oversight person for this section who has CREATE.SECTION.ATTENDANCE permission
+        /// </accessComments>
+        [HttpPut]
         public async Task<SectionAttendanceResponse> PutSectionAttendancesAsync([FromBody] SectionAttendance sectionAttendance)
         {
 

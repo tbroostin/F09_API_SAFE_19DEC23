@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -127,7 +127,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// List of Tax form boxes with their amounts.
         /// </summary>
-        public List<TaxFormBoxesPdfData> TaxFormBoxesList = new List<TaxFormBoxesPdfData>();
+        private List<TaxFormBoxesPdfData> taxFormBoxesList = new List<TaxFormBoxesPdfData>();
+        public List<TaxFormBoxesPdfData> TaxFormBoxesList { get { return taxFormBoxesList; } set { taxFormBoxesList = value; } }
 
         /// <summary>
         /// State Code for the TaxForm

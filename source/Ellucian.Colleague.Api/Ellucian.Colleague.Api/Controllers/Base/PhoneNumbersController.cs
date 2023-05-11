@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -54,8 +55,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="personId">Person to get phone numbers for</param>
         /// <returns>PhoneNumber Object <see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
-        
-        public Ellucian.Colleague.Dtos.Base.PhoneNumber GetPersonPhones(string personId)
+        /// <accessComments>Authenticated users can retrieve their own phone numbers or users with the VIEW.PERSON.INFORMATION permission can retrieve phone numbers for others.</accessComments>
+        public async Task<Ellucian.Colleague.Dtos.Base.PhoneNumber> GetPersonPhonesAsync(string personId)
         {
             if (string.IsNullOrEmpty(personId))
             {
@@ -64,15 +65,18 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                var phoneCollection = _phoneNumberRepository.GetPersonPhones(personId);
-                // Get the right adapter for the type mapping
-                var phoneDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.PhoneNumber, Ellucian.Colleague.Dtos.Base.PhoneNumber>();
-                // Map the PhoneNumber entity to the Address DTO
-                return phoneDtoAdapter.MapToType(phoneCollection);
+                var phoneNumberDtoCollection = await _phoneNumberService.GetPersonPhones2Async(personId);
+                return phoneNumberDtoCollection;
             }
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving phone numbers";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

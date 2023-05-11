@@ -28,7 +28,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
 
         private readonly string colleagueTimeZone;
-        private int index = 0;
 
         private const int NicknameLength = 50;
         private const int AccountIdLength = 17;
@@ -55,6 +54,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrEmpty(payeeId))
             {
+                logger.Debug("************ Payee Id cannot be null or empty ************");
                 throw new ArgumentNullException("payeeId");
             }
 
@@ -93,6 +93,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (!string.IsNullOrEmpty(personAddrBankInfoRecord.PabiRoutingNo))
                     {
                         //Create US payable deposit directive
+                        logger.Debug(string.Format("Creating US Payable deposit directive - payee Id {0}",payeeId));
                         payeePayableDepositDirectiveCollection.Add(new PayableDepositDirective(
                             personAddrBankInfoRecord.Recordkey,
                             payeeId,
@@ -117,6 +118,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     else
                     {
                         //Create Canadian payable deposit directive
+                        logger.Debug(string.Format("Creating Canadian Payable deposit directive - payee Id {0}", payeeId));
                         payeePayableDepositDirectiveCollection.Add(new PayableDepositDirective(
                             personAddrBankInfoRecord.Recordkey,
                             payeeId,
@@ -143,7 +145,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("PERSON_ADDR_BNK_INFO", payeeId, personAddrBankInfoRecord, e, "Error creating the payable deposit directives list.");
+                    LogDataError("PERSON_ADDR_BNK_INFO", payeeId, new Object(), e, "Error creating the payable deposit directives list.");
                 }
             }
 
@@ -183,6 +185,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrEmpty(accountTypeCode))
             {
+                logger.Debug("Cannot convert null or empty Account Type Code");
                 throw new ArgumentNullException("accountTypeCode", "Cannot convert null or empty accountTypeCode");
             }
 
@@ -193,7 +196,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 case "C":
                     return BankAccountType.Checking;
                 default:
-                    throw new ApplicationException("Unknown accountTypeCode " + accountTypeCode);
+                    {
+                        logger.Debug("Unknown Account Type Code");
+                        throw new ApplicationException("Unknown accountTypeCode " + accountTypeCode);
+                    }
+                    
             }
 
         }
@@ -212,7 +219,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 case BankAccountType.Checking:
                     return "C";
                 default:
-                    throw new ApplicationException("Unknown bankAccountType " + bankAccountType);
+                    {
+                        logger.Debug("Unknown Bank Account Type");
+                        throw new ApplicationException("Unknown bankAccountType " + bankAccountType);
+                    }
+                    
             }
 
         }
@@ -228,10 +239,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (newPayableDepositDirective == null)
             {
+                logger.Debug("New Payable Deposit Directive cannot be null or empty ");
                 throw new ArgumentNullException("newPayableDepositDirective");
             }
             if (newPayableDepositDirective.NewAccountId == null)
             {
+                logger.Debug("New Payable Deposit Directive Account Id cannot be null or empty ");
                 throw new ArgumentNullException("newPayableDepositDirective.NewAccountId");
             }
 
@@ -249,7 +262,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                  Nickname = checkNickname(newPayableDepositDirective.Nickname),
                  Prenote = newPayableDepositDirective.IsVerified ? "Y" : "N"
              };
-
+            logger.Debug("************Start- Create new Payable deposit directive request - Start************");
             var response = await transactionInvoker.ExecuteAsync<CreatePayableDepDirectiveRequest, CreatePayableDepDirectiveResponse>(request);
 
             //check response for errors
@@ -266,16 +279,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 logger.Error(message);
                 throw new ApplicationException(message);
             }
-
+            logger.Debug("************ End- Successfully Created new Payable deposit directive request - End ************");
             //call GetPayableDepositDirectivesAsync to get the payable deposit using the Id that was just created
+            logger.Debug("************ Get Payable deposit directives ************");
             var verifyPayableDepositDirectiveListOfOne = await GetPayableDepositDirectivesAsync(newPayableDepositDirective.PayeeId, response.OutPersonAddrBnkInfoId);
 
             // verify that the returned PayableDepositDirective is not null or empty
             if (verifyPayableDepositDirectiveListOfOne == null || !verifyPayableDepositDirectiveListOfOne.Any())
             {
+                logger.Debug("Get Payable Deposit Directive did not return expected payable deposit directive ");
                 throw new ApplicationException("GetPayableDepositDirectivesAsync did not return expected payable deposit directive");
             }
-
+            logger.Debug("************ Get Payable deposit directive Success ************");
             //otherwise, return that PayableDepositAccount
             return verifyPayableDepositDirectiveListOfOne.First();
         }
@@ -289,6 +304,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (payableDepositDirectiveToUpdate == null)
             {
+                logger.Debug("Payable Deposit Directive to update cannot be null or empty ");
                 throw new ArgumentNullException("payableDepositDirectiveToUpdate");
             }
 
@@ -317,7 +333,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             };
 
-
+            logger.Debug("************Start- Create request for updating Payable deposit directive - Start************");
             // get the response from request...
             var response = await transactionInvoker.ExecuteAsync<UpdatePayableDepDirectiveRequest, UpdatePayableDepDirectiveResponse>(request);
 
@@ -341,16 +357,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw new ApplicationException(response.ErrorMessage);
                 }
             }
-
+            logger.Debug("************End- Updated Payable deposit directive - End************");
             //call GetPayableDepositDirectivesAsync to get the payable deposit using the Id that was just created
+            logger.Debug("************ Get Payable deposit directives ************");
             var verifyPayableDepositDirectiveListOfOne = await GetPayableDepositDirectivesAsync(payableDepositDirectiveToUpdate.PayeeId, payableDepositDirectiveToUpdate.Id);
 
             // verify that the returned PayableDepositDirective is not null or empty
             if (verifyPayableDepositDirectiveListOfOne == null || !verifyPayableDepositDirectiveListOfOne.Any())
             {
+                logger.Debug(" Get Payable deposit directives did not return expected payable deposit directive");
                 throw new ApplicationException("GetPayableDepositDirectivesAsync did not return expected payable deposit directive");
             }
-
+            logger.Debug("************ Get Payable deposit directive Success ************");
             //otherwise, return that PayableDepositAccount
             return verifyPayableDepositDirectiveListOfOne.First();
         }
@@ -364,6 +382,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrEmpty(payableDepositDirectiveIdToDelete))
             {
+                logger.Debug("Payable Deposit Directive id to Delete cannot be null or empty ");
                 throw new ArgumentNullException("payableDepositDirectiveIdToDelete");
             }
 
@@ -383,7 +402,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             };
 
-
+            logger.Debug("************Start- Create request for deleting Payable deposit directive - Start************");
             // get the response from request...
             var response = await transactionInvoker.ExecuteAsync<DeletePayableDepDirectiveRequest, DeletePayableDepDirectiveResponse>(request);
 
@@ -407,6 +426,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw new ApplicationException(response.ErrorMessage);
                 }
             }
+            logger.Debug("************End- Successfully deleted Payable deposit directive - End************");
         }
 
         /// <summary>
@@ -434,6 +454,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrWhiteSpace(payeeId))
             {
+                logger.Debug("Payee id cannot be null or empty ");
                 throw new ArgumentNullException("payeeId");
             }
 
@@ -451,10 +472,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 ExpirationTime = expiration.ToLocalDateTime(colleagueTimeZone)
             };
 
+            logger.Debug("************Start- Create request to Authenticate Payable deposit directive - Start************");
             var response = await transactionInvoker.ExecuteAsync<AuthenticatePayableDepositDirectiveRequest, AuthenticatePayableDepositDirectiveResponse>(request);
 
             if (response == null)
             {
+                logger.Debug("Null response from transaction");
                 throw new BankingAuthenticationException(payableDepositDirectiveId, "Null response from transaction");
             }
             if (!string.IsNullOrEmpty(response.ErrorMessage))
@@ -477,7 +500,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 throw new BankingAuthenticationException(payableDepositDirectiveId, string.Format("Unable to parse token in CTX response - {0}", response.Token));
             }
-
+            logger.Debug("************End- Successfully Authenticated Payable deposit directive - End************");
             var authenticationToken = new BankingAuthenticationToken(officialExpiration.Value, officialToken);
             return authenticationToken;
 

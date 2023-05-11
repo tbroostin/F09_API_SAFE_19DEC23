@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -30,6 +30,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="glClassConfiguration">GL Class Configuration</param>
         /// <returns>Returns a general ledger user domain entity.</returns>
         Task<GeneralLedgerUser> GetGeneralLedgerUserAsync2(string id, string fullAccessRole, GeneralLedgerClassConfiguration glClassConfiguration);
+
+        /// <summary>
+        /// Add GL accounts a user can access through approval roles to the ones
+        /// they already have access through GL access roles.
+        /// </summary>
+        /// <param name="id">This is the user ID.</param>
+        /// <param name="glAccessAccounts">List of GL accounts the user has GL access to.</param>
+        /// <returns></returns>
+        Task<IEnumerable<string>> GetGlUserApprovalAndGlAccessAccountsAsync(string id, IEnumerable<string> glAccessAccounts);
 
         /// <summary>
         /// See if the sod record exist and if it has OVERRIDE

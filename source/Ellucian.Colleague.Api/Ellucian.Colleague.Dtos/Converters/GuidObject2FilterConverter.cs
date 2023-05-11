@@ -1,8 +1,9 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Dtos.Converters
 {
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                     var jObject = JToken.Parse(JsonConvert.SerializeObject(value)) as JObject;
                     if ((jObject != null) && (!JObject.DeepEquals(jObject, item)))
                     {
-                        throw new Exception("Invalid Properties");
+                        throw new ColleagueWebApiDtoException("Invalid Properties");
                     }
                     return value;
                 }

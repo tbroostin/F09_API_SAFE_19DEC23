@@ -12,6 +12,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -131,6 +132,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         logger.Error(emailUpdateResponse.Msg);
                     }
                 }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     var message = "Error processing Colleague Transaction UPDATE.PROXY.EMAIL";
@@ -203,6 +208,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 return BuildProxyPermissions(data, useEmployeeGroups);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 var message = "Error processing Colleague Transaction CREATE.UPDATE.PROXY.ACCESS.";
@@ -249,6 +258,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
 
                 return BuildProxyCandidate(data);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -298,7 +311,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 catch (Exception ex)
                 {
                     // Removed the logDataError which would spit out all the info for a candidate if data could not be retrieved.
-                    // LogDataError("PROXY.CANDIDATES", pc.Recordkey, pc, ex);
+                  
                     logger.Error("Unable to retrieve information for proxy candidate " + pc.Recordkey + ". " + ex.Message);
                 }
             }

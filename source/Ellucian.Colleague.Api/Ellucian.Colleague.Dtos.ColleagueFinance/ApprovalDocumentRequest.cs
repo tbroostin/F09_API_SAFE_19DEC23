@@ -54,6 +54,16 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string ChangeTime { get; set; }
 
         /// <summary>
+        /// Boolean flag to indicate that the user is returning the document.
+        /// </summary>
+        public bool Return { get; set; }
+
+        /// <summary>
+        /// The return comments for the document.
+        /// </summary>
+        public string ReturnComments { get; set; }
+
+        /// <summary>
         /// The list of line items associated with the document.
         /// </summary>
         public List<ApprovalItem> DocumentItems { get; set; }

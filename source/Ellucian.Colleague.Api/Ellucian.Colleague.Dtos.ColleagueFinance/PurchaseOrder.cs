@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -166,5 +166,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Address type description
         /// </summary>
         public string VendorAddressTypeDesc { get; set; }
+
+        /// <summary>
+        /// Whenever Approver returns the document this will be used to set
+        /// </summary>
+        public bool ApprovalReturnedIndicator { get; set; }
     }
 }

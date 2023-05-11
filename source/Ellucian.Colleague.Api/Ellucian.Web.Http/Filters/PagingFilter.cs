@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -109,7 +109,9 @@ namespace Ellucian.Web.Http.Filters
                 }
             }
             catch (Exception)
-            { }
+            {
+                isEnumerable = false; // avoid empty catch block
+            }
             base.OnActionExecuted(context);
         }
 

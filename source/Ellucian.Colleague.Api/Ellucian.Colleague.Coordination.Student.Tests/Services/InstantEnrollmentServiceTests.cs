@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -301,7 +302,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task InstantEnrollmentService_ProposedRegistrationForClassesAsync_Null_parameter()
         {
-            var dtos = await service.ProposedRegistrationForClassesAsync(null);
+            await service.ProposedRegistrationForClassesAsync(null);
         }
 
         [TestMethod]
@@ -309,7 +310,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task InstantEnrollmentService_ProposedRegistrationForClassesAsync_Sections_AreNull()
         {
             instantEnrollmentProposedRegistration.ProposedSections = null;
-            var dtos = await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
+            await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
         }
 
         [TestMethod]
@@ -325,7 +326,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
             sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).ReturnsAsync(ieSections);
 
-            var dtos = await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
+            await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
         }
 
         [TestMethod]
@@ -342,7 +343,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     RegistrationReason = "RSN"
                 }
             };
-            var dtos = await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
+            await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task InstantEnrollmentService_ProposedRegistrationForClassesAsync_RepositoryThrowsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            instantEnrollmentRepositoryMock.Setup(repo => repo.GetProposedRegistrationResultAync(
+                It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentProposedRegistration>())).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+
+            await service.ProposedRegistrationForClassesAsync(instantEnrollmentProposedRegistration);
         }
 
         [TestMethod]
@@ -391,7 +406,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).ReturnsAsync(ieSections);
-            var dto = await service.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
+            await service.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
         }
 
         [TestMethod]
@@ -408,7 +423,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     RegistrationReason = "RSN"
                 }
             };
-            var dto = await service.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
+            await service.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task InstantEnrollmentService_ZeroCostRegistrationForClassesAsync_RepositoryThrowsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            instantEnrollmentRepositoryMock.Setup(repo => repo.GetZeroCostRegistrationResultAsync(
+                It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentZeroCostRegistration>())).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+
+            await service.ZeroCostRegistrationForClassesAsync(zeroCostRegistration);
         }
 
         [TestMethod]
@@ -457,7 +486,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task InstantEnrollmentService_EcheckRegistrationForClassesAsync_NullParameter()
         {
-            var dtos = await service.EcheckRegistrationForClassesAsync(null);
+            await service.EcheckRegistrationForClassesAsync(null);
         }
 
         [TestMethod]
@@ -474,7 +503,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     RegistrationReason = "RSN"
                 }
             };
-            var dto = await service.EcheckRegistrationForClassesAsync(echeckReg);
+            await service.EcheckRegistrationForClassesAsync(echeckReg);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task InstantEnrollmentService_EcheckRegistrationForClassesAsync_RepositoryThrowsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            instantEnrollmentRepositoryMock.Setup(repo => repo.GetEcheckRegistrationResultAsync(
+                It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentEcheckRegistration>())).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+
+            await service.EcheckRegistrationForClassesAsync(echeckReg);
         }
 
         [TestMethod]
@@ -500,7 +543,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task StartInstantEnrollmentPaymentGatewayTransaction_Null_Criteria()
         {
-            var dto = await service.StartInstantEnrollmentPaymentGatewayTransaction(null);
+            await service.StartInstantEnrollmentPaymentGatewayTransaction(null);
         }
 
         [TestMethod]
@@ -509,7 +552,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration criteria = new InstantEnrollmentPaymentGatewayRegistration();
             criteria.ProposedSections = null;
-            var dto = await service.StartInstantEnrollmentPaymentGatewayTransaction(criteria);
+            await service.StartInstantEnrollmentPaymentGatewayTransaction(criteria);
         }
 
         [TestMethod]
@@ -532,7 +575,40 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     RegistrationReason = "RSN"
                 }
             };
-            var dto = await service.StartInstantEnrollmentPaymentGatewayTransaction(criteria);
+            await service.StartInstantEnrollmentPaymentGatewayTransaction(criteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task InstantEnrollmentService_StartInstantEnrollmentPaymentGatewayTransaction_RepositoryThrowsColleagueExpiredException()
+        {
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            instantEnrollmentRepositoryMock.Setup(repo => repo.StartInstantEnrollmentPaymentGatewayTransactionAsync(
+                It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration>())).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+
+            var criteria = new InstantEnrollmentPaymentGatewayRegistration();
+            criteria.PersonId = currentUserFactory.CurrentUser.PersonId;
+            criteria.ReturnUrl = "ReturnUrl";
+            criteria.PersonDemographic = null;
+            criteria.PaymentMethod = "CC";
+            criteria.PaymentAmount = 100;
+            criteria.ProposedSections = new List<InstantEnrollmentRegistrationBaseSectionToRegister>() 
+            { 
+                new InstantEnrollmentRegistrationBaseSectionToRegister() { SectionId = "Sect1" } 
+            };
+
+            //mock valid sections so service method can pass ValidateInstantEnrollmentSections section repository call
+            var ieSections = new List<Section>();
+            foreach (var sec in criteria.ProposedSections)
+            {
+                ieSections.Add(new Section(sec.SectionId, "1", "01", DateTime.Today.AddDays(30), 3m, null, sec.SectionId, "CE", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "Freshman" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, "A", DateTime.Now.AddDays(-10)) }, true, true, true, true, false, false));
+            }
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).ReturnsAsync(ieSections);
+
+            await service.StartInstantEnrollmentPaymentGatewayTransaction(criteria);
         }
 
         [TestMethod]
@@ -569,7 +645,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_null_request()
         {
-            var text = await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
+            await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(null);
         }
 
         [TestMethod]
@@ -583,7 +659,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             };
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Role>());
 
-            var text = await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+            await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
         }
 
         [TestMethod]
@@ -598,7 +674,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             instantEnrollmentRepositoryMock.Setup(repo => repo.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).
                 ThrowsAsync(new ArgumentException());
-            var text = await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+            await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
         }
 
         [TestMethod]
@@ -613,7 +689,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             instantEnrollmentRepositoryMock.Setup(repo => repo.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).
                 ReturnsAsync(() => null);
-            var text = await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+            await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ColleagueSessionExpiredException))]
+        public async Task InstantEnrollmentService_GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_RepositoryThrowsColleagueExpiredException()
+        {
+            var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest()
+            {
+                PersonId = currentUserFactory.CurrentUser.PersonId,
+                CashReceiptId = "0001234"
+            };
+
+            // Mock a repository that returns a Colleague Session Expired Exception.
+            instantEnrollmentRepositoryMock.Setup(repo => repo.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(
+                It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+
+            await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
         }
 
         [TestMethod]
@@ -784,16 +880,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
+            [ExpectedException(typeof(ColleagueSessionExpiredException))]
+            public async Task InstantEnrollmentService_GetInstantEnrollmentStudentPrograms2Async_RepositoryThrowsColleagueExpiredException()
+            {
+                // Mock a repository that returns a Colleague Session Expired Exception.
+                studentProgramRepoMock.Setup(repo => repo.GetAsync(personId)).Returns(() =>
+                {
+                    throw new ColleagueSessionExpiredException("session timeout");
+                });
+                await service.GetInstantEnrollmentStudentPrograms2Async(personId);
+            }
+
+            [TestMethod]
             public async Task GetInstantEnrollmentStudentPrograms2Async_BoolDefaultValueIsCurrentOnly()
             {
-                var expectedStudentPrograms = studentProgEntities.Where(x => 
-                    (x.StartDate != null && x.StartDate <= DateTime.Today) && 
+                var expectedStudentPrograms = studentProgEntities.Where(x =>
+                    (x.StartDate != null && x.StartDate <= DateTime.Today) &&
                     (x.EndDate == null || x.EndDate >= DateTime.Today)).ToList();
 
                 var actualStudentPrograms = (await service.GetInstantEnrollmentStudentPrograms2Async(personId)).ToList();
 
                 Assert.AreEqual(expectedStudentPrograms.Count, actualStudentPrograms.Count);
-                for(int i = 0; i < expectedStudentPrograms.Count; i++)
+                for (int i = 0; i < expectedStudentPrograms.Count; i++)
                 {
                     Assert.AreEqual(expectedStudentPrograms[i].ProgramCode, actualStudentPrograms[i].ProgramCode);
                 }

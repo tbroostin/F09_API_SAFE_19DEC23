@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -13,6 +13,8 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -21,11 +23,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly ITranscriptGroupingRepository _transcriptGroupingRepository;
         private readonly IAdapterRegistry _adapterRegistry;
+        private ILogger _logger;
 
-        public TranscriptGroupingService(IAdapterRegistry adapterRegistry, ITranscriptGroupingRepository transcriptGroupingRepository)
+        public TranscriptGroupingService(IAdapterRegistry adapterRegistry, ITranscriptGroupingRepository transcriptGroupingRepository, ILogger logger)
         {
             _adapterRegistry = adapterRegistry;
             _transcriptGroupingRepository = transcriptGroupingRepository;
+            _logger = logger;
 
         }
 
@@ -35,21 +39,35 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>A set of transcript grouping DTOs</returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TranscriptGrouping>> GetSelectableTranscriptGroupingsAsync()
         {
-            ICollection<Dtos.Student.TranscriptGrouping> transcriptGroupingDtos = new List<Dtos.Student.TranscriptGrouping>();
-            var transcriptGroupings = await _transcriptGroupingRepository.GetAsync();
-
-            var selectableGroupings = transcriptGroupings.Where(x => x.IsUserSelectable == true);
-
-            // Get the right adapter for the type mapping
-            var transcriptGroupingDtoAdapter = _adapterRegistry.GetAdapter<TranscriptGrouping, Ellucian.Colleague.Dtos.Student.TranscriptGrouping>();
-            foreach (var transcriptGrouping in selectableGroupings)
+            try
             {
-                // Map the degree plan entity to the degree plan DTO
-                var transcriptGroupingDto = transcriptGroupingDtoAdapter.MapToType(transcriptGrouping);
-                transcriptGroupingDtos.Add(transcriptGroupingDto);
-            }
+                ICollection<Dtos.Student.TranscriptGrouping> transcriptGroupingDtos = new List<Dtos.Student.TranscriptGrouping>();
+                var transcriptGroupings = await _transcriptGroupingRepository.GetAsync();
 
-            return transcriptGroupingDtos;
+                var selectableGroupings = transcriptGroupings.Where(x => x.IsUserSelectable == true);
+
+                // Get the right adapter for the type mapping
+                var transcriptGroupingDtoAdapter = _adapterRegistry.GetAdapter<TranscriptGrouping, Ellucian.Colleague.Dtos.Student.TranscriptGrouping>();
+                foreach (var transcriptGrouping in selectableGroupings)
+                {
+                    // Map the degree plan entity to the degree plan DTO
+                    var transcriptGroupingDto = transcriptGroupingDtoAdapter.MapToType(transcriptGrouping);
+                    transcriptGroupingDtos.Add(transcriptGroupingDto);
+                }
+
+                return transcriptGroupingDtos;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session expired while getting transcript groupings";
+                _logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw;
+            }
         }
     }
 }

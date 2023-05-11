@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,11 +15,34 @@ namespace Ellucian.Web.Http.Results
     /// </summary>
     public class FileContentActionResult : IHttpActionResult
     {
-        public string filePath;
-        public string fileName;
-        public string contentType;
-        public Dictionary<string, string> customHeaders;
+        public string FilePath
+        {
+            get { return filePath; }
+            set { filePath = value; }
+        }
+        private string filePath;
+
+        public string FileName
+        {
+            get { return fileName; }
+            set { fileName = value; }
+        }
+        private string fileName;
         
+        public string ContentType
+        {
+            get { return contentType; }
+            set { contentType = value; }
+        }
+        private string contentType;
+
+        public Dictionary<string, string> CustomHeaders
+        {
+            get { return customHeaders; }
+            set { customHeaders = value; }
+        }
+        private Dictionary<string, string> customHeaders;
+
         public FileContentActionResult(string filePath, string fileName, string contentType, Dictionary<string, string> customHeaders)
         {
             if (string.IsNullOrEmpty(filePath))
@@ -29,10 +52,10 @@ namespace Ellucian.Web.Http.Results
             if (string.IsNullOrEmpty(contentType))
                 throw new ArgumentNullException("contentType");
 
-            this.filePath = filePath;
-            this.fileName = fileName;
-            this.contentType = contentType;
-            this.customHeaders = customHeaders;
+            this.FilePath = filePath;
+            this.FileName = fileName;
+            this.ContentType = contentType;
+            this.CustomHeaders = customHeaders;
         }
 
         public Task<HttpResponseMessage> ExecuteAsync(CancellationToken cancellationToken)
@@ -40,14 +63,14 @@ namespace Ellucian.Web.Http.Results
             // create the response
             var response = new HttpResponseMessage();            
             response.Content = new StreamContent
-                (new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, 4096,
+                (new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.None, 4096,
                     FileOptions.Asynchronous | FileOptions.DeleteOnClose));  // delete the temp file on close
-            response.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment") { FileName = fileName };
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue(ContentType);
+            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment") { FileName = FileName };
             // add any custom headers
-            if (customHeaders != null)
+            if (CustomHeaders != null)
             {
-                foreach (var customHeader in customHeaders)
+                foreach (var customHeader in CustomHeaders)
                 {
                     response.Headers.Add(customHeader.Key, customHeader.Value);
                 }

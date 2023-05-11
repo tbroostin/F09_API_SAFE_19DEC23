@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.using System;
 
 namespace Ellucian.Colleague.Coordination.Planning
 {
@@ -82,6 +79,10 @@ namespace Ellucian.Colleague.Coordination.Planning
         /// If the student has academic credit for the archived course, this is the registration status of that item.
         /// </summary>
         public string RegistrationStatus { get; set; }
+        /// <summary>
+        /// Unique identifier for a course placeholder
+        /// </summary>
+        public string CoursePlaceholderId { get; set; }
 
         public ArchivedCourse()
         {

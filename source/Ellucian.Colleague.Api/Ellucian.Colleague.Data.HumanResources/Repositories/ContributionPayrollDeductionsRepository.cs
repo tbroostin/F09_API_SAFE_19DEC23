@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -45,6 +45,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         RepositoryException exception = null;
+
         /// <summary>
         /// Get the record key from a GUID
         /// </summary>
@@ -82,6 +83,42 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return foundEntry.Value.PrimaryKey;
         }
 
+        /// <summary>
+        /// Get the record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>The person ID</returns>
+        public async Task<string> GetArrangementKeyFromGuidAsync(string guid)
+        {
+            // return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException(string.Concat("payroll-deduction-arrangements GUID ", guid, " not found."));
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException(string.Concat("payroll-deduction-arrangements GUID ", guid, " not found."));
+            }
+
+            if (foundEntry.Value.Entity != "PERBEN")
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID '" + guid + "' has different entity, '" + foundEntry.Value.Entity + "', than expected, 'PERBEN'"));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
+        }
 
         /// <summary>
         ///  Get a collection of PayrollDeduction domain entity objects
@@ -92,42 +129,60 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="bypassCache"></param>
         /// <returns>collection of PayrollDeduction domain entity objects</returns>
         public async Task<Tuple<IEnumerable<PayrollDeduction>, int>> GetContributionPayrollDeductionsAsync(int offset, int limit,
-            string arrangement = "", bool bypassCache = false)
+            string arrangement = "", string deductedOn = "", Dictionary<string, string> filterQualifiers = null, bool bypassCache = false)
         {
             var totalCount = 0;
             var payrollDeductionEntities = new List<PayrollDeduction>();
-            var criteria = "";
+            string criteria = "";
+            string[] limitingKeys = null;
+            var deductedOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("DeductedOn") ? filterQualifiers["DeductedOn"] : "EQ";
 
             if (!string.IsNullOrEmpty(arrangement))
             {
-                criteria = string.Concat(criteria, "WITH PERBEN.ID EQ '", arrangement, "'");
-            }
-
-            if (!string.IsNullOrEmpty(criteria))
-            {
-                criteria = string.Concat(criteria, " AND ");
+                limitingKeys = await DataReader.SelectAsync("PERBEN", string.Concat("WITH PERBEN.ID EQ '", arrangement, "'"));
             }
             criteria = string.Concat(criteria, "WITH PERBEN.INTG.INTERVAL NE '' " +
                                                "OR WITH PERBEN.INTG.MO.PAY.PERIODS NE ''");
 
-
-            var perbenIds = await DataReader.SelectAsync("PERBEN", criteria.ToString());
+            var perbenIds = await DataReader.SelectAsync("PERBEN", limitingKeys, criteria);
 
             if (perbenIds == null)
-                throw new RepositoryException("No qualifying records selected from PERBEN in Colleague.");
+                return new Tuple<IEnumerable<PayrollDeduction>, int>(new List<PayrollDeduction>(), 0);
 
 
             var payToDatIds = await DataReader.SelectAsync("PAYTODAT", "WITH PTD.PERBEN.ID EQ ? ",
                 perbenIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
 
+            if (!string.IsNullOrEmpty(deductedOn))
+            {
+                var newDeductedOn = await GetUnidataFormattedDate(deductedOn);
+                if (!string.IsNullOrEmpty(newDeductedOn))
+                {
+                    criteria = string.Concat("WITH PTD.CHECK.DATE NE '' AND WITH PTD.ADVICE.DATE EQ '' AND WITH PTD.CHECK.DATE ", deductedOnOperation, " '", newDeductedOn, "'");
+                    var newCheckPayToDatIds = (await DataReader.SelectAsync("PAYTODAT", payToDatIds, criteria)).ToList();
+
+                    criteria = string.Concat("WITH PTD.ADVICE.DATE NE '' AND WITH PTD.CHECK.DATE EQ '' AND WITH PTD.ADVICE.DATE ", deductedOnOperation, " '", newDeductedOn, "'");
+                    var newAdvicePayToDatIds = (await DataReader.SelectAsync("PAYTODAT", payToDatIds, criteria)).ToList();
+
+                    criteria = string.Concat("WITH PTD.ADVICE.DATE EQ '' AND WITH PTD.CHECK.DATE EQ '' AND WITH PTD.PERIOD.DATE ", deductedOnOperation, " '", newDeductedOn, "'");
+                    var newDefaultPayToDatIds = (await DataReader.SelectAsync("PAYTODAT", payToDatIds, criteria)).ToList();
+
+                    payToDatIds = newCheckPayToDatIds.Union(newAdvicePayToDatIds).Union(newDefaultPayToDatIds).Distinct().ToArray();
+                }
+            }
+
+            if (payToDatIds == null || !payToDatIds.Any())
+            {
+                return new Tuple<IEnumerable<PayrollDeduction>, int>(new List<PayrollDeduction>(), 0);
+            }
+
             var payToDatRecords = await DataReader.BulkReadRecordAsync<Paytodat>("PAYTODAT", payToDatIds);
 
             if (payToDatRecords == null)
             {
-                throw new RepositoryException("No qualifying records selected from PAYTODAT in Colleague.");
+                return new Tuple<IEnumerable<PayrollDeduction>, int>(new List<PayrollDeduction>(), 0);
             }
             
-
             var payToDatCollection = new List<Paytodat>(payToDatRecords);
             foreach (var payToDatRecord in payToDatRecords)
             {
@@ -255,6 +310,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (payToDatCollRecord.PtdAdviceDate.HasValue)
             {
                 deductionDate = payToDatCollRecord.PtdAdviceDate.Value;
+            }
+            //if there still no deduction date then use the Period date as the deduction date
+            if (deductionDate == DateTime.MinValue)
+            {
+                var payToDatKey = payToDatCollRecord.Recordkey.Split('*');
+                string periodDate = payToDatKey[0];
+
+                //convert a unidata internal value into a datetime
+                DateTime zeroDate = new DateTime(1967, 12, 31);
+                double offsetDate = zeroDate.ToOADate();
+
+                var date = DateTime.FromOADate(double.Parse(periodDate) + offsetDate);
+
+                deductionDate = date;
             }
 
             //now we have to get the actual Ptdbnded record the guid is associated to, this lets us get everything else correctly
@@ -557,8 +626,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         perbenGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-                catch (Exception) // Do not throw error.
+                catch(Exception ex)
                 {
+                    // do not throw error
+                    logger.Error(ex, "Unable to get perben by guid.");
                 }
             }
 

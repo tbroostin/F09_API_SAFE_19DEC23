@@ -526,32 +526,46 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (string.IsNullOrEmpty(employmentPerformanceReviewsId))
                 throw new ArgumentNullException("EmploymentPerformanceReviews", string.Concat("Must provide an id for Institution Job.  Guid: ", employmentPerformanceReviews.Id));
 
-
-            Domain.HumanResources.Entities.EmploymentPerformanceReview response = null;
-
             if ((employmentPerformanceReviews.Person == null) || (string.IsNullOrEmpty(employmentPerformanceReviews.Person.Id)))
             {
                 throw new ArgumentNullException("Person ID is required for Employment Performance Reviews.");
             }
 
-            var personId = await _personRepository.GetPersonIdFromGuidAsync(employmentPerformanceReviews.Person.Id);
+            string personId;
+            try
+            {
+                personId = await _personRepository.GetPersonIdFromGuidAsync(employmentPerformanceReviews.Person.Id);
 
-            if (string.IsNullOrEmpty(personId))
+                if (string.IsNullOrEmpty(personId))
+                {
+                    throw new ArgumentException("Person not found for Id:" + employmentPerformanceReviews.Person.Id);
+                }
+            }
+            catch (Exception)
             {
                 throw new ArgumentException("Person not found for Id:" + employmentPerformanceReviews.Person.Id);
             }
 
             if ((employmentPerformanceReviews.CompletedOn == DateTime.MinValue))
             {
-                throw new ArgumentNullException("The completedOn date is a required field for colleague.");
+                throw new ArgumentNullException("The completedOn date is a required field for Colleague.");
             }
 
             if ((employmentPerformanceReviews.Job == null) || (string.IsNullOrEmpty(employmentPerformanceReviews.Job.Id)))
             {
                 throw new ArgumentNullException("Job ID is required for Employment Performance Reviews.");
             }
-            var job = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.Job.Id, "PERPOS");
-            if ((job == null) || (string.IsNullOrEmpty(job)))
+
+            string job;
+            try
+            {
+                job = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.Job.Id, "PERPOS");
+                if ((job == null) || (string.IsNullOrEmpty(job)))
+                {
+                    throw new ArgumentException("Job not found for Id:" + employmentPerformanceReviews.Job.Id);
+                }
+            }
+            catch (Exception)
             {
                 throw new ArgumentException("Job not found for Id:" + employmentPerformanceReviews.Job.Id);
             }
@@ -560,8 +574,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("Type ID is required for Employment Performance Reviews.");
             }
-            var type = await _employmentPerformanceReviewRepository.GetInfoFromGuidAsync(employmentPerformanceReviews.Type.Id);
-            if ((type == null) || (string.IsNullOrEmpty(type.SecondaryKey)))
+
+            Ellucian.Data.Colleague.GuidLookupResult type;
+            try
+            {
+                type = await _employmentPerformanceReviewRepository.GetInfoFromGuidAsync(employmentPerformanceReviews.Type.Id);
+                if ((type == null) || (string.IsNullOrEmpty(type.SecondaryKey)))
+                {
+                    throw new ArgumentException("The type ID supplied does not exist for EVALUTION.CYCLES valcode.");
+                }
+            }
+            catch (Exception)
             {
                 throw new ArgumentException("The type ID supplied does not exist for EVALUTION.CYCLES valcode.");
             }
@@ -570,17 +593,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("Rating ID is required for Employment Performance Reviews.");
             }
-            var rating = await _employmentPerformanceReviewRepository.GetInfoFromGuidAsync(employmentPerformanceReviews.Rating.Detail.Id);
-            if ((rating == null) || (string.IsNullOrEmpty(rating.SecondaryKey)))
+
+            Ellucian.Data.Colleague.GuidLookupResult rating;
+            try
+            {
+                rating = await _employmentPerformanceReviewRepository.GetInfoFromGuidAsync(employmentPerformanceReviews.Rating.Detail.Id);
+                if ((rating == null) || (string.IsNullOrEmpty(rating.SecondaryKey)))
+                {
+                    throw new ArgumentException("The rating detail id does not exist for PERFORMANCE.EVAL.RATINGS valcode.");
+                }
+            }
+            catch (Exception)
             {
                 throw new ArgumentException("The rating detail id does not exist for PERFORMANCE.EVAL.RATINGS valcode.");
             }
 
-            response = new Domain.HumanResources.Entities.EmploymentPerformanceReview(employmentPerformanceReviews.Id, personId, job, employmentPerformanceReviews.CompletedOn, type.SecondaryKey, rating.SecondaryKey);
+            EmploymentPerformanceReview response = new EmploymentPerformanceReview(employmentPerformanceReviews.Id, personId, job, employmentPerformanceReviews.CompletedOn, type.SecondaryKey, rating.SecondaryKey);
 
             if ((employmentPerformanceReviews.ReviewedBy != null) && (!string.IsNullOrEmpty(employmentPerformanceReviews.ReviewedBy.Id)))
             {
-                response.ReviewedById = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.ReviewedBy.Id, "PERSON");
+                try
+                {
+                    response.ReviewedById = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.ReviewedBy.Id, "PERSON");
+                }
+                catch (Exception)
+                {
+                    throw new ArgumentException("Person not found for Id:" + employmentPerformanceReviews.ReviewedBy.Id);
+                }
             }
 
             if (!string.IsNullOrEmpty(employmentPerformanceReviews.Comment))

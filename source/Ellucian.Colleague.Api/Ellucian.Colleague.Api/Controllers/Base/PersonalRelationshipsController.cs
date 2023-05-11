@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -170,7 +170,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                     if ((!string.IsNullOrEmpty(directRelationshipType)) && (!ValidEnumerationValue(typeof(PersonalRelationshipType), directRelationshipType)))
                     {
-                        throw new Exception(string.Concat("'", directRelationshipType, "' is an invalid enumeration value. "));
+                        throw new ColleagueWebApiException(string.Concat("'", directRelationshipType, "' is an invalid enumeration value. "));
                     }
                    
                     pageOfItems = await _personalRelationshipsService.GetPersonalRelationshipsByFilterAsync(page.Offset, page.Limit, subjectPerson, relatedPerson, directRelationshipType, directRelationshipDetailId);

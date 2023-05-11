@@ -26,6 +26,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public Mock<IPersonBaseRepository> personBaseRepositoryMock;
         public Mock<IPersonBaseRepository> proxyPersonBaseRepositoryMock;
         public Mock<IEmployeeRepository> employeeRepositoryMock;
+        public Mock<IHumanResourcesReferenceDataRepository> humanResourcesReferenceDataRepositoryMock;
         public Mock<IEmployeeRepository> proxyEmployeeRepositoryMock;
         public ICurrentUserFactory currentUserFactory;
         public ICurrentUserFactory proxyCurrentUserFactory;
@@ -176,6 +177,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 personBaseRepositoryMock.Object,
                 supervisorsRepositoryMock.Object,
                 employeeRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
                 adapterRegistryMock.Object,
                 currentUserFactory,
                 roleRepositoryMock.Object,
@@ -186,6 +188,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 proxyPersonBaseRepositoryMock.Object,
                 proxySupervisorsRepositoryMock.Object,
                 proxyEmployeeRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
                 proxyAdapterRegistryMock.Object,
                 proxyCurrentUserFactory,
                 proxyRoleRepositoryMock.Object,

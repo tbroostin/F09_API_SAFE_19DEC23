@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -27,10 +27,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public DateTime? EndDate { get; set; }
             public string ApproverId { get; set; }
             public string ApproverName { get; set; }
+            public string EmployeeName { get; set; }
             public LeaveStatusAction Status { get; set; }
             public List<LeaveRequestDetailRecord> LeaveRequestDetailRecords { get; set; }
             public List<LeaveRequestStatusRecord> LeaveRequestStatusRecords { get; set; }
             // To Do: LeaveRequestCommentRecords
+
+            public bool EnableDeleteForSupervisor { get; set; }
         }
 
         public class LeaveRequestDetailRecord
@@ -40,6 +43,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public DateTime LeaveDate { get; set; }
             public decimal? LeaveHours { get; set; }
             public bool ProcessedInPayPeriod { get; set; }
+            public string LeaveRequestDetailChgopr { get; set; }
         }
 
         public class LeaveRequestStatusRecord
@@ -234,7 +238,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 StartDate = new DateTime(2019,11,05),
                 EndDate = new DateTime(2019,11,06),
                 ApproverId="0010351",
-                ApproverName="Hadrian O. Racz",
+                ApproverName="CH_Brown, CH_Jennifer",
                 Status = LeaveStatusAction.Draft,
                 LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
                 {
@@ -250,7 +254,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 StartDate = new DateTime(2019,04,04),
                 EndDate = new DateTime(2019,04,04),
                 ApproverId="0010351",
-                ApproverName="Hadrian O. Racz",
+                ApproverName="Jennifer Aniston",
                 Status = LeaveStatusAction.Submitted,
                 LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
                 {
@@ -265,7 +269,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 StartDate = new DateTime(2019,10,01),
                 EndDate = new DateTime(2019,10,01),
                 ApproverId="0010351",
-                ApproverName="Hadrian O. Racz",
+                //ApproverName="Hadrian O. Racz",
                 Status = LeaveStatusAction.Submitted,
                 LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
                 {
@@ -340,9 +344,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             if (leaveRequestRecord.LeaveRequestDetailRecords != null && leaveRequestRecord.LeaveRequestDetailRecords.Any())
             {
                 leaveRquestDetails = new List<HumanResources.Entities.LeaveRequestDetail>();
-                leaveRequestRecord.LeaveRequestDetailRecords.ForEach(lrd => leaveRquestDetails.Add(new HumanResources.Entities.LeaveRequestDetail(lrd.Id, lrd.LeaveRequestId, lrd.LeaveDate, lrd.LeaveHours, lrd.ProcessedInPayPeriod)));
+                leaveRequestRecord.LeaveRequestDetailRecords.ForEach(lrd => leaveRquestDetails.Add(new HumanResources.Entities.LeaveRequestDetail(lrd.Id, lrd.LeaveRequestId, lrd.LeaveDate, lrd.LeaveHours, lrd.ProcessedInPayPeriod, lrd.LeaveRequestDetailChgopr)));
             }
 
+            // Get the latest Leave Request Status record of the current Leave Request Id
+            var latestLeaveRequestStatus = leaveRequestStatusRecords.Where(lrs => lrs.Id != null && lrs.LeaveRequestId == leaveRequestRecord.Id).OrderByDescending(lrs => int.Parse(lrs.Id)).FirstOrDefault();
             // To Do: Extract the LeaveRequestCommentRecords
 
             // Build the LeaveRequest Entity
@@ -351,11 +357,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 leaveRequestRecord.EmployeeId,
                 leaveRequestRecord.StartDate,
                 leaveRequestRecord.EndDate,
-                leaveRequestRecord.ApproverId,
+                latestLeaveRequestStatus.ActionerId,
                 leaveRequestRecord.ApproverName,
+                leaveRequestRecord.EmployeeName,
                 leaveRequestRecord.Status,
                 leaveRquestDetails,
-                new List<LeaveRequestComment>());
+                new List<LeaveRequestComment>(),
+                leaveRequestRecord.EnableDeleteForSupervisor);
         }
 
         /// <summary>
@@ -400,7 +408,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             DateTime? startDate,
             DateTime? endDate,
             string approverId,
-            string approverName,
+            string approverName,            
             LeaveStatusAction status,
             List<HumanResources.Entities.LeaveRequestDetail> leaveRequestDetails)
         {
@@ -413,7 +421,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 StartDate = startDate,
                 EndDate = endDate,
                 ApproverId = approverId,
-                ApproverName = approverName,
+                ApproverName = approverName,                
                 Status = status,
                 LeaveRequestDetailRecords = leaveRequestDetailRecords.Where(lrd => lrd.LeaveRequestId == randomLeaveRequestId).ToList(),
                 LeaveRequestStatusRecords = leaveRequestStatusRecords.Where(lrs => lrs.LeaveRequestId == randomLeaveRequestId).ToList()
@@ -468,7 +476,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             return await Task.FromResult(entities);
         }
 
-        public async Task<HumanResources.Entities.LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string leaveRequestId)
+        public async Task<HumanResources.Entities.LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string leaveRequestId, string currentUserId = null)
         {
             var record = leaveRequestRecords.FirstOrDefault(lr => lr.Id == leaveRequestId);
 
@@ -482,7 +490,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 leaveRequest.StartDate,
                 leaveRequest.EndDate,
                 leaveRequest.ApproverId,
-                leaveRequest.ApproverName,
+                leaveRequest.ApproverName,                
                 leaveRequest.Status,
                 leaveRequest.LeaveRequestDetails);
 
@@ -580,6 +588,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             leaveRequestsForTimeEntry.ForEach(x => LeaveRequestForTimeEntry.Add(BuildLeaveRequestEntity(x)));
 
             return await Task.FromResult(LeaveRequestForTimeEntry);
+        }
+
+        public Task<PersonHierarchyName> GetPersonNameFromNameHierarchy(PersonBase personBase)
+        {
+            throw new NotImplementedException();
         }
         #endregion
     }

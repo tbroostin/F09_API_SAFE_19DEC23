@@ -19,6 +19,7 @@ using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
@@ -263,7 +264,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 actualChangeRequests = await actualService.GetAwardPackageChangeRequestsAsync(studentId);
 
                 Assert.AreEqual(0, actualChangeRequests.Count());
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no AwardPackageChangeRequests", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no AwardPackageChangeRequests", studentId)));
             }
         }
 
@@ -743,7 +744,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task NullEntityReturnedByRepositoryTest()
             {
                 Domain.FinancialAid.Entities.AwardPackageChangeRequest nullRequest = null;
@@ -858,7 +859,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 };
                 await actualService.CreateAwardPackageChangeRequestAsync(studentId, inputChangeRequestDto);
 
-                loggerMock.Verify(l => l.Warn(It.Is<Exception>(e => e.GetType() == exception.GetType()), It.IsAny<string>()));
+                loggerMock.Verify(l => l.Debug(It.Is<Exception>(e => e.GetType() == exception.GetType()), It.IsAny<string>()));
             }
 
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -46,7 +46,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IEmergencyInformationService _emergencyInformationService;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
-
+        private const string permissionExceptionMessage = "User does not have permission to access the requested information";
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
         /// <summary>
         /// Initializes a new instance of the PersonsController class.
         /// </summary>
@@ -285,7 +287,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets a subset of person credentials.
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
-        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -335,13 +337,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
 
                 //Discussed with Vickie & Kelly to add exception similar to alternateCredentials. If only type is provided & value is not provided.
-                if( criteriaObject.Credentials != null && criteriaObject.Credentials.Any() )
+                if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
                 {
-                    foreach( var cred in criteriaObject.Credentials )
+                    foreach (var cred in criteriaObject.Credentials)
                     {
-                        if( cred.Type != null && string.IsNullOrEmpty( cred.Value ) )
+                        if (cred.Type != null && string.IsNullOrEmpty(cred.Value))
                         {
-                            throw new ArgumentException( "credentials.type", string.Concat( "credentials.type.id filter requires credentials.value filter." ) );
+                            throw new ArgumentException("credentials.type", string.Concat("credentials.type.id filter requires credentials.value filter."));
                         }
                     }
                 }
@@ -370,35 +372,35 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonCredential3>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
-            catch( KeyNotFoundException e )
+            catch (KeyNotFoundException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.NotFound );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
-            catch( PermissionsException e )
+            catch (PermissionsException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.Forbidden );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
-            catch( ArgumentException e )
+            catch (ArgumentException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( RepositoryException e )
+            catch (RepositoryException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( IntegrationApiException e )
+            catch (IntegrationApiException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( Exception e )
+            catch (Exception e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
 
@@ -556,7 +558,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">A global identifier of a person.</param>
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
-        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
         [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<Dtos.PersonCredential3> GetPersonCredential4ByGuidAsync(string id)
@@ -587,35 +589,35 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return credential;
 
             }
-            catch( KeyNotFoundException e )
+            catch (KeyNotFoundException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.NotFound );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
-            catch( PermissionsException e )
+            catch (PermissionsException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ), HttpStatusCode.Forbidden );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
-            catch( ArgumentException e )
+            catch (ArgumentException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( RepositoryException e )
+            catch (RepositoryException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( IntegrationApiException e )
+            catch (IntegrationApiException e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch( Exception e )
+            catch (Exception e)
             {
-                _logger.Error( e.ToString() );
-                throw CreateHttpResponseException( IntegrationApiUtility.ConvertToIntegrationApiException( e ) );
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
 
@@ -673,6 +675,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (ColleagueSessionExpiredException csse)
             {
+                string message = "Session has expired while retrieving person profile information.";
+                _logger.Error(csse, message);
                 throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
@@ -688,13 +692,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personId">Id of the person to get</param>
         /// <returns>The requested <see cref="Dtos.Base.PersonProxyDetails"/> information </returns>
         /// <accessComments>
-        /// Only the current user can access the proxy's details
+        /// Any logged in user can access their own proxy's details.
+        /// A user with the permission ADD.ALL.HR.PROXY is considered as an admin and can access details of any employee's proxy.
         /// </accessComments>
         public async Task<Dtos.Base.PersonProxyDetails> GetPersonProxyDetailsAsync(string personId)
         {
             try
             {
                 return await _personService.GetPersonProxyDetailsAsync(personId);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (ArgumentNullException anex)
             {
@@ -703,12 +713,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                _logger.Error(pex.ToString());
+                throw CreateHttpResponseException(permissionExceptionMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -849,6 +860,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -1002,10 +1017,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-               AddEthosContextProperties(
-                    await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
-                    await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                        new List<string>() { guid }));
+                AddEthosContextProperties(
+                     await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                     await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                         new List<string>() { guid }));
 
                 return await _personService.GetPerson3ByGuidAsync(guid, bypassCache);
             }
@@ -1544,13 +1559,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
 
                 //Discussed with Vickie & Kelly to add exception similar to alternateCredentials. If only type is provided & value is not provided.
-                if( criteriaObject.Credentials != null && criteriaObject.Credentials.Any() )
+                if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
                 {
-                    foreach( var cred in criteriaObject.Credentials )
+                    foreach (var cred in criteriaObject.Credentials)
                     {
-                        if( cred.Type != null && string.IsNullOrEmpty( cred.Value ) )
+                        if (cred.Type != null && string.IsNullOrEmpty(cred.Value))
                         {
-                            throw new ArgumentException( "credentials.type", string.Concat( "credentials.type.id filter requires credentials.value filter." ) );
+                            throw new ArgumentException("credentials.type", string.Concat("credentials.type.id filter requires credentials.value filter."));
                         }
                     }
                 }
@@ -1672,6 +1687,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentException e)
             {
                 _logger.Error(e.ToString());
@@ -1744,6 +1763,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
             }
             catch (ArgumentException e)
             {
@@ -1822,6 +1845,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
+            }
             catch (ArgumentException e)
             {
                 _logger.Error(e.ToString());
@@ -1896,6 +1923,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException e)
             {
@@ -2025,6 +2056,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
@@ -2133,6 +2168,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException e)
             {
@@ -2252,6 +2291,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return personReturn;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
+            }
             catch (ApplicationException e)
             {
                 _logger.Error(e.ToString());
@@ -2326,7 +2369,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                 //get Data Privacy List
+                //get Data Privacy List
                 var dpList = await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
                 //call import extend method that needs the extracted extension dataa and the config
@@ -2380,6 +2423,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(csse), HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException e)
             {
@@ -2436,22 +2483,22 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 if (string.IsNullOrEmpty(personId))
                 {
                     _logger.Error("PersonsController-PutProfileAsync: Must provide a person id in the request uri");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (profile == null)
                 {
                     _logger.Error("PersonsController-PutProfileAsync: Must provide a profile in the request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (string.IsNullOrEmpty(profile.Id))
                 {
                     _logger.Error("PersonsController-PutProfileAsync: Must provide a person Id in the request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (personId != profile.Id)
                 {
                     _logger.Error("PersonsController-PutProfileAsync: PersonID in URL is not the same as in request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
 
                 return await _personService.UpdateProfileAsync(profile);
@@ -2491,22 +2538,22 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 if (string.IsNullOrEmpty(personId))
                 {
                     _logger.Error("PersonsController-PutProfile2Async: Must provide a person id in the request uri");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (profile == null)
                 {
                     _logger.Error("PersonsController-PutProfile2Async: Must provide a profile in the request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (string.IsNullOrEmpty(profile.Id))
                 {
                     _logger.Error("PersonsController-PutProfile2Async: Must provide a person Id in the request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
                 if (personId != profile.Id)
                 {
                     _logger.Error("PersonsController-PutProfile2Async: PersonID in URL is not the same as in request body");
-                    throw new Exception();
+                    throw new ColleagueWebApiException();
                 }
 
                 return await _personService.UpdateProfile2Async(profile);
@@ -2624,6 +2671,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 AddDataPrivacyContextProperty((await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 return await _personService.QueryPerson2ByPostAsync(person);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
@@ -2658,6 +2709,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _personService.ValidatePermissions(GetPermissionsMetaData());
                 AddDataPrivacyContextProperty((await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 return await _personService.QueryPerson3ByPostAsync(person);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -2698,6 +2753,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                               personDtos.Select(a => a.Id).ToList()));
 
                 return personDtos;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -2754,6 +2813,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -2773,10 +2836,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _personService.QueryPersonMatchResultsByPostAsync(criteria);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -2804,6 +2872,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 return await _personService.QueryPersonNamesByPostAsync(criteria);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException pex)
             {
@@ -2835,6 +2907,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 var personGuid = await _personService.GetPersonGuidByIdAsync(id);
                 return personGuid;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {

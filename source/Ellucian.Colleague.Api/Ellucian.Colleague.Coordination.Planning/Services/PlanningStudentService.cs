@@ -50,7 +50,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             List<Dtos.Student.PlanningStudent> planningStudents = new List<Dtos.Student.PlanningStudent>();
             string requestor = CurrentUser.PersonId;
             bool hasPrivacyRestriction = false;
-            if (!HasPermission(StudentPermissionCodes.ViewPersonInformation) && !(await UserIsAdvisorAsync(requestor)))
+            //Should have ViewPersonInformation as well as ViewStudentInformation permissions OR have advisors permissions
+            if (!(HasPermission(StudentPermissionCodes.ViewPersonInformation) && HasPermission(StudentPermissionCodes.ViewStudentInformation)) && !(await UserIsAdvisorAsync(requestor)))
             {
                 throw new PermissionsException("User does not have permissions to query students");
             }
@@ -112,6 +113,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         }
                     }
                     planningStudents.Add(planningStudentDto);
+                }
+                catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {

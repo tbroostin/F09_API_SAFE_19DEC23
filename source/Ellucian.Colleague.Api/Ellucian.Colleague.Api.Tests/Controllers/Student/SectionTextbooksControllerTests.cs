@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Web.Security;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -48,6 +49,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             private SectionTextbook sectionTextbook;
             private SectionTextbook sectionTextbook2;
             private SectionTextbook sectionTextbook3;
+            private SectionTextbook sectionTextbook4;
 
             [TestInitialize]
             public void Initialize()
@@ -135,11 +137,37 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     }
                 };
 
-                var section = new Section3();
+                sectionTextbook4 = new SectionTextbook()
+                {
+                    SectionId = "4123456",
+                    Action = SectionBookAction.Add,
+                    RequirementStatusCode = "R",
+                    Textbook = new Book()
+                    {
+                        Id = "4123",
+                        Isbn = "4123456789",
+                        Title = "Title 4",
+                        Author = "Author 4",
+                        Publisher = "Publisher 4",
+                        Copyright = "Copyright 4",
+                        Edition = "Edition 4",
+                        IsActive = true,
+                        PriceUsed = 10m,
+                        Price = 20m,
+                        Comment = "Comment",
+                        ExternalComments = "External Comments",
+                        AlternateID1 = "altId41",
+                        AlternateID2 = "altId42",
+                        AlternateID3 = "altId43"
+                    }
+                };
 
+                var section = new Section3();
                 sectionCoordinationServiceMock.Setup(svc => svc.UpdateSectionBookAsync(sectionTextbook)).ThrowsAsync(new ArgumentNullException());
                 sectionCoordinationServiceMock.Setup(svc => svc.UpdateSectionBookAsync(sectionTextbook2)).ThrowsAsync(new PermissionsException());
                 sectionCoordinationServiceMock.Setup(svc => svc.UpdateSectionBookAsync(sectionTextbook3)).ReturnsAsync(section);
+                sectionCoordinationServiceMock.Setup(svc => svc.UpdateSectionBookAsync(sectionTextbook4))
+                    .ThrowsAsync(new ColleagueSessionExpiredException("session expired"));
 
                 // mock controller
                 sectionTextbooksController = new SectionTextbooksController(sectionCoordinationService, logger);
@@ -152,7 +180,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationService = null;
             }
 
-
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task SectionsController_AddBookToSection_BadRequest()
@@ -160,12 +187,26 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var result = await sectionTextbooksController.UpdateSectionBookAsync(sectionTextbook);
             }
 
-
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task SectionsController_AddBookToSection_Forbidden()
             {
                 var result = await sectionTextbooksController.UpdateSectionBookAsync(sectionTextbook2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionsController_AddBookToSection_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    await sectionTextbooksController.UpdateSectionBookAsync(sectionTextbook4);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
             }
 
             [TestMethod]

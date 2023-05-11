@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 allDepartmentDtos = new TestDepartmentRepository().Get();
                 var DepartmentsList = new List<Department>();
 
-                DepartmentController = new DepartmentsController(AdapterRegistry, DepartmentRepository);
+                DepartmentController = new DepartmentsController(AdapterRegistry, DepartmentRepository, logger);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Base.Entities.Department, Department>();
                 foreach (var Department in allDepartmentDtos)
                 {
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 allDepartmentDtos = new TestDepartmentRepository().Get().Where(d=>d.IsActive==true);
                 var DepartmentsList = new List<Department>();
 
-                DepartmentController = new DepartmentsController(AdapterRegistry, DepartmentRepository);
+                DepartmentController = new DepartmentsController(AdapterRegistry, DepartmentRepository, logger);
                 Mapper.CreateMap<Ellucian.Colleague.Domain.Base.Entities.Department, Department>();
                 foreach (var Department in allDepartmentDtos)
                 {

@@ -53,7 +53,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new KeyNotFoundException("Invalid ID for approval document: " + id);
             }
 
-            return new ApprovalDocument(id, apprDoc.ApdText.Split(new string[] {"\r\n"}, StringSplitOptions.None));
+            var newApprovalDoc = new ApprovalDocument(id, apprDoc.ApdText.Split(new string[] {"\r\n"}, StringSplitOptions.None));
+            //newApprovalDoc.PersonId = apprDoc.ApdPersonId;
+
+            return newApprovalDoc;
         }
 
         /// <summary>

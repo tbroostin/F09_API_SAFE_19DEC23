@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +17,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System.Text.RegularExpressions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -155,16 +156,30 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("personId");
             }
 
-            AccountHolder accountHolder = await base.GetAsync<AccountHolder>(personId,
-                person =>
-                {
-                    AccountHolder personAccountHolder = new AccountHolder(person.Recordkey, person.LastName, person.PrivacyFlag);
-                    personAccountHolder.AddDepositsDue(GetDepositsDue(personId));
-                    return personAccountHolder;
-                }
-            , bypassCache);
+            try
+            {
+                AccountHolder accountHolder = await base.GetAsync<AccountHolder>(personId,
+                        person =>
+                        {
+                            AccountHolder personAccountHolder = new AccountHolder(person.Recordkey, person.LastName, person.PrivacyFlag);
+                            personAccountHolder.AddDepositsDue(GetDepositsDue(personId));
+                            return personAccountHolder;
+                        }
+                    , bypassCache);
 
-            return accountHolder;
+                return accountHolder;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired while retrieving account holder.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving account holder.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -293,13 +308,20 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("id", "Invoice ID must be specified.");
             }
 
-            ArInvoices arInvoice = DataReader.ReadRecord<ArInvoices>(id);
-            if (arInvoice == null)
+            try
             {
-                throw new ArgumentOutOfRangeException("Invoice ID " + id + " is not valid.");
-            }
+                ArInvoices arInvoice = DataReader.ReadRecord<ArInvoices>(id);
+                if (arInvoice == null)
+                {
+                    throw new ArgumentOutOfRangeException("Invoice ID " + id + " is not valid.");
+                }
 
-            return BuildInvoice(arInvoice);
+                return BuildInvoice(arInvoice);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -309,7 +331,9 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// <returns>List of invoices</returns>
         public IEnumerable<Invoice> GetInvoices(IEnumerable<string> ids)
         {
-            if (ids == null || ids.Count() == 0)
+            try
+            {
+                if (ids == null || ids.Count() == 0)
             {
                 throw new ArgumentNullException("ids", "At least one invoice ID must be specified.");
             }
@@ -320,13 +344,26 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentOutOfRangeException("ids", "Some invoices could not be retrieved from the database.");
             }
 
-            var invoices = new List<Invoice>();
-            foreach (var inv in items)
-            {
-                invoices.Add(BuildInvoice(inv));
-            }
+            
+                var invoices = new List<Invoice>();
+                foreach (var inv in items)
+                {
+                    invoices.Add(BuildInvoice(inv));
+                }
 
-            return invoices;
+                return invoices;
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Colleague session got expired  while retrieving invoices.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving invoices.");
+                throw;
+            }
         }
 
         /// <summary>
@@ -376,13 +413,20 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("id", "Invoice ID must be specified.");
             }
 
-            ArInvoices arInvoice = DataReader.ReadRecord<ArInvoices>(id);
-            if (arInvoice == null)
+            try
             {
-                throw new KeyNotFoundException("Invoice ID " + id + " is not valid.");
-            }
+                ArInvoices arInvoice = DataReader.ReadRecord<ArInvoices>(id);
+                if (arInvoice == null)
+                {
+                    throw new KeyNotFoundException("Invoice ID " + id + " is not valid.");
+                }
 
-            return BuildReceivableInvoice(arInvoice);
+                return BuildReceivableInvoice(arInvoice);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -397,19 +441,27 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("ids", "At least one invoice ID must be specified.");
             }
 
-            Collection<ArInvoices> items = DataReader.BulkReadRecord<ArInvoices>(ids.ToArray());
-            if (items == null || items.Count != ids.Count())
+            try
             {
-                throw new KeyNotFoundException("Failed to retrieve one or more of invoice ids " + String.Join(", ", ids.ToArray()) + " from the database.");
+                Collection<ArInvoices> items = DataReader.BulkReadRecord<ArInvoices>(ids.ToArray());
+                if (items == null || items.Count != ids.Count())
+                {
+                    throw new KeyNotFoundException("Failed to retrieve one or more of invoice ids " + String.Join(", ", ids.ToArray()) + " from the database.");
+                }
+
+                var invoices = new List<ReceivableInvoice>();
+                foreach (var inv in items)
+                {
+                    invoices.Add(BuildReceivableInvoice(inv));
+                }
+
+                return invoices;
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
 
-            var invoices = new List<ReceivableInvoice>();
-            foreach (var inv in items)
-            {
-                invoices.Add(BuildReceivableInvoice(inv));
-            }
-
-            return invoices;
         }
 
         /// <summary>
@@ -466,14 +518,20 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 throw new ArgumentNullException("id", "Payment ID must be specified.");
             }
-
-            ArPayments arPayment = DataReader.ReadRecord<ArPayments>(id);
-            if (arPayment == null)
+            try
             {
-                throw new ArgumentOutOfRangeException("Payment ID " + id + " is not valid.");
-            }
+                ArPayments arPayment = DataReader.ReadRecord<ArPayments>(id);
+                if (arPayment == null)
+                {
+                    throw new ArgumentOutOfRangeException("Payment ID " + id + " is not valid.");
+                }
 
-            return BuildPayment(arPayment);
+                return BuildPayment(arPayment);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -488,25 +546,32 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("ids", "At least one payment ID must be specified.");
             }
 
-            Collection<ArPayments> pmts = DataReader.BulkReadRecord<ArPayments>(ids.ToArray());
-
-            if (pmts == null || pmts.Count != ids.Count())
+            try
             {
-                throw new ArgumentOutOfRangeException("ids", "Some payments could not be retrieved from the database.");
-            }
+                Collection<ArPayments> pmts = DataReader.BulkReadRecord<ArPayments>(ids.ToArray());
 
-            foreach (var rev in GetReversingPayments(pmts))
+                if (pmts == null || pmts.Count != ids.Count())
+                {
+                    throw new ArgumentOutOfRangeException("ids", "Some payments could not be retrieved from the database.");
+                }
+
+                foreach (var rev in GetReversingPayments(pmts))
+                {
+                    pmts.Add(rev);
+                }
+
+                var payments = new List<ReceivablePayment>();
+                foreach (var pmt in pmts)
+                {
+                    payments.Add(BuildPayment(pmt));
+                }
+
+                return payments;
+            }
+            catch (ColleagueSessionExpiredException)
             {
-                pmts.Add(rev);
+                throw;
             }
-
-            var payments = new List<ReceivablePayment>();
-            foreach (var pmt in pmts)
-            {
-                payments.Add(BuildPayment(pmt));
-            }
-
-            return payments;
         }
 
         /// <summary>
@@ -516,34 +581,41 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// <returns>PaymentReceipt entity</returns>
         private ReceivablePayment BuildPayment(ArPayments arPayment)
         {
-            // Cash Receipt
-            if (!string.IsNullOrEmpty(arPayment.ArpCashRcpt))
+            try
             {
-                string refNo = null;
-                CashRcpts cr = DataReader.ReadRecord<CashRcpts>(arPayment.ArpCashRcpt);
-                refNo = cr != null ? cr.RcptNo : null;
-
-                var crPayment = new ReceiptPayment(arPayment.Recordkey,
-                refNo,
-                arPayment.ArpPersonId,
-                arPayment.ArpArType,
-                arPayment.ArpTerm,
-                arPayment.ArpDate.HasValue ? arPayment.ArpDate.Value : DateTime.Today,
-                arPayment.ArpAmt.GetValueOrDefault() - arPayment.ArpReversalAmt.GetValueOrDefault(),
-                arPayment.ArpCashRcpt)
+                // Cash Receipt
+                if (!string.IsNullOrEmpty(arPayment.ArpCashRcpt))
                 {
-                    Location = arPayment.ArpLocation,
-                    IsArchived = !String.IsNullOrEmpty(arPayment.ArpArchive),
-                };
+                    string refNo = null;
+                    CashRcpts cr = DataReader.ReadRecord<CashRcpts>(arPayment.ArpCashRcpt);
+                    refNo = cr != null ? cr.RcptNo : null;
 
-                // TODO: Net the payment amount along with any associated reversals/reversals of reversals
+                    var crPayment = new ReceiptPayment(arPayment.Recordkey,
+                    refNo,
+                    arPayment.ArpPersonId,
+                    arPayment.ArpArType,
+                    arPayment.ArpTerm,
+                    arPayment.ArpDate.HasValue ? arPayment.ArpDate.Value : DateTime.Today,
+                    arPayment.ArpAmt.GetValueOrDefault() - arPayment.ArpReversalAmt.GetValueOrDefault(),
+                    arPayment.ArpCashRcpt)
+                    {
+                        Location = arPayment.ArpLocation,
+                        IsArchived = !String.IsNullOrEmpty(arPayment.ArpArchive),
+                    };
 
-                return crPayment;
+                    // TODO: Net the payment amount along with any associated reversals/reversals of reversals
+
+                    return crPayment;
+                }
+                else
+                {
+                    // TODO: Add logic to build/return other types of payments (FA, SB, Deposit Item, AR Transfer, Payroll, System-Gen, Refund)
+                    throw new NotImplementedException("Non-CR payments are not implemented in IPC.");
+                }
             }
-            else
+            catch (ColleagueSessionExpiredException)
             {
-                // TODO: Add logic to build/return other types of payments (FA, SB, Deposit Item, AR Transfer, Payroll, System-Gen, Refund)
-                throw new NotImplementedException("Non-CR payments are not implemented in IPC.");
+                throw;
             }
         }
 
@@ -556,24 +628,31 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         {
             Collection<ArPayments> reversals = new Collection<ArPayments>();
 
-            foreach (var pmt in pmts)
+            try
             {
-                if (!string.IsNullOrEmpty(pmt.ArpReversedByPayment))
+                foreach (var pmt in pmts)
                 {
-                    reversals.Add(DataReader.ReadRecord<ArPayments>(pmt.ArpReversedByPayment));
+                    if (!string.IsNullOrEmpty(pmt.ArpReversedByPayment))
+                    {
+                        reversals.Add(DataReader.ReadRecord<ArPayments>(pmt.ArpReversedByPayment));
+                    }
                 }
-            }
 
-            if (reversals.Any(x => !string.IsNullOrEmpty(x.ArpReversedByPayment)))
+                if (reversals.Any(x => !string.IsNullOrEmpty(x.ArpReversedByPayment)))
+                {
+                    var moreReversals = GetReversingPayments(reversals);
+                    foreach (var rev in moreReversals)
+                    {
+                        reversals.Add(rev);
+                    }
+                }
+
+                return reversals;
+            }
+            catch (ColleagueSessionExpiredException)
             {
-                var moreReversals = GetReversingPayments(reversals);
-                foreach (var rev in moreReversals)
-                {
-                    reversals.Add(rev);
-                }
+                throw;
             }
-
-            return reversals;
         }
 
         #endregion
@@ -869,45 +948,52 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("source", "The invoice to create must be specified.");
             }
 
-            // build list of ChargeGroups
-            var items = new List<ChargeGroup>();
-            foreach (var charge in source.Charges)
+            try
             {
-                items.Add(new ChargeGroup()
+                // build list of ChargeGroups
+                var items = new List<ChargeGroup>();
+                foreach (var charge in source.Charges)
                 {
-                    ChargeCodes = charge.Code,
-                    ChargeDescriptions = String.Join(Ellucian.Dmi.Runtime.DmiString.sSM, charge.Description.ToArray()),
-                    ChargeAmounts = charge.BaseAmount
-                });
+                    items.Add(new ChargeGroup()
+                    {
+                        ChargeCodes = charge.Code,
+                        ChargeDescriptions = String.Join(Ellucian.Dmi.Runtime.DmiString.sSM, charge.Description.ToArray()),
+                        ChargeAmounts = charge.BaseAmount
+                    });
+                }
+
+                // Execute the CreateReceivableInvoice transaction
+                var request = new CreateReceivableInvoiceRequest()
+                {
+                    PersonId = source.PersonId,
+                    ReceivableType = source.ReceivableType,
+                    InvoiceDescription = source.Description,
+                    InvoiceType = source.InvoiceType,
+                    ExternalInvoiceId = source.ExternalIdentifier,
+                    ExternalSystem = source.ExternalSystem,
+                    InvoiceDate = source.Date,
+                    TermCode = source.TermId,
+                    InvoiceBillingStartDate = source.BillingStart,
+                    InvoiceBillingEndDate = source.BillingEnd,
+                    InvoiceDueDate = source.DueDate,
+                    Location = source.Location,
+                    ChargeGroup = items
+                };
+                var response = transactionInvoker.Execute<CreateReceivableInvoiceRequest, CreateReceivableInvoiceResponse>(request);
+
+                if (response.ErrorMessage != null && response.ErrorMessage.Count > 0)
+                {
+                    // Update failed
+                    logger.Error(response.ErrorMessage.ToString());
+                    throw new InvalidOperationException(String.Join("\n", response.ErrorMessage));
+                }
+
+                return GetReceivableInvoice(response.InvoiceId);
             }
-
-            // Execute the CreateReceivableInvoice transaction
-            var request = new CreateReceivableInvoiceRequest()
+            catch (ColleagueSessionExpiredException)
             {
-                PersonId = source.PersonId,
-                ReceivableType = source.ReceivableType,
-                InvoiceDescription = source.Description,
-                InvoiceType = source.InvoiceType,
-                ExternalInvoiceId = source.ExternalIdentifier,
-                ExternalSystem = source.ExternalSystem,
-                InvoiceDate = source.Date,
-                TermCode = source.TermId,
-                InvoiceBillingStartDate = source.BillingStart,
-                InvoiceBillingEndDate = source.BillingEnd,
-                InvoiceDueDate = source.DueDate,
-                Location = source.Location,
-                ChargeGroup = items
-            };
-            var response = transactionInvoker.Execute<CreateReceivableInvoiceRequest, CreateReceivableInvoiceResponse>(request);
-
-            if (response.ErrorMessage != null && response.ErrorMessage.Count > 0)
-            {
-                // Update failed
-                logger.Error(response.ErrorMessage.ToString());
-                throw new InvalidOperationException(String.Join("\n", response.ErrorMessage));
+                throw;
             }
-
-            return GetReceivableInvoice(response.InvoiceId);
         }
         #endregion
 
@@ -942,15 +1028,22 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("ids", "Deposits must be specified.");
             }
 
-            Collection<ArDeposits> items = DataReader.BulkReadRecord<ArDeposits>(ids.ToArray());
-            if (items == null || items.Count != ids.Count())
+            try
             {
-                throw new KeyNotFoundException("Failed to retrieve one or more of deposit ids " + String.Join(", ", ids.ToArray()) + " from the database.");
+                Collection<ArDeposits> items = DataReader.BulkReadRecord<ArDeposits>(ids.ToArray());
+                if (items == null || items.Count != ids.Count())
+                {
+                    throw new KeyNotFoundException("Failed to retrieve one or more of deposit ids " + String.Join(", ", ids.ToArray()) + " from the database.");
+                }
+
+                var response = items.Select(x => BuildDeposit(x)).ToList();
+
+                return response;
             }
-
-            var response = items.Select(x => BuildDeposit(x)).ToList();
-
-            return response;
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
 
         private Deposit BuildDeposit(ArDeposits deposit)
@@ -982,46 +1075,60 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             {
                 throw new ArgumentNullException("invoiceIds", "At least one invoice ID must be specified.");
             }
-            // Get the information about the AR.INVOICES
-            Collection<ArInvoices> arInvoices = await DataReader.BulkReadRecordAsync<ArInvoices>(invoiceIds.ToArray());
-            // Since this is a qapi we will not throw an error if not all are retrieved but will log this information.
-            if (arInvoices == null || arInvoices.Count != invoiceIds.Count())
+            try
             {
-                logger.Info("ERROR: Failed to retrieve all invoices from the database.");
-                if (arInvoices != null)
+                // Get the information about the AR.INVOICES
+                Collection<ArInvoices> arInvoices = await DataReader.BulkReadRecordAsync<ArInvoices>(invoiceIds.ToArray());
+                // Since this is a qapi we will not throw an error if not all are retrieved but will log this information.
+                if (arInvoices == null || arInvoices.Count != invoiceIds.Count())
                 {
-                    logger.Info("Id count " + invoiceIds.Count() + " Invoices retrieved count " + arInvoices.Count());
-                    var missingIds = invoiceIds.Except(arInvoices.Select(c => c.Recordkey)).Distinct().ToList();
-                    logger.Info("   Missing Ids :" + string.Join(",", missingIds));
+                    logger.Info("ERROR: Failed to retrieve all invoices from the database.");
+                    if (arInvoices != null)
+                    {
+                        logger.Info("Id count " + invoiceIds.Count() + " Invoices retrieved count " + arInvoices.Count());
+                        var missingIds = invoiceIds.Except(arInvoices.Select(c => c.Recordkey)).Distinct().ToList();
+                        logger.Info("   Missing Ids :" + string.Join(",", missingIds));
+                    }
                 }
-            }
-            // Get AR.INVOICE.ITEMS for these invoices
-            var arInvoiceItemsIds = arInvoices.Where(inv => inv.InvInvoiceItems != null && inv.InvInvoiceItems.Any()).SelectMany(ii => ii.InvInvoiceItems).Distinct().ToList();
-            Collection<ArInvoiceItems> arInvoiceItems = new Collection<ArInvoiceItems>();
-            Collection<ArCodeTaxGlDistr> taxGlDistributions = new Collection<ArCodeTaxGlDistr>();
-            if (arInvoiceItemsIds != null && arInvoiceItemsIds.Any())
-            {
-                arInvoiceItems = await DataReader.BulkReadRecordAsync<ArInvoiceItems>(arInvoiceItemsIds.ToArray());
-                // Get AR.CODE.TAX.GL.DISTRs for these ARItems.
-
-                if (arInvoiceItems != null && arInvoiceItems.Any())
+                // Get AR.INVOICE.ITEMS for these invoices
+                var arInvoiceItemsIds = arInvoices.Where(inv => inv.InvInvoiceItems != null && inv.InvInvoiceItems.Any()).SelectMany(ii => ii.InvInvoiceItems).Distinct().ToList();
+                Collection<ArInvoiceItems> arInvoiceItems = new Collection<ArInvoiceItems>();
+                Collection<ArCodeTaxGlDistr> taxGlDistributions = new Collection<ArCodeTaxGlDistr>();
+                if (arInvoiceItemsIds != null && arInvoiceItemsIds.Any())
                 {
-                    var arCodeTaxGlDistrIds = arInvoiceItems.Where(invi => invi.InviArCodeTaxDistrs != null && invi.InviArCodeTaxDistrs.Any()).SelectMany(ii => ii.InviArCodeTaxDistrs).Distinct().ToList();
-                    taxGlDistributions = await DataReader.BulkReadRecordAsync<ArCodeTaxGlDistr>(arCodeTaxGlDistrIds.ToArray());
-                }
-            }
-            // Get paid amounts for these invoices - if appropriate.
-            List<InvoicePaymentItems> invoicePaymentItems = new List<InvoicePaymentItems>();
-            if (invoiceDataSubsetType == InvoiceDataSubset.InvoicePayment)
-            {
-                // Next retrieve the additional payment information for each invoice using Colleague TX
-                GetInvoicePaymentAmountsRequest paymentAmountsRequest = new GetInvoicePaymentAmountsRequest();
-                paymentAmountsRequest.InvoiceIds = invoiceIds.ToList();
-                GetInvoicePaymentAmountsResponse paymentAmountsResponse = await transactionInvoker.ExecuteAsync<GetInvoicePaymentAmountsRequest, GetInvoicePaymentAmountsResponse>(paymentAmountsRequest);
-                invoicePaymentItems = paymentAmountsResponse != null ? paymentAmountsResponse.InvoicePaymentItems : new List<InvoicePaymentItems>();
-            }
+                    arInvoiceItems = await DataReader.BulkReadRecordAsync<ArInvoiceItems>(arInvoiceItemsIds.ToArray());
+                    // Get AR.CODE.TAX.GL.DISTRs for these ARItems.
 
-            return BuildInvoicePayments(arInvoices, arInvoiceItems, taxGlDistributions, invoicePaymentItems);
+                    if (arInvoiceItems != null && arInvoiceItems.Any())
+                    {
+                        var arCodeTaxGlDistrIds = arInvoiceItems.Where(invi => invi.InviArCodeTaxDistrs != null && invi.InviArCodeTaxDistrs.Any()).SelectMany(ii => ii.InviArCodeTaxDistrs).Distinct().ToList();
+                        taxGlDistributions = await DataReader.BulkReadRecordAsync<ArCodeTaxGlDistr>(arCodeTaxGlDistrIds.ToArray());
+                    }
+                }
+                // Get paid amounts for these invoices - if appropriate.
+                List<InvoicePaymentItems> invoicePaymentItems = new List<InvoicePaymentItems>();
+                if (invoiceDataSubsetType == InvoiceDataSubset.InvoicePayment)
+                {
+                    // Next retrieve the additional payment information for each invoice using Colleague TX
+                    GetInvoicePaymentAmountsRequest paymentAmountsRequest = new GetInvoicePaymentAmountsRequest();
+                    paymentAmountsRequest.InvoiceIds = invoiceIds.ToList();
+                    GetInvoicePaymentAmountsResponse paymentAmountsResponse = await transactionInvoker.ExecuteAsync<GetInvoicePaymentAmountsRequest, GetInvoicePaymentAmountsResponse>(paymentAmountsRequest);
+                    invoicePaymentItems = paymentAmountsResponse != null ? paymentAmountsResponse.InvoicePaymentItems : new List<InvoicePaymentItems>();
+                }
+
+                return BuildInvoicePayments(arInvoices, arInvoiceItems, taxGlDistributions, invoicePaymentItems);
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = "Timeout exception has occurred while requesting InvoicePayment objects.";
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "An exception occurred while requesting InvoicePayment objects.");
+                throw;
+            }
         }
 
         #region private methods

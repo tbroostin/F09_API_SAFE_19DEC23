@@ -24,5 +24,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Indicates whether funds availability is turned on for general ledger accounts or projects.
         /// </summary>
         public bool FundsAvailabilityOn { get; set; }
+
+        /// <summary>
+        /// Is Approval Allow Returns is enabled for Procurement documents (true if Enable Approval Returns Flag in APPD is (Y)es)
+        /// </summary>
+        public bool AllowReturns { get; set; }
     }
 }

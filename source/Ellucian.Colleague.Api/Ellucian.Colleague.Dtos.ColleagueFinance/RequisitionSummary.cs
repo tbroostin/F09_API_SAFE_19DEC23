@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -74,6 +74,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string BlanketPurchaseOrderNumber { get; set; }
 
         /// <summary>
+        /// Flag to indicate if document has attachment/s associated
+        /// </summary>
+        public bool AttachmentsIndicator { get; set; }
+
+        /// <summary>
         /// List of purchase orders associated to this requisition
         /// </summary>
         public List<PurchaseOrderLinkSummary> PurchaseOrders { get; set; }
@@ -82,6 +87,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of Approvers associated to this requisition
         /// </summary>
         public List<Approver> Approvers { get; set; }
+
+        /// <summary>
+        /// Whenever Approver returns the document this will be used to set
+        /// </summary>
+        public bool ApprovalReturnedIndicator { get; set; }
 
     }
 }

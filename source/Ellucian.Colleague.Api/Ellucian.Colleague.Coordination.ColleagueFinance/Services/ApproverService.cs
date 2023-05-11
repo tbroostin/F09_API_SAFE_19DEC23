@@ -138,7 +138,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var hasPermission = (HasPermission(BasePermissionCodes.ViewAnyPerson) ||    
                                     HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition) ||
                                     HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder) || 
-                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher));
+                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher) ||
+                                    HasPermission(ColleagueFinancePermissionCodes.CreateUpdateBudgetAdjustments));
             
             if (!hasPermission)
             {

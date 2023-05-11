@@ -318,7 +318,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                         existingMealPlan.Consumption = studentMealPlans2.Consumption;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "An exception occurred while reading the Student Meal Plan.");
+                }
 
                 //do update with partial logic
                 var studentMealPlanReturn = await _studentMealPlansService.PutStudentMealPlans2Async(guid,
@@ -609,7 +612,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                         existingMealPlan.Consumption = studentMealPlans.Consumption;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "An exception occurred while reading the Student Meal Plan.");
+                }
 
                 //do update with partial logic
                 var studentMealPlanReturn = await _studentMealPlansService.PutStudentMealPlansAsync(guid,

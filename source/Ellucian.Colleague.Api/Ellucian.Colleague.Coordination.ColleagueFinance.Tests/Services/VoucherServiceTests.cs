@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private VoucherService service;
         private VoucherService service2;
         private VoucherService serviceForNoPermission;
+        private VoucherService voucherApprovalRolesService;
 
         private TestVoucherRepository testVoucherRepository;
         private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
@@ -54,8 +55,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
 
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryFalse;
+        private Mock<IApprovalConfigurationRepository> mockApprovalConfigurationRepositoryTrue;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
         private Mock<IGeneralLedgerAccountRepository> mockGeneralLedgerAccountRepository;
+        private Mock<IProcurementsUtilityService> mockProcurementsUtilityService;
         private int versionNumber;
         private VendorsVoucherSearchResult vendorEntities;
         private VoucherCreateUpdateResponse voucherCreateUpdateResponse;
@@ -73,11 +77,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Initialize the mock voucher repository
             mockVoucherRepository = new Mock<IVoucherRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
+            mockApprovalConfigurationRepositoryFalse = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationFalse = new ApprovalConfiguration()
+            {
+                VouchersUseApprovalRoles = false
+            };
+            mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationFalse));
+            mockApprovalConfigurationRepositoryTrue = new Mock<IApprovalConfigurationRepository>();
+            ApprovalConfiguration approvalConfigurationTrue = new ApprovalConfiguration()
+            {
+                VouchersUseApprovalRoles = true
+            };
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(approvalConfigurationTrue));
+
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
             mockGeneralLedgerAccountRepository = new Mock<IGeneralLedgerAccountRepository>();
+            mockProcurementsUtilityService = new Mock<IProcurementsUtilityService>();
 
             Dictionary<string, string> descDictionary = new Dictionary<string, string>();
-            List<string> glAccountIds = new List<string>() { "11-10-00-01-20601-51000", "11-10-00-01-20601-51001", "11-10-00-01-20601-52001"};
+            List<string> glAccountIds = new List<string>() { "11-10-00-01-20601-51000", "11-10-00-01-20601-51001", "11-10-00-01-20601-52001" };
 
             for (int i = 0; i < glAccountIds.Count(); i++)
             {
@@ -115,6 +133,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             service = null;
             service2 = null;
             serviceForNoPermission = null;
+            voucherApprovalRolesService = null;
 
             testVoucherRepository = null;
             testGeneralLedgerConfigurationRepository = null;
@@ -123,6 +142,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockVoucherRepository = null;
             mockGlConfigurationRepository = null;
             mockGeneralLedgerUserRepository = null;
+            mockApprovalConfigurationRepositoryFalse = null;
+            mockApprovalConfigurationRepositoryTrue = null;
 
             roleRepositoryMock = null;
             roleRepository = null;
@@ -1031,6 +1052,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 GeneralLedgerUser glUser = await testGeneralLedgerUserRepository.GetGeneralLedgerUserAsync2("0000028", null, glClassConfiguration);
                 this.mockGeneralLedgerUserRepository.Setup(repo => repo.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(Task.FromResult(glUser));
 
+                this.mockApprovalConfigurationRepositoryFalse.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult(new ApprovalConfiguration()));
+
                 var voucherDto = await service2.GetVoucher2Async("1");
             }
             catch (ArgumentNullException aex)
@@ -1040,6 +1063,74 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             Assert.AreEqual(expectedParamName, actualParamName);
         }
+        #endregion
+
+
+        #region Tests for GetVoucher2Async with GL approval roles functionality
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVoucher2Async_ApprovalConfigurationNull()
+        {
+            GeneralLedgerUser glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
+                {
+                    return Task.FromResult(glUser);
+                });
+
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(null));
+            var loggerObject = new Mock<ILogger>().Object;
+            var adapterRegistry = new Mock<IAdapterRegistry>();
+            voucherApprovalRolesService = new VoucherService(mockVoucherRepository.Object, testGeneralLedgerConfigurationRepository, mockGeneralLedgerUserRepository.Object, testGeneralLedgerAccountRepository,
+              adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, mockProcurementsUtilityService.Object, loggerObject);
+
+            await voucherApprovalRolesService.GetVoucher2Async("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVoucher2Async_ApprovalConfigurationException()
+        {
+            GeneralLedgerUser glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Throws(new Exception());
+            var loggerObject = new Mock<ILogger>().Object;
+            var adapterRegistry = new Mock<IAdapterRegistry>();
+            voucherApprovalRolesService = new VoucherService(mockVoucherRepository.Object, testGeneralLedgerConfigurationRepository, mockGeneralLedgerUserRepository.Object, testGeneralLedgerAccountRepository,
+              adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, mockProcurementsUtilityService.Object, loggerObject);
+
+            await voucherApprovalRolesService.GetVoucher2Async("1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetVoucher2Async_ApprovalConfigurationVouchersUseApprovalRoles()
+        {
+            GeneralLedgerUser glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
+            {
+                return Task.FromResult(glUser);
+            });
+            mockApprovalConfigurationRepositoryTrue.Setup(repo => repo.GetApprovalConfigurationAsync()).Returns(Task.FromResult<ApprovalConfiguration>(new ApprovalConfiguration() { VouchersUseApprovalRoles = true }));
+            mockGeneralLedgerUserRepository.Setup(x => x.GetGlUserApprovalAndGlAccessAccountsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(() =>
+            {
+                IEnumerable<string> approvalAccess = new List<string>() { "11_11_11_11_00000_11111", "11_11_11_11_00000_11112" };
+                return Task.FromResult(approvalAccess);
+            });
+            var loggerObject = new Mock<ILogger>().Object;
+            var adapterRegistry = new Mock<IAdapterRegistry>();
+            voucherApprovalRolesService = new VoucherService(mockVoucherRepository.Object, testGeneralLedgerConfigurationRepository, mockGeneralLedgerUserRepository.Object, testGeneralLedgerAccountRepository,
+              adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, mockProcurementsUtilityService.Object, loggerObject);
+
+            await voucherApprovalRolesService.GetVoucher2Async("1");
+        }
+
         #endregion
 
         #region GetVoucher2AsyncTests without a view permission
@@ -1166,7 +1257,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Mock the general ledger configuration repository method to return a null object within the service method
             GeneralLedgerAccountStructure accountStructure = null;
             mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetAccountStructureAsync()).Returns(Task.FromResult(accountStructure));
-            Domain.Base.Entities.Staff validStaff = new Domain.Base.Entities.Staff("1","last");
+            Domain.Base.Entities.Staff validStaff = new Domain.Base.Entities.Staff("1", "last");
             staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(validStaff));
             Ellucian.Colleague.Dtos.ColleagueFinance.VoucherCreateUpdateRequest request = new Ellucian.Colleague.Dtos.ColleagueFinance.VoucherCreateUpdateRequest()
             {
@@ -1328,7 +1419,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var adapterRegistry = new Mock<IAdapterRegistry>();
             var logger = new Mock<ILogger>();
             voucherCreateUpdateRequest.Voucher.VoucherId = "1";
-            Voucher originalVoucher = new Voucher("1",new DateTime(), VoucherStatus.Outstanding,"VenName");
+            Voucher originalVoucher = new Voucher("1", new DateTime(), VoucherStatus.Outstanding, "VenName");
             //mockVoucherRepository.Setup(s => s.GetVoucherAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GlAccessLevel>(), It.IsAny<string[]>(), It.IsAny<int>())).ReturnsAsync(originalVoucher);
             await service2.CreateUpdateVoucherAsync(voucherCreateUpdateRequest);
         }
@@ -1341,7 +1432,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task VoucherService_GetReimbursePersonAddressForVoucherAsync_PermissionException()
         {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() {  });
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
             await service.GetReimbursePersonAddressForVoucherAsync();
         }
 
@@ -1395,7 +1486,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             var adapterRegistry = new Mock<IAdapterRegistry>();
             VendorsVoucherSearchResultDtoToEntityAdapter adapter = new VendorsVoucherSearchResultDtoToEntityAdapter(new Mock<IAdapterRegistry>().Object, new Mock<ILogger>().Object);
-            var vendorsVoucherSearchResultEntity =  adapter.MapToType(vendorSearchResultDto);
+            var vendorsVoucherSearchResultEntity = adapter.MapToType(vendorSearchResultDto);
             Assert.AreEqual(vendorSearchResultDto.VendorId, vendorsVoucherSearchResultEntity.VendorId);
             Assert.AreEqual(vendorSearchResultDto.VendorNameLines.Count, vendorsVoucherSearchResultEntity.VendorNameLines.Count);
             Assert.AreEqual(vendorSearchResultDto.VendorNameLines.First().Trim(), vendorsVoucherSearchResultEntity.VendorNameLines.First().Trim());
@@ -1404,7 +1495,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(vendorSearchResultDto.AddressLines.First().Trim(), vendorsVoucherSearchResultEntity.AddressLines.First().Trim());
             Assert.AreEqual(vendorSearchResultDto.Zip, vendorsVoucherSearchResultEntity.Zip);
             Assert.AreEqual(vendorSearchResultDto.Country, vendorsVoucherSearchResultEntity.Country);
-            Assert.AreEqual(vendorSearchResultDto.FormattedAddress, vendorsVoucherSearchResultEntity.FormattedAddress);            
+            Assert.AreEqual(vendorSearchResultDto.FormattedAddress, vendorsVoucherSearchResultEntity.FormattedAddress);
             Assert.AreEqual(vendorSearchResultDto.City, vendorsVoucherSearchResultEntity.City);
             Assert.AreEqual(vendorSearchResultDto.Country, vendorsVoucherSearchResultEntity.Country);
             Assert.AreEqual(vendorSearchResultDto.AddressId, vendorsVoucherSearchResultEntity.AddressId);
@@ -1446,11 +1537,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>()).Returns(procurementCriteria_Adapter);
 
             // Set up the current user with a subset of projects and set up the service.
-            service = new VoucherService(testVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, testGeneralLedgerAccountRepository, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, loggerObject);
-            service2 = new VoucherService(mockVoucherRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,mockGeneralLedgerAccountRepository.Object, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, loggerObject);
+            service = new VoucherService(testVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, testGeneralLedgerAccountRepository,
+                adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, mockProcurementsUtilityService.Object, loggerObject);
+            service2 = new VoucherService(mockVoucherRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object, mockGeneralLedgerAccountRepository.Object,
+                adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, mockProcurementsUtilityService.Object, loggerObject);
 
             // Build a service for a user that has no permissions.
-            serviceForNoPermission = new VoucherService(testVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, testGeneralLedgerAccountRepository, adapterRegistry.Object, noPermissionsUser, roleRepository, staffRepositoryMock.Object, loggerObject);
+            serviceForNoPermission = new VoucherService(testVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, testGeneralLedgerAccountRepository,
+                adapterRegistry.Object, noPermissionsUser, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryFalse.Object, mockProcurementsUtilityService.Object, loggerObject);
+
+            // Build the voucherApprovalRolesService object.
+            voucherApprovalRolesService = new VoucherService(mockVoucherRepository.Object, testGeneralLedgerConfigurationRepository, mockGeneralLedgerUserRepository.Object, testGeneralLedgerAccountRepository,
+                adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, mockApprovalConfigurationRepositoryTrue.Object, mockProcurementsUtilityService.Object, loggerObject);
+
 
             vendorEntities =
                     new Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult()
@@ -1468,7 +1567,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     };
             voucherCreateUpdateRequest = new Ellucian.Colleague.Dtos.ColleagueFinance.VoucherCreateUpdateRequest
             {
-                ConfEmailAddresses = new List<string> { "abc@gmail.com" },                
+                ConfEmailAddresses = new List<string> { "abc@gmail.com" },
                 PersonId = currentUserFactory.CurrentUser.PersonId,
                 VendorsVoucherInfo = new Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult()
                 {
@@ -1634,12 +1733,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             abc.ConfirmationEmailAddresses = "abc@gmail.com";
             await service2.VoidVoucherAsync(abc);
         }
-        
+
         [TestMethod]
         public async Task VoidVoucherAsync_Success()
         {
             staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(new Domain.Base.Entities.Staff("0000001", "Test LastName")));
-            
+
 
             Ellucian.Colleague.Dtos.ColleagueFinance.VoucherVoidRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.VoucherVoidRequest();
 
@@ -1691,7 +1790,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             await service2.GetVouchersByVendorAndInvoiceNoAsync(string.Empty, string.Empty);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
         public async Task GetVouchersByVendorAndInvoiceNoAsync_PermissionsException()

@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 namespace Ellucian.Colleague.Dtos.Student
 {
     /// <summary>
@@ -69,5 +69,27 @@ namespace Ellucian.Colleague.Dtos.Student
         /// the number on any of the cross listed section's waitlists.
         /// </summary>
         public int Waitlisted { get; set; }
+
+        /// <summary>
+        /// This indicates status of the section 
+        /// It is Open when there are seats available.
+        /// It is Waitlisted when there are students in waitlist. 
+        /// It is Closed when there are no seats available.
+        /// </summary>
+        public SectionAvailabilityStatusType AvailabilityStatus { get; set; }
+
+        /// <summary>
+        /// CALCULATED: Number of enrolled students for the course section.
+        /// <remarks>If there is no global capacity, this is the sum of:
+        /// all active students 
+        /// + reserved seats 
+        /// + waitlisted students with permission to register</remarks>
+        /// <remarks>If there is a global capacity, this is the sum of:
+        /// all active students (for the section and any crosslisted sections) 
+        /// + reserved seats (for the section and any crosslisted sections) 
+        /// + waitlisted students with permission to register (for the section and any crosslisted sections)</remarks>
+        /// </summary>
+        public int? Enrolled { get; set; }
+
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Base
@@ -281,5 +281,19 @@ namespace Ellucian.Colleague.Domain.Base
         /// Permission to allow someone to view other people's photos (such as for faculty or advisors)
         /// </summary>
         public const string CanViewPersonPhotos = "CAN.VIEW.PERSON.PHOTOS";
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to search for an employee and add a proxy record on behalf of the searched employee.
+        /// </summary>
+        public const string AddAllEmployeeProxy = "ADD.ALL.HR.PROXY";
+
+        // Access to view person information
+        public const string ViewPersonInformation = "VIEW.PERSON.INFORMATION";
+
+        // Access to view Audit Log Configuration
+        public const string ViewAuditLogConfiguration = "VIEW.AUDIT.LOG.CONFIGURATION";
+
+        // Access to update Audit Log Configuration
+        public const string UpdateAuditLogConfiguration = "UPDATE.AUDIT.LOG.CONFIGURATION";
     }
 }

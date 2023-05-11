@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<IEnumerable<string>> SearchIdsAsync(string termId);
         Task<IEnumerable<Dtos.Student.RegistrationMessage>> CheckRegistrationEligibilityAsync(string id);
         Task<Dtos.Student.RegistrationEligibility> CheckRegistrationEligibility2Async(string studentId);
+        Task<Dtos.Student.RegistrationEligibility> CheckRegistrationEligibility3Async(string studentId);
         Task<IEnumerable<TranscriptRestriction>> GetTranscriptRestrictionsAsync(string studentid);
         Task<Dtos.Student.TranscriptAccess> GetTranscriptRestrictions2Async(string studentId);
         Task<IEnumerable<Dtos.Student.Term>> GetUngradedTermsAsync(string studentId);

@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualEvaluations = await actualRepository.GetStudentAcademicProgressEvaluationResultsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no financial aid data", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no financial aid data", studentId)));
             }
 
             [TestMethod]
@@ -140,7 +140,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualEvaluations = await actualRepository.GetStudentAcademicProgressEvaluationResultsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no Academic Progress Evaluations", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no Academic Progress Evaluations", studentId)));
             }
 
             [TestMethod]
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualEvaluations = await actualRepository.GetStudentAcademicProgressEvaluationResultsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
 
-                loggerMock.Verify(l => l.Info(string.Format("Student {0} has no Academic Progress Evaluations", studentId)));
+                loggerMock.Verify(l => l.Debug(string.Format("Student {0} has no Academic Progress Evaluations", studentId)));
             }
 
             [TestMethod]
@@ -160,7 +160,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualEvaluations = await actualRepository.GetStudentAcademicProgressEvaluationResultsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
 
-                loggerMock.Verify(l => l.Info(It.IsAny<string>(), It.IsAny<object[]>()));
+                var message = string.Format("FIN.AID {0} has FA.SAP.RESULTS.ID entries which do not point to existing SAP.RESULTS records: {1}", studentId, String.Join(", ", expectedRepository.financialAidStudentData.sapResultsIds));
+
+                //loggerMock.Verify(l => l.Error(It.IsAny<string>(), It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Error(message));
             }
 
             [TestMethod]
@@ -170,7 +173,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualEvaluations = await actualRepository.GetStudentAcademicProgressEvaluationResultsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
 
-                loggerMock.Verify(l => l.Info(It.IsAny<string>(), It.IsAny<object[]>()));
+                var message = string.Format("FIN.AID {0} has FA.SAP.RESULTS.ID entries which do not point to existing SAP.RESULTS records: {1}", studentId, String.Join(", ", expectedRepository.financialAidStudentData.sapResultsIds));
+
+                //loggerMock.Verify(l => l.Error(It.IsAny<string>(), It.IsAny<object[]>()));
+                loggerMock.Verify(l => l.Error(message));
             }
 
             [TestMethod]

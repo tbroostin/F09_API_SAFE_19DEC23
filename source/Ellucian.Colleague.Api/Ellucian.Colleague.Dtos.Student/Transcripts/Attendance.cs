@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
@@ -33,8 +34,9 @@ namespace Ellucian.Colleague.Dtos.Student.Transcripts
         /// <summary>
         /// Degrees or other awards reported
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Ellucian.StyleCop.WebApi.EllucianWebApiDtoAnalyzer", "EL1000:NoPublicFieldsOnDtos", Justification = "Already released. Risk of breaking change.")]        
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Ellucian.StyleCop.WebApi.EllucianWebApiDtoAnalyzer", "EL1000:NoPublicFieldsOnDtos", Justification = "Already released. Risk of breaking change.")]
         [XmlElement(Namespace = "")]
-        public List<AcademicAwardsReported> AcademicAwardsReported = new List<AcademicAwardsReported>();
+        public List<AcademicAwardsReported> AcademicAwardsReported { get { return academicAwardsReported; } set { academicAwardsReported = value; } }
+        private List<AcademicAwardsReported> academicAwardsReported = new List<AcademicAwardsReported>();
     }
 }

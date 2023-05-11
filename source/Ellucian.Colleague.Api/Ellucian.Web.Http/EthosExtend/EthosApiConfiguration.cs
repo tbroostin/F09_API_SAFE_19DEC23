@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -22,9 +22,34 @@ namespace Ellucian.Web.Http.EthosExtend
         public string ApiType { get; set; }
 
         /// <summary>
+        /// Domain of the Resource
+        /// </summary>
+        public string ApiDomain { get; set; }
+
+        /// <summary>
+        /// Release Status of the Resource
+        /// </summary>
+        public string ReleaseStatus { get; set; }
+
+        /// <summary>
         /// Process ID when type is Subroutine or Transaction
         /// </summary>
         public string ProcessId { get; set; }
+
+        /// <summary>
+        /// Mnemomic and the tile of the process 
+        /// </summary>
+        public string ProcessDesc { get; set; }
+
+        /// <summary>
+        /// List of file used by an API
+        /// </summary>
+        public List<string> ColleagueFileNames { get; set; }
+
+        /// <summary>
+        /// List of Keys to a file or Business Process UI form phantom list
+        /// </summary>
+        public List<string> ColleagueKeyNames { get; set; }
 
         /// <summary>
         /// Name of the Resource parent (Making this an alternate representation)
@@ -132,6 +157,26 @@ namespace Ellucian.Web.Http.EthosExtend
         public string SavingOption { get; set; }
 
         /// <summary>
+        /// Current User from API user required to pass data into repository
+        /// </summary>
+        public string CurrentUserId { get; set; }
+
+        /// <summary>
+        /// Current User ID path for getting records that match current API user only.
+        /// </summary>
+        public string CurrentUserIdPath { get; set; }
+
+        /// <summary>
+        /// API description
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
+        /// List of prepared Responses for a UI form business process API
+        /// </summary>
+        public IList<EthosApiPreparedResponse> PreparedResponses { get; set; }
+
+        /// <summary>
         /// Constructor for Ethos Api Configuration
         /// </summary>
         public EthosApiConfiguration()
@@ -140,6 +185,7 @@ namespace Ellucian.Web.Http.EthosExtend
             SelectionCriteria = new List<EthosApiSelectCriteria>();
             SelectRules = new List<string>();
             SortColumns = new List<EthosApiSortCriteria>();
+            PreparedResponses = new List<EthosApiPreparedResponse>();
         }
     }
 }

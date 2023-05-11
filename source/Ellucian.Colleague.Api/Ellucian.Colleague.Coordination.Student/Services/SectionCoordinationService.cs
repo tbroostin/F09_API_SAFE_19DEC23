@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,8 @@ using Ical.Net;
 using Ical.Net.DataTypes;
 using Ical.Net.Serialization;
 using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -583,9 +585,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             SectionRoster entity = await _sectionRepository.GetSectionRosterAsync(sectionId);
+            Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity;
+            sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
+            if (sectionEntity == null)
+            {
+                throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
+            }
 
-            // Verify user is a student or faculty assigned to the course section
-            if (!entity.StudentIds.Contains(CurrentUser.PersonId) && !entity.FacultyIds.Contains(CurrentUser.PersonId))
+            var allDepartments = await AllDepartments();
+            var userPermissions = await GetUserPermissionCodesAsync();
+
+            // Verify user is a student or faculty or departmental oversight member assigned to the course section with the required permissions
+            if (!entity.StudentIds.Contains(CurrentUser.PersonId) && !entity.FacultyIds.Contains(CurrentUser.PersonId) 
+                && !(CheckDepartmentalOversightAccessForSection(sectionEntity, allDepartments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionRoster) || userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionGrading) || userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionAddAuthorizations) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionAddAuthorization) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading))))
             {
                 throw new PermissionsException(string.Format("Requestor is not authorized to view course section roster for section {0}.", sectionId));
             }
@@ -659,12 +671,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             foreach (var sectionId in criteria.SectionIds)
             {
                 var section = await _sectionRepository.GetSectionAsync(sectionId);
-                CanViewSectionWaitlists(section, sectionId);
-                sections.Add(section);              
+                CanViewSectionWaitlistInfo(section, sectionId);
+                sections.Add(section);
             }
-            List<string> querySectionIds =  criteria.SectionIds;
-            
-            if(criteria.IncludeCrossListedSections && sections != null && sections.Any())
+            List<string> querySectionIds = criteria.SectionIds;
+
+            if (criteria.IncludeCrossListedSections && sections != null && sections.Any())
             {
                 foreach (var sec in sections)
                 {
@@ -721,7 +733,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Permission check
             var section = await _sectionRepository.GetSectionAsync(sectionId);
-            CanViewSectionWaitlists(section, sectionId);
+            CanViewSectionWaitlistInfo(section, sectionId);
             SectionWaitlistConfig entity = await _sectionRepository.GetSectionWaitlistConfigAsync(sectionId);
 
             Dtos.Student.SectionWaitlistConfig dto = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionWaitlistConfig, Dtos.Student.SectionWaitlistConfig>().MapToType(entity);
@@ -760,10 +772,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var waitEntity = await _sectionRepository.GetStudentSectionWaitlistsByStudentAndSectionIdAsync(sectionId, studentId);
                 if (waitEntity == null)
                 {
-                    throw new Exception("Failed to retrieve student section waitlist information");
+                    throw new ColleagueWebApiException("Failed to retrieve student section waitlist information");
                 }
                 Dtos.Student.StudentSectionWaitlistInfo dto = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentSectionWaitlistInfo, Dtos.Student.StudentSectionWaitlistInfo>().MapToType(waitEntity);
                 return dto;
+            }
+            catch (Ellucian.Data.Colleague.Exceptions.ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (KeyNotFoundException ex)
             {
@@ -792,6 +808,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             logger.Error(error);
             throw new PermissionsException("Current user is not authorized to view waitlist students in the current section");
         }
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view a section's waitlist configuration
+        /// </summary>
+        /// <exception><see cref="PermissionsException">Permissions Exception</see></exception>
+        private async void CanViewSectionWaitlistInfo(Domain.Student.Entities.Section section, string sectionId)
+        {
+            if (section != null && section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId))
+            {
+                return;
+            }
+            else
+            {
+                // Check if the requestor is a departmental oversight member for this section and has the required permissions
+                var userPermissions = await GetUserPermissionCodesAsync();
+                var allDepartments = await AllDepartments();
+                if (CheckDepartmentalOversightAccessForSection(section, allDepartments) &&
+                   (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionRoster) ||
+                   userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionAddAuthorization) ||
+                   userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionWaitlists)))
+                {
+                    return;
+                }
+            }
+
+            string error = "Current user is not authorized to view waitlist students for the section: " + sectionId;
+            logger.Error(error);
+            throw new PermissionsException("Current user is not authorized to view waitlist students in the current section");
+        }
+
 
         /// <summary>
         /// Imports students grades for a section. Calling user must have permission to update grades.
@@ -932,13 +978,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Imports students grades for a section from a standard non-ILP caller.
+        /// Imports students grades for a section from a standard non-ILP caller. This is used by Faculty or department head of the section
         /// </summary>
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
         public async Task<Dtos.Student.SectionGradeSectionResponse> ImportGrades5Async(Dtos.Student.SectionGrades4 sectionGrades)
         {
-            return await this.ImportGradesFromIlpOrStandard(sectionGrades, GradesPutCallerTypes.Standard);
+            return await this.ImportGradesFromIlpOrStandard(sectionGrades, GradesPutCallerTypes.Standard, isDeptOversightAllowed:true);
         }
 
         /// <summary>
@@ -967,8 +1013,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <param name="callerType">Indicate the caller type</param>
+        /// <param name="isDeptOversightAllowed">This indicates if department oversight person is importing grades. As of now version 5 of import from standard uses DO and ILP does not use DO</param>
         /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
-        private async Task<Dtos.Student.SectionGradeSectionResponse> ImportGradesFromIlpOrStandard(Dtos.Student.SectionGrades4 sectionGrades, GradesPutCallerTypes callerType)
+        private async Task<Dtos.Student.SectionGradeSectionResponse> ImportGradesFromIlpOrStandard(Dtos.Student.SectionGrades4 sectionGrades, GradesPutCallerTypes callerType, bool isDeptOversightAllowed=false)
         {
             Dtos.Student.SectionGradeSectionResponse responseDto = new Dtos.Student.SectionGradeSectionResponse();
 
@@ -976,9 +1023,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("sectionGrades");
 
             // Can the user update grades for this section?
-            if (!await UserCanUpdateGradesOfSectionAsync(sectionGrades.SectionId))
+
+            if (callerType == GradesPutCallerTypes.Standard)
             {
-                throw new PermissionsException();
+                if (!await UserCanUpdateGradesOfSectionAsync(sectionGrades.SectionId, isDeptOversightAllowed))
+                {
+                    throw new PermissionsException();
+                }
+            }
+            else {
+                if (!await UserCanUpdateGradesOfSectionfromILPAsync(sectionGrades.SectionId))
+                {
+                    throw new PermissionsException();
+                }
             }
 
             // Convert to domain objects
@@ -1047,7 +1104,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sectionId">The section ID</param>
         /// <returns>true if the user can update grades of the section, else false</returns>
-        private async Task<bool> UserCanUpdateGradesOfSectionAsync(string sectionId)
+        private async Task<bool> UserCanUpdateGradesOfSectionfromILPAsync(string sectionId)
         {
             IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
 
@@ -1073,6 +1130,46 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return false;
         }
 
+        /// <summary>
+        /// Check whether the current user has permissions to update grades of the specified section.
+        /// </summary>
+        /// <param name="sectionId">The section ID</param>
+         /// <param name="isDeptOversightAllowed">This indicates if department oversight persona should be validated for appropriate permission and is assigned department head for the given section</param>
+        /// <returns>true if the user can update grades of the section, else false</returns>
+        private async Task<bool> UserCanUpdateGradesOfSectionAsync(string sectionId, bool isDeptOversightAllowed = false)
+        {
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+            // Does the user have the "super" permission to update grades of all sections?
+            if (userPermissions.Contains(SectionPermissionCodes.UpdateGrades))
+            {
+                return true;
+            }
+
+            List<string> id = new List<string>() { sectionId };
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections = await _sectionRepository.GetCachedSectionsAsync(id);
+            var allDepartments = await _referenceDataRepository.DepartmentsAsync();
+            if (sections != null && sections.Any())
+            {
+                Domain.Student.Entities.Section section = sections.ElementAt(0);
+                string entity = CurrentUser.PersonId; // determine the ID of the logged in entity
+                // Check if the requestor is an assigned faculty for this section with the required permissions.
+                if (section != null && section.FacultyIds != null && section.FacultyIds.Contains(entity))
+                {
+                    return true;
+                }
+                // Check if the requestor is a departmental oversight member for this section with the required permissions.
+                else if (section != null && isDeptOversightAllowed == true && CheckDepartmentalOversightAccessForSection(section, allDepartments) && userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
         #region HeDM Version 1-3
 
         /// <summary>
@@ -1092,7 +1189,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException("Section must provide a GUID.");
             }
 
-        
+
             // Convert the CDM section into a domain entity and create it
             var entity = await ConvertSectionDtoToEntityAsync(section);
             var newEntity = await _sectionRepository.PostSectionAsync(entity);
@@ -1155,14 +1252,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var textbookEntity = textbookDtoAdapter.MapToType(textbook);
             var bookAction = ConvertSectionBookActionDtoToDomainEntityAsync(textbook.Action);
             var section = await _sectionRepository.GetSectionAsync(textbook.SectionId);
-            CanManageSectionTextbookAssignments(section);
-
+            var allDepartments = await AllDepartments();
+            CanManageSectionTextbookAssignments(section, allDepartments);
+            
             if (string.IsNullOrEmpty(textbook.Textbook.Id))
             {
                 try
                 {
                     var book = await _bookRepository.CreateBookAsync(textbookEntity);
                     textbookEntity = new Domain.Student.Entities.SectionTextbook(book, textbook.SectionId, textbook.RequirementStatusCode, bookAction);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -1181,7 +1283,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return sectionDto;
         }
-
 
         /// <summary>
         /// Convert the SectionBookAction DTO into a SectionBookAction Domain entity
@@ -1330,7 +1431,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Guid);
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section.");
+            }
+
 
             string id = section == null ? null : section.Id;
             var currentStatuses = section == null || section.Statuses == null ? new List<SectionStatusItem>() : section.Statuses.ToList();
@@ -2258,7 +2363,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section3> PostSection3Async(Dtos.Section3 section)
         {
-         
+
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
@@ -2305,7 +2410,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 6 section</returns>
         public async Task<Dtos.Section3> PutSection3Async(Dtos.Section3 section)
         {
-          
+
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
@@ -3707,9 +3812,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Id);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to retrieve section.");
             }
+
 
             string id = section == null ? null : section.Id;
             var currentStatuses = section == null || section.Statuses == null
@@ -4237,7 +4344,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section4> PostSection4Async(Dtos.Section4 section)
         {
-          
+
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
@@ -4284,7 +4391,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 8 section</returns>
         public async Task<Dtos.Section4> PutSection4Async(Dtos.Section4 section)
         {
-            
+
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
@@ -4748,9 +4855,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Id);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to retrieve section.");
             }
+
 
             string id = section == null ? null : section.Id;
             var currentStatuses = section == null || section.Statuses == null
@@ -5444,7 +5553,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="section">DTO containing the Data Model version 6 section to create</param>
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section5> PostSection5Async(Dtos.Section5 section)
-        {         
+        {
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status.Category);
 
@@ -5702,8 +5811,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Id);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to retrieve section.");
             }
 
 
@@ -6003,7 +6113,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var secTerms = (await AllTermsAsync()).Where(t => t.Code == term);
                     if (secTerms != null && secTerms.Count() == 1)
                     {
-                        secTerm = secTerms.First();                        
+                        secTerm = secTerms.First();
                         if (secTerm.RegistrationDates != null && secTerm.RegistrationDates.Where(srd => string.IsNullOrEmpty(srd.Location)).Count() == 1)
                         {
                             secTermOverrides = secTerm.RegistrationDates.First(srd => string.IsNullOrEmpty(srd.Location)).CensusDates;
@@ -6139,7 +6249,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 8 section</returns>
         public async Task<Dtos.Section5> PutSection5Async(Dtos.Section5 section)
         {
-         
+
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status.Category);
 
@@ -6852,7 +6962,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (!string.IsNullOrEmpty(entity.DefaultLearningProvider))
                 {
                     entity.LearningProvider = entity.DefaultLearningProvider;
-                }                    
+                }
             }
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
@@ -7153,7 +7263,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (entity.CourseTypeCodes != null && entity.CourseTypeCodes.Any())
             {
-                sectionDto.CourseCategories = new List<GuidObject2>();
+                var courseCategories = new List<GuidObject2>();
                 foreach (var cat in entity.CourseTypeCodes)
                 {
                     try
@@ -7161,13 +7271,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (!string.IsNullOrEmpty(cat))
                         {
                             var catGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
-                            sectionDto.CourseCategories.Add(new GuidObject2(catGuid));
+                            if (!string.IsNullOrEmpty(catGuid))
+                                courseCategories.Add(new GuidObject2(catGuid));
                         }
                     }
                     catch (RepositoryException ex)
                     {
                         IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                     }
+                }
+                if (courseCategories != null && courseCategories.Any())
+                {
+                    sectionDto.CourseCategories = courseCategories;
                 }
             }
 
@@ -7297,6 +7412,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             };
 
+            // New property for catalog display
+            if (entity.HideInCatalog)
+            {
+                sectionDto.CatalogDisplay = SectionCatalogDisplay.Hidden;
+            }
+            if (entity.VisibleInCatalog)
+            {
+                sectionDto.CatalogDisplay = SectionCatalogDisplay.Visible;
+            }
+
             return sectionDto;
         }
 
@@ -7364,8 +7489,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Id);
                 sectionId = section != null && string.IsNullOrEmpty(section.Id) ? section.Id : string.Empty;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, "Unable to retrieve section.");
             }
 
             //First, we need to check all required properties are present at the root level
@@ -7878,7 +8004,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var instrPlatforms = await InstructionalPlatformsAsync();
                     var providerCode = ConvertGuidToCode(instrPlatforms, sectionDto.InstructionalPlatform.Id);
                     if (string.IsNullOrEmpty(providerCode))
-                    {                        
+                    {
                         IntegrationApiExceptionAddError(string.Format("Invalid GUID '{0}' supplied for instructionalPlatform.", sectionDto.InstructionalPlatform.Id), "Record.Not.Found", sectionDto.Id, sectionId);
                     }
                     else
@@ -7953,8 +8079,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     else
                     {
                         site = tempLocationCode;
-                    }                    
-                }            
+                    }
+                }
                 catch (ArgumentNullException)
                 {
                     IntegrationApiExceptionAddError("Validation table locations is missing from the database.", "Validation.Exception", sectionDto.Id, sectionId);
@@ -8079,13 +8205,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
+            bool waitlistClosed = false;
+            bool instructorConsent = false;
+            bool hideInCatalog = false;
+            if (sectionDto.CatalogDisplay != null && sectionDto.CatalogDisplay != SectionCatalogDisplay.Hidden && sectionDto.CatalogDisplay != SectionCatalogDisplay.Visible)
+            {
+                IntegrationApiExceptionAddError("Section 'catalogDisplay' property must be 'visible', 'hidden' or null.", "Validation.Exception", sectionDto.Id, sectionId);
+            }
+            if (sectionDto.CatalogDisplay == SectionCatalogDisplay.Hidden)
+            {
+                hideInCatalog = true;
+            }
+
             // Create the section entity
             Domain.Student.Entities.Section entity = null;
             try
             {
                 entity = new Domain.Student.Entities.Section(id, course.Id, sectionDto.Number, sectionDto.StartOn.GetValueOrDefault(),
                     minCredits, ceus, shortTitle, creditTypeCode, offeringDepartments, courseLevelCodes, academicLevel, statuses,
-                    course.AllowPassNoPass, course.AllowAudit, course.OnlyPassNoPass, allowWaitlist, false)
+                    course.AllowPassNoPass, course.AllowAudit, course.OnlyPassNoPass, allowWaitlist, waitlistClosed, instructorConsent, hideInCatalog)
                 {
                     Guid = (sectionDto.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase)) ? string.Empty : sectionDto.Id.ToLowerInvariant(),
                     EndDate = sectionDto.EndOn == null ? default(DateTime?) : sectionDto.EndOn.GetValueOrDefault(),
@@ -8294,12 +8432,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 entity.NumberOfWeeks = sectionDto.Duration.Length;
             }
-            else
+            else            
             {
-                if (entity.EndDate.HasValue)
-                {
-                    entity.NumberOfWeeks = (int)Math.Ceiling((entity.EndDate.Value - entity.StartDate).Days / 7m);
-                }
+                // drop through.  Let UPDATE.COURSE.SECTIONS default the value from the course
             }
 
             entity.WaitlistMaximum = null;
@@ -8347,6 +8482,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!string.IsNullOrEmpty(printedComments))
             {
                 entity.Comments = printedComments;
+            }
+
+            if (sectionDto.CatalogDisplay == SectionCatalogDisplay.Visible)
+            {
+                entity.VisibleInCatalog = true;
             }
 
             if (IntegrationApiException != null)
@@ -8965,7 +9105,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionDtos = new List<Dtos.SectionMaximum5>();
             Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section>, int> sectionEntities = null;
             try
-            {                
+            {
                 sectionEntities = await _sectionRepository.GetSectionsAsync(offset, limit, title, newStartOn, newEndOn,
                     code, number, newInstructionalPlatform, newAcademicPeriod, newReportingAcademicPeriod,
                     newAcademicLevel, newCourse, newSite, newStatus, newOwningOrganization, "", newInstructors, newScheduleAcademicPeriod);
@@ -9368,7 +9508,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                         }
 
-                        
+
                         if (!string.IsNullOrEmpty(course.SubjectCode))
                         {
                             var subjects = await SubjectsAsync(bypassCache);
@@ -9398,7 +9538,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                         "GUID.Not.Found", entity.Guid, entity.Id);
                                 }
                             }
-                        }     
+                        }
                         else
                         {
                             IntegrationApiExceptionAddError(string.Concat("Missing subject for course ", course.Id, "."),
@@ -9420,7 +9560,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 IntegrationApiExceptionAddError("Missing course.", "GUID.Not.Found", entity.Guid, entity.Id);
             }
-                        
+
             var credit = new Dtos.DtoProperties.Credit2DtoProperty();
             if (!string.IsNullOrEmpty(entity.CreditTypeCode))
             {
@@ -9497,7 +9637,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             sectionDto.Credits = creditList;
 
             if (!string.IsNullOrEmpty(entity.Location))
-            {                
+            {
                 var site = new SiteDtoProperty();
                 try
                 {
@@ -9539,7 +9679,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     var levels = await AcademicLevelsAsync();
                     if (levels.Any())
-                    {                        
+                    {
                         var level = (levels.FirstOrDefault(l => l.Code == entity.AcademicLevelCode));
                         if (level != null)
                         {
@@ -9753,17 +9893,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Get instructional methods if it will be needed for any of multiple DTO properties
-            IEnumerable<Domain.Student.Entities.InstructionalMethod> allInstructionalMethods = null;            
+            IEnumerable<Domain.Student.Entities.InstructionalMethod> allInstructionalMethods = null;
             if ((entity.InstructionalContacts != null && entity.InstructionalContacts.Any()) ||
                 (entity.InstructionalMethods != null && entity.InstructionalMethods.Any()) ||
                 (entity.Meetings != null) && (entity.Meetings.Any()) ||
-                (entity.Faculty != null) && (entity.Faculty.Any()))           
+                (entity.Faculty != null) && (entity.Faculty.Any()))
             {
                 try
                 {
                     allInstructionalMethods = await InstructionalMethodsAsync(bypassCache);
                     if (!allInstructionalMethods.Any())
-                    {  
+                    {
                         IntegrationApiExceptionAddError(string.Concat("No instructional methods found."),
                             "GUID.Not.Found", entity.Guid, entity.Id);
                     }
@@ -9932,7 +10072,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 catch (Exception ex)
                 {
                     IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
-                }               
+                }
             }
 
             // New property for alternate Ids
@@ -10434,10 +10574,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     const string errorMessage = "SECTION.STATUSES must be configured for use in integration";
                     logger.Info(errorMessage);
-                    throw new Exception(errorMessage);
+                    throw new ColleagueWebApiException(errorMessage);
                 }
             }
-        }   
+        }
         #region Instructional Events Version 6
 
         /// <summary>
@@ -10959,9 +11099,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                IntegrationApiExceptionAddError(string.Format("No instructional-events was found for GUID '{0}'", id), "GUID.Not.Found", id, "",
-                   System.Net.HttpStatusCode.NotFound);
-                throw IntegrationApiException;
+                throw new KeyNotFoundException(string.Format("Record not found, invalid id provided: {0}", id));
             }
 
             if (entity == null)
@@ -11001,8 +11139,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 IntegrationApiExceptionAddError("Missing request body.", "Validation.Exception");
                 throw IntegrationApiException;
             }
-
-            CheckInstructionalEvent4Permissions(meeting);
 
             #region create domain entity from request
             Domain.Student.Entities.Section section = null;
@@ -11098,8 +11234,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 IntegrationApiExceptionAddError("Missing request body.", "Validation.Exception");
                 throw IntegrationApiException;
             }
-
-            CheckInstructionalEvent4Permissions(meeting);
 
             #region update domain entity from request
 
@@ -11360,71 +11494,71 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 StartOn = meeting.StartDate.GetValueOrDefault().Date + meeting.StartTime.GetValueOrDefault().TimeOfDay,
                 EndOn = meeting.EndDate.GetValueOrDefault().Date + meeting.EndTime.GetValueOrDefault().TimeOfDay
             };
-                if (!string.IsNullOrEmpty(meeting.Frequency))
+            if (!string.IsNullOrEmpty(meeting.Frequency))
+            {
+                var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
+                if (repeatCode == null)
                 {
-                    var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
-                    if (repeatCode == null)
-                    {
-                        throw new ArgumentException("Invalid meeting frequency code: " + meeting.Frequency, "meeting.Frequency");
-                    }
+                    throw new ArgumentException("Invalid meeting frequency code: " + meeting.Frequency, "meeting.Frequency");
+                }
 
-                    switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
-                    {
-                        case Dtos.FrequencyType2.Daily:
-                            var repeatRuleDaily = new Dtos.RepeatRuleDaily()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                            };
-                            outputDto.Recurrence.RepeatRule = repeatRuleDaily;
-                            break;
-                        case Dtos.FrequencyType2.Weekly:
-                            var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                                DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
-                            };
+                switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                {
+                    case Dtos.FrequencyType2.Daily:
+                        var repeatRuleDaily = new Dtos.RepeatRuleDaily()
+                        {
+                            Interval = repeatCode.Interval.GetValueOrDefault(),
+                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                        };
+                        outputDto.Recurrence.RepeatRule = repeatRuleDaily;
+                        break;
+                    case Dtos.FrequencyType2.Weekly:
+                        var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
+                        {
+                            Interval = repeatCode.Interval.GetValueOrDefault(),
+                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                            DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
+                        };
 
-                            outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
-                            break;
-                        case Dtos.FrequencyType2.Monthly:
-                            int? dayOfMonth = null;
-                            RepeatRuleDayOfWeek dayOfWeek = null;
-                            if (meeting.Days.Any())
+                        outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
+                        break;
+                    case Dtos.FrequencyType2.Monthly:
+                        int? dayOfMonth = null;
+                        RepeatRuleDayOfWeek dayOfWeek = null;
+                        if (meeting.Days.Any())
+                        {
+                            dayOfWeek = new RepeatRuleDayOfWeek()
                             {
-                                dayOfWeek = new RepeatRuleDayOfWeek()
-                                {
-                                    Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
-                                };
-                            }
-                            else
-                            {
-                                dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
-                            }
-                            var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                                RepeatBy = new RepeatRuleRepeatBy()
-                                {
-                                    DayOfWeek = dayOfWeek,
-                                    DayOfMonth = dayOfMonth
-                                }
+                                Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
                             };
-                            outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
-                            break;
-                        case Dtos.FrequencyType2.Yearly:
-                            var repeatRuleYearly = new Dtos.RepeatRuleYearly()
+                        }
+                        else
+                        {
+                            dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
+                        }
+                        var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
+                        {
+                            Interval = repeatCode.Interval.GetValueOrDefault(),
+                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                            RepeatBy = new RepeatRuleRepeatBy()
                             {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                            };
-                            outputDto.Recurrence.RepeatRule = repeatRuleYearly;
-                            break;
-                        default: break;
-                    }
-                
+                                DayOfWeek = dayOfWeek,
+                                DayOfMonth = dayOfMonth
+                            }
+                        };
+                        outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
+                        break;
+                    case Dtos.FrequencyType2.Yearly:
+                        var repeatRuleYearly = new Dtos.RepeatRuleYearly()
+                        {
+                            Interval = repeatCode.Interval.GetValueOrDefault(),
+                            Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                        };
+                        outputDto.Recurrence.RepeatRule = repeatRuleYearly;
+                        break;
+                    default: break;
+                }
+
             }
 
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
@@ -11703,7 +11837,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentException(string.Format("Instructional Method is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.InstructionalMethodCode");
                 }
                 throw new ArgumentException(string.Format("Instructional Method '{0}' is invalid for the instructional event '{1}'. ", meeting.InstructionalMethodCode, meeting.Guid), "meeting.InstructionalMethodCode");
-            }            
+            }
             outputDto.Recurrence = new Dtos.Recurrence3();
             outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
             {
@@ -12106,9 +12240,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = meeting.Section != null && !string.IsNullOrEmpty(meeting.Section.Id) ? await _sectionRepository.GetSectionByGuidAsync(meeting.Section.Id) : null;
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
-                // Fall through - we want this condition to do the same as if the section is null
+                logger.Error(knfex, "Process if the section is null.");
             }
             if (section == null || string.IsNullOrEmpty(section.Id))
             {
@@ -12606,9 +12740,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 section = meeting.Section != null && !string.IsNullOrEmpty(meeting.Section.Id) ? await _sectionRepository.GetSectionByGuidAsync(meeting.Section.Id) : null;
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
-                // Fall through - we want this condition to do the same as if the section is null
+                logger.Error(knfex, "Process if the section is null.");
             }
             if (section == null || string.IsNullOrEmpty(section.Id))
             {
@@ -13149,7 +13283,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (curriculumConfiguration != null && !string.IsNullOrEmpty(curriculumConfiguration.DefaultInstructionalMethodCode))
                     {
                         instructionalMethod = curriculumConfiguration.DefaultInstructionalMethodCode;
-                    }                    
+                    }
                 }
             }
             if (string.IsNullOrEmpty(instructionalMethod))
@@ -13620,14 +13754,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return fullName.Trim();
         }
-
+        
         /// <summary>
         /// Helper method to determine if the user has permission to manage a section's textbook assignments
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CanManageSectionTextbookAssignments(Domain.Student.Entities.Section section)
+        private void CanManageSectionTextbookAssignments(Domain.Student.Entities.Section section, IEnumerable<Domain.Base.Entities.Department> allDepartments)
         {
-            if (section != null && section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId)) return;
+            //check if this person is the assigned faculty for the section, otherwise check if the person is departmental oversight for this section and has create permission for books      
+
+            if ((section != null && section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId)) ||
+                (CheckDepartmentalOversightAccessForSection(section, allDepartments) && HasPermission(DepartmentalOversightPermissionCodes.CreateSectionBooks)))
+            {
+                return;
+            }
+
             string error = "Current user is not authorized to update books for the section: " + section.Id;
             logger.Error(error);
             throw new PermissionsException("Current user is not authorized to update books in the current section");
@@ -13800,11 +13941,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 sectionEntities = await _sectionRepository.GetNonCachedSectionsAsync(listOfIds);
             }
+
             Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity = sectionEntities.Where(s => s.Id == sectionId).FirstOrDefault();
             if (sectionEntity == null)
             {
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section entity for given sectionId {0}", sectionId));
             }
+
             //only a faculty that belongs to that section can retrieve student Ids.There is no need for other users to see that information
             //student Ids are considered as PII at institution level
             if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
@@ -13973,12 +14116,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var sectionDtoAdapter = new SectionEntityToStudentSection4DtoAdapter(_adapterRegistry, logger);
+            var allDepartments = await _referenceDataRepository.DepartmentsAsync();
             foreach (var section in sectionEntities)
             {
                 if (section != null)
                 {
                     Dtos.Student.Section4 sectionDto = sectionDtoAdapter.MapToType(section);
-                    if (section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId))
+
+                    bool canRetrieveActiveStudents = false;
+                    if (section.FacultyIds != null && section.FacultyIds.Contains(CurrentUser.PersonId))
+                    {
+                        canRetrieveActiveStudents = true;
+                    }
+                    else
+                    {
+                        if (CheckDepartmentalOversightAccessForSection(section, allDepartments))
+                        {
+                            canRetrieveActiveStudents = true;
+                        }
+                    }
+                    // Only assigned faculty or a departmental oversight of a section can get Active Students information
+                    if (!canRetrieveActiveStudents)
                     {
                         hasPrivacyRestriction = true;
                         sectionDto.ActiveStudentIds = new List<string>();
@@ -14011,12 +14169,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
             }
 
-            // The current user must be a faculty member of the section
-            if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await AllDepartments();
+            // The current user must be a faculty member of the section or a departmental oversight member with the required permissions
+            if ((sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId)) 
+                && !(CheckDepartmentalOversightAccessForSection(sectionEntity, allDepartments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionGrading) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading))))
             {
-                throw new PermissionsException();
+                throw new PermissionsException(string.Format("Authenticated user is neither a faculty nor a departmental oversight for course section {0}.", sectionEntity.Id));
             }
-
 
             var sectionGradingCompleteEntity = await _sectionRepository.GetSectionMidtermGradingCompleteAsync(sectionId);
 
@@ -14067,7 +14227,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Can the user update grades for this section?
-            if (!await UserCanUpdateGradesOfSectionAsync(sectionId))
+            if (!await UserCanUpdateGradesOfSectionAsync(sectionId, isDeptOversightAllowed:true))
             {
                 throw new PermissionsException();
             }
@@ -14099,9 +14259,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Retrieve non-cached course section information for further validations
             var courseSection = await RetrieveCourseSectionInformation(sectionId);
-
-            // The authenticated user is only permitted to retrieve section grading status information for a course section if they are an assigned faculty member for the course section
-            VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(courseSection);
+            var allDepartments = await AllDepartments();
+            var userPermissions = await GetUserPermissionCodesAsync();
+            // The authenticated user is only permitted to retrieve section grading status information for a course section if they are an assigned faculty member for the course section or a departmental oversight
+            VerifyAuthenticatedUserIsAssignedFacultyOrDeptOversightForSectionAsync(courseSection, allDepartments, userPermissions);
 
             // Retrieve section grading status information
             var sectionGradingStatusEntity = await _sectionRepository.GetSectionGradingStatusAsync(sectionId);
@@ -14137,7 +14298,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Dtos.Student.SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, Dtos.Student.SectionCensusToCertify sectionCensusToCertify, Dtos.Student.SectionRegistrationDate sectionRegistrationDate)
         {
             Domain.Student.Entities.Section sectionEntity = null;
-            Domain.Student.Entities.SectionCensusConfiguration sectionCensusConfiguration = null;
+            Domain.Student.Entities.SectionCensusConfiguration2 sectionCensusConfiguration = null;
 
             Dtos.Student.SectionCensusCertification certifiedCensusDto = null;
             if (sectionId == null)
@@ -14179,6 +14340,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //this will be retrieving non-cache course section 
                 sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 string message = string.Format("An exception occurred while retrieving section information for sectionId {0}, in order to create section's census certification", sectionId);
@@ -14191,16 +14356,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
             }
 
-            // The current user must be a faculty member of the section
-            if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
+            var userPermissions = await GetUserPermissionCodesAsync();
+            var allDepartments = await AllDepartments();
+
+            // The current user must be a faculty member of the section or a departmental oversight member with the required permissions.
+            if ((sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId)) && !(CheckDepartmentalOversightAccessForSection(sectionEntity, allDepartments) && userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionCensus)))
             {
-                throw new PermissionsException(string.Format("User must be the faculty of the section {0} in order to certify census", sectionId));
+                throw new PermissionsException(string.Format("Authenticated user is neither a faculty nor a departmental oversight of the section {0} in order to certify census", sectionId));
             }
 
             //retrieve section census configuration
             try
             {
-                sectionCensusConfiguration = await _studentConfigRepository.GetSectionCensusConfigurationAsync();
+                sectionCensusConfiguration = await _studentConfigRepository.GetSectionCensusConfiguration2Async();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -14276,12 +14448,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 certifiedCensusDto = entityToDtoAdapter.MapToType(certifiedCensusEntity);
                 return certifiedCensusDto;
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("An exception occurred while updating section {0} census certification", sectionId));
                 throw;
             }
         }
+
         private Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events)
         {
             if (events == null)
@@ -14345,16 +14522,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         #endregion
 
         /// <summary>
-        /// Verifies that the authenticated user is an assigned faculty member for the specified course section
+        /// Verifies that the authenticated user is an assigned faculty member for the specified course section or departmental oversight
         /// </summary>
         /// <param name="courseSection">Course section to check</param>
-        /// <exception cref="PermissionsException">Authenticated user is not an assigned faculty member for course section.</exception>
-        private void VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(Domain.Student.Entities.Section courseSection)
+        /// <exception cref="PermissionsException">Authenticated user is not an assigned faculty member for course section or departmental oversight.</exception>
+        private void VerifyAuthenticatedUserIsAssignedFacultyOrDeptOversightForSectionAsync(Domain.Student.Entities.Section courseSection, IEnumerable<Domain.Base.Entities.Department> departments, IEnumerable<string> userPermissions)
         {
-            // The current user must be a faculty member of the section
-            if (courseSection.FacultyIds == null || !courseSection.FacultyIds.Contains(CurrentUser.PersonId))
+            // The current user must be a faculty member of the section or a departmental oversight member with the required permissions
+            if ((courseSection.FacultyIds == null || !courseSection.FacultyIds.Contains(CurrentUser.PersonId))
+                && !(CheckDepartmentalOversightAccessForSection(courseSection, departments) && (userPermissions.Contains(DepartmentalOversightPermissionCodes.ViewSectionGrading) || userPermissions.Contains(DepartmentalOversightPermissionCodes.CreateSectionGrading))))
             {
-                throw new PermissionsException(string.Format("Authenticated user is not an assigned faculty member for course section {0}.", courseSection.Id));
+                throw new PermissionsException(string.Format("Authenticated user is neither a faculty nor a departmental oversight for course section {0}.", courseSection.Id));
             }
         }
 

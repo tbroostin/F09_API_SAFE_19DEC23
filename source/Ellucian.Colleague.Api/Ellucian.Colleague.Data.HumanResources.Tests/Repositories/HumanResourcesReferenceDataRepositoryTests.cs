@@ -3456,6 +3456,52 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         [TestClass]
+        public class HRSSConfigurationTests :BaseRepositorySetup
+        {
+            public HumanResourcesReferenceDataRepository repositoryUnderTest;
+            public HrssDefaults hrssDefaults;
+
+            [TestInitialize]
+            public void Initialise()
+            {
+                MockInitialize();
+
+                hrssDefaults = new HrssDefaults() { HrssDisplayNameHierarchy = "GR" };
+
+                dataReaderMock.Setup(r => r.ReadRecordAsync<HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", It.IsAny<bool>()))
+                    .Returns<string, string, bool>((f, r, b) => Task.FromResult(hrssDefaults));
+
+                loggerMock.Setup(l => l.IsDebugEnabled).Returns(true);
+
+                // create a new instance of the repo...
+                repositoryUnderTest = new HumanResourcesReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            }
+
+            [TestMethod]
+           public async Task HRSSConfiguration_ActualsEqualExpectedTest()
+            {
+                var actuals = await repositoryUnderTest.GetHrssConfigurationAsync();
+                Assert.IsNotNull(actuals);
+                Assert.IsTrue(string.IsNullOrEmpty(actuals.HrssDisplayNameHierarchy) == false);
+                Assert.AreEqual("GR", actuals.HrssDisplayNameHierarchy);
+              
+            }
+
+
+            [TestMethod]
+            public async Task HRSSConfiguration_NullTest()
+            {
+                hrssDefaults = null;
+                var actuals = await repositoryUnderTest.GetHrssConfigurationAsync();
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(string.Empty, actuals.HrssDisplayNameHierarchy);
+                loggerMock.Verify(e => e.Debug(It.IsAny<string>()));
+
+            }
+        }
+
+
+        [TestClass]
         public class TaxCodesTests : BaseRepositorySetup
         {
 

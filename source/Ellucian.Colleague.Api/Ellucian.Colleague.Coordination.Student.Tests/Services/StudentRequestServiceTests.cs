@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -451,7 +452,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Exception_in_Repository_Transcript_Request()
             {
                 requestRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Throws(new Exception());
@@ -579,7 +580,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task Exception_in_Repository_Enrollment_Request()
             {
                 requestRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Throws(new Exception());
@@ -750,7 +751,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentRequests_RepoThrowsOtherException()
             {
                 requestRepoMock.Setup(repo => repo.GetStudentRequestsAsync(It.IsAny<string>())).Throws(new Exception());

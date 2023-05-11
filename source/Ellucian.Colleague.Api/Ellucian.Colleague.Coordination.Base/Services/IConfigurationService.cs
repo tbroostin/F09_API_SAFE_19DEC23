@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
-    public interface IConfigurationService
+    public interface IConfigurationService : IBaseService
     {
         /// <summary>
         /// Gets an integration configuration
@@ -123,5 +123,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <returns>Session configuration</returns>
         Task<Dtos.Base.SessionConfiguration> GetSessionConfigurationAsync();
+
+        /// <summary>
+        /// Calls configuration repository and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        Task<IEnumerable<Dtos.AuditLogConfiguration>> GetAuditLogConfigurationAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Calls configuration repository and returns the Audit Log Configuration object.
+        /// </summary>
+        /// <returns><see cref="Dtos.AuditLogConfiguration">Audit Log Configuration</see> object.</returns>
+        Task<Dtos.AuditLogConfiguration> UpdateAuditLogConfigurationAsync(Dtos.AuditLogConfiguration auditLogConfiguration);
     }
 }

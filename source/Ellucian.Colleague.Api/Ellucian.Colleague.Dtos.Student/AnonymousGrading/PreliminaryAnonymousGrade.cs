@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Dtos.Student.AnonymousGrading
@@ -12,6 +12,10 @@ namespace Ellucian.Colleague.Dtos.Student.AnonymousGrading
         /// Anonymous grading ID for the preliminary anonymous grade
         /// </summary>
         public string AnonymousGradingId { get; set; }
+        /// <summary>
+        /// Anonymous grading ID for MidTerm grades
+        /// </summary>
+        public string AnonymousMidTermGradingId { get; set; }
 
         /// <summary>
         /// ID for the final grade for the preliminary anonymous grade

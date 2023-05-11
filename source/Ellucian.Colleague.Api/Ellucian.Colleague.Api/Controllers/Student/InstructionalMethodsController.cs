@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -18,6 +18,8 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -55,19 +57,35 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="InstructionalMethod">Instructional Method</see> codes and descriptions.</returns>
         public async Task<IEnumerable<InstructionalMethod>> GetAsync()
         {
-            var instructionalMethodCollection = await _referenceDataRepository.GetInstructionalMethodsAsync();
-
-            // Get the right adapter for the type mapping
-            var instructionalMethodDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod, InstructionalMethod>();
-
-            // Map the instructional method entity to the instructional method DTO
-            var instructionalMethodDtoCollection = new List<InstructionalMethod>();
-            foreach (var instrMethod in instructionalMethodCollection)
+            try
             {
-                instructionalMethodDtoCollection.Add(instructionalMethodDtoAdapter.MapToType(instrMethod));
+                var instructionalMethodCollection = await _referenceDataRepository.GetInstructionalMethodsAsync();
+
+                // Get the right adapter for the type mapping
+                var instructionalMethodDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod, InstructionalMethod>();
+
+                // Map the instructional method entity to the instructional method DTO
+                var instructionalMethodDtoCollection = new List<InstructionalMethod>();
+                foreach (var instrMethod in instructionalMethodCollection)
+                {
+                    instructionalMethodDtoCollection.Add(instructionalMethodDtoAdapter.MapToType(instrMethod));
+                }
+
+                return instructionalMethodDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving instructional methods";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                string message = "Exception occurred while retrieving instructional methods";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
 
-            return instructionalMethodDtoCollection;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HEDM version 4</remarks>

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,9 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
+using Ellucian.Data.Colleague.Exceptions;
+using slf4net;
+
 namespace Ellucian.Colleague.Api.Controllers
 {
     /// <summary>
@@ -26,16 +29,21 @@ namespace Ellucian.Colleague.Api.Controllers
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IAdapterRegistry _adapterRegistry;
+        private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// Initializes a new instance of the PrefixController class.
         /// </summary>
         /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
         /// <param name="referenceDataRepository">Repository of type <see cref="IReferenceDataRepository">IReferenceDataRepository</see></param>
-        public PrefixesController(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository)
+        /// <param name="logger">Interface to logger</param>
+        public PrefixesController(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository, ILogger logger)
         {
             _adapterRegistry = adapterRegistry;
             _referenceDataRepository = referenceDataRepository;
+            _logger = logger;
         }
 
         /// <summary>
@@ -44,19 +52,32 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>All <see cref="Prefix">Prefix codes and descriptions.</see></returns>
         public IEnumerable<Prefix> Get()
         {
-            var prefixCollection = _referenceDataRepository.Prefixes;
-
-            // Get the right adapter for the type mapping
-            var prefixDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Prefix, Prefix>();
-
-            // Map the prefix entity to the program DTO
-            var prefixDtoCollection = new List<Prefix>();
-            foreach (var prefix in prefixCollection)
+            try
             {
-                prefixDtoCollection.Add(prefixDtoAdapter.MapToType(prefix));
-            }
+                var prefixCollection = _referenceDataRepository.Prefixes;
 
-            return prefixDtoCollection;
+                // Get the right adapter for the type mapping
+                var prefixDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Prefix, Prefix>();
+
+                // Map the prefix entity to the program DTO
+                var prefixDtoCollection = new List<Prefix>();
+                foreach (var prefix in prefixCollection)
+                {
+                    prefixDtoCollection.Add(prefixDtoAdapter.MapToType(prefix));
+                }
+
+                return prefixDtoCollection;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
+            }
         }
     }
 }

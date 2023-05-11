@@ -56,9 +56,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentEligibilityPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentEligibility>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -83,9 +89,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<EmployeeBenefitsEnrollmentPoolItem>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -112,6 +124,11 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (ResourceNotFoundException ex)
             {
                 logger.Error(ex, "Unable to get the benefits enrollment configuration.");
@@ -141,9 +158,15 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<EmployeeBenefits>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -170,9 +193,15 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPackage>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -216,7 +245,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(employeeBenefitsEnrollmentPoolItem, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPoolItem>(await response.Content.ReadAsStringAsync());
             }
@@ -226,6 +255,11 @@ namespace Ellucian.Colleague.Api.Client
                 string message = "Adding benefits enrollment pool information to an employee is failed.";
                 logger.Error(hre, message);
                 throw new InvalidOperationException(message, hre);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // HTTP request successful, but some other problem encountered...
             catch (Exception ex)
@@ -276,7 +310,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(employeeBenefitsEnrollmentPoolItem, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPoolItem>(await response.Content.ReadAsStringAsync());
             }
@@ -286,6 +320,11 @@ namespace Ellucian.Colleague.Api.Client
                 string message = "Updating benefits enrollment pool information to an employee is failed.";
                 logger.Error(hre, message);
                 throw new InvalidOperationException(message, hre);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             // HTTP request successful, but some other problem encountered...
             catch (Exception ex)
@@ -333,7 +372,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentInfoPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(employeeBenefitsEnrollmentInfo, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentInfo>(await response.Content.ReadAsStringAsync());
             }
@@ -342,6 +381,11 @@ namespace Ellucian.Colleague.Api.Client
                 string message = "Updating benefits enrollment information for employee failed.";
                 logger.Error(hre, message);
                 throw new InvalidOperationException(message, hre);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -402,9 +446,15 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _benefitsEnrollmentInfoPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentInfo>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -443,9 +493,15 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, _submitOrReOpenBenefitElectionsPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<BenefitEnrollmentCompletionInfo>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -460,7 +516,6 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>Returns a list of Beneficiary Category DTOs</returns>
         public async Task<IEnumerable<BeneficiaryCategory>> GetBeneficiaryCategoriesAsync()
         {
-
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_employeesPath, _beneficiaryCategoriesPath);
@@ -471,7 +526,6 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<BeneficiaryCategory>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
-
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get beneficiary categories");
@@ -505,6 +559,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = await response.Content.ReadAsByteArrayAsync();
 
                 return new Tuple<byte[], string>(resource, fileName);
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -549,9 +608,15 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonEmploymentStatus>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -596,9 +661,15 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonPosition>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -643,9 +714,15 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonPositionWage>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -675,9 +752,15 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonStipend>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -701,6 +784,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Position>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Position data");
@@ -722,6 +810,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<EarningsType>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -745,6 +838,12 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<EarningsTypeGroup>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get EarningsTypeGroup data");
@@ -776,6 +875,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographics);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -817,9 +917,14 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographicsVersion2);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent); var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -846,9 +951,15 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographics);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<HumanResourceDemographics>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -889,6 +1000,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographics);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -925,6 +1037,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PayCycle>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch(LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1022,9 +1139,15 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 return JsonConvert.DeserializeObject<IEnumerable<PayStatementSummary>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -1038,7 +1161,6 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         public async Task<Tuple<string, byte[]>> GetPayStatementPdf(string id)
         {
-
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
@@ -1062,6 +1184,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = await response.Content.ReadAsByteArrayAsync();
 
                 return new Tuple<string, byte[]>(fileName, resource);
+            }
+            catch(LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -1092,6 +1219,11 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = await response.Content.ReadAsByteArrayAsync();
                 return resource;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to build mulitple pay statement pdf");
@@ -1113,6 +1245,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 return JsonConvert.DeserializeObject<PayStatementConfiguration>(await response.Content.ReadAsStringAsync());
+            }
+            catch(LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -1136,6 +1273,12 @@ namespace Ellucian.Colleague.Api.Client
 
                 return JsonConvert.DeserializeObject<LeaveBalanceConfiguration>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get leave balance configuration asynchronously");
@@ -1164,10 +1307,17 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 return JsonConvert.DeserializeObject<IEnumerable<EmployeeLeavePlan>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get employee leave plans");
@@ -1213,10 +1363,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 return JsonConvert.DeserializeObject<EmployeeCompensation>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }            
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get employee compensation details");
@@ -1253,9 +1409,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<List<LeaveRequest>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 var message = "unable to get leave request";
@@ -1285,9 +1448,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get the leave request information");
@@ -1328,8 +1498,14 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPathWithArguments = UrlUtility.CombineEncodedUrlPathAndArguments(urlPath, urlArgCollection);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
                 return JsonConvert.DeserializeObject<List<LeaveRequest>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception e)
             {
@@ -1363,10 +1539,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(leaveRequest, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (HttpRequestFailedException hrfe)
             {
                 if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
@@ -1419,10 +1601,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(leaveRequest, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (HttpRequestFailedException hrfe)
             {
                 if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
@@ -1453,7 +1641,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Any authenticated user can create status for their own leave request     
         /// The endpoint will reject the creation of a Leave Request Status if Employee does not have the correct permission.
         /// </accessComments>
-        /// <param name="status">Leave Request Status DTO</param>
+        /// <param name="status">Leave Request Status DTO</param>CreateLeaveRequest
         /// <param name="effectivePersonId">Optional parameter - Current user or proxy user person id.</param>
         /// <returns>Newly created Leave Request Status</returns>
         public async Task<LeaveRequestStatus> CreateLeaveRequestStatusAsync(LeaveRequestStatus status, string effectivePersonId = null)
@@ -1473,9 +1661,16 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(status, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<LeaveRequestStatus>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 var message = "Unable to create leave request status";
@@ -1515,9 +1710,16 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(leaveRequestComment, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<LeaveRequestComment>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 var message = "Unable to create leave request comment";
@@ -1546,10 +1748,15 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(id, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1588,9 +1795,15 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
             }
             catch (Exception ex)
             {
@@ -1617,6 +1830,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _employeeSummaryPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<EmployeeSummary>>(await response.Content.ReadAsStringAsync());
             }
@@ -1645,9 +1859,16 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _employeeLeavePlansPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<EmployeeLeavePlan>>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve employee leave plan data for specified criteria");

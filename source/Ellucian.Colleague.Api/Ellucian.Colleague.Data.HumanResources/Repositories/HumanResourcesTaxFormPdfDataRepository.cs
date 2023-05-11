@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -48,6 +48,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseGuamTemplate))
             {
                 return qtdYtdParameter.QypW2UseGuamTemplate.ToUpper() == "Y";
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the American Samoa version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = American Samoa and false = USA</returns>
+        public async Task<bool> GetW2AmericanSamoaFlag()
+        {
+            var qtdYtdParameter = await DataReader.ReadRecordAsync<QtdYtdParameterW2Pdf>("HR.PARMS", "QTD.YTD.PARAMETER");
+            if (qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseAsTemplate))
+            {
+                return qtdYtdParameter.QypW2UseAsTemplate.ToUpper() == "Y";
             }
             else
             {

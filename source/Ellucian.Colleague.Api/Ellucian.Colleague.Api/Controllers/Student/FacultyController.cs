@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -15,6 +15,7 @@ using System.Net;
 using System.Web.Http;
 using Ellucian.Web.Http.Filters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly IFacultyService _facultyService;
         private readonly IFacultyRestrictionService _facultyRestrictionService;
         private readonly ILogger _logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// Initializes a new instance of the FacultyController class.
@@ -41,7 +43,6 @@ namespace Ellucian.Colleague.Api.Controllers
             _facultyService = facultyService;
             _facultyRestrictionService = facultyRestrictionService;
             _logger = logger;
-
         }
 
         /// <summary>
@@ -218,8 +219,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>List of <see cref="Section3">Sections</see></returns>
         /// <accessComments>
         /// Any authenticated user can retrieve faculty course section information; however,
-        /// only an assigned faculty user may retrieve list of active students Ids in a course section.
-        /// For all other users that are not assigned faculty to a course section cannot retrieve list of active students Ids and
+        /// only an assigned faculty or departmental oversight user may retrieve list of active students Ids in a course section.
+        /// For all other users that are not assigned faculty or departmental oversight to a course section cannot retrieve list of active students Ids and
         /// response object is returned with a X-Content-Restricted header with a value of "partial".
         /// </accessComments>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "bestFit", "startDate", "endDate" })]
@@ -247,10 +248,16 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return sectionDtos;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                _logger.Error(csse, "Session has expired while retrieving faculty details.");
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             catch (Exception exception)
             {
-                _logger.Error(exception.ToString());
-                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving faculty details";
+                _logger.Error(exception, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -262,7 +269,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>List of <see cref="Faculty">Faculty</see></returns>
         /// <accessComments>Any authenticated user can request faculty information.</accessComments>
         [Obsolete("Obsolete as of API version 1.2, use the GET faculty/{id} API")]
-        public async Task<IEnumerable<Faculty>> PostFacultyAsync([FromBody]string ids)
+        public async Task<IEnumerable<Faculty>> PostFacultyAsync([FromBody] string ids)
         {
             try
             {
@@ -293,12 +300,20 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<Faculty> GetFacultyAsync(string id)
         {
             try
-            {            
+            {
                 return await _facultyService.GetAsync(id);
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                string message = "Session has expired while retrieving faculty data";
+                _logger.Error(csse, message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving faculty details";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -337,13 +352,23 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _facultyService.QueryFacultyAsync(criteria);
             }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while retrieving faculty details";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                string message = "User does not have appropriate permissions to retrieve faculty details";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.InternalServerError);
+                string message = "Exception occurred while retrieving faculty details";
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
         /// <summary>
@@ -351,7 +376,16 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">Contains flags for Faculty only and Advisor only.</param>
         /// <returns>List of faculty IDs</returns>
-        /// <accessComments>Only users with permission VIEW.ANY.ADVISEE can retrieve list of Faculty IDs.</accessComments>
+        /// <accessComments>Only users with any of the following permissions can retrieve list of Faculty IDs.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<string>> PostFacultyIdsAsync([FromBody] FacultyQueryCriteria criteria)
         {
@@ -366,6 +400,12 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving list of faculty ids";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception e)
             {
@@ -383,14 +423,14 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             try
             {
-                return await  _facultyService.GetFacultyPermissionsAsync();
+                return await _facultyService.GetFacultyPermissionsAsync();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
-            
+
         }
 
         /// <summary>
@@ -404,13 +444,19 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _facultyService.GetFacultyPermissions2Async();
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                var message = "Session has expired while retrieving list of faculty permissions.";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
-                _logger.Error(ex.ToString());
-                throw CreateHttpResponseException("An error occurred while retrieving faculty permissions.", HttpStatusCode.BadRequest);
+                var message = "An error occurred while retrieving faculty permissions.";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
-
 
         /// <summary>
         /// Returns the faculty office hours for the list of faculty ids.
@@ -418,7 +464,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>A list of FacultyOfficeHours for each faculty id</returns>
         /// <accessComments>Any authenticated user can request faculty information.</accessComments>
         [HttpPost]
-        public async Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync([FromBody]IEnumerable<string> facultyIds)
+        public async Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync([FromBody] IEnumerable<string> facultyIds)
         {
             try
             {
@@ -427,9 +473,15 @@ namespace Ellucian.Colleague.Api.Controllers
                     return await _facultyService.GetFacultyOfficeHoursAsync(facultyIds);
                 }
                 else
-                {                   
-                  throw new ArgumentNullException("facultyIds", "IDs cannot be empty/null for Faculty office hours retrieval.");                    
+                {
+                    throw new ArgumentNullException("facultyIds", "IDs cannot be empty/null for Faculty office hours retrieval.");
                 }
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while retrieving list of faculty office hours";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

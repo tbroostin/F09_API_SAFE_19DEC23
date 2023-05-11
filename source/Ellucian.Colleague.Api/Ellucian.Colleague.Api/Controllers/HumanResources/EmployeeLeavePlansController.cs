@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,6 +22,7 @@ using System.Linq;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -35,6 +36,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     {
         private readonly IEmployeeLeavePlansService employeeLeavePlansService;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
+        private const string invalidPermissionsErrorMessage = "The current user does not have the permissions to perform the requested operation.";
+        private const string unexpectedGenericErrorMessage = "Unexpected error occurred while processing the request.";
 
         /// <summary>
         /// Initializes a new instance of the EmployeeLeavePlansController class.
@@ -58,6 +62,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetEmployeeLeavePlansAsync(Paging page)
         {
+            logger.Debug("********* Start - Process to get employee leave plans - Start *********");
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -73,14 +78,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 {
                     page = new Paging(200, 0);
                 }
-
+                logger.Debug("Calling GetEmployeeLeavePlansAsync service method");
                 var pageOfItems = await employeeLeavePlansService.GetEmployeeLeavePlansAsync(page.Offset, page.Limit, bypassCache);
+                logger.Debug("Calling GetEmployeeLeavePlansAsync service method completed");
 
                 AddEthosContextProperties(
                     await employeeLeavePlansService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await employeeLeavePlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         pageOfItems.Item1.Select(i => i.Id).ToList()));
-
+                logger.Debug("********* End - Process to get employee leave plans - End *********");
                 return new PagedHttpActionResult<IEnumerable<Dtos.EmployeeLeavePlans>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
             catch (KeyNotFoundException e)
@@ -135,17 +141,26 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         {
             try
             {
-                return await employeeLeavePlansService.GetEmployeeLeavePlansV2Async(effectivePersonId: effectivePersonId, bypassCache: false);
+                logger.Debug("********* Start - Process to get employee leave plans - V2 - Start *********");
+                var leavePlans =  await employeeLeavePlansService.GetEmployeeLeavePlansV2Async(effectivePersonId: effectivePersonId, bypassCache: false);
+                logger.Debug("********* End - Process to get employee leave plans - V2 - End *********");
+                return leavePlans;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
             }
         }
 
@@ -167,6 +182,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [HttpPost]
         public async Task<IEnumerable<EmployeeLeavePlan>> QueryEmployeeLeavePlanAsync([FromBody]EmployeeLeavePlanQueryCriteria criteria)
         {
+            logger.Debug("********* Start - Process to Query employee leave plan - Start *********");
             if (criteria == null)
             {
                 var message = string.Format("criteria is required for QueryEmployeeLeavePlanAsync.");
@@ -183,18 +199,26 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-                return await employeeLeavePlansService.QueryEmployeeLeavePlanAsync(criteria);
+                var leaveplans = await employeeLeavePlansService.QueryEmployeeLeavePlanAsync(criteria);
+                logger.Debug("********* End - Process to Query employee leave plan - End *********");
+                return leaveplans;
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
             catch (PermissionsException pe)
             {
                 var message = string.Format("You do not have permission to QueryEmployeeLeavePlanAsync - {0}", pe.Message);
                 logger.Error(pe, message);
-                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage, HttpStatusCode.BadRequest);
             }
         }
 
@@ -207,6 +231,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         [PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeavePlans)]
         public async Task<Dtos.EmployeeLeavePlans> GetEmployeeLeavePlansByGuidAsync(string guid)
         {
+            logger.Debug("********* Start - Process to Get employee leave plans by GUID - Start *********");
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -227,7 +252,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     await employeeLeavePlansService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await employeeLeavePlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         new List<string>() { guid }));
-                return await employeeLeavePlansService.GetEmployeeLeavePlansByGuidAsync(guid);
+
+                logger.Debug(string.Format("Calling GetEmployeeLeavePlansByGuidAsync service method with guid {0}", guid));
+                var leaveplans =  await employeeLeavePlansService.GetEmployeeLeavePlansByGuidAsync(guid);
+
+                logger.Debug("********* End - Process to Get employee leave plans by GUID - End *********");
+                return leaveplans;
             }
             catch (KeyNotFoundException e)
             {

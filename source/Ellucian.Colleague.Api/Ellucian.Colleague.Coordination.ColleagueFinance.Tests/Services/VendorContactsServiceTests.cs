@@ -238,8 +238,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 phoneTypesCollection = new List<Domain.Base.Entities.PhoneType>()
                 {
-                    new Domain.Base.Entities.PhoneType(Guid.NewGuid().ToString(), "HOME", "Home", PhoneTypeCategory.Home),
-                    new Domain.Base.Entities.PhoneType(Guid.NewGuid().ToString(), "BUS", "Business", PhoneTypeCategory.Business),
+                    new Domain.Base.Entities.PhoneType(Guid.NewGuid().ToString(), "HOME", "Home", PhoneTypeCategory.Home, false),
+                    new Domain.Base.Entities.PhoneType(Guid.NewGuid().ToString(), "BUS", "Business", PhoneTypeCategory.Business, false),
                 };
 
                 var emailTypeGuid = Guid.NewGuid().ToString();

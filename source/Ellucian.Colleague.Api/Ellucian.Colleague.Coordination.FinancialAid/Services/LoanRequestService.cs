@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,8 @@ using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -138,7 +140,17 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             {
                 studentOrApplicant = await studentRepository.GetAsync(loanRequest.StudentId);
             }
-            catch (Exception) { }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception a) 
+            {
+                if (a.Message == "SECURITY \n00002 \nYour previous session is no longer valid.  Please log in again. \n")
+                {
+                    throw new ColleagueSessionExpiredException("Session has expired, please login again.");
+                }
+            }
 
             if (studentOrApplicant == null)
             {
@@ -146,7 +158,17 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 {
                     studentOrApplicant = await applicantRepository.GetApplicantAsync(loanRequest.StudentId);
                 }
-                catch (Exception) { }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
+                catch (Exception b) 
+                {
+                    if (b.Message == "SECURITY \n00002 \nYour previous session is no longer valid.  Please log in again. \n")
+                    {
+                        throw new ColleagueSessionExpiredException("Session has expired, please login again.");
+                    }
+                }
             }
 
             //if the studentOrApplicant is still null, throw an exception
@@ -170,18 +192,25 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             var loanRequestEntityAdapter = _adapterRegistry.GetAdapter<LoanRequest, Domain.FinancialAid.Entities.LoanRequest>();
             var inputLoanRequestEntity = loanRequestEntityAdapter.MapToType(loanRequest);
 
-            //call repository to create loan request
-            var newLoanRequestEntity = await loanRequestRepository.CreateLoanRequestAsync(inputLoanRequestEntity, activeStudentAwardYear);
-            if (newLoanRequestEntity == null)
+            try
             {
-                var message = string.Format("Unknown resource id for new LoanRequest resource for student id {0} and awardYear {1}", loanRequest.StudentId, loanRequest.AwardYear);
-                logger.Error(message);
-                throw new Exception(message);
-            }
+                //call repository to create loan request
+                var newLoanRequestEntity = await loanRequestRepository.CreateLoanRequestAsync(inputLoanRequestEntity, activeStudentAwardYear);
+                if (newLoanRequestEntity == null)
+                {
+                    var message = string.Format("Unknown resource id for new LoanRequest resource for student id {0} and awardYear {1}", loanRequest.StudentId, loanRequest.AwardYear);
+                    logger.Error(message);
+                    throw new ColleagueWebApiException(message);
+                }
 
-            //call adapter to convert new domain entity to Dto
-            var loanRequestDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.LoanRequest, LoanRequest>();
-            return loanRequestDtoAdapter.MapToType(newLoanRequestEntity);
+                //call adapter to convert new domain entity to Dto
+                var loanRequestDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.LoanRequest, LoanRequest>();
+                return loanRequestDtoAdapter.MapToType(newLoanRequestEntity);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
         }
     }
 }

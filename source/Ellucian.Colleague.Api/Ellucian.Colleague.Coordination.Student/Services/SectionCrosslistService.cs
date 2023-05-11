@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -196,10 +196,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //get the colleague id for a sectioncrosslist, if it exists
                     sectionCrosslistId = await _sectionRepository.GetSectionCrosslistIdFromGuidAsync(sectionCrosslistGuid);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    //not logging or catching here because this can be called by a create and the guid wouldnt exist on a create call.
+                    //not catching here because this can be called by a create and the guid wouldnt exist on a create call.
                     //id will be set to empty by default, which means it is a create
+                    logger.Error(ex, "Unable to get section cross list ID.");
                 }
             }
 

@@ -37,6 +37,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string Reason { get; set; }
 
         /// <summary>
+        /// Flag to indicate if document has attachment/s associated
+        /// </summary>
+        public bool AttachmentsIndicator { get; set; }
+
+        /// <summary>
         /// Status of the budget adjustment.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]

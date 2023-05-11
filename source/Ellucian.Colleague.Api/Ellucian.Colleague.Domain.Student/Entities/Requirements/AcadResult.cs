@@ -9,7 +9,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
     [Serializable]
     public abstract class AcadResult
     {
-        public string GroupId;
+        public string GroupId { get; set; }
         public Result Result { get; set; }
         public AcadResultExplanation Explanation { get; set; }
 
@@ -45,6 +45,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         Applied, 
         PlannedApplied,
         Related,
+        RelatedFromCourseException,
 
         NotInCoursesList,
         NotInFromCoursesList,

@@ -1,4 +1,4 @@
-﻿/* Copyright 2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2018-2022 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,9 +11,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
     public enum LeaveTransactionType
     {
 
-        Earned,
-        Used,
-        Adjusted,
-        LeaveReporting
+        Earned, // A
+        Used, // U
+        Adjusted, // J
+        LeaveReporting, // L
+        StartingBalanceAdjustment, // S
+        StartingBalance, // B
+        MidYearBalanceAdjustment, // C
+        Rollover // R
     }
 }

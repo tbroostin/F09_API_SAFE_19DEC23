@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -16,6 +16,9 @@ using Ellucian.Colleague.Dtos.ColleagueFinance;
 using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Data.ColleagueFinance;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -30,6 +33,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private IGeneralLedgerUserRepository generalLedgerUserRepository;
         private IGeneralLedgerAccountRepository generalLedgerAccountRepository;
         private IStaffRepository staffRepository;
+        private IApprovalConfigurationRepository approvalConfigurationRepository;
+        private IProcurementsUtilityService procurementsUtilityService;
 
         // This constructor initializes the private attributes.
         public VoucherService(IVoucherRepository voucherRepository,
@@ -40,6 +45,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             IStaffRepository staffRepository,
+            IApprovalConfigurationRepository approvalConfigurationRepository,
+            IProcurementsUtilityService procurementsUtilityService,
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
@@ -48,62 +55,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.generalLedgerUserRepository = generalLedgerUserRepository;
             this.generalLedgerAccountRepository = generalLedgerAccountRepository;
             this.staffRepository = staffRepository;
-        }
-
-        /// <summary>
-        /// Returns the DTO for the specified voucher.
-        /// </summary>
-        /// <param name="id">ID of the requested voucher.</param>
-        /// <returns>Voucher DTO.</returns>
-        [Obsolete("OBSOLETE as of API 1.15. Please use GetVoucher2Async")]
-        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.Voucher> GetVoucherAsync(string id)
-        {
-            // Check the permission code to view a voucher.
-            CheckViewVoucherPermission();
-
-            // Get the GL Configuration so we know how to format the GL numbers, and get the full GL access role
-            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
-            if (glConfiguration == null)
-            {
-                throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
-            }
-
-            // Get the GL class configuration because it is used by the GL user repository.
-            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
-            if (glClassConfiguration == null)
-            {
-                throw new ArgumentNullException("glClassConfiguration", "glClassConfiguration cannot be null");
-            }
-
-            // Get the ID for the person who is logged in, and use the ID to get their GL access level.
-            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync(CurrentUser.PersonId, glConfiguration.FullAccessRole, glClassConfiguration.ClassificationName, glClassConfiguration.ExpenseClassValues);
-            if (generalLedgerUser == null)
-            {
-                throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
-            }
-
-            // Get the voucher domain entity from the repository.
-            int versionNumber = 1;
-            var voucherDomainEntity = await voucherRepository.GetVoucherAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts, versionNumber);
-
-            if (voucherDomainEntity == null)
-            {
-                throw new ArgumentNullException("voucherDomainEntity", "voucherDomainEntity cannot be null.");
-            }
-
-            // Convert the project and all its child objects into DTOs.
-            var voucherDtoAdapter = new VoucherEntityToDtoAdapter(_adapterRegistry, logger);
-            var voucherDto = voucherDtoAdapter.MapToType(voucherDomainEntity, glConfiguration.MajorComponentStartPositions);
-
-            // Throw an exception if there are no line items being returned since access to the document
-            // is governed by access to the GL numbers on the line items, and a line item will not be returned
-            // if the user does not have access to at least one of the line items.
-            if (voucherDto.LineItems == null || voucherDto.LineItems.Count < 1)
-            {
-                throw new PermissionsException("Insufficient permission to access voucher.");
-            }
-
-            return voucherDto;
+            this.approvalConfigurationRepository = approvalConfigurationRepository;
+            this.procurementsUtilityService = procurementsUtilityService;
         }
 
         /// <summary>
@@ -137,9 +90,45 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
             }
 
+            // If the user has access to all the GL accounts through the GL access role,
+            // don't bother adding any additional GL accounts they may have access through
+            // approval roles.
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>();
+            if (generalLedgerUser.GlAccessLevel != GlAccessLevel.Full_Access)
+            {
+                ApprovalConfiguration approvalConfiguration = null;
+                try
+                {
+                    approvalConfiguration = await approvalConfigurationRepository.GetApprovalConfigurationAsync();
+                }
+                catch (Exception e)
+                {
+                    logger.Debug(e, "Approval Roles are not configured.");
+                }
+
+                // Check if vouchers use approval roles.
+                if (approvalConfiguration != null && approvalConfiguration.VouchersUseApprovalRoles)
+                {
+                    // Use the approval roles to see if they have access to additional GL accounts.
+                    allAccessAndApprovalAccounts = await generalLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(CurrentUser.PersonId, generalLedgerUser.AllAccounts);
+                }
+                else
+                {
+                    // If approval roles aren't being used, just use the GL Access
+                    allAccessAndApprovalAccounts = generalLedgerUser.AllAccounts;
+                }
+
+                // If the user has access to some GL accounts via approval 
+                // roles, change the GL access level to possible access.
+                if (allAccessAndApprovalAccounts != null && allAccessAndApprovalAccounts.Any())
+                {
+                    generalLedgerUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+                }
+            }
+
             // Get the voucher domain entity from the repository.
             int versionNumber = 2;
-            var voucherDomainEntity = await voucherRepository.GetVoucherAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts, versionNumber);
+            var voucherDomainEntity = await voucherRepository.GetVoucherAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, allAccessAndApprovalAccounts, versionNumber);
 
             if (voucherDomainEntity == null)
             {
@@ -168,9 +157,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="personId"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesAsync(string personId)
+        public async Task<IEnumerable<Dtos.ColleagueFinance.VoucherSummary>> GetVoucherSummariesAsync(string personId)
         {
-            List<VoucherSummary> voucherSummaryDtos = new List<VoucherSummary>();
+            List<Dtos.ColleagueFinance.VoucherSummary> voucherSummaryDtos = new List<Dtos.ColleagueFinance.VoucherSummary>();
 
             if (string.IsNullOrEmpty(personId))
             {
@@ -285,7 +274,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 responseEntity = await voucherRepository.UpdateVoucherAsync(voucherCreateUpdateRequestEntity, originalVoucher);
             }
 
-            VoucherCreateUpdateResponse response = new VoucherCreateUpdateResponse();
+            Dtos.ColleagueFinance.VoucherCreateUpdateResponse response = new Dtos.ColleagueFinance.VoucherCreateUpdateResponse();
 
             var createResponseAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VoucherCreateUpdateResponse, Dtos.ColleagueFinance.VoucherCreateUpdateResponse>();
 
@@ -295,6 +284,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return response;
         }
+
 
         /// <summary>
         /// Gets Reimburse person address details for voucher
@@ -323,6 +313,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return addressDtos;
 
         }
+
 
         /// <summary>
         /// Void a voucher.
@@ -376,6 +367,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return response;
         }
 
+
         /// <summary>
         /// Get the list of voucher's by vendor id and invoice number.
         /// </summary>
@@ -426,9 +418,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="criteria">procurement filter criteria</param>
         /// <returns>Voucher Summary DTOs</returns>
-        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria)
+        public async Task<IEnumerable<Dtos.ColleagueFinance.VoucherSummary>> QueryVoucherSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria)
         {
-            List<VoucherSummary> voucherSummaryDtos = new List<VoucherSummary>();
+            List<Dtos.ColleagueFinance.VoucherSummary> voucherSummaryDtos = new List<Dtos.ColleagueFinance.VoucherSummary>();
 
             if (criteria == null)
             {
@@ -451,7 +443,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Create the adapter to convert domain entities to DTO.
             var filterCriteriaAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Ellucian.Colleague.Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>();
             var queryCriteriaEntity = filterCriteriaAdapter.MapToType(criteria);
-            
+
             // Get the list of voucher summary domain entity from the repository
             var voucherSummaryDomainEntities = await voucherRepository.QueryVoucherSummariesAsync(queryCriteriaEntity);
 
@@ -461,12 +453,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             //sorting
             var sortOrderSequence = new List<string> { Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.InProgress.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.NotApproved.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Outstanding.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Paid.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Reconciled.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Voided.ToString() };
-            voucherSummaryDomainEntities = voucherSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(item => item.Date).ThenByDescending(item => item.Id);
+            voucherSummaryDomainEntities = voucherSummaryDomainEntities.OrderByDescending(item => item.ApprovalReturnedIndicator).ThenBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(item => item.Date).ThenByDescending(item => item.Id);
+
+            //attachments
+            var voucherIds = voucherSummaryDomainEntities.Select(x => x.Id);
+            string voucherTagonePrefix = ColleagueFinanceConstants.VoucherAttachmentTagOnePrefix;
+            List<Attachment> attachmentsList = await procurementsUtilityService.GetAttachmentsAsync(criteria.PersonId, voucherTagonePrefix, voucherIds);
 
             // Convert the voucher summary and all its child objects into DTOs
             var voucherSummaryDtoAdapter = new VoucherSummaryEntityDtoAdapter(_adapterRegistry, logger);
             foreach (var voucherDomainEntity in voucherSummaryDomainEntities)
             {
+                voucherDomainEntity.AttachmentsIndicator = attachmentsList != null && attachmentsList.Any() ? attachmentsList.Any(attach => attach.TagOne == voucherTagonePrefix + voucherDomainEntity.Id) : false;
                 voucherSummaryDtos.Add(voucherSummaryDtoAdapter.MapToType(voucherDomainEntity));
             }
 
@@ -489,6 +487,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return voidRequestEntity;
         }
+
 
         /// <summary>
         /// Permission code that allows a READ operation on a voucher.
@@ -524,6 +523,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
+
         /// <summary>
         /// Determine if personId is has staff record
         /// </summary>
@@ -554,6 +554,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
+
         /// <summary>
         /// Convert Voucher Dto to Entity
         /// </summary>
@@ -570,7 +571,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var voucherId = !(string.IsNullOrEmpty(voucher.VoucherId)) ? voucher.VoucherId.Trim() : "NEW";
 
             var voucherEntity = new Domain.ColleagueFinance.Entities.Voucher(
-                voucherId, voucher.Date, voucherStatus,voucher.VendorName);
+                voucherId, voucher.Date, voucherStatus, voucher.VendorName);
 
 
             if ((voucher.Approvers != null) && (voucher.Approvers.Any()))
@@ -610,16 +611,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         apLineItem.TaxForm = lineItem.TaxForm;
                         apLineItem.TaxFormCode = lineItem.TaxFormCode;
                         apLineItem.TaxFormLocation = lineItem.TaxFormLocation;
-                        
+
                         foreach (var glAccount in lineItem.GlDistributions)
                         {
                             string glAccountNo = !(string.IsNullOrEmpty(glAccount.FormattedGlAccount)) ? glAccount.FormattedGlAccount : "MASKED";
                             var internalGlAccountNo = GlAccountUtility.ConvertGlAccountToInternalFormat(glAccountNo, glAccountStructure.MajorComponentStartPositions);
 
-                            apLineItem.AddGlDistributionForSave(new Domain.ColleagueFinance.Entities.LineItemGlDistribution(internalGlAccountNo, glAccount.Quantity, glAccount.Amount)
+                            apLineItem.AddGlDistributionForSave(new Domain.ColleagueFinance.Entities.LineItemGlDistribution(internalGlAccountNo, glAccount.Quantity, glAccount.Amount, glAccount.Percent)
                             {
                                 ProjectNumber = glAccount.ProjectNumber
                             });
+                            logger.Debug("==> GL Distribution internalGlAccountNo: " + internalGlAccountNo + " <==");
+                            logger.Debug("==> GL Distribution glAccount.Amount: " + glAccount.Amount + " <==");
+                            logger.Debug("==> GL Distribution glAccount.Quantity: " + glAccount.Quantity + " <==");
+                            logger.Debug("==> GL Distribution glAccount.Percent: " + glAccount.Percent + " <==");
                         }
                         if (voucherId.Equals("NEW"))
                         {
@@ -681,6 +686,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         }
 
+
         /// <summary>
         /// convert create/Update Voucer Request to Entity
         /// </summary>
@@ -702,6 +708,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return createUpdateRequestEntity;
         }
+
 
         /// <summary>
         /// Converts a VoucherStatus DTO enumeration to a VoucherStatus domain enum 
@@ -734,6 +741,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return voucherStatus;
         }
+
 
         private async Task AssignGlDescription(Ellucian.Colleague.Domain.ColleagueFinance.Entities.GeneralLedgerAccountStructure glAccountStructure, Ellucian.Colleague.Domain.ColleagueFinance.Entities.Voucher voucherDomainEntity)
         {
@@ -768,5 +776,73 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
         }
+
+
+
+        //////////////////////////////////////////////////////
+        //                                                  //
+        //               DEPRECATED / OBSOLETE              //
+        //                                                  //
+        //////////////////////////////////////////////////////
+
+        #region DEPRECATED / OBSOLETE
+
+        /// <summary>
+        /// Returns the DTO for the specified voucher.
+        /// </summary>
+        /// <param name="id">ID of the requested voucher.</param>
+        /// <returns>Voucher DTO.</returns>
+        [Obsolete("OBSOLETE as of API 1.15. Please use GetVoucher2Async")]
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.Voucher> GetVoucherAsync(string id)
+        {
+            // Check the permission code to view a voucher.
+            CheckViewVoucherPermission();
+
+            // Get the GL Configuration so we know how to format the GL numbers, and get the full GL access role
+            var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glConfiguration == null)
+            {
+                throw new ArgumentNullException("glConfiguration", "glConfiguration cannot be null");
+            }
+
+            // Get the GL class configuration because it is used by the GL user repository.
+            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+            if (glClassConfiguration == null)
+            {
+                throw new ArgumentNullException("glClassConfiguration", "glClassConfiguration cannot be null");
+            }
+
+            // Get the ID for the person who is logged in, and use the ID to get their GL access level.
+            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync(CurrentUser.PersonId, glConfiguration.FullAccessRole, glClassConfiguration.ClassificationName, glClassConfiguration.ExpenseClassValues);
+            if (generalLedgerUser == null)
+            {
+                throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
+            }
+
+            // Get the voucher domain entity from the repository.
+            int versionNumber = 1;
+            var voucherDomainEntity = await voucherRepository.GetVoucherAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts, versionNumber);
+
+            if (voucherDomainEntity == null)
+            {
+                throw new ArgumentNullException("voucherDomainEntity", "voucherDomainEntity cannot be null.");
+            }
+
+            // Convert the project and all its child objects into DTOs.
+            var voucherDtoAdapter = new VoucherEntityToDtoAdapter(_adapterRegistry, logger);
+            var voucherDto = voucherDtoAdapter.MapToType(voucherDomainEntity, glConfiguration.MajorComponentStartPositions);
+
+            // Throw an exception if there are no line items being returned since access to the document
+            // is governed by access to the GL numbers on the line items, and a line item will not be returned
+            // if the user does not have access to at least one of the line items.
+            if (voucherDto.LineItems == null || voucherDto.LineItems.Count < 1)
+            {
+                throw new PermissionsException("Insufficient permission to access voucher.");
+            }
+
+            return voucherDto;
+        }
+
+        #endregion
     }
 }

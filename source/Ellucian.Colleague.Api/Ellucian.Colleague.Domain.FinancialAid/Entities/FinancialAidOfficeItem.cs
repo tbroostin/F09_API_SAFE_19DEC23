@@ -1,8 +1,7 @@
-﻿using Ellucian.Colleague.Domain.Entities;
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Entities
 {
@@ -13,7 +12,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// The address lines of the financial aid office location
         /// </summary>
-        public List<string> addressLines;
+        public List<string> addressLines { get; set; }
         /// <summary>
         /// The city of the financial aid office location
         /// </summary>
@@ -45,7 +44,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// <summary>
         /// The name of the financial aid office
         /// </summary>
-        public string name;
+        public string name { get; set; }
 
         /// <summary>
         /// Constructor for FinancialAidOffice

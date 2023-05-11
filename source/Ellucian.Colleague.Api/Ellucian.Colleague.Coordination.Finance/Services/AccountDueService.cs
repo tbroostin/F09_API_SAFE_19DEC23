@@ -16,6 +16,8 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Finance.Services;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -58,57 +60,73 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         public Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDue GetAccountDue(string studentId)
         {
             CheckPermission(studentId);
-
-            var accountDueItems = _accountRepository.Get(studentId);
-
-            DueDateOverrideProcessor.OverrideTermDueDates(_dueDateOverrides, accountDueItems);
-
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDue, Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDue>();
-            var accountDueDto = adapter.MapToType(accountDueItems);
-
-            // Get the deposits due for this student with an outstanding balance
-            var depositDueItems = _arRepository.GetDepositsDue(studentId).Where(x => x.Balance > 0);
-            if (depositDueItems.Count() > 0)
+            try
             {
-                string distribution = _arRepository.GetDistribution(studentId, String.Empty, "DD");
-                AddDepositsDue(depositDueItems, accountDueDto, distribution);
-            }
-            accountDueDto.Balance = accountDueDto.AccountTerms.Sum(at => at.Amount);
+                var accountDueItems = _accountRepository.Get(studentId);
+                var colleagueTimezone = _configRepository.GetFinanceConfiguration().ColleagueTimezone;
+                DueDateOverrideProcessor.OverrideTermDueDates(_dueDateOverrides, accountDueItems, colleagueTimezone);
 
-            return accountDueDto;
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDue, Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDue>();
+                var accountDueDto = adapter.MapToType(accountDueItems);
+
+                // Get the deposits due for this student with an outstanding balance
+                var depositDueItems = _arRepository.GetDepositsDue(studentId).Where(x => x.Balance > 0);
+                if (depositDueItems.Count() > 0)
+                {
+                    string distribution = _arRepository.GetDistribution(studentId, String.Empty, "DD");
+                    AddDepositsDue(depositDueItems, accountDueDto, distribution);
+                }
+                accountDueDto.Balance = accountDueDto.AccountTerms.Sum(at => at.Amount);
+
+                return accountDueDto;
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
+
         }
 
         public Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDuePeriod GetAccountDuePeriod(string studentId)
         {
             CheckPermission(studentId);
 
-            var accountDueItems = _accountRepository.GetPeriods(studentId);
-
-            DueDateOverrideProcessor.OverridePeriodDueDates(_dueDateOverrides, accountDueItems);
-
-            var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDuePeriod, Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDuePeriod>();
-            var accountDueDto = adapter.MapToType(accountDueItems);
-            accountDueDto.Balance = 0m;
-
-            // Get the deposits due for this student with an outstanding balance
-            var depositDueItems = _arRepository.GetDepositsDue(studentId).Where(x => x.Balance > 0);
-            if (depositDueItems.Count() > 0)
+            try
             {
-                string distribution = _arRepository.GetDistribution(studentId, String.Empty, "DD");
-                AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date <= accountDueDto.Past.EndDate.Value.Date),
-                    accountDueDto.Past, distribution);
-                AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date >= accountDueDto.Current.StartDate.Value.Date && x.DueDate.Date <= accountDueDto.Current.EndDate.Value.Date),
-                    accountDueDto.Current, distribution);
-                AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date >= accountDueDto.Future.StartDate.Value.Date),
-                    accountDueDto.Future, distribution);
+                var accountDueItems = _accountRepository.GetPeriods(studentId);
+
+                DueDateOverrideProcessor.OverridePeriodDueDates(_dueDateOverrides, accountDueItems);
+
+                var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountDue.AccountDuePeriod, Ellucian.Colleague.Dtos.Finance.AccountDue.AccountDuePeriod>();
+                var accountDueDto = adapter.MapToType(accountDueItems);
+                accountDueDto.Balance = 0m;
+
+                // Get the deposits due for this student with an outstanding balance
+                var depositDueItems = _arRepository.GetDepositsDue(studentId).Where(x => x.Balance > 0);
+                if (depositDueItems.Count() > 0)
+                {
+                    string distribution = _arRepository.GetDistribution(studentId, String.Empty, "DD");
+                    AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date <= accountDueDto.Past.EndDate.Value.Date),
+                        accountDueDto.Past, distribution);
+                    AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date >= accountDueDto.Current.StartDate.Value.Date && x.DueDate.Date <= accountDueDto.Current.EndDate.Value.Date),
+                        accountDueDto.Current, distribution);
+                    AddDepositsDue(depositDueItems.Where(x => x.DueDate.Date >= accountDueDto.Future.StartDate.Value.Date),
+                        accountDueDto.Future, distribution);
+                }
+                accountDueDto.Past.Balance = accountDueDto.Past.AccountTerms.Sum(at => at.Amount);
+                accountDueDto.Current.Balance = accountDueDto.Current.AccountTerms.Sum(at => at.Amount);
+                accountDueDto.Future.Balance = accountDueDto.Future.AccountTerms.Sum(at => at.Amount);
+
+                accountDueDto.Balance = accountDueDto.Past.Balance + accountDueDto.Current.Balance + accountDueDto.Future.Balance;
+
+                return accountDueDto;
             }
-            accountDueDto.Past.Balance = accountDueDto.Past.AccountTerms.Sum(at => at.Amount);
-            accountDueDto.Current.Balance = accountDueDto.Current.AccountTerms.Sum(at => at.Amount);
-            accountDueDto.Future.Balance = accountDueDto.Future.AccountTerms.Sum(at => at.Amount);
-
-            accountDueDto.Balance = accountDueDto.Past.Balance + accountDueDto.Current.Balance + accountDueDto.Future.Balance;
-
-            return accountDueDto;
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw;
+            }
         }
 
         #region Private helper methods
@@ -136,7 +154,9 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 depositDueDto.Distribution = distribution;
 
                 // Add the deposit due to the proper AccountTerm
-                int loc = accountDueDto.AccountTerms.FindIndex(t => t.TermId == (String.IsNullOrEmpty(item.TermId) ? "NON-TERM" : item.TermId));
+                bool nonTermActivityPresent = accountDueDto.AccountTerms.Any(at => at.TermId == FinanceTimeframeCodes.NonTerm);
+                string nonTermIdentifier = nonTermActivityPresent ? FinanceTimeframeCodes.NonTerm : "";
+                int loc = accountDueDto.AccountTerms.FindIndex(t => t.TermId == (String.IsNullOrEmpty(item.TermId) ? nonTermIdentifier : item.TermId));
                 if (loc >= 0)
                 {
                     // Term exists - update existing AccountTerm

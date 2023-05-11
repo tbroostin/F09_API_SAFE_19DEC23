@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -13,6 +13,9 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
 using System.Threading.Tasks;
+using Ellucian.Data.Colleague.Exceptions;
+using System.Net;
+using System;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -49,13 +52,26 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.NoncourseStatus>> GetAsync()
         {
             var noncourseStatusDtoCollection = new List<Ellucian.Colleague.Dtos.Student.NoncourseStatus>();
-            var noncourseStatusCollection = await _studentReferenceDataRepository.GetNoncourseStatusesAsync();
-            // Get the right adapter for the type mapping
-            var noncourseStatusDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.NoncourseStatus, Ellucian.Colleague.Dtos.Student.NoncourseStatus>();
-            // Map the NoncourseStatus entity to the NoncourseStatus DTO
-            foreach (var status in noncourseStatusCollection)
+            try
             {
-                noncourseStatusDtoCollection.Add(noncourseStatusDtoAdapter.MapToType(status));
+                var noncourseStatusCollection = await _studentReferenceDataRepository.GetNoncourseStatusesAsync();
+                // Get the right adapter for the type mapping
+                var noncourseStatusDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.NoncourseStatus, Ellucian.Colleague.Dtos.Student.NoncourseStatus>();
+                // Map the NoncourseStatus entity to the NoncourseStatus DTO
+                foreach (var status in noncourseStatusCollection)
+                {
+                    noncourseStatusDtoCollection.Add(noncourseStatusDtoAdapter.MapToType(status));
+                }
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Session has expired while fetching non-course statuses";
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (Exception e)
+            {
+                throw CreateHttpResponseException(e.Message);
             }
 
             return noncourseStatusDtoCollection;

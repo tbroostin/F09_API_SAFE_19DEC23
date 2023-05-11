@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -443,7 +443,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
         /// <param name="currentUser"></param>
         /// <param name="userPermissions"></param>
         /// <param name="isProfileChanged"></param>
-        /// <returns>A Profile object ready for update. Includes only the entity properties that are updated.</returns>
+        /// <returns>A Profile object ready for update.</returns>
         public static Profile VerifyProfileUpdate2(Profile newProfile, Profile repoProfile, UserProfileConfiguration2 configuration, ICurrentUser currentUser, IEnumerable<string> userPermissions, out bool isProfileChanged)
         {
             // VERIFY ARGUMENTS
@@ -525,7 +525,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
                 // Exception has not occurred, Add email to verified profile for update.
                 verifiedProfile.AddEmailAddress(email);
@@ -541,7 +541,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
             }
 
@@ -549,14 +549,23 @@ namespace Ellucian.Colleague.Domain.Base.Services
             // PHONE UPDATE VERIFICATION
             foreach (var phone in newProfile.Phones)
             {
+                // See if this number, ext, and type exists in the the repo version.  
                 var repoPhoneMatch = repoProfile.Phones.Where(x => x.Equals(phone)).FirstOrDefault();
+                // If the number combination matches, and if the text authorizize is not null, then has it changed. (.Equals does not include the text authoriztion for backward compatibility)
+                if ((repoPhoneMatch != null) && phone.IsAuthorizedForText != null)
+                {
+                    if (repoPhoneMatch.IsAuthorizedForText != phone.IsAuthorizedForText)
+                    {
+                        isProfileChanged = true;
+                    }
+                }
                 if (repoPhoneMatch == null)
                 {
                     // No exact match for this phone found on the repo record. Verify that configuration and permissions allow for it to be updated. 
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
                 // Exception has not occurred, Add phone to verified profile for update.
                 verifiedProfile.AddPhone(phone);
@@ -565,14 +574,15 @@ namespace Ellucian.Colleague.Domain.Base.Services
             // Check for anything in the repo record phones that are missing
             foreach (var phone in repoProfile.Phones)
             {
+                // See if this number, ext, and type exists in the the incoming dto.
                 var incomingPhoneMatch = verifiedProfile.Phones.Where(x => x.Equals(phone)).FirstOrDefault();
                 if (incomingPhoneMatch == null)
                 {
-                    // No exact match for this repo phone in the incoming list. Verify that configuration and permissions allow for it to be updated.
+                    // No exact match for this repo phone in the incoming list. Verify that configuration and permissions allow for it to be removed.
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
             }
 
@@ -596,7 +606,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // If not thrown out, add the address to the profile for update
                     verifiedProfile.AddAddress(address);
                     isProfileChanged = true;
-                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted: AddressLines: " + address.AddressLines.ElementAt(0) + " City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted for City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
                 }
             }
 
@@ -631,17 +641,55 @@ namespace Ellucian.Colleague.Domain.Base.Services
 
             //Identity Update Verifications 
 
-            if ((newProfile.Nickname != repoProfile.Nickname) || (newProfile.ChosenFirstName != repoProfile.ChosenFirstName) || (newProfile.ChosenMiddleName != repoProfile.ChosenMiddleName) || (newProfile.ChosenLastName != repoProfile.ChosenLastName) || (newProfile.GenderIdentityCode != repoProfile.GenderIdentityCode) || (newProfile.PersonalPronounCode != repoProfile.PersonalPronounCode))
+            verifiedProfile.Nickname = newProfile.Nickname;
+            if (newProfile.Nickname != repoProfile.Nickname)
             {
                 isProfileChanged = true;
+                if (configuration.CanViewUpdateNickname != UserProfileViewUpdateOption.Updatable)
+                {
+                    var message = "Update failed: Configuration does not allow update of nickname.";
+                    _logger.Error(message);
+                    throw new PermissionsException(message);
+                }
             }
-
-            verifiedProfile.Nickname = newProfile.Nickname;
             verifiedProfile.ChosenFirstName = newProfile.ChosenFirstName;
             verifiedProfile.ChosenMiddleName = newProfile.ChosenMiddleName;
             verifiedProfile.ChosenLastName = newProfile.ChosenLastName;
+            if (newProfile.ChosenFirstName != repoProfile.ChosenFirstName || newProfile.ChosenMiddleName != repoProfile.ChosenMiddleName || newProfile.ChosenLastName != repoProfile.ChosenLastName)
+            {
+                isProfileChanged = true;
+                if (configuration.CanViewUpdateChosenName != UserProfileViewUpdateOption.Updatable)
+                {
+                    var message = "Update failed: Configuration does not allow update of chosen name.";
+                    _logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
+
             verifiedProfile.GenderIdentityCode = newProfile.GenderIdentityCode;
+            if (newProfile.GenderIdentityCode != repoProfile.GenderIdentityCode)
+            {
+                isProfileChanged = true;
+
+                if (configuration.CanViewUpdateGenderIdentity != UserProfileViewUpdateOption.Updatable)
+                {
+                    var message = "Update failed: Configuration does not allow update of gender identity.";
+                    _logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
+
             verifiedProfile.PersonalPronounCode = newProfile.PersonalPronounCode;
+            if (newProfile.PersonalPronounCode != repoProfile.PersonalPronounCode)
+            {
+                isProfileChanged = true;
+                if (configuration.CanViewUpdatePronoun != UserProfileViewUpdateOption.Updatable)
+                {
+                    var message = "Update failed: Configuration does not allow update of pronoun.";
+                    _logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
 
             // WRAPUP
             // Last changed date/time needs to be checked again at the moment of database update.
@@ -851,7 +899,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
             }
             return false;
         }
-        
+
         #endregion
 
     }

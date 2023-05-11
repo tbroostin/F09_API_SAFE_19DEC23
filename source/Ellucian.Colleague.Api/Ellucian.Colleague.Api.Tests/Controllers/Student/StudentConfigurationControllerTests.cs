@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ using slf4net;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -221,6 +222,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.IsTrue(graduationConfiguration2 is Dtos.Student.GraduationConfiguration2);
                 Assert.AreEqual(graduationConfiguration2.ApplicationQuestions.Count(), graduationConfiguration2.ApplicationQuestions.Count());
                 Assert.AreEqual(graduationConfiguration2.GraduationTerms.Count(), graduationConfiguration2.GraduationTerms.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetGraduationConfiguration2Async_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(repo => repo.GetGraduationConfigurationAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var graduationConfiguration2 = await studentConfigurationController.GetGraduationConfiguration2Async();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -1063,7 +1080,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     {
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
-                    }, "BANK", "US", true, "CEUSER", null, false, null);
+                    }, "BANK", "US", true, "CEUSER", null, false, null, false);
             }
 
             [TestMethod]
@@ -1076,7 +1093,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     {
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
-                    }, "BANK", "US", true, "CEUSER", null, false, new List<DemographicField>());
+                    }, "BANK", "US", true, "CEUSER", null, false, new List<DemographicField>(), false);
             }
 
             [TestMethod]
@@ -1094,7 +1111,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                         new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
                         new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
                         new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
-                    });
+                    }, false);
 
                 // Mock the respository get
                 studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Returns(Task.FromResult(configurationEntity));
@@ -1116,6 +1133,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual("CEUSER", configuration.RegistrationUserRole);
                 Assert.AreEqual(false, configuration.ShowInstantEnrollmentBookstoreLink);
                 Assert.AreEqual(3, configuration.DemographicFields.Count());
+                Assert.AreEqual(false, configuration.AllowNonCitizenRegistration);
             }
 
             [TestMethod]
@@ -1132,7 +1150,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                         new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
                         new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
                         new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
-                    });
+                    }, true);
 
 
                 // Mock the respository get
@@ -1155,8 +1173,24 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual("CEUSER", configuration.RegistrationUserRole);
                 Assert.AreEqual(true, configuration.ShowInstantEnrollmentBookstoreLink);
                 Assert.AreEqual(3, configuration.DemographicFields.Count());
+                Assert.AreEqual(true, configuration.AllowNonCitizenRegistration);
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetGetInstantEnrollmentConfigurationAsyncAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                    await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw;
+                }
+            }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
@@ -1165,7 +1199,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     studentConfigurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).Throws(new Exception());
-                    var configuration = await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
+                    await studentConfigurationController.GetInstantEnrollmentConfigurationAsync();
                 }
                 catch (HttpResponseException ex)
                 {
@@ -1173,7 +1207,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
         }
 
         [TestClass]
@@ -1262,7 +1295,210 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
+        }
 
+        [TestClass]
+        public class StudentConfigurationControllerTests_GetSectionAvailabilityInformationConfigurationAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                var configAdapter = new AutoMapperAdapter<Domain.Student.Entities.SectionAvailabilityInformationConfiguration, Dtos.Student.SectionAvailabilityInformationConfiguration>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionAvailabilityInformationConfiguration, Dtos.Student.SectionAvailabilityInformationConfiguration>()).Returns(configAdapter);
+
+                logger = new Mock<ILogger>().Object;
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetSectionAvailabilityInformationConfigurationAsync_ReturnConfigDto()
+            {
+                var configurationEntity = new Domain.Student.Entities.SectionAvailabilityInformationConfiguration(true, true);
+
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(svc => svc.GetSectionAvailabilityInformationConfigurationAsync()).ReturnsAsync(configurationEntity);
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetSectionAvailabilityInformationConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.SectionAvailabilityInformationConfiguration);
+                Assert.AreEqual(configurationEntity.ShowNegativeSeatCounts, configuration.ShowNegativeSeatCounts);
+                Assert.AreEqual(configurationEntity.IncludeSeatsTakenInAvailabilityInformation, configuration.IncludeSeatsTakenInAvailabilityInformation);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetSectionAvailabilityInformationConfigurationAsync_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(svc => svc.GetSectionAvailabilityInformationConfigurationAsync()).Throws(new Exception());
+                    var configuration = await studentConfigurationController.GetSectionAvailabilityInformationConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+        }
+
+        [TestClass]
+        public class StudentConfigurationControllerTests_GetFacultyAttendanceConfigurationAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                var configAdapter = new AutoMapperAdapter<Domain.Student.Entities.FacultyAttendanceConfiguration, Dtos.Student.FacultyAttendanceConfiguration>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.FacultyAttendanceConfiguration, Dtos.Student.FacultyAttendanceConfiguration>()).Returns(configAdapter);
+
+                logger = new Mock<ILogger>().Object;
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetFacultyAttendanceConfigurationAsync_ReturnConfigDto()
+            {
+                var configurationEntity = new Domain.Student.Entities.FacultyAttendanceConfiguration() 
+                { 
+                    CloseAttendanceCensusTrackNumber = 1,
+                    CloseAttendanceNumberOfDaysPastCensusTrackDate = 23,
+                    CloseAttendanceNumberOfDaysPastSectionEndDate = null,
+                };
+
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(svc => svc.GetFacultyAttendanceConfigurationAsync()).ReturnsAsync(configurationEntity);
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetFacultyAttendanceConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.FacultyAttendanceConfiguration);
+                Assert.AreEqual(configurationEntity.CloseAttendanceCensusTrackNumber, configuration.CloseAttendanceCensusTrackNumber);
+                Assert.AreEqual(configurationEntity.CloseAttendanceNumberOfDaysPastCensusTrackDate, configuration.CloseAttendanceNumberOfDaysPastCensusTrackDate);
+                Assert.AreEqual(configurationEntity.CloseAttendanceNumberOfDaysPastSectionEndDate, configuration.CloseAttendanceNumberOfDaysPastSectionEndDate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetFacultyAttendanceConfigurationAsync_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(svc => svc.GetFacultyAttendanceConfigurationAsync()).Throws(new Exception());
+                    var configuration = await studentConfigurationController.GetFacultyAttendanceConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetFacultyAttendanceConfigurationAsync_ColleagueSessionExpiredException_ReturnsHttpResponseException_Unauthorized()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(svc => svc.GetFacultyAttendanceConfigurationAsync()).Throws(new ColleagueSessionExpiredException("session expired"));
+                    var configuration = await studentConfigurationController.GetFacultyAttendanceConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
         }
     }
 }

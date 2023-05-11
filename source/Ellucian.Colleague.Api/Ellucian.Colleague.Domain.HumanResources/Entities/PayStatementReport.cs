@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +16,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         private PayStatementReportDataContext sourceDataContext;
         private IEnumerable<PayStatementReportDataContext> yearToDateDataContext;
         private PayStatementReferenceDataUtility dataUtility;
+        private const string ExemptedFromTaxMsg = "Exempt"; 
 
         /// <summary>
         /// Constructor
@@ -133,9 +134,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             var taxCodes = dataUtility.GetTaxCodesForType(type);
 
             //find the first tax entry in the payroll register for the given type
-            //that aren't inactive and that aren't TaxableExempt
+            //that aren't inactive and that aren't TaxableExempt and aren't TaxExempt
             var taxEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
-                .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt)
+                .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt && te.ProcessingCode != PayrollTaxProcessingCode.TaxExempt)
                 .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
 
             if (taxEntry != null)
@@ -147,6 +148,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                     return associatedTaxCode.FilingStatus.Description;
                 }
             }
+
+            //find the first tax entry in the payroll register for the given type
+            //that aren't inactive but that are TaxableExempt(FATER code - X) or that are Tax Exempt(FATER code - E)
+            var taxExemptEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
+                .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && (te.ProcessingCode == PayrollTaxProcessingCode.TaxableExempt || te.ProcessingCode == PayrollTaxProcessingCode.TaxExempt))
+                .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
+
+            if (taxExemptEntry != null)
+            {                                   
+                return ExemptedFromTaxMsg;                
+            }
             return string.Empty;
         }
 
@@ -154,19 +166,28 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <summary>
         /// The number of exemptions taken on the federal withholding type tax entry
         /// </summary>
-        public int FederalExemptions
+        public int? FederalExemptions
         {
             get
             {
                 var taxCodes = dataUtility.GetTaxCodesForType(TaxCodeType.FederalWithholding);
 
                 var taxEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
-                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt)
+                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt && te.ProcessingCode != PayrollTaxProcessingCode.TaxExempt)
                     .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
 
                 if (taxEntry != null)
                 {
                     return taxEntry.Exemptions;
+                }
+
+                var taxExemptEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
+                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && (te.ProcessingCode == PayrollTaxProcessingCode.TaxableExempt || te.ProcessingCode == PayrollTaxProcessingCode.TaxExempt))
+                    .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
+
+                if (taxExemptEntry != null)
+                {                   
+                    return null;                  
                 }
                 return 0;
             }
@@ -175,19 +196,28 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <summary>
         /// The number of exemptions taken on the first state withholding type tax entry.
         /// </summary>
-        public int StateExemptions
+        public int? StateExemptions
         {
             get
             {
                 var taxCodes = dataUtility.GetTaxCodesForType(TaxCodeType.StateWithholding);
 
                 var taxEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
-                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt)
+                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && te.ProcessingCode != PayrollTaxProcessingCode.TaxableExempt && te.ProcessingCode != PayrollTaxProcessingCode.TaxExempt)
                     .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
 
                 if (taxEntry != null)
                 {
                     return taxEntry.Exemptions;
+                }
+
+                var taxExemptEntry = sourceDataContext.payrollRegisterEntry.TaxEntries
+                    .Where(te => te.ProcessingCode != PayrollTaxProcessingCode.Inactive && (te.ProcessingCode == PayrollTaxProcessingCode.TaxableExempt || te.ProcessingCode == PayrollTaxProcessingCode.TaxExempt))
+                    .FirstOrDefault(te => taxCodes.Any(t => t.Code == te.TaxCode));
+
+                if (taxExemptEntry != null)
+                {
+                    return null;                    
                 }
                 return 0;
             }

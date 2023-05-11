@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -23,6 +23,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System.Text.RegularExpressions;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Data.ColleagueFinance;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -43,6 +44,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IConfigurationRepository configurationRepository;
         private readonly IAccountFundsAvailableRepository accountFundAvailableRepository;
         private IGeneralLedgerAccountRepository generalLedgerAccountRepository;
+        private IApprovalConfigurationRepository approvalConfigurationRepository;
         IDictionary<string, string> _projectReferenceIds = null;
         private IStaffRepository staffRepository;
         private IProcurementsUtilityService procurementsUtilityService;
@@ -63,6 +65,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             IRoleRepository roleRepository,
             IStaffRepository staffRepository,
             IGeneralLedgerAccountRepository generalLedgerAccountRepository,
+            IApprovalConfigurationRepository approvalConfigurationRepository,
             IProcurementsUtilityService procurementsUtilityService,
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
@@ -79,6 +82,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.configurationRepository = configurationRepository;
             this.staffRepository = staffRepository;
             this.generalLedgerAccountRepository = generalLedgerAccountRepository;
+            this.approvalConfigurationRepository = approvalConfigurationRepository;
             this.procurementsUtilityService = procurementsUtilityService;
         }
 
@@ -241,8 +245,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("generalLedgerUser", "generalLedgerUser cannot be null");
             }
 
+            // If the user has access to all the GL accounts through the GL access role,
+            // don't bother adding any additional GL accounts they may have access through
+            // through their current approval roles.
+            IEnumerable<string> allAccessAndApprovalAccounts = new List<string>();
+            if (generalLedgerUser.GlAccessLevel != GlAccessLevel.Full_Access)
+            {
+                ApprovalConfiguration approvalConfiguration = null;
+                try
+                {
+                    approvalConfiguration = await approvalConfigurationRepository.GetApprovalConfigurationAsync();
+                }
+                catch (Exception e)
+                {
+                    logger.Debug(e, "Approval Roles are not configured.");
+                }
+
+                // Check if purchase orders use approval roles.
+                if (approvalConfiguration != null && approvalConfiguration.PurchaseOrdersUseApprovalRoles)
+                {
+                    // Use the approval roles to see if they have access to additional GL accounts.
+                    allAccessAndApprovalAccounts = await generalLedgerUserRepository.GetGlUserApprovalAndGlAccessAccountsAsync(CurrentUser.PersonId, generalLedgerUser.AllAccounts);
+                }
+                else
+                {
+                    // If approval roles aren't being used, just use the GL Access
+                    allAccessAndApprovalAccounts = generalLedgerUser.AllAccounts;
+                }
+
+                // If the user has access to some GL accounts via approval 
+                // roles, change the GL access level to possible access.
+                if (allAccessAndApprovalAccounts != null && allAccessAndApprovalAccounts.Any())
+                {
+                    generalLedgerUser.SetGlAccessLevel(GlAccessLevel.Possible_Access);
+                }
+            }
+
             // Get the purchase order domain entity from the repository
-            var purchaseOrderDomainEntity = await purchaseOrderRepository.GetPurchaseOrderAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, generalLedgerUser.AllAccounts);
+            var purchaseOrderDomainEntity = await purchaseOrderRepository.GetPurchaseOrderAsync(id, CurrentUser.PersonId, generalLedgerUser.GlAccessLevel, allAccessAndApprovalAccounts);
 
             if (purchaseOrderDomainEntity == null)
             {
@@ -310,8 +350,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="bypassCache">Bypass cache flag.  If set to true, will requery cached items</param>
         /// <returns>List of <see cref="Dtos.PurchaseOrders">PurchaseOrders</see></returns>
         public async Task<Tuple<IEnumerable<PurchaseOrders2>, int>> GetPurchaseOrdersAsync(int offset, int limit, PurchaseOrders2 criteriaObject, bool bypassCache = false)
-        {     
-            var purchaseOrdersCollection = new List<Ellucian.Colleague.Dtos.PurchaseOrders2>();  
+        {
+            var purchaseOrdersCollection = new List<Ellucian.Colleague.Dtos.PurchaseOrders2>();
             Tuple<IEnumerable<PurchaseOrder>, int> purchaseOrderEntities = null;
             try
             {
@@ -398,7 +438,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a Purchase Order.");
             }
-            
+
             //var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             GeneralLedgerAccountStructure glConfiguration = null;
 
@@ -953,8 +993,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 purchaseOrderId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(purchaseOrder.Id);
             }
-            catch (KeyNotFoundException)
-            { }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, "Unable to get purchase order by guid");
+            }
 
             var overRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
             // verify the GUID exists to perform an update.  If not, perform a create instead
@@ -979,14 +1021,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 purchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-                #region  Check Funds Available
-
+                #region create domain entity from request
+                PurchaseOrder purchaseOrderEntity = null;
                 try
                 {
-                    // Don't check funds availability if we are closing the purchase order
-                    if (purchaseOrder.Status != PurchaseOrdersStatus.Closed && purchaseOrder.Status != PurchaseOrdersStatus.Voided)
-                        overRideGLs = await CheckFunds(purchaseOrder, purchaseOrderId);
-
+                    // get the project IDs from the incoming payload to be used in the map of DTO to entity.
                     if ((purchaseOrder.LineItems) != null && (purchaseOrder.LineItems.Any()))
                     {
                         var projectRefNos = purchaseOrder.LineItems
@@ -1002,25 +1041,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             _projectReferenceIds = await purchaseOrderRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                         }
                     }
-                }
-                catch (RepositoryException ex)
-                {
-                    IntegrationApiExceptionAddError(ex);
-                }
-                catch (Exception ex)
-                {
-                    IntegrationApiExceptionAddError(ex.Message);
-                }
-                if (IntegrationApiException != null)
-                {
-                    throw IntegrationApiException;
-                }
-                #endregion
 
-                #region create domain entity from request
-                PurchaseOrder purchaseOrderEntity = null;
-                try
-                {
                     // map the DTO to entities
                     purchaseOrderEntity = await ConvertPurchaseOrdersDtoToEntityAsync(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
                 }
@@ -1029,6 +1050,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
                        purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null
                       );
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
+
+                #region  Check Funds Available
+
+                try
+                {
+                    // Don't check funds availability if we are closing the purchase order
+                    if (purchaseOrder.Status != PurchaseOrdersStatus.Closed && purchaseOrder.Status != PurchaseOrdersStatus.Voided)
+                        overRideGLs = await CheckFunds(purchaseOrder, purchaseOrderId);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
                 }
                 if (IntegrationApiException != null)
                 {
@@ -1098,7 +1141,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                     var submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
                                     if (string.IsNullOrEmpty(submittedByGuid))
                                     {
-                                        throw new Exception(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
+                                        throw new ColleagueWebApiException(string.Concat("Process finished but we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
                                     }
                                     detail.SubmittedBy = new GuidObject2(submittedByGuid);
                                 }
@@ -1134,15 +1177,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             purchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            #region  Check Funds Available
+            #region Create domain entity from request
 
-            var overRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
-
+            PurchaseOrder purchaseOrderEntity = null;
             try
             {
-                overRideGLs = await CheckFunds(purchaseOrder);
-
-
+                // get the project IDs from the incoming payload to be used in the map of DTO to entity.
                 if ((purchaseOrder.LineItems) != null && (purchaseOrder.LineItems.Any()))
                 {
                     var projectRefNos = purchaseOrder.LineItems
@@ -1159,6 +1199,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
 
+                // map the DTO to entities
+                purchaseOrderEntity = await ConvertPurchaseOrdersDtoToEntityAsync(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
+                   purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null
+                  );
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            #endregion
+
+            #region  Check Funds Available
+
+            var overRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
+
+            try
+            {
+                overRideGLs = await CheckFunds(purchaseOrder);
             }
             catch (RepositoryException ex)
             {
@@ -1169,27 +1232,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 IntegrationApiExceptionAddError(ex.Message);
             }
 
-            if (IntegrationApiException != null)
-            {
-                throw IntegrationApiException;
-            }
-
-            #endregion
-
-            #region Create domain entity from request
-
-            PurchaseOrder purchaseOrderEntity = null;
-            try
-            {
-                // map the DTO to entities
-                purchaseOrderEntity = await ConvertPurchaseOrdersDtoToEntityAsync(purchaseOrder.Id, purchaseOrder, glConfiguration.MajorComponents.Count);
-            }
-            catch (Exception ex)
-            {
-                IntegrationApiExceptionAddError("Record not created.  Error extracting request." + ex.Message, "Global.Internal.Error",
-                   purchaseOrder != null && !string.IsNullOrEmpty(purchaseOrder.Id) ? purchaseOrder.Id : null
-                  );
-            }
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;
@@ -1259,7 +1301,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var submittedByGuid = await personRepository.GetPersonGuidFromIdAsync(findOvr.SubmittedBy);
                                 if (string.IsNullOrEmpty(submittedByGuid))
                                 {
-                                    throw new Exception(string.Concat("Process finsihed by we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
+                                    throw new ColleagueWebApiException(string.Concat("Process finsihed by we couldn't return a Submitted By GUID purchase order: ", dtoPurchaseOrder.Id, " Submitted By: ", findOvr.SubmittedBy));
                                 }
                                 detail.SubmittedBy = new GuidObject2(submittedByGuid);
                             }
@@ -1303,6 +1345,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     foreach (var details in lineItems.AccountDetail)
                     {
                         detailCount++;
+                        decimal? budgetAmount = 0;
                         var submittedBy = (details.SubmittedBy != null) ? details.SubmittedBy.Id :
                                         (purchaseOrder.SubmittedBy != null) ? purchaseOrder.SubmittedBy.Id : "";
                         var submittedById = (!string.IsNullOrEmpty(submittedBy)) ? await personRepository.GetPersonIdFromGuidAsync(submittedBy) : "";
@@ -1310,6 +1353,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         if (details.Allocation != null && details.Allocation.Allocated != null &&
                                 details.Allocation.Allocated.Amount != null && details.Allocation.Allocated.Amount.Value != null
                                 && details.Allocation.Allocated.Amount.Value.HasValue)
+                        {
+                            budgetAmount = details.Allocation.Allocated.Amount.Value.Value;
+                        }
+                        //if there is no allocated.amount, we see if there is percent and we calculate the amount
+                        else if (details.Allocation != null && details.Allocation.Allocated != null &&
+                                details.Allocation.Allocated.Percentage != null && details.Allocation.Allocated.Percentage.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Value != null && lineItems.UnitPrice.Value.HasValue)
+                        {
+                            budgetAmount = lineItems.UnitPrice.Value.Value * details.Allocation.Allocated.Percentage / 100;
+                        }
+                        // if there is no allocated amount or percentage, then use the quantity to calculate the amount for budget check
+                        else if (details.Allocation != null && details.Allocation.Allocated != null &&
+                                details.Allocation.Allocated.Quantity != null && details.Allocation.Allocated.Quantity.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Value != null && lineItems.UnitPrice.Value.HasValue && lineItems.Quantity != null && lineItems.Quantity.HasValue)
+                        {
+                            budgetAmount = lineItems.UnitPrice.Value.Value * details.Allocation.Allocated.Quantity / lineItems.Quantity;
+                        }
+                        if (budgetAmount != null && budgetAmount.HasValue && lineItems.UnitPrice != null && lineItems.UnitPrice.Currency != null)
                         {
                             string PosID = lineCount.ToString() + "." + detailCount.ToString();
                             if (details.SubmittedBy != null)
@@ -1328,9 +1387,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 {
                                     Sequence = PosID,
                                     SubmittedBy = submittedById,
-                                    Amount = details.Allocation.Allocated.Amount.Value.Value,
+                                    Amount = (decimal)budgetAmount,
                                     ItemId = lineItems.LineItemNumber ?? lineItems.LineItemNumber,
-                                    TransactionDate = purchaseOrder.OrderedOn
+                                    TransactionDate = purchaseOrder.OrderedOn,
+                                    CurrencyCode = lineItems.UnitPrice.Currency.ToString()
                                 });
                             }
                         }
@@ -1414,11 +1474,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 purchaseOrderId = await purchaseOrderRepository.GetPurchaseOrdersIdFromGuidAsync(guid);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException knfex)
             {
                 // do nothing.. if the purchase order does not exist, it will be a new record.
+                logger.Error(knfex, "Unable to get purchase order by guid");
             }
-
             var poStatus = PurchaseOrderStatus.InProgress;
             if (purchaseOrder.Status != PurchaseOrdersStatus.NotSet && purchaseOrder.Status != null)
             {
@@ -2663,7 +2723,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if (string.IsNullOrEmpty(lineItem.Description))
                     {
                         IntegrationApiExceptionAddError("The Description is required when submitting a line item.", "Validation.Exception");
-                    }                    
+                    }
                     if (lineItem.Quantity != null && lineItem.Quantity.HasValue && lineItem.Quantity.Value <= 0)
                     {
                         IntegrationApiExceptionAddError("The Quantity must be greater than zero when submitting a line item.", "Validation.Exception");
@@ -2672,7 +2732,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if (lineItem.Quantity == null || !lineItem.Quantity.HasValue)
                     {
                         var totalQuantity = lineItem.AccountDetail.Sum(ad => ad.Allocation != null && ad.Allocation.Allocated != null && ad.Allocation.Allocated.Quantity.HasValue ? ad.Allocation.Allocated.Quantity : 1);
-                        lineItem.Quantity = totalQuantity;                       
+                        lineItem.Quantity = totalQuantity;
                     }
                     if (lineItem.UnitPrice == null)
                     {
@@ -3713,12 +3773,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             //sorting
             var sortOrderSequence = new List<string> { PurchaseOrderStatus.InProgress.ToString(), PurchaseOrderStatus.NotApproved.ToString(), PurchaseOrderStatus.Outstanding.ToString(), PurchaseOrderStatus.Accepted.ToString(), PurchaseOrderStatus.Backordered.ToString(), PurchaseOrderStatus.Invoiced.ToString(), PurchaseOrderStatus.Paid.ToString(), PurchaseOrderStatus.Reconciled.ToString(), PurchaseOrderStatus.Closed.ToString(), PurchaseOrderStatus.Voided.ToString() };
-            purchaseOrderSummaryDomainEntities = purchaseOrderSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(x => x.Date).ThenByDescending(n => n.Number);
+            purchaseOrderSummaryDomainEntities = purchaseOrderSummaryDomainEntities.OrderByDescending(item => item.ApprovalReturnedIndicator).ThenBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(x => x.Date).ThenByDescending(n => n.Number);
+
+            //attachments
+            var purchaseOrderIds = purchaseOrderSummaryDomainEntities.Select(x => x.Id);
+            string purchaseOrderTagonePrefix = ColleagueFinanceConstants.PurchaseOrderAttachmentTagOnePrefix;
+            List<Attachment> attachmentsList = await procurementsUtilityService.GetAttachmentsAsync(null, purchaseOrderTagonePrefix, purchaseOrderIds);
 
             // Convert the purchase order summary and all its child objects into DTOs
             var purchaseOrderSummaryDtoAdapter = new PurchaseOrderSummaryEntityDtoAdapter(_adapterRegistry, logger);
             foreach (var purchaseOrderDomainEntity in purchaseOrderSummaryDomainEntities)
             {
+                purchaseOrderDomainEntity.AttachmentsIndicator = attachmentsList != null && attachmentsList.Any() ? attachmentsList.Any(attach => attach.TagOne == purchaseOrderTagonePrefix + purchaseOrderDomainEntity.Id) : false;
                 purchaseOrderSummaryDtos.Add(purchaseOrderSummaryDtoAdapter.MapToType(purchaseOrderDomainEntity));
             }
 
@@ -3859,7 +3925,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             string glAccountNo = !(string.IsNullOrEmpty(glAccount.FormattedGlAccount)) ? glAccount.FormattedGlAccount : "MASKED";
                             var internalGlAccountNo = GlAccountUtility.ConvertGlAccountToInternalFormat(glAccountNo, glAccountStructure.MajorComponentStartPositions);
 
-                            apLineItem.AddGlDistributionForSave(new Domain.ColleagueFinance.Entities.LineItemGlDistribution(internalGlAccountNo, glAccount.Quantity, glAccount.Amount)
+                            apLineItem.AddGlDistributionForSave(new Domain.ColleagueFinance.Entities.LineItemGlDistribution(internalGlAccountNo, glAccount.Quantity, glAccount.Amount, glAccount.Percent)
                             {
                                 ProjectNumber = glAccount.ProjectNumber
                             });

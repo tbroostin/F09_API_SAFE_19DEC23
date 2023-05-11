@@ -93,7 +93,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// List of session periods that contain dates, tuition, and hours.
         /// </summary>
-        public List<FormT2202aSessionPeriod> SessionPeriods = new List<FormT2202aSessionPeriod>();
+        private List<FormT2202aSessionPeriod> sessionPeriods = new List<FormT2202aSessionPeriod>();
+        public List<FormT2202aSessionPeriod> SessionPeriods
+        {
+            get { return sessionPeriods; }
+            set { if (value != null) { sessionPeriods = value; } }
+        }
 
         /// <summary>
         /// Student's Box A total amount.

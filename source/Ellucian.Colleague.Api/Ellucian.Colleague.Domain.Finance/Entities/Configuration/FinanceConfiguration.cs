@@ -184,6 +184,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.Configuration
         public bool DisplayDueDates { get; set; }
 
         /// <summary>
+        /// Colleague timezone data
+        /// </summary>
+        public string ColleagueTimezone { get; set; }
+
+        /// <summary>
         /// Add a <see cref="PayableReceivableType"/> to the <see cref="FinanceConfiguration"/> object.
         /// </summary>
         /// <param name="prt">The <see cref="PayableReceivableType"/> to be added.</param>

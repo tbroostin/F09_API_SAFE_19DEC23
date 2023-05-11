@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
+
+using System.ComponentModel;
 using Ellucian.Web.License;
 using System.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -12,6 +14,7 @@ using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using System.Net;
 using Ellucian.Web.Security;
 using System;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -25,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
     {
         private readonly IReceiveProcurementsService receiveProcurementsService;
         private readonly ILogger logger;
+        private const string invalidSessionErrorMessage = "Your previous session has expired and is no longer valid.";
 
         /// <summary>
         /// This constructor initializes the ReceiveProcurementsController object
@@ -74,6 +78,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
@@ -102,7 +111,6 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
-
                 return await receiveProcurementsService.AcceptOrReturnProcurementItemsAsync(procurementAcceptOrReturnItemInformationRequest);
             }
             catch (PermissionsException peex)
@@ -114,6 +122,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(anex, anex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

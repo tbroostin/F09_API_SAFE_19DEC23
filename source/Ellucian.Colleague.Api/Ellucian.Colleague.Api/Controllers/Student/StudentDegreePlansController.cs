@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Net;
 using System.Net.Http;
@@ -50,10 +50,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">id of the degree plan</param>
         /// <returns>The student's <see cref="DegreePlan">Degree Plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 3 of this API")]
         public async Task<DegreePlan> GetAsync(int id)
         {
@@ -84,10 +95,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">id of the degree plan</param>
         /// <returns>The student's <see cref="DegreePlan2">Degree Plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.5, use version 3 of this API")]
         public async Task<DegreePlan2> Get2Async(int id)
         {
@@ -118,10 +140,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">id of the degree plan</param>
         /// <returns>The student's <see cref="DegreePlan3">Degree Plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.6, use version 4 of this API")]
         public async Task<DegreePlan3> Get3Async(int id)
         {
@@ -162,10 +195,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="validate">Defaults to true. If false, returns a non-validated degree plan (use when planned course warnings are not needed to improve performance)</param>
         /// <returns>A combined dto <see cref="DegreePlanAcademicHistory">DegreePlanAcademicHistory</see> which includes the student's <see cref="DegreePlan3">Degree Plan</see> and <see cref="AcademicHistory2">AcademicHistory</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.11, use Get5Async going forward")]
         public async Task<DegreePlanAcademicHistory> Get4Async(int id, bool validate = true)
         {
@@ -206,10 +250,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="validate">Defaults to true. If false, returns a non-validated degree plan (use when planned course warnings are not needed to improve performance)</param>
         /// <returns>A combined dto <see cref="DegreePlanAcademicHistory2">DegreePlanAcademicHistory2</see> which includes the student's <see cref="DegreePlan4">Degree Plan</see> and <see cref="AcademicHistory3">AcademicHistory</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.18, use Get6Async going forward")]
         public async Task<DegreePlanAcademicHistory2> Get5Async(int id, bool validate = true)
         {
@@ -252,10 +307,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="includeDrops">Defaults to false, If true, includes dropped academic credits in the degree plan</param>
         /// <returns>A combined dto <see cref="DegreePlanAcademicHistory3">DegreePlanAcademicHistory3</see> which includes the student's <see cref="DegreePlan4">Degree Plan</see> and <see cref="AcademicHistory3">AcademicHistory</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this degree plan</exception>
-        /// <accessComments>        /// A person may retrieve their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         public async Task<DegreePlanAcademicHistory3> Get6Async(int id, bool validate = true, bool includeDrops = false)
         {
             try
@@ -271,17 +337,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (PermissionsException peex)
             {
-                _logger.Info(peex.ToString());
+                _logger.Error(peex, "User does not have appropriate permissions to retrieve degree plan for Id: "+id);
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
             catch (EllucianLicenseException  ex)
             {
-                _logger.Info(ex.ToString());
+                _logger.Error(ex, "License expiration for degree plan Id: " + id);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception ex)
             {
-                _logger.Info(ex.ToString(), "Unable to get DegreePlanAcademicHistory for plan " + id);
+                _logger.Error(ex, "Unable to get DegreePlanAcademicHistory for plan " + id);
                 throw CreateNotFoundException("DegreePlanAcademicHistory", id.ToString());
             }
            
@@ -294,7 +360,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlan">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may make any updates to their own degree plan.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may make any updates to their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 3 of this API")]
         public async Task<DegreePlan> PutAsync(DegreePlan degreePlan)
         {
@@ -335,7 +415,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlan2">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 3 of this API")]
         public async Task<DegreePlan2> Put2Async(DegreePlan2 degreePlan)
         {
@@ -376,7 +470,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlan3">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.6, use version 4 of this API")]
         public async Task<DegreePlan3> Put3Async(DegreePlan3 degreePlan)
         {
@@ -418,7 +526,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlan3">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.11, use Put5Async instead")]
         public async Task<DegreePlanAcademicHistory> Put4Async(DegreePlan4 degreePlan)
         {
@@ -459,7 +581,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlanAcademicHistory2">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.18, use Put6Async instead")]
         public async Task<DegreePlanAcademicHistory2> Put5Async(DegreePlan4 degreePlan)
         {
@@ -500,7 +636,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The updated <see cref="DegreePlanAcademicHistory3">degree plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if version number of passed degree plan object does not match the version in the database, indicating that an update has occurred on the degree plan by another user and this action has not been saved.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.        ///         /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.        ///         /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any        /// advisee based on the specific permission code:        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan.         /// </accessComments>
+        /// <accessComments>
+        /// A person may update their own degree plan but are not allowed to move or remove a protected planned course item.
+        /// 
+        /// An authenticated user (advisor) with REVIEW.ASSIGNED.ADVISEES permission may perform review type of updates on a degree plan for one of their assigned advisees.
+        /// An authenticated user (advisor) with REVIEW.ANY.ADVISEE permission may perform review type of updates on a degree plan for any advisee.
+        /// Review types of updates include approving or denying planned courses, setting protection level for planned courses, adding advising notes, marking a plan as review complete or advisment complete.
+        /// 
+        /// In addition to the above review actions, an advisor with any of the following permission codes may make any change to the plan for either their assigned advisees or any
+        /// advisee based on the specific permission code:
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// Additional update actions include adding, moving or removing planned courses and adding or removing terms from the plan. 
+        /// </accessComments>
         public async Task<DegreePlanAcademicHistory3> Put6Async(DegreePlan4 degreePlan)
         {
             DegreePlanAcademicHistory3 returnDto = null;
@@ -554,10 +704,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 4 of this API")]
         public async Task<HttpResponseMessage> PostAsync([FromBody]string studentId)
         {
@@ -603,10 +766,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.5, use version 4 of this API")]
         public async Task<HttpResponseMessage> Post2Async([FromBody]string studentId)
         {
@@ -652,10 +828,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.6, use version 4 of this API")]
         public async Task<HttpResponseMessage> Post3Async([FromBody]string studentId)
         {
@@ -682,6 +871,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Info(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                string message = "Session has expired while creating a new degree plan";
+                _logger.Error(csee, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 // Student Id not provided, student Id does not exist, student is locked, etc.
@@ -701,10 +896,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.11, use Post5Async instead")]
         public async Task<HttpResponseMessage> Post4Async([FromBody]string studentId)
         {
@@ -750,10 +958,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.18, use Post6Async instead")]
         public async Task<HttpResponseMessage> Post5Async([FromBody]string studentId)
         {
@@ -800,10 +1021,23 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create a degree plan for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if a degree plan already exists for this student</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if invalid student id or student locked or any other creation problem.</exception>
-        /// <accessComments>        /// A person may create their own degree plan.        ///         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may create their own degree plan.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may create the degree plan for any advisee
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        ///         /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 
+        /// Note: Advisor view only permissions are included because when accessing an advisee for the first time, even to view it, it must exist.
+        /// </accessComments>
         public async Task<HttpResponseMessage> Post6Async([FromBody]string studentId)
         {
             try
@@ -812,6 +1046,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 var response = Request.CreateResponse<DegreePlanAcademicHistory3>(HttpStatusCode.Created, newPlanDto);
                 SetResourceLocationHeader("GetDegreePlan", new { id = newPlanDto.DegreePlan.Id });
                 return response;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Session has expired  while creating a degree plan for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -852,7 +1092,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </returns>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if either the degreePlanId or termId argument is not specified</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the student's degree plan</exception>
-        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
+        /// <accessComments>
+        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.  
+        /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.
+        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 2 of this API")]
         public async Task<IEnumerable<RegistrationMessage>> PutRegistrationAsync(int degreePlanId, string termId)
         {
@@ -893,7 +1137,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </returns>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if either the degreePlanId or termId argument is not specified</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the student's degree plan</exception>
-        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
+        /// <accessComments>
+        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.  
+        /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.
+        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.5, use students/{studentId}/register moving forward.")]
         public async Task<RegistrationResponse> PutRegistration2Async(int degreePlanId, string termId)
         {
@@ -932,7 +1180,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>A list of <see cref="RegistrationMessage">registration messages</see> from the registration process indicating success or failure</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if either the degreePlanId argument or the sectionRegistration information is not specified</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
+        /// <accessComments>
+        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.  
+        /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.
+        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 2 of this API")]
         public async Task<IEnumerable<RegistrationMessage>> PutSectionRegistrationAsync(int degreePlanId, IEnumerable<SectionRegistration> sectionRegistrations)
         {
@@ -971,7 +1223,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>A <see cref="RegistrationResponse">response</see> returned from the registration system.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if either the degreePlanId argument or the sectionRegistration information is not specified</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to update the degree plan</exception>
-        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
+        /// <accessComments>
+        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.  
+        /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.
+        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.5, use students/{studentId}/register moving forward.")]
         public async Task<RegistrationResponse> PutSectionRegistration2Async(int degreePlanId, IEnumerable<SectionRegistration> sectionRegistrations)
         {

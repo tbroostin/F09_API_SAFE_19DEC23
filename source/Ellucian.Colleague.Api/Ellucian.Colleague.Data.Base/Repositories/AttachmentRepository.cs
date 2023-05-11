@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -39,6 +39,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private static string appServerOSPathSeparator = null;
         private static string attachmentTempFilePath = null;
 
+        private readonly int bulkReadSize;
+
         /// <summary>
         /// Constructor for AttachmentRepository
         /// </summary>
@@ -49,6 +51,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
+            bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
             colleagueTimeZone = settings.ColleagueTimeZone;
         }
 
@@ -106,12 +109,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var attachmentRecords = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(criteria.ToString());
                 return BuildAttachments(attachmentRecords);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving bulk attachment metadata";
                 logger.Error(e, error);
                 throw new RepositoryException(error);
-            }            
+            }
         }
 
         /// <summary>
@@ -130,12 +137,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var attachmentRecord = await DataReader.ReadRecordAsync<Attachments>(attachmentId);
                 return BuildAttachments(new List<Attachments>() { attachmentRecord }).FirstOrDefault();
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving attachment metadata";
                 logger.Error(e, string.Format("{0} for attachment ID {1}", error, attachmentId));
                 throw new RepositoryException(error);
-            }        
+            }
         }
 
         /// <summary>
@@ -153,6 +164,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var attachmentRecord = await DataReader.ReadRecordAsync<AttachmentsNoEncr>(attachmentId);
                 return BuildAttachments(new List<AttachmentsNoEncr>() { attachmentRecord }).FirstOrDefault();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -174,8 +189,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (attachmentContentDirPath == null)
             {
-                attachmentContentDirPath = await GetApphomePathAsync() 
-                    + await GetAppServerOSPathSeparatorAsync() 
+                attachmentContentDirPath = await GetApphomePathAsync()
+                    + await GetAppServerOSPathSeparatorAsync()
                     + attachmentContentDir;
             }
             if (appServerOSPathSeparator == null)
@@ -282,9 +297,101 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var attachmentRecords = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(criteria.ToString());
                 return BuildAttachments(attachmentRecords);
             }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 string error = "Error occurred retrieving attachment metadata by query";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="owner">The attachment owner to query by</param>
+        /// <param name="collectionId">Collection Id to query by</param>
+        /// <param name="tagOnesList">List of TagOne values to query by</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsAsync(string owner, string collectionId, List<string> tagOneList)
+        {
+            var attachmentRecords = new List<AttachmentsNoEncr>();
+            // owner or collection ID is required to continue
+            if (string.IsNullOrEmpty(owner) && string.IsNullOrEmpty(collectionId))
+                throw new ArgumentException("Required filter not provided to get attachments");
+
+            // get attachments
+            var baseCriteria = new StringBuilder();
+            // owner
+            if (!string.IsNullOrEmpty(owner))
+            {
+                baseCriteria.Append(string.Format("WITH ATT.OWNER EQ '{0}'", owner));
+            }
+            // collection ID
+            if (!string.IsNullOrEmpty(collectionId))
+            {
+                if (baseCriteria.Length > 0)
+                    baseCriteria.Append(string.Format(" AND ATT.COLLECTION.ID EQ '{0}'", collectionId));
+                else
+                    baseCriteria.Append(string.Format("WITH ATT.COLLECTION.ID EQ '{0}'", collectionId));
+            }
+
+            baseCriteria.Append(string.Format(" AND ATT.STATUS EQ '{0}'", attachmentActiveStatus));
+
+            // do not include the encryption metadata
+            try
+            {
+                if (tagOneList != null && tagOneList.Any())
+                {
+                    if (tagOneList != null && tagOneList.Count() > bulkReadSize)
+                    {
+                        for (int i = 0; i < tagOneList.Count(); i += bulkReadSize)
+                        {
+                            var queryCriteria = new StringBuilder();
+                            queryCriteria.Append(baseCriteria);
+                            var subList = tagOneList.Skip(i).Take(bulkReadSize).ToArray();
+                            queryCriteria.Append(" AND ATT.TAG.ONE EQ '?'");
+                            var attachmentIds = await DataReader.SelectAsync("ATTACHMENTS", queryCriteria.ToString(), subList);
+                            var records = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(attachmentIds);
+                            if (records == null)
+                            {
+                                logger.Error("Unexpected null from bulk read of Attachments No Encr");
+                            }
+                            else
+                            {
+                                attachmentRecords.AddRange(records);
+                            }
+                        }
+                    }
+                    //when tagOnes list is less than bulk read size
+                    else
+                    {
+                        var subList = tagOneList.ToArray();
+                        baseCriteria.Append(" AND ATT.TAG.ONE EQ '?'");
+                        var attachmentIds = await DataReader.SelectAsync("ATTACHMENTS", baseCriteria.ToString(), subList);
+                        var records = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(attachmentIds);
+                        attachmentRecords.AddRange(records);
+                    }
+                }
+                //when tagOnes list is empty, query by base criterias
+                else
+                {
+                    var records = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(baseCriteria.ToString());
+                    attachmentRecords.AddRange(records);
+                }
+
+                return BuildAttachments(attachmentRecords);
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving bulk attachment metadata";
                 logger.Error(e, error);
                 throw new RepositoryException(error);
             }
@@ -384,7 +491,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="attachmentContentStream">Stream to the attachment content</param>
         /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
         public async Task<Attachment> PostAttachmentAndContentAsync(Attachment attachment, Stream attachmentContentStream)
-        {            
+        {
             if (attachment == null)
                 throw new ArgumentNullException("attachment");
             if (attachmentContentStream == null)
@@ -634,7 +741,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return AttachmentStatus.Deleted;
                 default:
                     return AttachmentStatus.Active;
-            }                    
+            }
         }
 
         // Convert an attachment status entity to internal
@@ -678,7 +785,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception e)
             {
-                logger.Info(e, string.Format("Exception occurred rolling back attachment, attachment {0} ({1}) : error = {2}", 
+                logger.Info(e, string.Format("Exception occurred rolling back attachment, attachment {0} ({1}) : error = {2}",
                     attachment.Id, attachment.Name, e.Message));
             }
         }

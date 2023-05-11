@@ -1,8 +1,9 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
@@ -26,7 +27,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
     [TestClass]
     public class BudgetAdjustmentsControllerTests
     {
-    
+
         #region Test Context
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _loggerMock = new Mock<ILogger>();
             _budgetAdjustmentServiceMock = new Mock<IBudgetAdjustmentService>();
 
-            
+
             _response = new HttpResponse(new StringWriter());
 
             _budgetAdjustmentsController = new BudgetAdjustmentsController(_budgetAdjustmentServiceMock.Object, _loggerMock.Object)
@@ -81,7 +82,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var budgetAdjustmentDto = await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
             Assert.IsNotNull(budgetAdjustmentDto);
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task BudgetAdjustmentsController_PutAsync_PermissionsException()
@@ -135,6 +136,120 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
                 Assert.IsNotNull(responseJson);
                 Assert.AreEqual("Unable to update the budget adjustment.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsControllerr_PutAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsController_PostAsync_Create_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.CreateBudgetAdjustmentAsync(It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.PostAsync(new Dtos.ColleagueFinance.BudgetAdjustment());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsControllerr_GetBudgetAdjustmentAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.GetBudgetAdjustmentAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.GetBudgetAdjustmentAsync("1");
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsControllerr_GetBudgetAdjustmentPendingApprovalDetailAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.GetBudgetAdjustmentPendingApprovalDetailAsync(It.IsAny<string>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.GetBudgetAdjustmentPendingApprovalDetailAsync("1");
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsControllerr_GetBudgetAdjustmentsPendingApprovalSummaryAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.GetBudgetAdjustmentsPendingApprovalSummaryAsync()).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.GetBudgetAdjustmentsPendingApprovalSummaryAsync();
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetAdjustmentsControllerr_PostBudgetAdjustmentApprovalAsync_ExpiredSessionException()
+        {
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.PostBudgetAdjustmentApprovalAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustmentApproval>())).ThrowsAsync(new ColleagueSessionExpiredException("timeout"));
+                await _budgetAdjustmentsController.PostBudgetAdjustmentApprovalAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustmentApproval>());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("timeout", responseJson.Message);
                 throw;
             }
         }

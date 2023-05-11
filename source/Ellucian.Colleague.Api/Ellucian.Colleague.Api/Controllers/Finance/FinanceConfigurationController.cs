@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -12,6 +12,7 @@ using Ellucian.Web.Http.Controllers;
 using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -52,6 +53,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             {
                 configurationDto = _service.GetFinanceConfiguration();
             }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -74,6 +80,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             try
             {
                 return _service.GetImmediatePaymentControl();
+            }
+            catch (ColleagueSessionExpiredException csee)
+            {
+                _logger.Error(csee, csee.Message);
+                throw CreateHttpResponseException(csee.Message, HttpStatusCode.Unauthorized);
             }
             catch (Exception ex)
             {

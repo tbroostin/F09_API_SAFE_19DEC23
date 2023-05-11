@@ -24,5 +24,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<List<StudentProgram>> GetStudentAcademicPeriodProfileStudentProgramInfoAsync(List<string> stuProgIds);
         Task<StudentProgram> AddStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates);
         Task<StudentProgram> UpdateStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates);
+        Task<IEnumerable<StudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms=false, bool currentOnly=true);
     }
 }

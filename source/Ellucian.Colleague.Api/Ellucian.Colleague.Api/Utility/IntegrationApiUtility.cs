@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -28,12 +28,17 @@ namespace Ellucian.Colleague.Api.Utility
         /// <summary>
         /// Default error code
         /// </summary>
-        public static string DefaultErrorCode = "Global.Internal.Error";
+        private static string DefaultErrorCode = "Global.Internal.Error";
 
         /// <summary>
         /// Default Error message for not supported messages
         /// </summary>
-        public static string DefaultNotSupportedApiErrorMessage = "The method is not supported by the resource.";
+        public static string DefaultNotSupportedApiErrorMessage
+        {
+            get { return defaultNotSupportedApiErrorMessage; }
+            set { defaultNotSupportedApiErrorMessage = value; }
+        }
+        private static string defaultNotSupportedApiErrorMessage = "The method is not supported by the resource.";
 
         /// <summary>
         /// Default error message
@@ -235,7 +240,12 @@ namespace Ellucian.Colleague.Api.Utility
         /// <summary>
         /// List of standard error messages for the Integration API
         /// </summary>
-        public static List<IntegrationApiErrorMessage> ApiErrorMessages = new List<IntegrationApiErrorMessage>() {
+        public static List<IntegrationApiErrorMessage> ApiErrorMessages
+        {
+            get { return apiErrorMessages; }
+            set { apiErrorMessages = value; }
+        }
+        private static List<IntegrationApiErrorMessage> apiErrorMessages = new List<IntegrationApiErrorMessage>() {
             new IntegrationApiErrorMessage( "Authentication.Required                                               ", "Authentication failed or wasn't provided.                                                                                                                                          ", 401 ),
             new IntegrationApiErrorMessage( "Access.Denied                                                         ", "Client not authorized to perform this action.                                                                                                                                      ", 403 ),
             new IntegrationApiErrorMessage( "Global.Internal.Error                                                 ", "Unspecified Error on the system which prevented execution.                                                                                                                         ", 400 ),
@@ -284,7 +294,7 @@ namespace Ellucian.Colleague.Api.Utility
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.InsufficientRoomCapacity                     ", "maxOccupancy is greater than the room capacity for all rooms.                                                                                                                      ", 400 ),
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.NoMeetingDates                               ", "No dates were identified for the start and end dates, start and end times, and recurrence pattern.                                                                                 ", 400 ),
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.Recurrences.NotSpecified                     ", "recurrence was not specified.                                                                                                                                                      ", 400 ),
-            new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.Recurrences.OutOfRange                       ", "RoomsAvailabilityRequest recurrences by Day includes a day of the week, which is not valid for the start and end date range.                                                       ", 400 ),            
+            new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.Recurrences.OutOfRange                       ", "RoomsAvailabilityRequest recurrences by Day includes a day of the week, which is not valid for the start and end date range.                                                       ", 400 ),
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.Occupanices.NotSpecified                     ", "occupancies was not specified.                                                                                                                                                     ", 400 ),
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.StartDate.OutOfRange                         ", "Start date is out of range.                                                                                                                                                        ", 400 ),
             new IntegrationApiErrorMessage( "RoomsAvailabilityRequest.StartTime.OutOfRange                         ", "Start time is out of range.                                                                                                                                                        ", 400 ),

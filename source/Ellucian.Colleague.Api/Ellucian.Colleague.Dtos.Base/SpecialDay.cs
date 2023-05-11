@@ -34,6 +34,11 @@ namespace Ellucian.Colleague.Dtos.Base
         public bool IsHoliday { get; set; }
 
         /// <summary>
+        /// Whether this special day is a payroll Holiday
+        /// </summary>
+        public bool IsPayrollHoliday { get; set; }
+
+        /// <summary>
         /// Whether this special day is a full day or not.
         /// </summary>
         public bool IsFullDay { get; set; }

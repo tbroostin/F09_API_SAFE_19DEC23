@@ -1,23 +1,23 @@
 ﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using slf4net;
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Data.Colleague.Exceptions;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private readonly string _colleagueTimeZone;
 
         public PlanningStudentRepository(
-            ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, 
+            ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory,
             ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger, apiSettings)
         {
@@ -141,11 +141,69 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // If any requested students not found in the cache, retrieve the data and build them now.
                 if (planningStudentsNotInCache != null && planningStudentsNotInCache.Count() > 0)
                 {
-                    // Bulk read all the non-cached student records before looping and getting other data
-                    var students = await DataReader.BulkReadRecordAsync<Students>(planningStudentsNotInCache.ToArray());
-                    var personRecords = (await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>(planningStudentsNotInCache.ToArray())).ToList();
-                    var personStRecords = (await DataReader.BulkReadRecordAsync<PersonSt>(planningStudentsNotInCache.ToArray())).ToList();
+                    // Bulk read all the non-cached STUDENTS records before looping and getting other data
+                    var studentsBulkReadOutput = await DataReader.BulkReadRecordWithInvalidRecordsAsync<Students>(planningStudentsNotInCache.ToArray());
+                    if (studentsBulkReadOutput.InvalidRecords != null && studentsBulkReadOutput.InvalidRecords.Any())
+                    {
+                        logger.Error("Following Students records could not be read:");
+                        foreach (var invalidRecord in studentsBulkReadOutput.InvalidRecords)
+                        {
+                            logger.Error(String.Format("Student Id {0} has bad data {1}", invalidRecord.Key, invalidRecord.Value));
+                        }
+                    }
+                    var students = new Collection<Students>();
+                    if (studentsBulkReadOutput.BulkRecordsRead != null)
+                    {
+                        students = studentsBulkReadOutput.BulkRecordsRead;
+                    }
+                    else
+                    {
+                        logger.Info(string.Format("There are no STUDENTS records for the given advisees list"));
+                    }
+
+                    // Bulk read all the PERSON records before looping and getting other data
+                    var personRecordsBulkReadOutput = (await DataReader.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(planningStudentsNotInCache.ToArray()));
+                    if (personRecordsBulkReadOutput.InvalidRecords != null && personRecordsBulkReadOutput.InvalidRecords.Any())
+                    {
+                        logger.Error("Following Person records could not be read:");
+                        foreach (var invalidRecord in studentsBulkReadOutput.InvalidRecords)
+                        {
+                            logger.Error(String.Format("Person Id {0} has bad data {1}", invalidRecord.Key, invalidRecord.Value));
+                        }
+                    }
+                    var personRecords = new Collection<Base.DataContracts.Person>();
+                    if (personRecordsBulkReadOutput.BulkRecordsRead != null)
+                    {
+                        personRecords = personRecordsBulkReadOutput.BulkRecordsRead;
+                    }
+                    else
+                    {
+                        logger.Info(string.Format("There are no PERSON records for the given advisees list"));
+                    }
+
+                    // Bulk read all the PERSON.ST records before looping and getting other data
+                    var personStRecordsBulkReadOutput = (await DataReader.BulkReadRecordWithInvalidRecordsAsync<PersonSt>(planningStudentsNotInCache.ToArray()));
+                    if (personStRecordsBulkReadOutput.InvalidRecords != null && personStRecordsBulkReadOutput.InvalidRecords.Any())
+                    {
+                        logger.Error("Following Person-ST records could not be read:");
+                        foreach (var invalidRecord in studentsBulkReadOutput.InvalidRecords)
+                        {
+                            logger.Error(String.Format("Person Id {0} has bad data {1}", invalidRecord.Key, invalidRecord.Value));
+                        }
+                    }
+                    var personStRecords = new Collection<PersonSt>();
+                    if (personStRecordsBulkReadOutput.BulkRecordsRead != null)
+                    {
+                        personStRecords = personStRecordsBulkReadOutput.BulkRecordsRead;
+                    }
+                    else
+                    {
+                        logger.Info(string.Format("There are no PERSON.ST records for the given advisees list"));
+                    }
+
+                    //Reading STUDENT.ADVISEMENT records from the PERSON.ST pointers
                     var studentAdvisementIds = new List<string>();
+
                     foreach (var person in personStRecords)
                     {
                         if (person.PstAdvisement != null)
@@ -156,17 +214,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                         }
                     }
+                    logger.Info("Selected " + studentAdvisementIds.Count() + " PERSON.ST pointers on STUDENT.ADVISEMENT for the student(s)");
+
                     var studentAdvisementRecords = new Collection<StudentAdvisement>();
                     if (studentAdvisementIds != null && studentAdvisementIds.Count() > 0)
                     {
                         // Limit the advisements returned to current, exclude any that are ended.
                         var date = await GetUnidataFormatDateAsync(DateTime.Today);
-                      
+
                         string criteria = string.Format("WITH STAD.END.DATE GE '{0}' OR STAD.END.DATE EQ ''", date);
                         studentAdvisementIds = (await DataReader.SelectAsync("STUDENT.ADVISEMENT", studentAdvisementIds.ToArray(), criteria)).ToList();
                         if (studentAdvisementIds != null && studentAdvisementIds.Count() > 0)
                         {
-                            studentAdvisementRecords = await DataReader.BulkReadRecordAsync<StudentAdvisement>(studentAdvisementIds.Distinct().ToArray());
+                            var studentAdvisementRecordsBulkReadOutput = await DataReader.BulkReadRecordWithInvalidRecordsAsync<StudentAdvisement>(studentAdvisementIds.Distinct().ToArray());
+                            if (studentAdvisementRecordsBulkReadOutput.InvalidRecords != null && studentAdvisementRecordsBulkReadOutput.InvalidRecords.Any())
+                            {
+                                logger.Error("Following Student advisement records could not be read:");
+                                foreach (var invalidRecord in studentAdvisementRecordsBulkReadOutput.InvalidRecords)
+                                {
+                                    logger.Error(String.Format("Student Advisement Id {0} has bad data {1}", invalidRecord.Key, invalidRecord.Value));
+                                }
+                            }
+                            studentAdvisementRecords = studentAdvisementRecordsBulkReadOutput.BulkRecordsRead;
                         }
                         if (logger.IsInfoEnabled)
                         {
@@ -190,6 +259,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             logger.Info(message);
                         }
                     }
+
+                    //Reading STUDENT.PROGRAMS from STU.ACAD.PROGRAMS pointers
                     var studentProgramIds = new List<string>();
                     foreach (var student in students)
                     {
@@ -201,8 +272,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                         }
                     }
-                    var studentProgramRecords = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.ToArray());
+                    var studentProgramRecordsBulkReadOutput = await DataReader.BulkReadRecordWithInvalidRecordsAsync<StudentPrograms>(studentProgramIds.ToArray());
+                    if (studentProgramRecordsBulkReadOutput.InvalidRecords != null && studentProgramRecordsBulkReadOutput.InvalidRecords.Any())
+                    {
+                        logger.Error("Following Student program records could not be read:");
+                        foreach (var invalidRecord in studentProgramRecordsBulkReadOutput.InvalidRecords)
+                        {
+                            logger.Error(String.Format("Student Program Id {0} has bad data {1}", invalidRecord.Key, invalidRecord.Value));
+                        }
+                    }
+                    var studentProgramRecords = studentProgramRecordsBulkReadOutput.BulkRecordsRead;
 
+                    //Start building PlanningStudent entities for all the students records retrieved
                     foreach (var student in students)
                     {
                         try
@@ -228,9 +309,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                             // Now that we have all the data, assemble the entity
                             var planningStudentEntity = await BuildPlanningStudentAsync(student.Recordkey, student, studentProgramData, personStData, studentAdvisementData, personContract);
-
-                            // Add this entity to the list of items to be returned
-                            planningStudentEntities.Add(planningStudentEntity);
+                            if (planningStudentEntity != null)
+                            {
+                                // Add this entity to the list of items to be returned
+                                planningStudentEntities.Add(planningStudentEntity);
+                            }
+                            else
+                            {
+                                logger.Error(String.Format("Planning Student entity is null for student id {0}", student.Recordkey));
+                            }
 
                             // Add the planningstudent to the cache ONLY IF IT HAS A DEGREE PLAN ID
                             if (planningStudentEntity != null && planningStudentEntity.DegreePlanId != null)
@@ -289,6 +376,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 var codeAssoc = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == studentProgram.StprStatus.ElementAt(0)).FirstOrDefault();
                                 if (codeAssoc != null && (codeAssoc.ValActionCode1AssocMember == "4" || codeAssoc.ValActionCode1AssocMember == "5"))
                                 {
+                                    logger.Info(String.Format("Student {0} for program {1} status is withdrawn or dropped or changed-mind", studentData.Recordkey, studentProgram.Recordkey));
                                     continue;
                                 }
                             }
@@ -296,17 +384,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             // If student program has ended, skip it.
                             if (studentProgram.StprEndDate != null && studentProgram.StprEndDate.Count > 0 && studentProgram.StprEndDate.ElementAt(0) < DateTime.Today)
                             {
+                                logger.Info(String.Format("Student {0} for program {1} has ended", studentData.Recordkey, studentProgram.Recordkey));
                                 continue;
                             }
 
                             // If the program doesn't have a start date, skip it.
                             if (studentProgram.StprStartDate != null && studentProgram.StprStartDate.Count == 0)
                             {
+                                logger.Info(String.Format("Student {0} for program {1} doesn't have start date", studentData.Recordkey, studentProgram.Recordkey));
                                 continue;
                             }
 
                             // STUDENT.PROGRAMS key is multi-part.  Only save the program portion (second part) to the Student domain entity
                             programIds.Add(studentProgram.Recordkey.Split('*')[1]);
+                        }
+                        else
+                        {
+                            logger.Error(String.Format("There is no corresponding STUDENT.PROGRAMS record for STU.ACAD.PROGRAM Id {0} pointer for student {1}", acadProgramId, studentData.Recordkey));
                         }
                     }
                 }
@@ -321,6 +415,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Sorting results in the event multiple plans are returned so that we always get the plan with the  smallest Id.
                     IEnumerable<int> studentPlanIds = studentPlans.Select(int.Parse);
                     degreePlanId = studentPlanIds.OrderBy(s => s).FirstOrDefault();
+                }
+                else
+                {
+                    logger.Debug(String.Format("Student {0} does not have a degree plan", studentData.Recordkey));
                 }
 
                 // Construct the Student entity

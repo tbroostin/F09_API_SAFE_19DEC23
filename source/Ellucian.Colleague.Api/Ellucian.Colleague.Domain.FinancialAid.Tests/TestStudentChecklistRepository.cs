@@ -218,5 +218,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             }
             return Task.FromResult(studentChecklistList.AsEnumerable());
         }
+        public Task<string> GetSetHousingOptionAsync(string studentId, string awardYear, string housingCode, string retrieveOption)
+        {
+            return null;
+        }
     }
 }

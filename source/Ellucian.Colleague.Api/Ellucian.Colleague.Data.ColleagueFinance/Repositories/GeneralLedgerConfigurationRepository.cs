@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -20,7 +19,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType]
     public class GeneralLedgerConfigurationRepository : BaseColleagueRepository, IGeneralLedgerConfigurationRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private List<GeneralLedgerComponentDescription> componentDescriptions;
 
         public GeneralLedgerConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
@@ -40,7 +38,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                async () => await BuildGlFiscalYearConfiguration());
 
             return fiscalYearConfiguration;
-            
+
         }
 
         private async Task<GeneralLedgerFiscalYearConfiguration> BuildGlFiscalYearConfiguration()
@@ -160,9 +158,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 // Get the subcomponent names, start positions, and lengths for the given major component.
                 var majorComponentType = DetermineComponentType(glStruct.AcctComponentType[i]);
-                var subcomponentNames = glStruct.AcctSubName[i].Split(_SM);
-                var subcomponentStartPositions = glStruct.AcctSubStart[i].Split(_SM);
-                var subcomponentLengths = glStruct.AcctSubLgth[i].Split(_SM);
+                var subcomponentNames = glStruct.AcctSubName[i].Split(DmiString._SM);
+                var subcomponentStartPositions = glStruct.AcctSubStart[i].Split(DmiString._SM);
+                var subcomponentLengths = glStruct.AcctSubLgth[i].Split(DmiString._SM);
 
                 // Grab the individual subcomponent name, start position, and length and make sure that subcomponent is represented in the entity.
                 for (int j = 0; j < subcomponentNames.Length; j++)
@@ -253,7 +251,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subName in glStruct.AcctSubName)
                 {
-                    string[] subvalues = subName.Split(_SM);
+                    string[] subvalues = subName.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentList.Add(sub);
@@ -267,7 +265,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subStart in glStruct.AcctSubStart)
                 {
-                    string[] subvalues = subStart.Split(_SM);
+                    string[] subvalues = subStart.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentStartList.Add(sub);
@@ -281,7 +279,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subLgth in glStruct.AcctSubLgth)
                 {
-                    string[] subvalues = subLgth.Split(_SM);
+                    string[] subvalues = subLgth.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentLengthList.Add(sub);
@@ -675,7 +673,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var approvalRequired = false;
             var sameCostCenterApprovalRequired = false;
 
-            
+
 
             if (dataContract != null)
             {
@@ -900,7 +898,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subName in glStruct.AcctSubName)
                 {
-                    string[] subvalues = subName.Split(_SM);
+                    string[] subvalues = subName.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentList.Add(sub);
@@ -919,7 +917,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subStart in glStruct.AcctSubStart)
                 {
-                    string[] subvalues = subStart.Split(_SM);
+                    string[] subvalues = subStart.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentStartList.Add(sub);
@@ -938,7 +936,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subLgth in glStruct.AcctSubLgth)
                 {
-                    string[] subvalues = subLgth.Split(_SM);
+                    string[] subvalues = subLgth.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentLengthList.Add(sub);

@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -190,7 +190,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return dtos;
         }
 
-
         /// <summary>
         /// Retrieves course section information for the specified course section ID
         /// </summary>
@@ -199,7 +198,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <exception cref="KeyNotFoundException">Course section data could not be retrieved.</exception>
         private async Task<Domain.Student.Entities.Section> RetrieveCourseSectionInformation(string sectionId)
         {
-            var courseSections = await _sectionRepository.GetSectionAsync(sectionId);
+            var courseSections = await _sectionRepository.GetSectionAsync(sectionId, ignoreFaculty: false, useSeatServiceWhenEnabled: true);
             if (courseSections == null)
             {
                 throw new KeyNotFoundException(string.Format("Could not retrieve course section information for course section {0}.", sectionId));

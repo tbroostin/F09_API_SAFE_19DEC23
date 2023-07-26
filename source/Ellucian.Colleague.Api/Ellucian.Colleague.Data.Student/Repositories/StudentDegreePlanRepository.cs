@@ -1,25 +1,25 @@
-﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using slf4net;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Data.Colleague.DataContracts;
+﻿// Copyright 2021-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
 using Ellucian.Colleague.Domain.Student.Exceptions;
 using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -73,7 +73,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         public async Task<DegreePlan> UpdateAsync(DegreePlan newPlan)
-        {           
+        {
             var updateReq = new Transactions.UpdateDegreePlanRequest();
             updateReq.DegreePlanId = newPlan.Id.ToString();
             updateReq.Version = newPlan.Version.ToString();
@@ -204,7 +204,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            try 
+            try
             {
                 // Update the plan
                 var updateResponse = await transactionInvoker.ExecuteAsync<Transactions.UpdateDegreePlanRequest, Transactions.UpdateDegreePlanResponse>(updateReq);
@@ -504,7 +504,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     degreePlan.AddCourse(new PlannedCourse(course: course, section: section, gradingType: gradingType, status: status,
                                         addedBy: addedBy, addedOn: addedOn, coursePlaceholder: coursePlaceholder)
-                                        { Credits = credits, IsProtected = isProtected }, t.DptTerm);
+                                    { Credits = credits, IsProtected = isProtected }, t.DptTerm);
                                 }
                                 else if (!string.IsNullOrEmpty(plannedcourse.DptCoursePlaceholdersAssocMember))
                                 {
@@ -571,7 +571,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 comment.DegreePlanCommentAdddate, colleagueTimeZone);
                             // Convert value marks to new line characters because we want to maintain any formatting (line-to-line) that the user may
                             // have entered.
-                            var commentText = !string.IsNullOrEmpty(comment.DpcText) ? comment.DpcText.Replace(Convert.ToChar(DynamicArray.VM), '\n') : comment.DpcText;
+                            var commentText = !string.IsNullOrEmpty(comment.DpcText) ? comment.DpcText.Replace(DmiString._VM, '\n') : comment.DpcText;
                             dpComments.Add(new DegreePlanNote(
                                 int.Parse(comment.Recordkey), comment.DegreePlanCommentAddopr, date, commentText));
                         }
@@ -592,7 +592,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 note.DegreePlanRstrCmtAdddate, colleagueTimeZone);
                             // Convert value marks to new line characters because we want to maintain any formatting (line-to-line) that the user may
                             // have entered.
-                            var rcommentText = !string.IsNullOrEmpty(note.DprcText) ? note.DprcText.Replace(Convert.ToChar(DynamicArray.VM), '\n') : note.DprcText;
+                            var rcommentText = !string.IsNullOrEmpty(note.DprcText) ? note.DprcText.Replace(DmiString._VM, '\n') : note.DprcText;
                             restrictedNotes.Add(new DegreePlanNote(
                                 int.Parse(note.Recordkey), note.DegreePlanRstrCmtAddopr, adddate, rcommentText));
                         }

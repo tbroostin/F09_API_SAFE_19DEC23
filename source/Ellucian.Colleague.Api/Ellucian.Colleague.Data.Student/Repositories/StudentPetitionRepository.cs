@@ -1,22 +1,20 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Cache;
-using Ellucian.Data.Colleague;
-using slf4net;
-using Ellucian.Web.Http.Configuration;
 using System.Collections.ObjectModel;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Student.Exceptions;
-using Ellucian.Data.Colleague.Exceptions;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -98,7 +96,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 string error = "Exception occurred while trying to retrieve student overload petitions";
-                logger.Error(ex,error);
+                logger.Error(ex, error);
                 throw new ApplicationException(error);
             }
         }
@@ -132,8 +130,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         comments = commentData.FirstOrDefault(c => c.Recordkey == petition.StpeStuPetitionCmntsIdAssocMember);
                                     if (null != comments)
                                     {
-                                        facConsentCmnts = (string.IsNullOrEmpty(comments.StpcConsentComments)) ? null : comments.StpcConsentComments.Replace(Convert.ToChar(DynamicArray.VM), '\n');
-                                        stuPetitionCmnts = (string.IsNullOrEmpty(comments.StpcPetitionComments)) ? null : comments.StpcPetitionComments.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                                        facConsentCmnts = (string.IsNullOrEmpty(comments.StpcConsentComments)) ? null : comments.StpcConsentComments.Replace(DmiString._VM, '\n');
+                                        stuPetitionCmnts = (string.IsNullOrEmpty(comments.StpcPetitionComments)) ? null : comments.StpcPetitionComments.Replace(DmiString._VM, '\n');
                                     }
 
                                     if (!string.IsNullOrEmpty(petition.StpeFacultyConsentAssocMember))

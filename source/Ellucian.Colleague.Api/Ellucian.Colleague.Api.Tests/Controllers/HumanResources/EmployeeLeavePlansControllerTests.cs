@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2012 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -463,6 +463,40 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             {
                 employeeLeavePlanServiceMock.Setup(s => s.GetEmployeeLeavePlansV2Async(null, false)).ThrowsAsync(new PermissionsException());
                 var result = await controllerUnderTest.GetEmployeeLeavePlansV2Async();
+            }
+
+            [TestMethod, ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchGenericExceptionTest()
+            {
+                employeeLeavePlanServiceMock.Setup(s => s.GetEmployeeLeavePlansV2Async(null, false)).ThrowsAsync(new Exception());
+                var result = await controllerUnderTest.GetEmployeeLeavePlansV2Async();
+            }
+        }
+
+        [TestClass]
+        public class GetEmployeeLeavePlansV3Tests : EmployeeLeavePlansControllerTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                InitializeEmployeeLeavePlansControllerTests();
+                employeeLeavePlanServiceMock.Setup(s => s.GetEmployeeLeavePlansV3Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<Dtos.HumanResources.EmployeeLeavePlan>());
+                employeeLeavePlanServiceMock.Setup(s => s.GetEmployeeLeavePlansV3Async(null, false)).ReturnsAsync(new List<Dtos.HumanResources.EmployeeLeavePlan>());
+
+            }
+
+            [TestMethod]
+            public async Task MethodExecutesNoErrors()
+            {
+                var result = await controllerUnderTest.GetEmployeeLeavePlansV3Async();
+                Assert.IsInstanceOfType(result, typeof(IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>));
+            }
+
+            [TestMethod, ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchPermissionsExceptionTest()
+            {
+                employeeLeavePlanServiceMock.Setup(s => s.GetEmployeeLeavePlansV3Async(null, false)).ThrowsAsync(new PermissionsException());
+                var result = await controllerUnderTest.GetEmployeeLeavePlansV3Async();
             }
 
             [TestMethod, ExpectedException(typeof(HttpResponseException))]

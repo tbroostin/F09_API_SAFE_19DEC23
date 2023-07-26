@@ -1,5 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -18,7 +17,6 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         private GeneralLedgerComponentDescriptionBuilder ComponentDescriptionBuilder;
         public GeneralLedgerAccountStructure accountStructure;
         private CostCenterStructure costCenterStructure;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private TestGlAccountRepository testGlAccountRepository;
         public BudgetAdjustmentAccountExclusions exclusions;
 
@@ -237,9 +235,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             AcctLength = new List<int?>() { 2, 2, 2, 2, 5, 5 },
             AcctComponentType = new List<string>() { "FD", "SO", "LO", "FC", "UN", "OB" },
             GlFullAccessRole = "GTT",
-            AcctSubStart = new List<string>() { "1" + _SM + "1", "4", "7", "10", "13" + _SM + "13" + _SM + "13" + _SM + "13", "19" + _SM + "19" + _SM + "19" + _SM + "19" + _SM + "19" },
-            AcctSubLgth = new List<string>() { "1" + _SM + "2", "2", "2", "2", "1" + _SM + "2" + _SM + "3" + _SM + "5", "1" + _SM + "2" + _SM + "3" + _SM + "4" + _SM + "5" },
-            AcctSubName = new List<string>() { "FUND" + _SM + "FUND.GROUP", "PROGRAM", "LOCATION", "ACTIVITY", "FUNCTION" + _SM + "DIVISION" + _SM + "SUBDIVISION" + _SM + "DEPARTMENT", "GL.CLASS" + _SM + "GL.SUBCLASS" + _SM + "CATEGORY" + _SM + "SUBCATEGORY" + _SM + "OBJECT" }
+            AcctSubStart = new List<string>() { "1" + DmiString._SM + "1", "4", "7", "10", "13" + DmiString._SM + "13" + DmiString._SM + "13" + DmiString._SM + "13", "19" + DmiString._SM + "19" + DmiString._SM + "19" + DmiString._SM + "19" + DmiString._SM + "19" },
+            AcctSubLgth = new List<string>() { "1" + DmiString._SM + "2", "2", "2", "2", "1" + DmiString._SM + "2" + DmiString._SM + "3" + DmiString._SM + "5", "1" + DmiString._SM + "2" + DmiString._SM + "3" + DmiString._SM + "4" + DmiString._SM + "5" },
+            AcctSubName = new List<string>() { "FUND" + DmiString._SM + "FUND.GROUP", "PROGRAM", "LOCATION", "ACTIVITY", "FUNCTION" + DmiString._SM + "DIVISION" + DmiString._SM + "SUBDIVISION" + DmiString._SM + "DEPARTMENT", "GL.CLASS" + DmiString._SM + "GL.SUBCLASS" + DmiString._SM + "CATEGORY" + DmiString._SM + "SUBCATEGORY" + DmiString._SM + "OBJECT" }
         };
 
         public CfwebDefaults CfWebDefaultsDataContract = new CfwebDefaults()

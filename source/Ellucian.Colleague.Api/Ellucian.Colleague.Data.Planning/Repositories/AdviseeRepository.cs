@@ -1,18 +1,17 @@
 ﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using slf4net;
+using Ellucian.Colleague.Data.Planning.Transactions;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Planning.Repositories;
+using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Data.Planning.Transactions;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Domain.Planning.Repositories;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Planning.Repositories
 {
@@ -31,7 +30,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
         /// </summary>
         /// <param name="id">An advisee (student) id</param>
         /// <returns>A student domain entity for that specified advisee</returns>
-        new public  async Task<Domain.Student.Entities.PlanningStudent> GetAsync(string id)
+        new public async Task<Domain.Student.Entities.PlanningStudent> GetAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -63,19 +62,25 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             }
             var watch = new Stopwatch();
             watch.Start();
-            
-            var currentPageAdvisees = await this.GetCurrentPageAsync(adviseeIds, pageSize, pageIndex);
-            
-            watch.Stop();
-            logger.Info("  STEP3.1 GetCurrentPage... completed in " + watch.ElapsedMilliseconds.ToString());
 
+            var currentPageAdvisees = await this.GetCurrentPageAsync(adviseeIds, pageSize, pageIndex);
+
+            watch.Stop();
+            logger.Info(String.Format("  STEP3.1 GetCurrentPage... completed in {0} ", watch.ElapsedMilliseconds.ToString()));
+            if (currentPageAdvisees != null)
+            {
+                logger.Info(String.Format("  STEP3.1.1 GetCurrentPage... returned {0} advisees out of {1} advisees passed", currentPageAdvisees.Count(), adviseeIds.Count()));
+            }
             watch.Restart();
 
             var advisees = currentPageAdvisees.Count() > 0 ? (await base.GetAsync(currentPageAdvisees)).ToList() : new List<Domain.Student.Entities.PlanningStudent>();
 
             watch.Stop();
-            logger.Info("  STEP3.2 Get(currentPageAdvisees)(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            logger.Info(String.Format("  STEP3.2 Get(currentPageAdvisees)(base)... completed in {0}", watch.ElapsedMilliseconds.ToString()));
+            if (advisees != null)
+            {
+                logger.Info(String.Format("  STEP3.2.1 Get(currentPageAdvisees)(base)... returned {0} planning students records", advisees.Count));
+            }
             return advisees;
         }
 
@@ -99,10 +104,13 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
             // Search PERSON using the given last, first, middle names
             var adviseeIds = await base.SearchByNameAsync(lastName, firstName, middleName);
-            
+
             watch.Stop();
             logger.Info("  STEP5.1 SearchByName(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (adviseeIds != null)
+            {
+                logger.Info("  STEP5.1.1 Returned searched Person Ids count: " + adviseeIds.Count());
+            }
             watch.Restart();
             // Filter to only return students
             adviseeIds = await base.FilterByEntityAsync("STUDENTS", adviseeIds);
@@ -110,22 +118,30 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             logger.Info("  STEP5.2 FilterByEntity(base)... completed in " + watch.ElapsedMilliseconds.ToString());
             if (adviseeIds != null)
             {
-                logger.Info("  STEP5.2 Filtered PERSONS to " + adviseeIds.Count() + " STUDENTS.");
+                logger.Info("  STEP5.2.1 Filtered PERSONS to " + adviseeIds.Count() + " STUDENTS.");
             }
 
             // If there are assigned advisees (only set if the user can only view assigned advisees), limit the list
             if (assignedAdvisees != null && assignedAdvisees.Count() > 0)
             {
+                logger.Info("Filtering student Ids to only assigned advisees");
                 adviseeIds = adviseeIds.Where(x => assignedAdvisees.Contains(x));
+                if (adviseeIds != null)
+                {
+                    logger.Info("  STEP5.2.2 Filtered advisee Ids to only assigned advisees and the count is " + adviseeIds.Count());
+                }
             }
 
             watch.Restart();
 
             var currentPageAdvisees = await this.GetCurrentPageAsync(adviseeIds, pageSize, pageIndex);
-            
+
             watch.Stop();
             logger.Info("  STEP5.3 GetCurrentPage... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (currentPageAdvisees != null)
+            {
+                logger.Info(String.Format("  STEP3.2 Get(currentPageAdvisees)(base)... returned {0} advisees ids", currentPageAdvisees.Count()));
+            }
             watch.Restart();
 
             var adviseesUnsorted = currentPageAdvisees.Count() > 0 ? (await base.GetAsync(currentPageAdvisees)).ToList() : new List<Domain.Student.Entities.PlanningStudent>();
@@ -135,12 +151,20 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             var advisees = new List<Domain.Student.Entities.PlanningStudent>();
             foreach (var id in currentPageAdvisees)
             {
-                advisees.Add(adviseesUnsorted.First(x => x.Id == id));
+                var matchedAdvisee = adviseesUnsorted.FirstOrDefault(x => x.Id == id);
+                if (matchedAdvisee != null)
+                {
+                    advisees.Add(matchedAdvisee);
+                }
+                else
+                {
+                    logger.Info(string.Format("Could not retrieve details for the Advisee {0} therefore this particular advisee is not returned", id));
+                }
             }
 
             watch.Stop();
             logger.Info("  STEP5.4 Get(currentPageAdvisees)(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            logger.Info(String.Format("  STEP5.4.1 Get(currentPageAdvisees)(base)... returned {0} planningStudent records out of {1} advisee ids on current page", advisees.Count(), currentPageAdvisees.Count()));
             return advisees;
         }
 
@@ -168,7 +192,10 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
             watch.Stop();
             logger.Info("  STEP5.1 SearchByName(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (adviseeIds != null)
+            {
+                logger.Info("  STEP5.1.1 Returned searched Person Ids count: " + adviseeIds.Count());
+            }
             watch.Restart();
             // Filter to only return students
             adviseeIds = await base.FilterByEntityAsync("STUDENTS", adviseeIds);
@@ -176,13 +203,18 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             logger.Info("  STEP5.2 FilterByEntity(base)... completed in " + watch.ElapsedMilliseconds.ToString());
             if (adviseeIds != null)
             {
-                logger.Info("  STEP5.2 Filtered PERSONS to " + adviseeIds.Count() + " STUDENTS.");
+                logger.Info("  STEP5.2.1 Filtered PERSONS to " + adviseeIds.Count() + " STUDENTS.");
             }
 
             // If there are assigned advisees (only set if the user can only view assigned advisees), limit the list
             if (assignedAdvisees != null && assignedAdvisees.Count() > 0)
             {
+                logger.Info("Filtering student Ids to only assigned advisees");
                 adviseeIds = adviseeIds.Where(x => assignedAdvisees.Contains(x));
+                if (adviseeIds != null)
+                {
+                    logger.Info("  STEP5.2.2 Filtered advisee Ids to only assigned advisees and the count is " + adviseeIds.Count());
+                }
             }
 
             watch.Restart();
@@ -191,7 +223,10 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
             watch.Stop();
             logger.Info("  STEP5.3 GetCurrentPage... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (currentPageAdvisees != null)
+            {
+                logger.Info(String.Format("  STEP3.2 Get(currentPageAdvisees)(base)... returned {0} advisees ids", currentPageAdvisees.Count()));
+            }
             watch.Restart();
 
             var adviseesUnsorted = currentPageAdvisees.Count() > 0 ? (await base.GetAsync(currentPageAdvisees)).ToList() : new List<Domain.Student.Entities.PlanningStudent>();
@@ -201,12 +236,21 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             var advisees = new List<Domain.Student.Entities.PlanningStudent>();
             foreach (var id in currentPageAdvisees)
             {
-                advisees.Add(adviseesUnsorted.First(x => x.Id == id));
+                var matchedAdvisee = adviseesUnsorted.FirstOrDefault(x => x.Id == id);
+                if (matchedAdvisee != null)
+                {
+                    advisees.Add(matchedAdvisee);
+                }
+                else
+                {
+                    logger.Info(string.Format("Could not retrieve details for the Advisee {0} therefore this particular advisee is not returned", id));
+                }
+
             }
 
             watch.Stop();
             logger.Info("  STEP5.4 Get(currentPageAdvisees)(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            logger.Info(String.Format("  STEP5.4.1 Get(currentPageAdvisees)(base)... returned {0} planningStudent records out of {1} advisee ids on current page", advisees.Count(), currentPageAdvisees.Count()));
             return advisees;
         }
         /// <summary>
@@ -239,6 +283,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             string[] studentIdsReviewRequestedSorted = new string[] { };
             if (studentIdsReviewRequested != null && studentIdsReviewRequested.Count() > 0)
             {
+                logger.Info("Count of student Ids requested for degree plan review is: " + studentIdsReviewRequested.Count());
                 watch.Restart();
 
                 searchString = "BY LAST.NAME BY FIRST.NAME BY MIDDLE.NAME";
@@ -246,6 +291,18 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
                 watch.Stop();
                 logger.Info("    STEPX.3.2 SELECT PERSON WITH " + searchString + "... completed in " + watch.ElapsedMilliseconds.ToString());
+                if (studentIdsReviewRequestedSorted != null)
+                {
+                    logger.Info(string.Format("Count of PERSON records read for the list of students requested for degree plan review is {0}", studentIdsReviewRequestedSorted.Count()));
+                }
+                else
+                {
+                    logger.Info("No PERSON records were read for student ids requested for degree plan review");
+                }
+            }
+            else
+            {
+                logger.Info("There are no students waiting for degree plan review");
             }
 
             watch.Restart();
@@ -255,7 +312,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             string[] studentIds = await DataReader.SelectAsync("STUDENTS", adviseeIds.ToArray(), string.Empty);
             watch.Stop();
             logger.Info("    STEPX.3.3 SELECT STUDENTS " + "... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            logger.Info(String.Format("Count of Student records are {0} for the list of advisees passed {1} ", studentIds.Count(), adviseeIds.Count()));
             // Next sort them by name
             watch.Restart();
             searchString = "BY LAST.NAME BY FIRST.NAME BY MIDDLE.NAME";
@@ -263,7 +320,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
             watch.Stop();
             logger.Info("    STEPX.3.3.1 SELECT PERSON WITH " + searchString + "... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            logger.Info(String.Format("Count of PERSON records are {0}", studentIdsSorted.Count()));
             // Finally, merge the two lists of IDs, removing duplicates.
             var studentIdsMerged = studentIdsReviewRequestedSorted != null && studentIdsReviewRequestedSorted.Count() != 0 ? studentIdsReviewRequestedSorted.Concat(studentIdsSorted) : studentIdsSorted.ToList();
             var studentIdsMergedNoDupes = new List<string>();
@@ -307,6 +364,10 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             string[] matchingAdviseeIds = await DataReader.SelectAsync("STUDENT.ADVISEMENT", searchString, advisorIds.ToArray());
 
             IEnumerable<string> adviseeIds = matchingAdviseeIds.AsEnumerable().Distinct();
+            if (adviseeIds != null)
+            {
+                logger.Info(String.Format("Count of STUDENT.ADVISEMENT records found for given advisor Ids are {0} ", adviseeIds.Count()));
+            }
 
             // If there are assigned advisees (only set if the user can only view assigned advisees), limit the list
             if (assignedAdvisees != null && assignedAdvisees.Count() > 0)
@@ -316,20 +377,30 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
 
             watch.Stop();
             logger.Info("Student Advisement select... completed in " + watch.ElapsedMilliseconds.ToString());
+            if (adviseeIds != null)
+            {
+                logger.Info(String.Format("Count of assigned STUDENT.ADVISEMENT records found for given advisor Ids are {0} ", adviseeIds.Count()));
+            }
             watch.Restart();
 
             var currentPageAdvisees = await this.GetCurrentPageAsync(adviseeIds, pageSize, pageIndex);
 
             watch.Stop();
             logger.Info("GetCurrentPage... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (currentPageAdvisees != null)
+            {
+                logger.Info(String.Format("Count of Current page advisees for advisor Ids search is {0} ", currentPageAdvisees.Count()));
+            }
             watch.Restart();
 
             var advisees = currentPageAdvisees.Count() > 0 ? (await base.GetAsync(currentPageAdvisees)).ToList() : new List<Domain.Student.Entities.PlanningStudent>();
 
             watch.Stop();
             logger.Info("Get(currentPageAdvisees)(base)... completed in " + watch.ElapsedMilliseconds.ToString());
-
+            if (advisees != null)
+            {
+                logger.Info(String.Format("Count of Current page advisees planningStudent records for advisor Ids search is {0} ", advisees.Count()));
+            }
             return advisees;
         }
 

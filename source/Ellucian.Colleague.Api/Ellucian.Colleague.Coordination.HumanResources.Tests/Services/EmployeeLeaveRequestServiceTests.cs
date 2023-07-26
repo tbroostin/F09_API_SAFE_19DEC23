@@ -29,6 +29,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
         public Mock<IPersonBaseRepository> personBaseRepositoryMock;
         public Mock<IEmployeeLeaveRequestRepository> employeeLeaveRequestRepositoryMock;
+        public Mock<ILeavePlansRepository> leavePlansRepositoryMock;
+        public Mock<IEmployeeLeavePlansRepository> employeeLeavePlansRepositoryMock;
+        public Mock<IHumanResourcesReferenceDataRepository> humanResourcesReferenceDataRepositoryMock;
+        public Mock<IPersonPositionWageRepository> personPositionWageRepositoryMock;
+        public Mock<IPersonEmploymentStatusRepository> personEmploymentStatusRepositoryMock;
+        public Mock<IEarningsTypeRepository> earningsTypeRepositoryMock;
         public TestEmployeeLeaveRequestRepository testEmployeeLeaveRequestRepository;
         private EmployeeLeaveRequestService employeeLeaveRequestService;
         private ICurrentUserFactory employeeLeaveRequestUserFactory;
@@ -50,6 +56,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             supervisorsRepositoryMock = new Mock<ISupervisorsRepository>();
             personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
             employeeLeaveRequestRepositoryMock = new Mock<IEmployeeLeaveRequestRepository>();
+            leavePlansRepositoryMock = new Mock<ILeavePlansRepository>();
+            employeeLeavePlansRepositoryMock = new Mock<IEmployeeLeavePlansRepository>();
+            humanResourcesReferenceDataRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
+            personPositionWageRepositoryMock = new Mock<IPersonPositionWageRepository>();
+            personEmploymentStatusRepositoryMock = new Mock<IPersonEmploymentStatusRepository>();
+            earningsTypeRepositoryMock = new Mock<IEarningsTypeRepository>();
             testEmployeeLeaveRequestRepository = new TestEmployeeLeaveRequestRepository();
             employeeLeaveRequestUserFactory = new EmployeeLeaveRequestUserFactory();
             timeApproverUserFactory = new TimeApproverUserFactory();
@@ -76,9 +88,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             supervisorsRepositoryMock.Setup(r => r.GetSuperviseesBySupervisorAsync(It.IsAny<string>(), null)).ReturnsAsync(new string[] { "0011560" });
 
+            earningsTypeRepositoryMock.Setup(et => et.GetEarningsTypesAsync())
+            .Returns(testEmployeeLeaveRequestRepository.GetEarningsTypeAsync());
+
             employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
                 personBaseRepositoryMock.Object,
                 employeeLeaveRequestRepositoryMock.Object,
+                leavePlansRepositoryMock.Object,
+                employeeLeavePlansRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
+                personPositionWageRepositoryMock.Object,
+                personEmploymentStatusRepositoryMock.Object,
+                earningsTypeRepositoryMock.Object,
                 adapterRegistryMock.Object,
                 employeeLeaveRequestUserFactory,
                 roleRepositoryMock.Object,
@@ -104,6 +125,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             employeeLeaveRequestRepositoryMock.Setup(elr => elr.CreateLeaveRequestAsync(It.IsAny<LeaveRequest>()))
                 .Returns<LeaveRequest>((lr) => testEmployeeLeaveRequestRepository.CreateLeaveRequestAsync(lr));
 
+            earningsTypeRepositoryMock.Setup(et => et.GetEarningsTypesAsync())
+                .Returns(testEmployeeLeaveRequestRepository.GetEarningsTypeAsync());
+                
+
             leaveRequestDtoComparer = this.LeaveRequestComparer();
         }
 
@@ -117,6 +142,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             employeeLeaveRequestRepositoryMock = null;
             personBaseRepositoryMock = null;
             supervisorsRepositoryMock = null;
+            leavePlansRepositoryMock = null;
+            employeeLeavePlansRepositoryMock = null;
+            humanResourcesReferenceDataRepositoryMock = null;
+            personPositionWageRepositoryMock = null;
+            personEmploymentStatusRepositoryMock = null;
         }
         #endregion
 
@@ -593,6 +623,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
               personBaseRepositoryMock.Object,
               testEmployeeLeaveRequestRepository,
+              leavePlansRepositoryMock.Object,
+                employeeLeavePlansRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
+                personPositionWageRepositoryMock.Object,
+                personEmploymentStatusRepositoryMock.Object,
+                earningsTypeRepositoryMock.Object,
               adapterRegistryMock.Object,
               employeeLeaveRequestUserFactory,
               roleRepositoryMock.Object,
@@ -624,6 +660,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
                 personBaseRepositoryMock.Object,
                 testEmployeeLeaveRequestRepository,
+                leavePlansRepositoryMock.Object,
+                employeeLeavePlansRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
+                personPositionWageRepositoryMock.Object,
+                personEmploymentStatusRepositoryMock.Object,
+                earningsTypeRepositoryMock.Object,
                 adapterRegistryMock.Object,
                 timeApproverUserFactory,
                 roleRepositoryMock.Object,
@@ -649,6 +691,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
                 personBaseRepositoryMock.Object,
                 testEmployeeLeaveRequestRepository,
+                leavePlansRepositoryMock.Object,
+                employeeLeavePlansRepositoryMock.Object,
+                humanResourcesReferenceDataRepositoryMock.Object,
+                personPositionWageRepositoryMock.Object,
+                personEmploymentStatusRepositoryMock.Object,
+                earningsTypeRepositoryMock.Object,
                 adapterRegistryMock.Object,
                 proxyTimeApproverUserFactory,
                 roleRepositoryMock.Object,

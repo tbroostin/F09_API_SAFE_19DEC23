@@ -1,4 +1,4 @@
-﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Data.HumanResources.Repositories;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -28,6 +29,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private readonly ISupervisorsRepository supervisorsRepository;
         private readonly IPersonBaseRepository personBaseRepository;
         private readonly IEmployeeLeaveRequestRepository employeeLeaveRequestRepository;
+        private readonly ILeavePlansRepository leavePlansRepository;
+        private readonly IEmployeeLeavePlansRepository employeeLeavePlansRepository;
+        private readonly IHumanResourcesReferenceDataRepository humanResourcesReferenceDataRepository;
+        private readonly IPersonPositionWageRepository personPositionWageRepository;
+        private readonly IPersonEmploymentStatusRepository personEmploymentStatusRepository;
+        private readonly IEarningsTypeRepository earningsTypeRepository;
 
         /// <summary>
         /// Parametrized constructor for the EmployeeLeaveRequestService
@@ -42,6 +49,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public EmployeeLeaveRequestService(ISupervisorsRepository supervisorsRepository,
             IPersonBaseRepository personBaseRepository,
             IEmployeeLeaveRequestRepository employeeLeaveRequestRepository,
+            ILeavePlansRepository leavePlansRepository,
+            IEmployeeLeavePlansRepository employeeLeavePlansRepository,
+            IHumanResourcesReferenceDataRepository humanResourcesReferenceDataRepository,
+            IPersonPositionWageRepository personPositionWageRepository,
+            IPersonEmploymentStatusRepository personEmploymentStatusRepository,
+            IEarningsTypeRepository earningsTypeRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -50,6 +63,59 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             this.supervisorsRepository = supervisorsRepository;
             this.personBaseRepository = personBaseRepository;
             this.employeeLeaveRequestRepository = employeeLeaveRequestRepository;
+            this.leavePlansRepository = leavePlansRepository;
+            this.employeeLeavePlansRepository = employeeLeavePlansRepository;
+            this.humanResourcesReferenceDataRepository = humanResourcesReferenceDataRepository;
+            this.personPositionWageRepository = personPositionWageRepository;
+            this.personEmploymentStatusRepository = personEmploymentStatusRepository;
+            this.earningsTypeRepository = earningsTypeRepository;
+        }
+
+        private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.LeavePlan>> GetLeavePlansV2Async(bool bypassCache)
+        {
+            logger.Debug("********* Start - Service to get leave plans - Start *********");
+            var leaveplans = await leavePlansRepository.GetLeavePlansV2Async(bypassCache);
+            logger.Debug("********* End - Service to get leave plans - End *********");
+            return leaveplans;
+        }
+
+        //get all leave type categories from reference repository
+        private IEnumerable<LeaveType> leaveTypes = null;
+        private async Task<IEnumerable<LeaveType>> GetLeaveCategoriesAsync(bool bypassCache)
+        {
+            logger.Debug("********* Start - Service to get leave categories - Start *********");
+            if (leaveTypes == null)
+            {
+                leaveTypes = await humanResourcesReferenceDataRepository.GetLeaveTypesAsync(bypassCache);
+            }
+            logger.Debug("********* End - Service to get leave categories - End *********");
+            return leaveTypes;
+        }
+
+        //get all earnings types from reference repository
+        private IEnumerable<EarningsType> earningTypes = null;
+        private async Task<IEnumerable<EarningsType>> GetEarningTypesAsync()
+        {
+            logger.Debug("********* Start - Service to get earning types - Start *********");
+            if (earningTypes == null)
+            {
+                earningTypes = await earningsTypeRepository.GetEarningsTypesAsync();
+            }
+            logger.Debug("********* End - Service to get earning types - End *********");
+            return earningTypes;
+        }
+
+        //get all earnings types from reference repository
+        private IEnumerable<EarningType2> earningTypes2 = null;
+        private async Task<IEnumerable<EarningType2>> GetEarningTypes2Async(bool bypassCache)
+        {
+            logger.Debug("********* Start - Service to get earning types - Start *********");
+            if (earningTypes2 == null)
+            {
+                earningTypes2 = await humanResourcesReferenceDataRepository.GetEarningTypesAsync(bypassCache);
+            }
+            logger.Debug("********* End - Service to get earning types - End *********");
+            return earningTypes2;
         }
 
         /// <summary>
@@ -541,6 +607,301 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return newLeaveRequestCommentDTO;
         }
 
+        /// <summary>
+        /// Gets all leave types for leave requests for current user
+        /// </summary>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>List of LeaveRequestLeaveTypes DTOs</returns>
+        public async Task<IEnumerable<Dtos.HumanResources.LeaveRequestLeaveTypes>> GetLeaveTypesForLeaveRequestAsync(string effectivePersonId = null)
+        {
+
+            if (string.IsNullOrEmpty(effectivePersonId))
+            {
+                effectivePersonId = CurrentUser.PersonId;
+            }
+
+            if (effectivePersonId != CurrentUser.PersonId)
+            {
+                logger.Debug("Current user doesn't have the permissions to access the requested data");
+                throw new PermissionsException("Current user doesn't have the permissions to access the requested data");
+            }
+
+            logger.Debug("Leave types will be retrieved for the person :- " + effectivePersonId);
+
+            var leavePlans = await leavePlansRepository.GetLeavePlansV2Async(false);
+            var leaveTypes = await GetLeaveCategoriesAsync(false);
+            var earningTypes = await GetEarningTypesAsync();
+            var earningTypes2 = await GetEarningTypes2Async(false);
+            var today = DateTime.Today;
+            var empployeeLeavePlansDtos = new List<Dtos.HumanResources.EmployeeLeavePlan>();
+
+            var employeeIds = new List<string>() { effectivePersonId };
+
+            var employeeLeavePlansTask = employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(employeeIds.Distinct(), leavePlans, leaveTypes, earningTypes2, true);
+
+            var earningsTypeGroupDictionary = await humanResourcesReferenceDataRepository.GetEarningsTypesGroupsAsync();
+            var adapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EarningsTypeGroup, Dtos.HumanResources.EarningsTypeGroup>();
+            var earningsTypeGroupDtos = earningsTypeGroupDictionary.Values.Select(etg => adapter.MapToType(etg));
+
+            var personPositionWagesTask = personPositionWageRepository.GetPersonPositionWagesAsync(employeeIds, null);
+
+            var earningTypeGroupsTask = humanResourcesReferenceDataRepository.GetEarningsTypesGroupsAsync();
+
+            var personEmploymentStatusesTask = personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(employeeIds, null);
+
+            await Task.WhenAll(employeeLeavePlansTask, personPositionWagesTask, earningTypeGroupsTask, personEmploymentStatusesTask);
+
+            var personPositionWages = personPositionWagesTask.Result;
+            var earningTypeGroups = earningTypeGroupsTask.Result;
+            var personEmploymentStatuses = personEmploymentStatusesTask.Result;
+            var employeeLeavePlans = employeeLeavePlansTask.Result;
+
+
+            if (personPositionWages == null || !personPositionWages.Any())
+            {
+                logger.Error("Error occurred while retrieving all colleague person position wages");
+                throw new ApplicationException("Error occurred while retrieving all colleague person position wages");
+            }
+
+            if (earningTypeGroups == null || !earningTypeGroups.Any())
+            {
+                logger.Error("Error occurred while retrieving earning type groups.");
+                throw new ApplicationException("Error occurred while retrieving earning type groups.");
+            }
+
+            if (personEmploymentStatuses == null || !personEmploymentStatuses.Any())
+            {
+                logger.Error("Error occurred while retrieving person employment statuses.");
+                throw new ApplicationException("Error occurred while retrieving person employment statuses.");
+            }
+
+            if (employeeLeavePlans == null || !employeeLeavePlans.Any())
+            {
+                logger.Error("Error occurred while retrieving employee leave plans.");
+                throw new ApplicationException("Error occurred while retrieving employee leave plans.");
+            }
+
+            //Filer the Leave plan
+            var filteredLeave = (employeeLeavePlans != null || employeeLeavePlans.Any()) ? employeeLeavePlans.ToList().FindAll(x => x.EmployeeId.Equals(effectivePersonId) &&
+                                (x.StartDate <= today && (x.EndDate ?? today) >= today)
+                                ) : null;
+
+            if (filteredLeave != null)
+            {
+                var employeeLeavePlansEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>();
+                empployeeLeavePlansDtos = filteredLeave.Select(lp => employeeLeavePlansEntityToDtoAdapter.MapToType(lp)).ToList();
+            }
+
+            var personEmploymentStatusForLoggedinUser = personEmploymentStatuses.Where(p => p.PersonId == effectivePersonId &&
+                                                        (p.StartDate <= today && (p.EndDate >= today || p.EndDate == null)));
+
+            string primaryPosition = (personEmploymentStatusForLoggedinUser != null && personEmploymentStatusForLoggedinUser.Any(pes => pes != null)) ? personEmploymentStatusForLoggedinUser.Where(pes => pes != null).FirstOrDefault().PrimaryPositionId : string.Empty;
+
+            // Fetching the person position wages based on the primary position
+            var personPrimaryPositionWages = personPositionWages.Where(x => x.PositionId == primaryPosition).ToList();
+
+            var personPositionWageAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.PersonPositionWage, Dtos.HumanResources.PersonPositionWage>();
+            var personPositionWageDtos = personPrimaryPositionWages.Select(ppw => personPositionWageAdapter.MapToType(ppw));
+
+            var earningTypesAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EarningsType, Dtos.HumanResources.EarningsType>();
+            var earningTypesDtos = earningTypes.Select(et => earningTypesAdapter.MapToType(et));
+
+            List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes> sortedLeaveTypes = new List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes>();
+
+            if (employeeLeavePlans != null)
+            {
+                var sickPlan = empployeeLeavePlansDtos.Where(lp => lp.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.Sick).FirstOrDefault();
+                var vacationPlan = empployeeLeavePlansDtos.Where(lp => lp.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.Vacation).FirstOrDefault();
+                var otherPlans = empployeeLeavePlansDtos.Where(lp => lp.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.Compensatory || lp.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.None).ToList();
+
+                List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes> otherLeaveTypes = new List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes>();
+
+                if (otherPlans.Any())
+                {
+                    otherLeaveTypes = GetLeaveDescriptionFromEarningTypeGroup(otherPlans, earningTypesDtos, personPositionWageDtos, earningsTypeGroupDtos, today);
+                }
+
+                // Adding Sick Leave Type at top if there is any active Sick Leave Plan
+                if (sickPlan != null)
+                {
+                    string sickLeaveDescription = Dtos.HumanResources.LeaveTypeCategory.Sick.ToString();
+                    sortedLeaveTypes.Add(new Domain.HumanResources.Entities.LeaveRequestLeaveTypes(sickPlan.Id,
+                        sickLeaveDescription,
+                        sickPlan.CurrentPlanYearBalance,
+                        sickPlan.LeaveAllowedDate,
+                        sickPlan.StartDate,
+                        sickPlan.EndDate,
+                        sickPlan.AccrualMethod,
+                        sickPlan.CurrentPlanYearStartDate,
+                        sickPlan.CurrentPlanYearEndDate));
+                }
+
+                // Adding Vacation Leave Type after Sick if there is any any active Vacation Leave Plan
+                if (vacationPlan != null)
+                {
+                    string vacationLeaveDescription = Dtos.HumanResources.LeaveTypeCategory.Vacation.ToString();
+                    sortedLeaveTypes.Add(new Domain.HumanResources.Entities.LeaveRequestLeaveTypes(vacationPlan.Id,
+                        vacationLeaveDescription,
+                        vacationPlan.CurrentPlanYearBalance,
+                        vacationPlan.LeaveAllowedDate,
+                        vacationPlan.StartDate,
+                        vacationPlan.EndDate,
+                        vacationPlan.AccrualMethod,
+                        vacationPlan.CurrentPlanYearStartDate,
+                        vacationPlan.CurrentPlanYearEndDate));
+                }
+
+                //Sorting other leave planes and adding same after Sick and Vaction leave plans
+                sortedLeaveTypes.AddRange(otherLeaveTypes);
+
+            }
+
+            var leaveRequestLeaveTypesEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.LeaveRequestLeaveTypes, Dtos.HumanResources.LeaveRequestLeaveTypes>();
+
+            var leaveRequestLeavetypesDTOs = sortedLeaveTypes.Select(lre => leaveRequestLeaveTypesEntityToDtoAdapter.MapToType(lre)).ToList();
+
+            return leaveRequestLeavetypesDTOs;
+        }
+
+        private List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes> GetLeaveDescriptionFromEarningTypeGroup(List<Dtos.HumanResources.EmployeeLeavePlan> otherPlans, IEnumerable<Dtos.HumanResources.EarningsType> earningsTypes,
+            IEnumerable<Dtos.HumanResources.PersonPositionWage> personPositionWages, IEnumerable<Dtos.HumanResources.EarningsTypeGroup> earningsTypeGroups, DateTime browserDateTimeOffset)
+        {
+            List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes> leaveTypes = new List<Domain.HumanResources.Entities.LeaveRequestLeaveTypes>();
+
+            var CurrentBrowserDate = browserDateTimeOffset;
+
+            var activeOtherLeavePlans = otherPlans.Where(op => op.StartDate <= CurrentBrowserDate && (op.EndDate >= CurrentBrowserDate || op.EndDate == null)).ToList();
+
+
+            logger.Info("GetLeaveDescriptionFromEarningTypeGroup: get leave desc from ETGR");
+
+            // Filter and add only cmp time TAKEN leave plans (Based on the EarningsMethod)
+            // Assumption: At a given time, there's only one active LP of a given category                
+            bool addCompTimeFlag = false;
+            List<string> compTimeEarningsTypeIds = new List<string>();
+            var compTimePlans = activeOtherLeavePlans.Where(lp => lp.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.Compensatory).ToList();
+
+            foreach (var item in compTimePlans)
+            {
+                compTimeEarningsTypeIds.AddRange(item.EarningTypeIDList);
+            }
+            if (compTimeEarningsTypeIds.Any())
+            {
+                addCompTimeFlag = earningsTypes.Where(c => compTimeEarningsTypeIds.Contains(c.Id) && c.Method == Dtos.HumanResources.EarningsMethod.Taken).Any();
+            }
+
+            logger.Info("Comp time earnings type IDs: " + compTimeEarningsTypeIds.ToString());
+            logger.Info("Add Comp Time Flag: " + addCompTimeFlag);
+
+            foreach (var wage in personPositionWages)
+            {
+
+                var earningsTypeGroup = earningsTypeGroups.FirstOrDefault(etg => etg.EarningsTypeGroupId == wage.EarningsTypeGroupId);
+
+                if (earningsTypeGroup != null &&
+                    earningsTypeGroup.EarningsTypeGroupItems != null &&
+                    earningsTypeGroup.IsEnabledForTimeManagement)
+                {
+                    foreach (var group in earningsTypeGroup.EarningsTypeGroupItems)
+                    {
+                        //find the matching (active) earningsType object, 
+                        //its ok if its a leave earnings type
+                        //but don't add sick/vacation types since they're handled elsewhere. 
+
+                        Dtos.HumanResources.EarningsType earnType = null;
+                        // Add comp time leave plans
+                        if (addCompTimeFlag)
+                        {
+                            earnType = earningsTypes.FirstOrDefault(et =>
+                            et.Id == group.EarningsTypeId
+                            && et.IsActive);
+                        }
+                        else
+                        {
+                            earnType = earningsTypes.FirstOrDefault(et =>
+                            et.Id == group.EarningsTypeId
+                            && et.IsActive
+                            && et.LeaveTypeCategory == Dtos.HumanResources.LeaveTypeCategory.None);
+                        }
+
+                        if (earnType != null)
+                        {
+                            logger.Info("Earn Type: " + earnType.Id);
+                            if (earnType.Category == Dtos.HumanResources.EarningsCategory.Leave)
+                            {
+                                Dtos.HumanResources.EmployeeLeavePlan activeLeavePlan = activeOtherLeavePlans.FirstOrDefault(lp => lp.EarningTypeIDList.Contains(earnType.Id));
+                                if (activeLeavePlan != null)
+                                {
+                                    logger.Info("Active Leave Plan " + activeLeavePlan.Id + " - " + activeLeavePlan.LeavePlanDescription + " found from earn type.");
+                                    //found a matching leave plan for the leave earnings type. we can create the worktypeItem
+                                    if (activeLeavePlan.LeavePlanTypeCategory == Dtos.HumanResources.LeaveTypeCategory.Compensatory)
+                                    {
+                                        // Fetch the EarningTypeIDList of the current compTime leave plan (an employee can have many compTime LPs for a given pay period but only one is active on a given date)
+                                        compTimeEarningsTypeIds = activeLeavePlan.EarningTypeIDList.ToList();
+
+                                        if (addCompTimeFlag)
+                                        {
+                                            // List of earningsTypes for the current compTime LP whose earningsMethod is P in EARN form
+                                            var ernIdsFromEtgr = earningsTypes.Where(c => compTimeEarningsTypeIds.Contains(c.Id) && c.Method == Dtos.HumanResources.EarningsMethod.Taken).Select(x => x.Id).ToList();
+                                            if (ernIdsFromEtgr.Any())
+                                            {
+                                                // check if at least one the earningsTypes present in ernIdsFromEtgr is present in ETGR form, if yes, fetch its description from ETGR and add it to the list of WorkTypeItems
+                                                var fromETGR = earningsTypeGroup.EarningsTypeGroupItems.Where(x => ernIdsFromEtgr.Contains(x.EarningsTypeId));
+
+                                                if (fromETGR.Any())
+                                                {
+                                                    // get the description of the earningsType from the ETGR form
+                                                    string compTimeDesc = fromETGR.FirstOrDefault().Description;
+                                                    leaveTypes.Add(new Domain.HumanResources.Entities.LeaveRequestLeaveTypes(activeLeavePlan.Id,
+                                                        compTimeDesc,
+                                                        activeLeavePlan.CurrentPlanYearBalance,
+                                                        activeLeavePlan.LeaveAllowedDate,
+                                                        activeLeavePlan.StartDate,
+                                                        activeLeavePlan.EndDate,
+                                                        activeLeavePlan.AccrualMethod,
+                                                        activeLeavePlan.CurrentPlanYearStartDate,
+                                                        activeLeavePlan.CurrentPlanYearEndDate));
+                                                    activeOtherLeavePlans.Remove(activeLeavePlan);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Adding group description in case of Leave type category None
+                                        leaveTypes.Add(new Domain.HumanResources.Entities.LeaveRequestLeaveTypes(activeLeavePlan.Id,
+                                            group.Description,
+                                            activeLeavePlan.CurrentPlanYearBalance,
+                                            activeLeavePlan.LeaveAllowedDate,
+                                            activeLeavePlan.StartDate,
+                                            activeLeavePlan.EndDate,
+                                            activeLeavePlan.AccrualMethod,
+                                            activeLeavePlan.CurrentPlanYearStartDate,
+                                            activeLeavePlan.CurrentPlanYearEndDate));
+                                        activeOtherLeavePlans.Remove(activeLeavePlan);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (leaveTypes != null && leaveTypes.Any())
+            {
+                foreach (var lt in leaveTypes)
+                {
+                    if (lt != null)
+                    {
+                        logger.Info("Leave Type to be returned: " + lt.PerLeaveId + " - " + lt.LeaveDescription);
+                    }
+                }
+            }
+            logger.Info("GetLeaveDescriptionFromEarningTypeGroup : returning Leave Types");
+            return leaveTypes.OrderBy(x => x.LeaveDescription).ToList();
+        }
+
+
         #region Helper_Methods
         /// <summary>
         /// Helper method that creates a LeaveRequestHelper used for updating an existing leave request record
@@ -715,7 +1076,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             logger.Debug(string.Format("Permission checks cleared for employee  {0}", effectivePersonId));
             // Get all the supervisorIds for the input positionId
             var supervisorIds = await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
-            logger.Debug("Supervisees by primary position retrieved for supervisor {0}",effectivePersonId);
+            logger.Debug("Supervisees by primary position retrieved for supervisor {0}", effectivePersonId);
 
             List<PersonBase> personBaseEntities = new List<PersonBase>();
             if (supervisorIds != null && supervisorIds.Any())
@@ -724,7 +1085,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 if (personEntities != null && personEntities.Any())
                 {
                     personBaseEntities = personEntities.ToList();
-                    foreach(var personBaseEntity in personBaseEntities)
+                    foreach (var personBaseEntity in personBaseEntities)
                     {
                         var personDisplayName = await employeeLeaveRequestRepository.GetPersonNameFromNameHierarchy(personBaseEntity);
                         personBaseEntity.PersonDisplayName = personDisplayName;
@@ -760,4 +1121,3 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         #endregion
     }
 }
-

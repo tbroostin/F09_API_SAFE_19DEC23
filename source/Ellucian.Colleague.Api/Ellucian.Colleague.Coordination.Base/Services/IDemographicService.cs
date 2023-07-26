@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -20,7 +20,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         Task<IEnumerable<Ellucian.Colleague.Dtos.PersonFilter>> GetPersonFiltersAsync(bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.PersonFilter> GetPersonFilterByGuidAsync(string guid);
-        
+
+        Task<Ellucian.Colleague.Dtos.PersonFilter2> GetPersonFilterPersonsByGuidAsync(string guid);
+
         Task<IEnumerable<Ellucian.Colleague.Dtos.PrivacyStatus>> GetPrivacyStatusesAsync(bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.PrivacyStatus> GetPrivacyStatusByGuidAsync(string guid);
 

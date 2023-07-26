@@ -27,7 +27,7 @@ namespace Ellucian.Colleague.Api.Utility
         /// API config version
         /// MUST be incremented everytime any setting/property is added/removed/renamed in any of the setting groups.
         /// </summary>
-        public const string ApiConfigVersion = "1.0";
+        public const string ApiConfigVersion = "2.0";
 
         /// <summary>
         /// config service client settings
@@ -398,7 +398,7 @@ namespace Ellucian.Colleague.Api.Utility
                 Serilog.Events.LogEventLevel newLogLevel;
                 if (Enum.TryParse(newLogLevelString, true, out newLogLevel))
                 {
-                    var newSettings = new Settings(currentSettings.ColleagueSettings, newLogLevel) { ProfileName = currentSettings.ProfileName };
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.OauthSettings, newLogLevel) { ProfileName = currentSettings.ProfileName };
                     currentSettings = newSettings; 
                     changesOccurred = true;
                     logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", logLevelSettingName, oldLogLevel, newLogLevelString));
@@ -423,7 +423,7 @@ namespace Ellucian.Colleague.Api.Utility
 
                 if (!string.IsNullOrWhiteSpace(newApiProfileNameString))
                 {
-                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.LogLevel) { ProfileName = newApiProfileNameString };
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.OauthSettings, currentSettings.LogLevel) { ProfileName = newApiProfileNameString };
                     currentSettings = newSettings;
                     changesOccurred = true;
                     logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", apiProfileNameSettingName, oldApiProfileName, newApiProfileNameString));
@@ -459,7 +459,7 @@ namespace Ellucian.Colleague.Api.Utility
 
                     var newColleagueSettings = currentSettings.ColleagueSettings;
                     newColleagueSettings.DmiSettings.SharedSecret = decryptedNewApiSharedSecret;
-                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.LogLevel) { ProfileName = currentSettings.ProfileName };
+                    var newSettings = new Settings(currentSettings.ColleagueSettings, currentSettings.OauthSettings, currentSettings.LogLevel) { ProfileName = currentSettings.ProfileName };
                     currentSettings = newSettings;
                     changesOccurred = true;
                     logger.Info(string.Format("Staging file changes: {0}. Old value={1}; new value={2}", apiSharedSecretSettingName, "*notshown*", "*notshown*"));

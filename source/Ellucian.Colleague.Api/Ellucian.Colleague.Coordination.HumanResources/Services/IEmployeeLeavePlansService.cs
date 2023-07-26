@@ -37,6 +37,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansV2Async(string effectivePersonId = null, bool bypassCache = false);
 
         /// <summary>
+        /// Gets current user leave plans V3
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansV3Async(string effectivePersonId = null, bool bypassCache = false);
+
+        /// <summary>
         /// Gets 
         /// </summary>
         /// <param name="criteria"></param>

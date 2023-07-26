@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliatesusing System
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliatesusing System
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -24,7 +24,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class EmergencyInformationRepository : BaseColleagueRepository, IEmergencyInformationRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private RepositoryException repoException = new RepositoryException();
 
         public EmergencyInformationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
@@ -59,12 +58,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 emergencyInfoEntity.ConfirmedDate = emergencyInfoContract.EmerLastConfirmedDate;
 
                 emergencyInfoEntity.OptOut = string.Equals(emergencyInfoContract.EmerOptout, "Y", StringComparison.OrdinalIgnoreCase);
-                
+
                 // We need to convert value marks to new line characters because we want to maintain any formatting
                 // (line-to-line) that the user may have entered.
                 if (!string.IsNullOrEmpty(emergencyInfoContract.EmerInsuranceInfo))
                 {
-                    var insuranceInfo = emergencyInfoContract.EmerInsuranceInfo.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                    var insuranceInfo = emergencyInfoContract.EmerInsuranceInfo.Replace(DmiString._VM, '\n');
                     emergencyInfoEntity.InsuranceInformation = insuranceInfo;
                 }
 
@@ -75,10 +74,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // have entered.
                 if (!string.IsNullOrEmpty(emergencyInfoContract.EmerAddnlInformation))
                 {
-                    var additionalInfo = emergencyInfoContract.EmerAddnlInformation.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                    var additionalInfo = emergencyInfoContract.EmerAddnlInformation.Replace(DmiString._VM, '\n');
                     emergencyInfoEntity.AdditionalInformation = additionalInfo;
                 }
-                
+
                 if (emergencyInfoContract.EmerContactsEntityAssociation != null)
                 {
                     foreach (var emergencyContact in emergencyInfoContract.EmerContactsEntityAssociation)
@@ -94,7 +93,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             emergencyContactEntity.IsEmergencyContact = false;
                         }
-                        else 
+                        else
                         //(emergencyContact.EmerEmergencyContactFlagAssocMember == "Y" or null or empty)
                         {
                             emergencyContactEntity.IsEmergencyContact = true;
@@ -121,7 +120,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         if (GetHealthConditions().ValsEntityAssociation.Select(x => x.ValInternalCodeAssocMember).Contains(healthCondition))
                         {
-                           emergencyInfoEntity.AddHealthCondition(healthCondition);
+                            emergencyInfoEntity.AddHealthCondition(healthCondition);
                         }
                         else
                         {
@@ -164,20 +163,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 );
         }
 
-        
+
         /// <summary>
         /// This method updates emergency information for a person.
         /// </summary>
         /// <param name="emergencyInformation">Pass in an EmergencyInformation object containing all the emergency information for a person.</param>
         /// <returns>Returns an EmergencyInformation object containing this person's updated emergency information from the database.</returns>
-        public EmergencyInformation UpdateEmergencyInformation(EmergencyInformation emergencyInformation) 
+        public EmergencyInformation UpdateEmergencyInformation(EmergencyInformation emergencyInformation)
         {
             var updateEmergencyInformationRequest = new Ellucian.Colleague.Data.Base.Transactions.UpdateEmergencyInformationRequest();
 
             updateEmergencyInformationRequest.PersonId = emergencyInformation.PersonId;
             updateEmergencyInformationRequest.LastConfirmedDate = emergencyInformation.ConfirmedDate;
             updateEmergencyInformationRequest.HospitalPreference = emergencyInformation.HospitalPreference;
-            updateEmergencyInformationRequest.OptOut = emergencyInformation.OptOut ? "y": "n";
+            updateEmergencyInformationRequest.OptOut = emergencyInformation.OptOut ? "y" : "n";
 
             // We may have line break characters in the data. Split them out and add each line separately
             // to preserve any line-to-line formatting the user entered. Note that these characters could be
@@ -229,20 +228,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     updateEmergencyInformationRequest.MissingContactFlags.Add("N");
                 }
                 updateEmergencyInformationRequest.ContactAddresses.Add(contact.Address);
-                
+
             }
 
             foreach (var healthCondition in emergencyInformation.HealthConditions)
             {
                 if (GetHealthConditions().ValsEntityAssociation.Select(x => x.ValInternalCodeAssocMember).Contains(healthCondition))
                 {
-                   updateEmergencyInformationRequest.HealthConditions.Add(healthCondition);
+                    updateEmergencyInformationRequest.HealthConditions.Add(healthCondition);
                 }
                 else
                 {
-                   var errorMessage = "Health Condition " + healthCondition + " is an invalid code.";
-                   logger.Error(errorMessage);
-                   throw new ArgumentException(errorMessage);
+                    var errorMessage = "Health Condition " + healthCondition + " is an invalid code.";
+                    logger.Error(errorMessage);
+                    throw new ArgumentException(errorMessage);
                 }
             }
 
@@ -273,7 +272,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         combinedErrorMessages += "; " + errorMessage;
                     }
-                                        
+
                 }
 
                 // Throw an exception giving all the errors.
@@ -297,11 +296,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<PersonContact>, int>> GetPersonContactsAsync(int offset, int limit, bool bypassCache, string person = "")
         {
-            string[] personContactIds = new string[]{ };
-            
+            string[] personContactIds = new string[] { };
+
             if (!string.IsNullOrEmpty(person))
             {
-                personContactIds = await DataReader.SelectAsync("PERSON.EMER", new string[] {person}, "");
+                personContactIds = await DataReader.SelectAsync("PERSON.EMER", new string[] { person }, "");
                 //return empty if not found
             }
             else
@@ -325,13 +324,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             IEnumerable<PersonContact> personContactList = BuildPersonContacts(personContactDataContracts);
-            
+
             if (repoException != null && repoException.Errors != null && repoException.Errors.Any())
             {
                 throw repoException;
             }
 
-            return new Tuple<IEnumerable<PersonContact>, int>(personContactList, totalCount); 
+            return new Tuple<IEnumerable<PersonContact>, int>(personContactList, totalCount);
         }
 
 
@@ -357,7 +356,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     if (!filterPersonIds.Contains(personId))
                     {
-                        Array.Resize(ref filterPersonIds, filterPersonIds.Length + 1 );
+                        Array.Resize(ref filterPersonIds, filterPersonIds.Length + 1);
                         filterPersonIds[filterPersonIds.Length - 1] = personId;
                     }
                 }
@@ -389,12 +388,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                     foreach (var emerId in personEmerIds)
                     {
-                        var personEmerId = emerId.Split(_VM)[0];
+                        var personEmerId = emerId.Split(DmiString._VM)[0];
                         var emerName = personEmerNames.ElementAt(idx).Split(new[] { '*' })[0];
                         keys.Add(String.Concat(personEmerId, "|", emerName));
                         idx++;
                     }
-                   keys.Sort();
+                    keys.Sort();
                     return keys;
                 });
                 //check for duplicate keys ( bad data)
@@ -483,7 +482,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     throw new KeyNotFoundException(string.Concat("No emergency contact was found for guid ", id));
                 }
-                var personContactDtos = await BuildPersonEmergencyContacts(new List<PersonEmer> { personContactDataContract }, new List<string> { validKey });  
+                var personContactDtos = await BuildPersonEmergencyContacts(new List<PersonEmer> { personContactDataContract }, new List<string> { validKey });
                 if (personContactDtos == null || !personContactDtos.Any())
                 {
                     throw new KeyNotFoundException(string.Concat("No emergency contact was found for guid ", id));
@@ -508,7 +507,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="personContactDataContracts"></param>
         /// <returns>IEnumerable<PersonContact></returns>
         private IEnumerable<PersonContact> BuildPersonContacts(IEnumerable<PersonEmer> personContactDataContracts)
-        {            
+        {
             List<PersonContact> personContactsList = new List<PersonContact>();
             foreach (var personContactDataContract in personContactDataContracts)
             {
@@ -528,7 +527,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="personContactDataContract"></param>
         /// <returns>PersonContact</returns>
         private PersonContact BuildPersonContact(PersonEmer personContactDataContract)
-        {            
+        {
             if (string.IsNullOrEmpty(personContactDataContract.RecordGuid))
             {
                 repoException.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for person-contacts for person ", personContactDataContract.Recordkey, "."))
@@ -574,7 +573,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             else
             {
                 return null;
-            }               
+            }
         }
 
         /// <summary>
@@ -632,7 +631,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 var emerNameGuid = string.Empty;
                                 guidList.TryGetValue(key, out emerNameGuid);
                                 if (string.IsNullOrEmpty(emerNameGuid))
-                                {                                       
+                                {
                                     exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for person-emergency-contacts for ", personContactDataContract.Recordkey,
                                         " for emergency contact name ", key.Split('|')[1], "."))
                                     {
@@ -640,7 +639,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     });
                                 }
                                 else
-                                {                
+                                {
                                     PersonContactDetails contactDetails = new PersonContactDetails()
                                     {
                                         ContactAddresses = contact.EmerContactAddressAssocMember,
@@ -652,9 +651,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         OtherPhone = contact.EmerOtherPhoneAssocMember,
                                         Relationship = contact.EmerRelationshipAssocMember
                                     };
-                                    
+
                                     contactDetails.Guid = emerNameGuid;
-                                    
+
                                     // do some data validation
                                     //the emergency contact flag cannot be null.
                                     if (string.IsNullOrEmpty(contactDetails.ContactFlag))
@@ -754,7 +753,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var guidLookup = ids
                    .Where(s => !string.IsNullOrWhiteSpace(s))
                    .Distinct().ToList()
-                   .ConvertAll(p => new RecordKeyLookup(filename, p.Split('|')[0], "EMER.NAME",p.Split('|')[1], false)).ToArray();
+                   .ConvertAll(p => new RecordKeyLookup(filename, p.Split('|')[0], "EMER.NAME", p.Split('|')[1], false)).ToArray();
 
                 var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
 
@@ -767,7 +766,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
                             if (!guidCollection.ContainsKey(splitKeys[1]))
                             {
-                                guidCollection.Add(string.Concat(splitKeys[1],"|", splitKeys[2]), recordKeyLookupResult.Value.Guid);
+                                guidCollection.Add(string.Concat(splitKeys[1], "|", splitKeys[2]), recordKeyLookupResult.Value.Guid);
                             }
                         }
                     }
@@ -782,7 +781,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
 
-         /// <summary>
+        /// <summary>
         /// Get the record key from a GUID
         /// </summary>
         /// <param name="guid">The GUID</param>
@@ -806,7 +805,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new KeyNotFoundException(string.Concat("No emergency contact was found for guid ", guid));
             }
 
-            if (foundEntry.Value.Entity != "PERSON.EMER" )
+            if (foundEntry.Value.Entity != "PERSON.EMER")
             {
                 throw new RepositoryException(string.Concat("The GUID specified: ", guid, " is used by a different resource: ", foundEntry.Value.Entity, " than expected: PERSON.EMER."));
             }
@@ -861,7 +860,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 request.ExtendedValues = extendedDataTuple.Item2;
             }
 
-           var response = await transactionInvoker.ExecuteAsync<UpdatePersonEmerRequest, UpdatePersonEmerResponse>(request);
+            var response = await transactionInvoker.ExecuteAsync<UpdatePersonEmerRequest, UpdatePersonEmerResponse>(request);
 
             // If there is any error message - throw an exception
             if (response.UpdatePersonEmerErrors != null && response.UpdatePersonEmerErrors.Any())

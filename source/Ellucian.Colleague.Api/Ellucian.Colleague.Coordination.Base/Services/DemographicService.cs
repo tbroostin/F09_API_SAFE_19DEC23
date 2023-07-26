@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     public class DemographicService : BaseCoordinationService, IDemographicService
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
+        private readonly IPersonBaseRepository _personBaseRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly ILogger repoLogger;
         private const string _dataOrigin = "Colleague";
@@ -34,11 +35,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="logger">The logger.</param>
         /// <param name="configurationRepository">The configuration repository.</param>
         /// <param name="staffRepository">The staff repository</param>
-        public DemographicService(IReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory,
+        public DemographicService(IReferenceDataRepository referenceDataRepository, IPersonBaseRepository personBaseRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository, IStaffRepository staffRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, staffRepository, configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
+            _personBaseRepository = personBaseRepository;
             _configurationRepository = configurationRepository;
 
             this.repoLogger = logger;
@@ -243,6 +245,44 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             catch (InvalidOperationException)
             {
                 //throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError("Person filter not found for GUID " + guid, "GUID.Not.Found");
+                throw IntegrationApiException;
+            }
+        }
+
+
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 6</remarks>
+        /// <summary>
+        /// Get a person filter from its GUID
+        /// </summary>
+        /// <returns>PersonFilter DTO object</returns>
+        public async Task<Ellucian.Colleague.Dtos.PersonFilter2> GetPersonFilterPersonsByGuidAsync(string guid)
+        {
+            try
+            {
+                var personFilterDto = new Dtos.PersonFilter2();
+                //personFilterDto.Id = guid;
+
+                var persons = await _referenceDataRepository.GetPersonIdsByPersonFilterGuid2Async(guid);
+                var personsDict = await _personBaseRepository.GetPersonGuidsCollectionAsync(persons);
+                personFilterDto.PersonIds = new List<string>();
+             
+                foreach (var personDict in personsDict)
+                {
+                    personFilterDto.PersonIds.Add(personDict.Value);
+                }
+
+                return personFilterDto;
+
+            }
+            catch (KeyNotFoundException)
+            {
+                IntegrationApiExceptionAddError("Person filter not found for GUID " + guid, "GUID.Not.Found");
+                throw IntegrationApiException;
+            }
+            catch (InvalidOperationException)
+            {
                 IntegrationApiExceptionAddError("Person filter not found for GUID " + guid, "GUID.Not.Found");
                 throw IntegrationApiException;
             }

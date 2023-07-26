@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates.*/
 
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
@@ -482,7 +482,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 // a leave plan's earnings type is defined as a list, but only the first value matters
                                 earningsTypeId = leavePlan.EarningsTypes.First();
                                 earningsTypeEntity = earnTypes.FirstOrDefault(et => et.Code == earningsTypeId);
-
+                               
                                 if (earningsTypeEntity != null)
                                 {
                                     earningsTypeDescription = earningsTypeEntity.Description;
@@ -530,6 +530,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 leavePlan.Title,
                                 leavePlan.StartDate.Value,
                                 leavePlan.EndDate,
+                                leavePlan.Type,
                                 leaveCategory,
                                 earningsTypeId,
                                 earningsTypeDescription,

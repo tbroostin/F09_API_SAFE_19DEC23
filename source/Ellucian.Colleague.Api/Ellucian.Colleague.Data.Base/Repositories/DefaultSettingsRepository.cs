@@ -1,5 +1,4 @@
-﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
-
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -25,8 +24,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class DefaultSettingsRepository : BaseColleagueRepository, IDefaultSettingsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        //public static char _VM = Convert.ToChar(DynamicArray.VM);
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private readonly int _readSize;
 
         public DefaultSettingsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
@@ -161,7 +158,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw searchException;
                 }
                 if (advancedSearchResponse.MatchingData.Any())
-                {                    
+                {
                     foreach (var match in advancedSearchResponse.MatchingData)
                     {
                         var option = new DefaultSettingsAdvancedSearchOptions(match.Titles, match.Values, match.Origins);
@@ -184,7 +181,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var request = new SearchDefaultSettingsRequest()
             {
                 Keyword = keyword,
-                DefaultId = defaultSettingsId                
+                DefaultId = defaultSettingsId
             };
 
             return request;
@@ -219,10 +216,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var errorMessage = string.Format("Error(s) occurred updating default-settings '{0}'.", defaultSettingss.Guid);
                     var exception = new RepositoryException(errorMessage);
                     updateResponse.DefaultSettingErrors.ForEach(e => exception.AddError(new RepositoryError("Validation.Exception", string.Concat(e.ErrorCodes, ": ", e.ErrorMessages))
-                        {
-                            Id = defaultSettingss.Guid,
-                            SourceId = defaultSettingssId
-                        }
+                    {
+                        Id = defaultSettingss.Guid,
+                        SourceId = defaultSettingssId
+                    }
                     ));
                     logger.Error(errorMessage);
                     throw exception;
@@ -503,7 +500,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var bendedCodeList = ldmDefaults.LdmdBendedCode;
                             if (bendedCodeList != null && bendedCodeList.Count() > valuePos)
                             {
-                                var typeCodeList = bendedCodeList.ElementAt(valuePos).Split(_SM);
+                                var typeCodeList = bendedCodeList.ElementAt(valuePos).Split(DmiString._SM);
                                 if (typeCodeList.Count() > subValuePos)
                                 {
                                     defaultSettings.SourceValue = typeCodeList[subValuePos];
@@ -634,7 +631,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (allArCodes != null && allArCodes.Any())
             {
-               foreach (var arCode in allArCodes)
+                foreach (var arCode in allArCodes)
                 {
                     if (arCode != null && !string.IsNullOrEmpty(arCode.ArcDesc))
                     {
@@ -768,7 +765,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         return new Collection<DataContracts.Person>();
                     }
-                    
+
                     var corpFounds = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", approvalAgencyIds);
                     if (corpFounds == null)
                     {
@@ -1033,7 +1030,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             IEnumerable<PositionBase> allPositions = null;
             try
             {
-                allPositions =  await GetOrAddToCacheAsync<IEnumerable<PositionBase>>(cacheControlKey,
+                allPositions = await GetOrAddToCacheAsync<IEnumerable<PositionBase>>(cacheControlKey,
                     async () =>
                     {
                         var today = await GetUnidataFormatDateAsync(DateTime.Now);
@@ -1087,7 +1084,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             IEnumerable<LoadPeriodsBase> allLoadPeriods = null;
 
-            try {
+            try
+            {
                 allLoadPeriods = await GetOrAddToCacheAsync<IEnumerable<LoadPeriodsBase>>(cacheControlKey,
                 async () =>
                 {
@@ -1253,7 +1251,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 ClearCache(new List<string> { cacheControlKey });
             }
             IEnumerable<ApplicationStatusesBase> allApplicationStatuses = null;
-            try {
+            try
+            {
                 allApplicationStatuses = await GetOrAddToCacheAsync<IEnumerable<ApplicationStatusesBase>>(cacheControlKey,
                 async () =>
                 {
@@ -1411,29 +1410,30 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 ClearCache(new List<string> { cacheControlKey });
             }
             IEnumerable<DataContracts.Person> allSponsors = null;
-            try { 
-             allSponsors = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
-                async () =>
-                {
-                    string criteria = "WITH SECSPN.SPONSOR NE '' SAVING UNIQUE SECSPN.SPONSOR";
-                    var secSponsorIds = await DataReader.SelectAsync("SEC.SPONSORSHIPS", criteria);
-                    criteria = "WITH PSPN.SPONSOR NE '' SAVING UNIQUE PSPN.SPONSOR";
-                    var personSponsorIds = await DataReader.SelectAsync("PERSON.SPONSORSHIPS", criteria);
+            try
+            {
+                allSponsors = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
+                   async () =>
+                   {
+                       string criteria = "WITH SECSPN.SPONSOR NE '' SAVING UNIQUE SECSPN.SPONSOR";
+                       var secSponsorIds = await DataReader.SelectAsync("SEC.SPONSORSHIPS", criteria);
+                       criteria = "WITH PSPN.SPONSOR NE '' SAVING UNIQUE PSPN.SPONSOR";
+                       var personSponsorIds = await DataReader.SelectAsync("PERSON.SPONSORSHIPS", criteria);
 
-                    var sponsorIds = secSponsorIds.Union(personSponsorIds).Distinct().ToArray();
-                    if (sponsorIds == null || !sponsorIds.Any())
-                    {
-                        return new Collection<DataContracts.Person>();
-                    }
+                       var sponsorIds = secSponsorIds.Union(personSponsorIds).Distinct().ToArray();
+                       if (sponsorIds == null || !sponsorIds.Any())
+                       {
+                           return new Collection<DataContracts.Person>();
+                       }
 
-                    var staffApproval = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", sponsorIds);
-                    if (staffApproval == null)
-                    {
-                        logger.Info("Unable to access PERSON from database.");
-                        staffApproval = new Collection<DataContracts.Person>();
-                    }
-                    return staffApproval;
-                }, Level1CacheTimeoutValue);
+                       var staffApproval = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", sponsorIds);
+                       if (staffApproval == null)
+                       {
+                           logger.Info("Unable to access PERSON from database.");
+                           staffApproval = new Collection<DataContracts.Person>();
+                       }
+                       return staffApproval;
+                   }, Level1CacheTimeoutValue);
             }
             catch (Exception ex)
             {

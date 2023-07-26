@@ -13,8 +13,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     {
         Task<Tuple<IEnumerable<Dtos.EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, string resourceName, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool bypassCache);
         Task<Dtos.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string id, string resourceName);
-        Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields);
-        Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields);
+        Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, EthosResourceRouteInfo ethosResourceRouteInfo, Dictionary<string, EthosExtensibleDataFilter> filterDictionary);
+        Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, EthosResourceRouteInfo ethosResourceRouteInfo, Dictionary<string, EthosExtensibleDataFilter> filterDictionary);
         Task DeleteEthosApiBuilderAsync(string id, string resourceName);
         Task<Ellucian.Colleague.Domain.Base.Entities.EthosApiConfiguration> GetEthosApiConfigurationByResourceAsync(string resourceName);
         Task<string> GetRecordIdFromGuidAsync(string guid, string entityName, string secondaryKey = "");

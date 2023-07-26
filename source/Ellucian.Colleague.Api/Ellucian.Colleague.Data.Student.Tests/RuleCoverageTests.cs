@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -30,7 +30,8 @@ namespace Ellucian.Colleague.Data.Student.Tests
     ///      to run as part of a "run all tests in solution" because actually hitting an environment for data is 
     ///      slower than test data.
     /// </summary>
-    [TestClass][Ignore]
+    [TestClass]
+    [Ignore]
     public class RuleCoverageTests
     {
         private ConsoleLogger logger = new ConsoleLogger() { IsDebugEnabled = true, IsErrorEnabled = true, IsInfoEnabled = true, IsTraceEnabled = true, IsWarnEnabled = true };
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Data.Student.Tests
             Console.WriteLine(results.Name);
             Console.WriteLine("\t" + results.Supported + " rules supported");
             Console.WriteLine("\t" + results.Count + " rules total");
-            Console.WriteLine("\t" + ((float)results.Supported/(float)results.Count)*100 + "% covered");
+            Console.WriteLine("\t" + ((float)results.Supported / (float)results.Count) * 100 + "% covered");
             Console.WriteLine();
         }
 
@@ -65,7 +66,7 @@ namespace Ellucian.Colleague.Data.Student.Tests
             settings.IpAddress = "yourserver.yourschool.com";
             settings.Port = 9999;
             settings.SharedSecret = "sharedsecret123";
-            var token = new ColleagueSessionRepository(settings).LoginAsync("student_id", "student_password");
+            var token = new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LoginAsync("student_id", "student_password");
 
             var principal = JwtHelper.CreatePrincipal(token.Result);
             var sessionClaim = (principal as IClaimsPrincipal).Identities.First().Claims.FirstOrDefault(c => c.ClaimType == "sid");
@@ -76,7 +77,7 @@ namespace Ellucian.Colleague.Data.Student.Tests
 
             var results = await QueryRulesAsync("environment1", txFactory);
 
-            await new ColleagueSessionRepository(settings).LogoutAsync(token.Result);
+            await new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LogoutAsync(token.Result);
 
             return results;
         }
@@ -88,7 +89,7 @@ namespace Ellucian.Colleague.Data.Student.Tests
             settings.IpAddress = "yourserver.yourschool.com";
             settings.Port = 9999;
             settings.SharedSecret = "sharedsecret123";
-            var token = new ColleagueSessionRepository(settings).LoginAsync("student_id", "student_password");
+            var token = new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LoginAsync("student_id", "student_password");
 
             var principal = JwtHelper.CreatePrincipal(token.Result);
             var sessionClaim = (principal as IClaimsPrincipal).Identities.First().Claims.FirstOrDefault(c => c.ClaimType == "sid");
@@ -99,7 +100,7 @@ namespace Ellucian.Colleague.Data.Student.Tests
 
             var results = await QueryRulesAsync("environment2", txFactory);
 
-            new ColleagueSessionRepository(settings).LogoutAsync(token.Result);
+            new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LogoutAsync(token.Result);
 
             return results;
         }

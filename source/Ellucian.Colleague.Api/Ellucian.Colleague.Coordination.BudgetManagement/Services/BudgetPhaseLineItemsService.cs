@@ -1,23 +1,22 @@
-﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿//Copyright 2018-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.BudgetManagement.Entities;
+using Ellucian.Colleague.Domain.BudgetManagement.Repositories;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.BudgetManagement.Repositories;
-using Ellucian.Colleague.Domain.BudgetManagement.Entities;
-using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 {
@@ -106,7 +105,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                    .Where(x => (!string.IsNullOrEmpty(x.AccountingStringComponentValue)))
                    .Select(x => x.AccountingStringComponentValue).Distinct().ToList();
                 var glAcctIdCollection = await _referenceDataRepository.GetGuidsForPooleeGLAcctsInFiscalYearsAsync(glAcctIds);
-              
+
                 var budgetPhaseIds = budgetPhasesEntitiesTuple.Item1
                   .Where(x => (!string.IsNullOrEmpty(x.BudgetPhase)))
                   .Select(x => x.BudgetPhase).Distinct().ToList();
@@ -114,19 +113,19 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
                 foreach (var budgetWork in budgetPhasesEntitiesTuple.Item1)
                 {
-                    budgetPhaseLineItemsCollection.Add(await ConvertBudgetWorkEntityToDtoAsync(budgetWork, glAcctIdCollection, budgetPhaseIdCollection, bypassCache)) ;
+                    budgetPhaseLineItemsCollection.Add(await ConvertBudgetWorkEntityToDtoAsync(budgetWork, glAcctIdCollection, budgetPhaseIdCollection, bypassCache));
                 }
             }
             catch (Exception ex)
             {
-                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");               
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");
             }
-            
+
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;
             }
-            return  new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, budgetPhasesEntitiesTuple.Item2);
+            return new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, budgetPhasesEntitiesTuple.Item2);
 
         }
 
@@ -136,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
             try
             {
-               budgetPhaseLineItemsByGuid  = await _budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid);
+                budgetPhaseLineItemsByGuid = await _budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid);
             }
             catch (RepositoryException ex)
             {
@@ -150,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
             try
             {
-                var glAcctIdCollection = await _referenceDataRepository.GetGuidsForPooleeGLAcctsInFiscalYearsAsync( new List<string> { budgetPhaseLineItemsByGuid .AccountingStringComponentValue} );
+                var glAcctIdCollection = await _referenceDataRepository.GetGuidsForPooleeGLAcctsInFiscalYearsAsync(new List<string> { budgetPhaseLineItemsByGuid.AccountingStringComponentValue });
                 var budgetPhaseIdCollection = await _budgetRepository.GetBudgetGuidCollectionAsync(new List<string> { budgetPhaseLineItemsByGuid.BudgetPhase });
 
 
@@ -163,7 +162,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No budget-phase-line-items was found for GUID '" + guid + "'", ex );
+                throw new KeyNotFoundException("No budget-phase-line-items was found for GUID '" + guid + "'", ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -182,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
         /// <param name="source">Budget domain entity</param>
         /// <returns>BudgetPhases DTO</returns>
         private async Task<Ellucian.Colleague.Dtos.BudgetPhaseLineItems> ConvertBudgetWorkEntityToDtoAsync(BudgetWork source,
-            IDictionary<string, string> glAccountIdCollection, IDictionary<string, string> budgetPhaseIdCollection,  bool bypassCache = false)
+            IDictionary<string, string> glAccountIdCollection, IDictionary<string, string> budgetPhaseIdCollection, bool bypassCache = false)
         {
             var budgetPhaseLineItem = new Ellucian.Colleague.Dtos.BudgetPhaseLineItems();
 
@@ -197,7 +196,8 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                 IntegrationApiExceptionAddError("Unable to determine GUID for BudgetWork.",
                                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
             }
-            else {
+            else
+            {
 
                 budgetPhaseLineItem.Id = source.RecordGuid;
             }
@@ -207,7 +207,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             //    var budgetPhasesGuid = string.Empty;
             //    if (!budgetPhaseDict.TryGetValue(source.BudgetPhase, out budgetPhasesGuid))
             //    {
-                   // budgetPhasesGuid = await _budgetRepository.GetBudgetPhasesGuidFromIdAsync(source.BudgetPhase);
+            // budgetPhasesGuid = await _budgetRepository.GetBudgetPhasesGuidFromIdAsync(source.BudgetPhase);
             //        if (string.IsNullOrEmpty(budgetPhasesGuid))
             //        {
             //            IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for BudgetPhase: ", source.BudgetPhase), "GUID.Not.Found",
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                     }
                 }
             }
-    
+
 
             //if (!string.IsNullOrEmpty(source.AccountingStringComponentValue))
             //{
@@ -296,9 +296,9 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             if (source.Comments != null && source.Comments.Any())
             {
                 budgetPhaseLineItem.Comment = String.Join(" ", source.Comments)
-                                                      .Replace(Convert.ToChar(DynamicArray.VM), '\n')
-                                                      .Replace(Convert.ToChar(DynamicArray.TM), ' ')
-                                                      .Replace(Convert.ToChar(DynamicArray.SM), ' ');
+                                                      .Replace(DmiString._VM, '\n')
+                                                      .Replace(DmiString._TM, ' ')
+                                                      .Replace(DmiString._SM, ' ');
             }
 
 
@@ -318,9 +318,11 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             Dtos.DtoProperties.Amount2DtoProperty amount = null;
             if (value.HasValue)
             {
-                amount = new Dtos.DtoProperties.Amount2DtoProperty() {
+                amount = new Dtos.DtoProperties.Amount2DtoProperty()
+                {
                     Value = value,
-                    Currency = ConvertEntityToHostCountryEnum(hostCountry) };
+                    Currency = ConvertEntityToHostCountryEnum(hostCountry)
+                };
             }
 
             return amount;

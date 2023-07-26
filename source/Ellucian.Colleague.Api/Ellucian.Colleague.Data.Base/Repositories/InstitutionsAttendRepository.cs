@@ -1,37 +1,34 @@
-﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2019-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Dmi.Runtime;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
     [RegisterType]
     public class InstitutionsAttendRepository : BaseColleagueRepository, IInstitutionsAttendRepository
     {
-        //public static char _SM = Convert.ToChar(DynamicArray.SM);
         private RepositoryException exception;
         readonly int readSize;
         private ApplValcodes _institutionTypes;
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         public InstitutionsAttendRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -230,7 +227,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                        foreach (KeyValuePair<string, string> institutitionsAttended in validRecords)
                                        {
                                            var studentId = entry.Key;
-                                           var institutionsAttends = institutitionsAttended.Value.Split(_VM);
+                                           var institutionsAttends = institutitionsAttended.Value.Split(DmiString._VM);
                                            foreach (var institutionsAttend in institutionsAttends)
                                            {
                                                if (!string.IsNullOrEmpty(institutionsAttend)) //&& (hostInstitutionId != institutionsAttend))
@@ -313,10 +310,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     criteria += "WITH INSTA.INST.TYPE.ACTION1 EQ '" + instaInstTypeAction + "'";
                 }
 
-                institutionAttendLimitingKeys = (await DataReader.SelectAsync("INSTITUTIONS.ATTEND", 
+                institutionAttendLimitingKeys = (await DataReader.SelectAsync("INSTITUTIONS.ATTEND",
                         institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria))
                         .ToList();
-                
+
                 if (institutionAttendLimitingKeys == null || !institutionAttendLimitingKeys.Any())
                 {
                     return new Tuple<IEnumerable<Domain.Base.Entities.InstitutionsAttend>, int>(new List<Domain.Base.Entities.InstitutionsAttend>(), 0);
@@ -328,7 +325,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             //Note: this should be called independently of the named queries
             criteria = string.Empty;
-           
+
             if (!string.IsNullOrEmpty(hostInstitutionId))
             {
                 criteria += "WITH INSTA.INSTITUTIONS.ID NE '" + hostInstitutionId + "'";
@@ -345,9 +342,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             #endregion
 
-            var institutionAttends = await DataReader.SelectAsync("INSTITUTIONS.ATTEND", 
+            var institutionAttends = await DataReader.SelectAsync("INSTITUTIONS.ATTEND",
                 institutionAttendLimitingKeys != null && institutionAttendLimitingKeys.Any() ? institutionAttendLimitingKeys.ToArray() : null, criteria);
-                 
+
             //after applying initial criteria, need to get a collection of institution records that 
             //are  associated with an INSTITUTIONS record with special processing codes
             var types = (await this.GetInstitutionTypesAsync()).ValsEntityAssociation.Where(x => !string.IsNullOrEmpty(x.ValActionCode1AssocMember))
@@ -688,4 +685,3 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
     }
 }
- 

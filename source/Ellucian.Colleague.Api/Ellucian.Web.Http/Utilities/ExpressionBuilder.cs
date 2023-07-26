@@ -378,6 +378,9 @@ namespace Ellucian.Web.Http.Utilities
                 if (propertyType == typeof(DateTime))
                     return DateTime.Parse(value);
 
+                if (propertyType == typeof(DateTimeOffset))
+                    return DateTimeOffset.Parse(value);
+
                 if (propertyType.IsEnum)
                     try
                     {

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
@@ -31,6 +31,11 @@ using System.Web.Hosting;
 using Ellucian.Web.Http.Exceptions;
 using System.Web.Mvc;
 using Serilog.Core;
+using Lucene.Net.Support;
+using Ellucian.Colleague.Api.Helpers;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Protocols;
+using System.Threading;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -97,6 +102,8 @@ namespace Ellucian.Colleague.Api.Controllers
                 model.SharedSecret1 = PasswordSecretPlaceholder;
             if (!string.IsNullOrEmpty(model.SharedSecret2))
                 model.SharedSecret2 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.OauthProxyPassword))
+                model.OauthProxyPassword = PasswordSecretPlaceholder;
 
             ViewBag.json = JsonConvert.SerializeObject(model);
             return View();
@@ -108,26 +115,39 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         [HttpPost]
-        public ActionResult ConnectionSettings(string model)
+        public async Task<ActionResult> ConnectionSettings(string model)
         {
             var localSettingsModel = JsonConvert.DeserializeObject<WebApiSettings>(model);
+            var domainSettings = settingsRepository.Get();
+            var oldModel = BuildSettingsModel(domainSettings);
+
             if (localSettingsModel.SharedSecret1 == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.SharedSecret1 = oldModel.SharedSecret1;
-            }
+
             if (localSettingsModel.SharedSecret2 == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.SharedSecret2 = oldModel.SharedSecret2;
-            }
+
             if (localSettingsModel.DasPassword == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.DasPassword = oldModel.DasPassword;
+
+            if (localSettingsModel.OauthProxyPassword == PasswordSecretPlaceholder)
+                localSettingsModel.OauthProxyPassword = oldModel.OauthProxyPassword;
+
+            try
+            {
+                var cookie = LocalUserUtilities.GetCookie(Request);
+
+                IPrincipal localUser = null;
+                if (cookie != null)
+                {
+                    localUser = LocalUserUtilities.GetCurrentUser(Request);
+                }
+                var localUserName = localUser?.Identity.Name ?? "LocalAdmin";
+                localSettingsModel.AuditLogConfigurationChanges(oldModel, localUserName);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to audit log changes for web api connection settings.");
             }
 
             var settings = BuildSettingsDomain(localSettingsModel);
@@ -152,6 +172,8 @@ namespace Ellucian.Colleague.Api.Controllers
                 model.SharedSecret1 = PasswordSecretPlaceholder;
             if (!string.IsNullOrEmpty(model.SharedSecret2))
                 model.SharedSecret2 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.OauthProxyPassword))
+                model.OauthProxyPassword = PasswordSecretPlaceholder;
 
             ViewBag.json = JsonConvert.SerializeObject(model);
             return View();
@@ -163,26 +185,39 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         [HttpPost]
-        public ActionResult Logging(string model)
+        public async Task<ActionResult> Logging(string model)
         {
             var localSettingsModel = JsonConvert.DeserializeObject<WebApiSettings>(model);
+            var domainSettings = settingsRepository.Get();
+            var oldModel = BuildSettingsModel(domainSettings);
+
             if (localSettingsModel.SharedSecret1 == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.SharedSecret1 = oldModel.SharedSecret1;
-            }
+
             if (localSettingsModel.SharedSecret2 == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.SharedSecret2 = oldModel.SharedSecret2;
-            }
+
             if (localSettingsModel.DasPassword == PasswordSecretPlaceholder)
-            {
-                var domainSettings = settingsRepository.Get();
-                var oldModel = BuildSettingsModel(domainSettings);
                 localSettingsModel.DasPassword = oldModel.DasPassword;
+
+            if (localSettingsModel.OauthProxyPassword == PasswordSecretPlaceholder)
+                localSettingsModel.OauthProxyPassword = oldModel.OauthProxyPassword;
+
+            try
+            {
+                var cookie = LocalUserUtilities.GetCookie(Request);
+
+                IPrincipal localUser = null;
+                if (cookie != null)
+                {
+                    localUser = LocalUserUtilities.GetCurrentUser(Request);
+                }
+                var localUserName = localUser?.Identity.Name ?? "LocalAdmin";
+                localSettingsModel.AuditLogConfigurationChanges(oldModel, localUserName);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to audit log changes for web api logging settings.");
             }
 
             var settings = BuildSettingsDomain(localSettingsModel);
@@ -203,7 +238,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var domainSettings = settingsRepository.Get();
             var model = BuildSettingsModel(domainSettings);
 
-            var validLogLevel = model.LogLevels.FirstOrDefault(l => l.Value.Equals(loggingLevel, StringComparison.OrdinalIgnoreCase) 
+            var validLogLevel = model.LogLevels.FirstOrDefault(l => l.Value.Equals(loggingLevel, StringComparison.OrdinalIgnoreCase)
                                                                  || l.Text.Equals(loggingLevel, StringComparison.OrdinalIgnoreCase));
             if (validLogLevel != null)
             {
@@ -392,7 +427,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="model">The Api settings view model</param>
         /// <returns>The settings confirmation view</returns>
         [HttpPost]
-        public ActionResult ApiSettings(string model)
+        public async Task<ActionResult> ApiSettings(string model)
         {
             var apiSettingsModel = JsonConvert.DeserializeObject<ApiSettingsModel>(model);
 
@@ -442,7 +477,25 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
                 var apiSettingsRepo = CreateApiSettingsRepository();
+                var oldApiSettings = apiSettingsRepo.Get(apiSettingsDomain.Name);
                 apiSettingsRepo.Update(apiSettingsDomain);
+
+                try
+                {
+                    var cookie = LocalUserUtilities.GetCookie(Request);
+
+                    IPrincipal localUser = null;
+                    if (cookie != null)
+                    {
+                        localUser = LocalUserUtilities.GetCurrentUser(Request);
+                    }
+                    var localUserName = localUser?.Identity.Name ?? "LocalAdmin";
+                    apiSettingsDomain.AuditLogConfigurationChanges(oldApiSettings, localUserName);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Failed to audit log changes for web api logging settings.");
+                }
             }
 
             // do a backup, even though API settings isn't included in the restore.
@@ -451,6 +504,80 @@ namespace Ellucian.Colleague.Api.Controllers
             // recycle
             RecycleApp();
 
+            return RedirectToAction("SettingsConfirmation");
+        }
+
+        #endregion
+
+        #region Oauth settings actions
+
+        /// <summary>
+        /// Gets the API connection settings page.
+        /// </summary>
+        /// <returns></returns>
+        public ActionResult OauthSettings()
+        {
+            var domainSettings = settingsRepository.Get();
+            var model = BuildSettingsModel(domainSettings);
+
+            if (!string.IsNullOrEmpty(model.DasPassword))
+                model.DasPassword = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret1))
+                model.SharedSecret1 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret2))
+                model.SharedSecret2 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.OauthProxyPassword))
+                model.OauthProxyPassword = PasswordSecretPlaceholder;
+
+            ViewBag.json = JsonConvert.SerializeObject(model);
+            return View();
+        }
+
+        /// <summary>
+        /// Post the API connection settings page.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<ActionResult> OauthSettings(string model)
+        {
+            var localSettingsModel = JsonConvert.DeserializeObject<WebApiSettings>(model);
+            var domainSettings = settingsRepository.Get();
+            var oldModel = BuildSettingsModel(domainSettings);
+
+            if (localSettingsModel.SharedSecret1 == PasswordSecretPlaceholder)
+                localSettingsModel.SharedSecret1 = oldModel.SharedSecret1;
+
+            if (localSettingsModel.SharedSecret2 == PasswordSecretPlaceholder)
+                localSettingsModel.SharedSecret2 = oldModel.SharedSecret2;
+
+            if (localSettingsModel.DasPassword == PasswordSecretPlaceholder)
+                localSettingsModel.DasPassword = oldModel.DasPassword;
+
+            if (localSettingsModel.OauthProxyPassword == PasswordSecretPlaceholder)
+                localSettingsModel.OauthProxyPassword = oldModel.OauthProxyPassword;
+
+            try
+            {
+                var cookie = LocalUserUtilities.GetCookie(Request);
+
+                IPrincipal localUser = null;
+                if (cookie != null)
+                {
+                    localUser = LocalUserUtilities.GetCurrentUser(Request);
+                }
+                var localUserName = localUser?.Identity.Name ?? "LocalAdmin";
+                localSettingsModel.AuditLogConfigurationChanges(oldModel, localUserName);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to audit log changes for web api connection settings.");
+            }
+
+            var settings = BuildSettingsDomain(localSettingsModel);
+            settingsRepository.Update(settings);
+            PerformBackupConfig();
+            RecycleApp();
             return RedirectToAction("SettingsConfirmation");
         }
 
@@ -495,7 +622,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 }
                 var client = new ColleagueApiClient(baseUrl, logger);
-                var token = await client.LoginAsync(credentials.UserId, credentials.Password);
+                var token = await client.Login2Async(credentials.UserId, credentials.Password);
                 Response.Cookies.Add(LocalUserUtilities.CreateCookie(baseUrl, token));
             }
             catch (Exception e)
@@ -584,7 +711,8 @@ namespace Ellucian.Colleague.Api.Controllers
                 dmiSettings.SharedSecret = model.SharedSecret1;
 
             collSettings.DmiSettings = dmiSettings;
-            var sessionRepo = new ColleagueSessionRepository(dmiSettings);
+            var cacheProvider = DependencyResolver.Current.GetService<ICacheProvider>();
+            var sessionRepo = new ColleagueSessionRepository(dmiSettings, cacheProvider);
             string token = null;
             try
             {
@@ -621,6 +749,60 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 HttpContext.User = null;
             }
+        }
+
+        /// <summary>
+        /// Submits a request to test the OAuth setting URL and Proxy UserID/Password.
+        /// </summary>
+        /// <param name="model"><see cref="TestConnection"/> model</param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<JsonResult> TestOauthSettingsAsync(TestConnection model)
+        {
+            var domainSettings = settingsRepository.Get();
+            var dmiSettings = domainSettings.ColleagueSettings.DmiSettings;
+            var myIssuer = model.OauthIssuerUrl;
+
+            if (model.Password == PasswordSecretPlaceholder)
+            {
+                var oldModel = BuildSettingsModel(domainSettings);
+                model.Password = oldModel.OauthProxyPassword;
+            }
+
+            try
+            {
+                IConfigurationManager<OpenIdConnectConfiguration> configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>($"{myIssuer}/.well-known/openid-configuration", new OpenIdConnectConfigurationRetriever());
+                OpenIdConnectConfiguration openIdConfig = await configurationManager.GetConfigurationAsync(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return Json("The OAUTH Issuer URL did not respond with the OpenID Configuration.");
+            }
+
+            var cacheProvider = DependencyResolver.Current.GetService<ICacheProvider>();
+            var sessionRepo = new ColleagueSessionRepository(dmiSettings, cacheProvider);
+            string token;
+            try
+            {
+                token = await sessionRepo.LoginAsync(model.UserId, model.Password);
+            }
+            catch (LoginException lex)
+            {
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return Json(lex.Message);
+            }
+            catch (Exception ex)
+            {
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return Json("Login failed: " + ex.Message);
+            }
+
+            // Bye
+            await sessionRepo.LogoutAsync(token);
+            HttpContext.User = null;
+
+            return Json("Success!");
         }
 
         /// <summary>
@@ -908,6 +1090,9 @@ namespace Ellucian.Colleague.Api.Controllers
             model.DasConnectionPoolSize = settings.ColleagueSettings.DasSettings.ConnectionPoolSize;
             model.DasUsername = settings.ColleagueSettings.DasSettings.DbLogin;
             model.DasPassword = settings.ColleagueSettings.DasSettings.DbPassword;
+            model.OauthIssuerUrl = settings.OauthSettings.OauthIssuerUrl;
+            model.OauthProxyUsername = settings.OauthSettings.OauthProxyLogin;
+            model.OauthProxyPassword = settings.OauthSettings.OauthProxyPassword;
 
             string[] levels = new string[5];
             levels[0] = SourceLevels.Off.ToString(); //in serilog there is no off setting, this will be converted to fatal level
@@ -943,6 +1128,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var dmiSettings = new DmiSettings();
             var dasSettings = new DasSettings();
             var generalSettings = new GeneralSettings();
+            var oauthSettings = new OauthSettings();
 
             dmiSettings.AccountName = webApiSettings.AccountName;
             dmiSettings.ConnectionPoolSize = webApiSettings.ConnectionPoolSize;
@@ -966,7 +1152,11 @@ namespace Ellucian.Colleague.Api.Controllers
             dasSettings.DbPassword = webApiSettings.DasPassword;
             collSettings.DasSettings = dasSettings;
 
-            return new Settings(collSettings,
+            oauthSettings.OauthIssuerUrl = webApiSettings.OauthIssuerUrl;
+            oauthSettings.OauthProxyLogin = webApiSettings.OauthProxyUsername;
+            oauthSettings.OauthProxyPassword = webApiSettings.OauthProxyPassword;
+
+            return new Settings(collSettings, oauthSettings,
                 SerilogAdapter.LevelFromString(webApiSettings.LogLevel))
             { ProfileName = webApiSettings.ProfileName };
         }

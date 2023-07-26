@@ -1,5 +1,4 @@
 ﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
-
 using System;
 using System.Collections.Generic;
 
@@ -14,54 +13,67 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Unique section Id
         /// </summary>
         public string Id { get; set; }
+
         /// <summary>
         /// Parent course of this section
         /// </summary>
         public string CourseId { get; set; }
+
         /// <summary>
         /// Code of term in which section offered (may be blank for non-term sections)
         /// </summary>
         public string TermId { get; set; }
+
         /// <summary>
         /// Section start date
         /// </summary>
         public DateTime StartDate { get; set; }
+
         /// <summary>
         /// Section end date
         /// </summary>
         public DateTime? EndDate { get; set; }
+
         /// <summary>
         /// Distinct number of this section (used to distinguish between multiple sections of the same course, e.g. 01 or 02)
         /// </summary>
         public string Number { get; set; }
+
         /// <summary>
         /// Subject and Course number put together separated by a dash '-'.
         /// </summary>
         public string CourseName { get; set; }
+
         /// <summary>
         /// Minimum credits allowed for this section
         /// </summary>
         public decimal? MinimumCredits { get; set; }
+
         /// <summary>
         /// Maximum credits allowed for this section, used for variable credit courses
         /// </summary>
         public decimal? MaximumCredits { get; set; }
+
         /// <summary>
         /// Allowable credit increments, used for variable credit courses
         /// </summary>
         public decimal? VariableCreditIncrement { get; set; }
+
         /// <summary>
         /// Number of CEUs for this section, only if this is a continuing education course
         /// </summary>
         public decimal? Ceus { get; set; }
+
         /// <summary>
         /// Brief section title
         /// </summary>
         public string Title { get; set; }
+
         /// <summary>
         /// Institutionally-defined location of this section (often campus)
         /// </summary>
         public string Location { get; set; }
+
         /// <summary>
         /// <see cref="SectionMeeting">Meeting</see> information for this section
         /// </summary>
@@ -73,38 +85,47 @@ namespace Ellucian.Colleague.Dtos.Student
         /// when cross-listed section does not have its own meetings defined.
         /// </summary>
         public IEnumerable<SectionMeeting2> PrimarySectionMeetings { get; set; }
+
         /// <summary>
         /// Id of all faculty for this section
         /// </summary>
         public IEnumerable<string> FacultyIds { get; set; }
+
         /// <summary>
         /// <see cref="SectionBook">Books</see> used in this section
         /// </summary>
         public IEnumerable<SectionBook> Books { get; set; }
+
         /// <summary>
         /// List of Ids of students registered in this section
         /// </summary>
         public IEnumerable<string> ActiveStudentIds { get; set; }
+
         /// <summary>
         /// Learning Provider
         /// </summary>
         public string LearningProvider { get; set; }
+
         /// <summary>
         /// Learning Provider Site
         /// </summary>
         public string LearningProviderSiteId { get; set; }
+
         /// <summary>
         /// In the case of cross-listed sections, the ID of the primary cross-listed section. 
         /// </summary>
         public string PrimarySectionId { get; set; }
+
         /// <summary>
         /// Indicates whether this section can be registered as Pass/NoPass
         /// </summary>
         public bool AllowPassNoPass { get; set; }
+
         /// <summary>
         /// Indicates whether this section can be registered as Audit
         /// </summary>
         public bool AllowAudit { get; set; }
+
         /// <summary>
         /// Indicates whether this section can ONLY be registered as Pass/NoPass
         /// </summary>
@@ -311,5 +332,11 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Indicates whether Self-Service attendance entry for a section has been temporarily re-opened and the close attendance parameters on FCWP are to be bypassed
         /// </summary>
         public bool ReopenSectionAttendance { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not the section seat count information is available
+        ///  - this will be false when the Seat Service API is enabled and the call to the External Seat Service API failed
+        /// </summary>
+        public bool AreSeatCountsAvailable { get; set; }
     }
 }

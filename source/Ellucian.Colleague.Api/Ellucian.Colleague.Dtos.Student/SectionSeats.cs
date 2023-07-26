@@ -91,5 +91,12 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public int? Enrolled { get; set; }
 
+        /// <summary>
+        /// <summary>
+        /// Flag indicating whether or not the section seat count information is available
+        ///  - this will be false when the Seat Service API is enabled and the call to the External Seat Service API failed
+        /// </summary>
+        /// </summary>
+        public bool AreSeatCountsAvailable { get; set; }
     }
 }

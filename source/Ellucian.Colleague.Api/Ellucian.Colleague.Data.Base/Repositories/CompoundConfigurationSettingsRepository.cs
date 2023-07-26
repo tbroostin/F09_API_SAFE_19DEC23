@@ -1,5 +1,4 @@
-﻿/*Copyright 2020-2021 Ellucian Company L.P. and its affiliates. */
-
+﻿/*Copyright 2020-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,7 +7,6 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -25,8 +23,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class CompoundConfigurationSettingsRepository : BaseColleagueRepository, ICompoundConfigurationSettingsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        //public static char _VM = Convert.ToChar(DynamicArray.VM);
-        //public static char _SM = Convert.ToChar(DynamicArray.SM);
         private readonly int _readSize;
 
         public CompoundConfigurationSettingsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
@@ -606,7 +602,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var primarySourceCollection = new List<CompoundConfigurationSettingsOptionsSource>();
             var secondarySourceCollection = new List<CompoundConfigurationSettingsOptionsSource>();
             var tertiarySourceCollection = new List<CompoundConfigurationSettingsOptionsSource>();
-                               
+
             var title = source.IcmCollCmpdConfigTitle;
             switch (title.ToUpperInvariant())
             {
@@ -764,7 +760,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             return compoundSettings;
         }
-        
+
         #endregion
 
         #region Helper Methods 

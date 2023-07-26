@@ -1,19 +1,20 @@
 ﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Runtime.Caching;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -144,6 +145,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 Collection<Base.DataContracts.PersonSt> emptyPersonStCollection = new Collection<Base.DataContracts.PersonSt>();
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(It.IsAny<string>(), true)).ReturnsAsync(emptyPersonStCollection);
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string>(), true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.PersonSt>() { BulkRecordsRead = emptyPersonStCollection });
 
                 Domain.Student.Entities.PlanningStudent student = await planningStudentRepository.GetAsync(knownStudentId2);
                 Assert.AreEqual(1, student.ProgramIds.Count);
@@ -194,6 +197,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Verify that bulk read was not (times.never) called
                 dataReaderMock.Verify<Task<Collection<Base.DataContracts.Person>>>(a => a.BulkReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true), Times.Never());
+                dataReaderMock.Verify<Task<BulkReadOutput<Base.DataContracts.Person>>>(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true), Times.Never());
+
             }
 
             [TestMethod]
@@ -712,6 +717,54 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) => Task.FromResult(ToCollection(personStRecords.Where(x => s.Contains(x.Recordkey)))));
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.StudentPrograms>(It.IsAny<string[]>(), true)).ReturnsAsync(studentPrograms);
 
+                //DataReader mock setup for BulkReadRecordWithInvalidRecordsAsync
+                //for person
+                dataReaderMock.Setup(
+               accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true))
+               .Returns<string[], bool>((s, b) =>
+               {
+                   return Task.FromResult(new BulkReadOutput<Base.DataContracts.Person>()
+                   {
+                       BulkRecordsRead = ToCollection(people.Where(x => s.Contains(x.Recordkey)))
+                   });
+               }).Verifiable();
+
+                //for students
+
+                dataReaderMock.Setup(
+              accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true))
+              .Returns<string[], bool>((s, b) =>
+              {
+                  return Task.FromResult(new BulkReadOutput<Student.DataContracts.Students>()
+                  {
+                      BulkRecordsRead = ToCollection(students.Where(x => s.Contains(x.Recordkey)))
+                  });
+              });
+
+                //for personst
+                dataReaderMock.Setup(
+             accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true))
+             .Returns<string[], bool>((s, b) =>
+             {
+                 return Task.FromResult(new BulkReadOutput<Base.DataContracts.PersonSt>()
+                 {
+                     BulkRecordsRead = ToCollection(personStRecords.Where(x => s.Contains(x.Recordkey)))
+                 });
+             });
+
+                //student programs
+                dataReaderMock.Setup(
+             accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentPrograms>(It.IsAny<string[]>(), true))
+             .Returns<string[], bool>((s, b) =>
+             {
+                 return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentPrograms>()
+                 {
+                     BulkRecordsRead = studentPrograms
+                 });
+             });
+
+
+
                 var foo = students.Where(x => x.Recordkey != "1").ToList();
 
                 // mock data accessor DEGREE_PLANS response  - for student 0000001
@@ -726,11 +779,28 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // mock data accessor STUDENT.ADVISEMENT for students with no advisor
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string>(), true)).ReturnsAsync(new Collection<Student.DataContracts.StudentAdvisement>());
-
+                dataReaderMock.Setup(
+              accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true))
+              .Returns<string[], bool>((s, b) =>
+              {
+                  return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                  {
+                      BulkRecordsRead = new Collection<Student.DataContracts.StudentAdvisement>()
+                  });
+              });
                 // mock data accessor and selects STUDENT.ADVISEMENT for student 0000002
                 string[] student2AdvismentIds = new List<string>() { "21", "22", "23" }.ToArray();
                 dataReaderMock.Setup(a => a.SelectAsync("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(student2AdvismentIds).Verifiable();
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(student2AdvismentIds, true)).ReturnsAsync(studentAdvisements);
+                dataReaderMock.Setup(
+              accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(student2AdvismentIds, true))
+              .Returns<string[], bool>((s, b) =>
+              {
+                  return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                  {
+                      BulkRecordsRead = studentAdvisements
+                  });
+              });
 
                 var stWebDflt = BuildStwebDefaults();
                 //Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
@@ -997,6 +1067,52 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) => Task.FromResult(ToCollection(personStRecords.Where(x => s.Contains(x.Recordkey)))));
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.StudentPrograms>(It.IsAny<string[]>(), true)).ReturnsAsync(studentPrograms);
 
+                //DataReader mock setup for BulkReadRecordWithInvalidRecordsAsync
+                //for person
+                dataReaderMock.Setup(
+               accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true))
+               .Returns<string[], bool>((s, b) =>
+               {
+                   return Task.FromResult(new BulkReadOutput<Base.DataContracts.Person>()
+                   {
+                       BulkRecordsRead = ToCollection(people.Where(x => s.Contains(x.Recordkey)))
+                   });
+               });
+
+                //for students
+
+                dataReaderMock.Setup(
+              accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true))
+              .Returns<string[], bool>((s, b) =>
+              {
+                  return Task.FromResult(new BulkReadOutput<Student.DataContracts.Students>()
+                  {
+                      BulkRecordsRead = ToCollection(students.Where(x => s.Contains(x.Recordkey)))
+                  });
+              });
+
+                //for personst
+                dataReaderMock.Setup(
+             accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true))
+             .Returns<string[], bool>((s, b) =>
+             {
+                 return Task.FromResult(new BulkReadOutput<Base.DataContracts.PersonSt>()
+                 {
+                     BulkRecordsRead = ToCollection(personStRecords.Where(x => s.Contains(x.Recordkey)))
+                 });
+             });
+
+                //student programs
+                dataReaderMock.Setup(
+             accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentPrograms>(It.IsAny<string[]>(), true))
+             .Returns<string[], bool>((s, b) =>
+             {
+                 return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentPrograms>()
+                 {
+                     BulkRecordsRead = studentPrograms
+                 });
+             });
+
                 // mock data accessor DEGREE_PLANS response  - for student 0000001
                 dataReaderMock.Setup(a => a.SelectAsync("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "'")).ReturnsAsync(new string[] { "1" });
 
@@ -1009,12 +1125,29 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // mock data accessor STUDENT.ADVISEMENT for students with no advisor
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(new List<string>().ToArray(), true)).ReturnsAsync(new Collection<Student.DataContracts.StudentAdvisement>());
+                dataReaderMock.Setup(
+             accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true))
+             .Returns<string[], bool>((s, b) =>
+             {
+                 return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.StudentAdvisement>()
+                 });
+             });
 
                 // mock data accessor STUDENT.ADVISEMENT for student 0000002
                 string[] student2AdvismentIds = new List<string>() { "21", "22" }.ToArray();
                 dataReaderMock.Setup(a => a.SelectAsync("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(student2AdvismentIds);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(student2AdvismentIds, true)).ReturnsAsync(studentAdvisements);
-
+                dataReaderMock.Setup(
+              accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(student2AdvismentIds, true))
+              .Returns<string[], bool>((s, b) =>
+              {
+                  return Task.FromResult(new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                  {
+                      BulkRecordsRead = studentAdvisements
+                  });
+              });
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));

@@ -26,6 +26,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         public TestFinancialAidPersonRepository faPersonsRepository;
 
         public Mock<IFinancialAidPersonRepository> faPersonRepositoryMock;
+        public Mock<IPersonBaseRepository> personBaseRepositoryMock;
 
         public AutoMapperAdapter<Domain.Base.Entities.PersonBase, Ellucian.Colleague.Dtos.Base.Person> personAdapter;
 
@@ -36,7 +37,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         {
             get
             {
-                return new FinancialAidPersonService(adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object, faPersonRepositoryMock.Object, baseConfigurationRepository);
+                return new FinancialAidPersonService(adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object, faPersonRepositoryMock.Object, personBaseRepositoryMock.Object, baseConfigurationRepository);
             }
         }
 
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
             faPersonsRepository = new TestFinancialAidPersonRepository();
             faPersonRepositoryMock = new Mock<IFinancialAidPersonRepository>();
+            personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
             faPersonRepositoryMock.Setup(r => r.SearchFinancialAidPersonsByIdsAsync(It.IsAny<IEnumerable<string>>())).Returns<IEnumerable<string>>(
                 (ids) => faPersonsRepository.SearchFinancialAidPersonsByIdsAsync(ids));
             faPersonRepositoryMock.Setup(r => r.SearchFinancialAidPersonsByKeywordAsync(It.IsAny<string>())).Returns<string>(

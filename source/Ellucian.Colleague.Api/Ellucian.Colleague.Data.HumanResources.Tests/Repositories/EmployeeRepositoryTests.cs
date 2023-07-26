@@ -270,6 +270,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     PpwgBaseEt = "et",
                     PpwgEndDate = DateTime.Now.AddYears(1),
                     PpwgStartDate = DateTime.Now.AddDays(-1),
+                    PpwgType = "W",
                     PpwgHrpId = i.ToString(),
                     Recordkey = i.ToString()
                 });
@@ -1209,6 +1210,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     PpwgBaseEt = "et",
                     PpwgEndDate = DateTime.Now.AddYears(1),
                     PpwgStartDate = DateTime.Now.AddDays(-1),
+                    PpwgType = "W",
                     PpwgHrpId = i.ToString(),
                     Recordkey = i.ToString()
                 });

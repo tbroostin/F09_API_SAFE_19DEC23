@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,7 +99,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData));
 
                 // Mock student petition response
                 studentPetitionsData = BuildStudentPetitionsRepositoryResponse();
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData));
 
                 // Mock student petition response
                 studentOverloadPetitionsData = BuildStudentOverloadPetitionsRepositoryResponse();

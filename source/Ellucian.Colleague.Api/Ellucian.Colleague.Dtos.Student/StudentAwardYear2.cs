@@ -71,5 +71,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Flag indicating whether to suppress disbursement info display for the year
         /// </summary>
         public bool SuppressDisbursementInfoDisplay { get; set; }
+
+        /// <summary>
+        /// List of available housing options for the FA SS checklist
+        /// </summary>
+        public List<string> HousingOptions { get; set; }
     }
 }

@@ -1,29 +1,27 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
 using System.Threading;
-using System;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Web.Http.Exceptions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
     [TestClass]
     public class StudentConfigurationRepositoryTests
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
-
         [TestClass]
         public class GraduationConfigurationTests
         {
@@ -3981,9 +3979,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var configuration = await studentConfigurationRepository.GetStudentRecordsReleaseConfigAsync();
                 Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.StudentRecordsReleaseConfig);
-                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(_VM).ToList(), configuration.Text);
+                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(DmiString._VM).ToList(), configuration.Text);
                 Assert.IsTrue(configuration.IsPinRequired);
-                
+
             }
 
             [TestMethod]
@@ -3991,14 +3989,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 stwebDefaults2 = new StwebDefaults2()
                 {
-                   Stweb2StRecRelText="Student Records Release Configuration Information." 
+                    Stweb2StRecRelText = "Student Records Release Configuration Information."
                 };
                 // Set up repo response for StwebDefaults2
                 dataAccessorMock.Setup<Task<StwebDefaults2>>(src => src.ReadRecordAsync<StwebDefaults2>(It.IsAny<string>(), It.IsAny<string>(), false)).Returns(Task.FromResult(stwebDefaults2));
 
                 var configuration = await studentConfigurationRepository.GetStudentRecordsReleaseConfigAsync();
                 Assert.IsTrue(configuration is Ellucian.Colleague.Domain.Student.Entities.StudentRecordsReleaseConfig);
-                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(_VM).ToList(), configuration.Text);
+                CollectionAssert.AreEqual(stwebDefaults2.Stweb2StRecRelText.Split(DmiString._VM).ToList(), configuration.Text);
 
             }
 

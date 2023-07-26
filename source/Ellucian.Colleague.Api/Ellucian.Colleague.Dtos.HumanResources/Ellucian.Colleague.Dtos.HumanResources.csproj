@@ -40,8 +40,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -62,10 +62,15 @@
     <Compile Include="BenefitEnrollmentCompletionInfo.cs" />
     <Compile Include="BenefitsEnrollmentAknowledgement.cs" />
     <Compile Include="BenefitTypeAction.cs" />
+    <Compile Include="EmployeeSearchResult.cs" />
+    <Compile Include="OrgChartEmployeeName.cs" />
+    <Compile Include="OrgChartEmployee.cs" />
     <Compile Include="EmployeeLeaveTransaction.cs" />
     <Compile Include="EmployeeLeavePlanQueryCriteria.cs" />
     <Compile Include="LeaveRequestActionType.cs" />
+    <Compile Include="LeaveRequestLeaveTypes.cs" />
     <Compile Include="LeaveTransactionType.cs" />
+    <Compile Include="PayStatementInformation.cs" />
     <Compile Include="PeriodBenefitCostCalculationRequirement.cs" />
     <Compile Include="EmployeeBenefitsEnrollmentInfoQueryCriteria.cs" />
     <Compile Include="BenefitEnrollmentBenefitsQueryCriteria.cs" />

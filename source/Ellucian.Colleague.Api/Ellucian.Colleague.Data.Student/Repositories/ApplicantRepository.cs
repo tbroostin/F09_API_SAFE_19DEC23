@@ -95,5 +95,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }).GetAwaiter().GetResult();
             return x;
         }
+
+        public async Task<string> GetStwebDefaultsHierarchyAsync()
+        {
+
+            var result = await GetOrAddToCacheAsync<Data.Student.DataContracts.StwebDefaults>("StudentWebDefaults",
+            async () =>
+            {
+                Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
+                if (stwebDefaults == null)
+                {
+                    if (logger.IsInfoEnabled)
+                    {
+                        var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                        logger.Info(errorMessage);
+                    }
+                    stwebDefaults = new StwebDefaults();
+                }
+                return stwebDefaults;
+            }, Level1CacheTimeoutValue);
+
+            return result.StwebDisplayNameHierarchy;
+
+        }
     }
 }

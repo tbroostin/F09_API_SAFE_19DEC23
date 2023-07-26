@@ -1124,5 +1124,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<StudentReleaseAccess>> GetStudentReleaseAccessCodesAsync();
+
+        /// <summary>
+        /// Returns all aid application type
+        /// </summary>
+        /// <param name="bypassCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="AidApplicationType">aid application types</see></returns>
+        Task<IEnumerable<AidApplicationType>> GetAidApplicationTypesAsync(bool bypassCache = false);
     }
 }

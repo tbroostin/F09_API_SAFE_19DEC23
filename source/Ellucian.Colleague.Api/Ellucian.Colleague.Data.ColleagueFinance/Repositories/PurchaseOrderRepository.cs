@@ -1,26 +1,25 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
-using Ellucian.Colleague.Domain.Base.Services;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
-using Ellucian.Dmi.Runtime;
+using System.Threading.Tasks;
 using GlAccts = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAccts;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
@@ -35,7 +34,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private const int PurchaseOrdersCacheTimeout = 20;
         private const string AllPurchaseOrdersCache = "AllPurchaseOrders";
         RepositoryException exception = null;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         /// The constructor to instantiate a purchase order repository object
@@ -934,7 +932,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                                         // list of line items to update funds availability.
                                         List<string> itemsList = purchaseOrder.PoItemsId;
-                                        
+
                                         if ((purchaseOrder.PoReqIds != null) && (purchaseOrder.PoReqIds.Any()))
                                         {
                                             // if the purchase order originated from one or more requisitions, then if requisition split is
@@ -1126,7 +1124,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private static bool CanUserByPassGlAccessCheck(string personId, PurchaseOrders purchaseOrders, PurchaseOrder purchaseOrderDomainEntity)
         {
             if (purchaseOrderDomainEntity.Requisitions == null || (purchaseOrderDomainEntity.Requisitions.Count == 0))
-                return ((purchaseOrderDomainEntity.Status == PurchaseOrderStatus.InProgress ) || (purchaseOrderDomainEntity.Status == PurchaseOrderStatus.Voided) || (purchaseOrderDomainEntity.Status == PurchaseOrderStatus.Closed)) && (purchaseOrders.PoRequestor == personId || purchaseOrders.PoDefaultInitiator == personId);
+                return ((purchaseOrderDomainEntity.Status == PurchaseOrderStatus.InProgress) || (purchaseOrderDomainEntity.Status == PurchaseOrderStatus.Voided) || (purchaseOrderDomainEntity.Status == PurchaseOrderStatus.Closed)) && (purchaseOrders.PoRequestor == personId || purchaseOrders.PoDefaultInitiator == personId);
             else
                 return false;
         }
@@ -1577,7 +1575,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (addLineItemToModify)
                     {
                         var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
-                        lineItem.AlLineItemDescs = string.Join(_SM.ToString(), descriptionList);
+                        lineItem.AlLineItemDescs = string.Join(DmiString.sSM, descriptionList);
                         lineItem.AlLineItemQtys = apLineItem.Quantity.ToString();
                         lineItem.AlItemPrices = apLineItem.Price.ToString();
                         lineItem.AlItemUnitIssues = apLineItem.UnitOfIssue;
@@ -1748,7 +1746,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", "Unable to build purchase order. Missing record id.") { Id = purchaseOrder.RecordGuid } );
+                exception.AddError(new RepositoryError("Bad.Data", "Unable to build purchase order. Missing record id.") { Id = purchaseOrder.RecordGuid });
             }
 
             string guid = purchaseOrder.RecordGuid;
@@ -1757,7 +1755,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", "Unable to build purchase order. Missing record guid.") { SourceId = purchaseOrder.Recordkey } );
+                exception.AddError(new RepositoryError("Bad.Data", "Unable to build purchase order. Missing record guid.") { SourceId = purchaseOrder.Recordkey });
             }
 
             if (exception != null && exception.Errors != null && exception.Errors.Any())
@@ -1784,14 +1782,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (exception == null)
                         exception = new RepositoryException();
                     exception.AddError(new RepositoryError("Bad.Data", string.Concat("Invalid purchase order status for purchase order '", purchaseOrder.PoNo, "'.  Status: '", purchaseOrder.PoStatus.FirstOrDefault(), "'," +
-                        " Entity: 'PURCHASE.ORDERS'")) { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey } );
+                        " Entity: 'PURCHASE.ORDERS'"))
+                    { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey });
                 }
             }
             else
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", "Missing status for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey } );
+                exception.AddError(new RepositoryError("Bad.Data", "Missing status for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey });
             }
 
             string purchaseOrderVendorName = "";
@@ -1800,14 +1799,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", "Missing status date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey } );
+                exception.AddError(new RepositoryError("Bad.Data", "Missing status date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey });
             }
 
             if (!purchaseOrder.PoDate.HasValue)
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", "Missing date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey } );
+                exception.AddError(new RepositoryError("Bad.Data", "Missing date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS'") { Id = purchaseOrder.RecordGuid, SourceId = purchaseOrder.Recordkey });
             }
 
             if (exception != null && exception.Errors != null && exception.Errors.Any())
@@ -1917,7 +1916,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 if (address != null)
                 {
                     int counter = 0;
-                    foreach(var addLine in address.AddressLines)
+                    foreach (var addLine in address.AddressLines)
                     {
                         if (purchaseOrderDomainEntity.MiscAddress.Count >= counter)
                         {
@@ -1926,7 +1925,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 purchaseOrderDomainEntity.VendorAddressId = "";
                                 break;
                             }
-                        } else
+                        }
+                        else
                         {
                             purchaseOrderDomainEntity.VendorAddressId = "";
                             break;
@@ -2329,14 +2329,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return purchaseOrderLineItemStatus;
         }
 
-        private  PurchaseOrderStatus? GetPurchaseOrderStatus(string status, string recordId)
+        private PurchaseOrderStatus? GetPurchaseOrderStatus(string status, string recordId)
         {
             PurchaseOrderStatus? purchaseOrderStatus = null;
             if (string.IsNullOrEmpty(status))
             {
                 if (exception == null)
                     exception = new RepositoryException();
-                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Purchase Order Status is required. Entity: 'PURCHASE.ORDERS', Record ID: '", recordId , "'")));
+                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Purchase Order Status is required. Entity: 'PURCHASE.ORDERS', Record ID: '", recordId, "'")));
             }
             switch (status.ToUpper())
             {
@@ -2446,7 +2446,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             request.Status = PurchaseOrderEntity.Status.ToString();
 
-            if(PurchaseOrderEntity.StatusDate != default(DateTime))
+            if (PurchaseOrderEntity.StatusDate != default(DateTime))
                 request.StatusDate = PurchaseOrderEntity.StatusDate;
 
             if (!string.IsNullOrEmpty(PurchaseOrderEntity.Fob))
@@ -2530,7 +2530,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                     var lineItem = new Transactions.PoLineItems()
                     {
-                        ItemsDesc= apLineItem.Description,
+                        ItemsDesc = apLineItem.Description,
                         ItemsCommodityCode = apLineItem.CommodityCode,
                         ItemsFixedAssetsFlag = apLineItem.FixedAssetsFlag,
                         ItemsPartNumber = apLineItem.VendorPart,
@@ -2548,7 +2548,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (!string.IsNullOrWhiteSpace(apLineItem.Id))
                     {
                         lineItem.ItemsNo = apLineItem.Id;
-                    } else { lineItem.ItemsNo = "NEW"; }
+                    }
+                    else { lineItem.ItemsNo = "NEW"; }
 
                     lineItem.ItemsStatus = apLineItem.LineItemStatus.ToString();
                     switch (apLineItem.LineItemStatus)
@@ -2749,7 +2750,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
                     var lineItem = new Transactions.AlCreatePoLineItems()
                     {
-                        AlItemDescs = string.Join(_SM.ToString(), descriptionList),
+                        AlItemDescs = string.Join(DmiString.sSM, descriptionList),
                         AlItemQtys = apLineItem.Quantity.ToString(),
                         AlItemPrices = apLineItem.Price.ToString(),
                         AlItemUnitIssues = apLineItem.UnitOfIssue,
@@ -2925,7 +2926,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 logger.Error("Missing date for purchase order id: " + purchaseOrderDataContract.Recordkey);
             }
 
-            if(purchaseOrderDataContract.PoStatus==null || !purchaseOrderDataContract.PoStatus.Any())
+            if (purchaseOrderDataContract.PoStatus == null || !purchaseOrderDataContract.PoStatus.Any())
             {
                 throw new ArgumentNullException("Missing status for purchase order: " + purchaseOrderDataContract.Recordkey);
             }

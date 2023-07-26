@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -4682,6 +4682,326 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         #endregion
+
+        #region AidApplicationAdditionalInfo
+        [TestMethod]
+        public void DefaultRoute_AidApplicationAdditionalInfo_GetAidApplicationAdditionalInfoAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-additional-info");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationAdditionalInfoAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationAdditionalInfo_GetAidApplicationAdditionalInfoAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-additional-info", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationAdditionalInfoAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_AidApplicationAdditionalInfo_GetAidApplicationAdditionalInfoByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-additional-info/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationAdditionalInfoByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationAdditionalInfo_GetAidApplicationAdditionalInfoByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-additional-info/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationAdditionalInfoByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationAdditionalInfo_PutAidApplicationAdditionalInfoAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/aid-application-additional-info/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("PutAidApplicationAdditionalInfoAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationAdditionalInfo_PostAidApplicationAdditionalInfoAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/aid-application-additional-info", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("PostAidApplicationAdditionalInfoAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationAdditionalInfo_DeleteAidApplicationAdditionalInfoAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/aid-application-additional-info/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-additional-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationAdditionalInfo", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteAidApplicationAdditionalInfoAsync", routeData.Values["Action"]);
+        }
+        #endregion AidApplicationAdditionalInfo
+
+        #region AidApplicationDemographics
+
+        [TestMethod]
+        public void DefaultRoute_AidApplicationDemographics_GetAidApplicationDemographicsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-demographics");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationDemographicsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationDemographics_GetAidApplicationDemographicsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-demographics", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationDemographicsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_AidApplicationDemographics_GetAidApplicationDemographicsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-demographics/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationDemographicsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationDemographics_GetAidApplicationDemographicsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-demographics/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationDemographicsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationDemographics_PutAidApplicationDemographicsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/aid-application-demographics/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("PutAidApplicationDemographicsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationDemographics_PostAidApplicationDemographicsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/aid-application-demographics", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("PostAidApplicationDemographicsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationDemographics_DeleteAidApplicationDemographicsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/aid-application-demographics/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-demographics/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationDemographics", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteAidApplicationDemographicsAsync", routeData.Values["Action"]);
+        }
+
+        #endregion AidApplicationDemographics
+
+        #region AidApplicationResults
+        [TestMethod]
+        public void DefaultRoute_AidApplicationResults_GetAidApplicationResultsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-results");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationResultsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationResults_GetAidApplicationResultsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-results", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationResultsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_AidApplicationResults_GetAidApplicationResultsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-results/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationResultsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationResults_GetAidApplicationResultsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-application-results/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationResultsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationResults_PutAidApplicationResultsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/aid-application-results/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("PutAidApplicationResultsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationResults_PostAidApplicationResultsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/aid-application-results", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("PostAidApplicationResultsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplicationResults_DeleteAidApplicationResultsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/aid-application-results/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-application-results/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplicationResults", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteAidApplicationResultsAsync", routeData.Values["Action"]);
+        }
+        #endregion AidApplicationResults
+
+        #region AidApplications
+
+        [TestMethod]
+        public void DefaultRoute_AidApplications_GetAidApplicationsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-applications");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplications_GetAidApplicationsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-applications", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_AidApplications_GetAidApplicationsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-applications/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplications_GetAidApplicationsByIdAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aid-applications/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAidApplicationsByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplications_PutAidApplicationsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/aid-applications/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("PutAidApplicationsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplications_PostAidApplicationsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/aid-applications", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("PostAidApplicationsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AidApplications_DeleteAidApplicationsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/aid-applications/id");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("aid-applications/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AidApplications", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteAidApplicationsAsync", routeData.Values["Action"]);
+        }
+
+        #endregion AidApplications
 
         #region Applicants
 
@@ -13819,7 +14139,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         [TestMethod]
         public void Route_GetEmployeeLeavePlans_UnsupportedVersion()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-plans", "application/vnd.hedtech.integration.v1+json");
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-plans", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
@@ -13912,6 +14232,17 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("employee-leave-plans", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("EmployeeLeavePlans", routeData.Values["Controller"]);
             Assert.AreEqual("GetEmployeeLeavePlansV2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_EmployeeLeavePlans_Get_V3()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-plans", "application/vnd.ellucian.v3+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("employee-leave-plans", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EmployeeLeavePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("GetEmployeeLeavePlansV3Async", routeData.Values["Action"]);
         }
         #endregion
 
@@ -22265,6 +22596,34 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
         #endregion
 
+        #region LeaveBalanceConfiguration
+
+        [TestMethod]
+        public void Default_Route_LeavePlansConfiguration()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-plans-configuration");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("leave-plans-configuration", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("LeaveBalanceConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetLeaveBalanceConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_GetLeaveBalanceConfiguration_EthosEnabled_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-plans-configuration", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("leave-plans-configuration", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("LeaveBalanceConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetLeaveBalanceConfigurationAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
+
+        #endregion
+
         #region LeaveCategories
 
         [TestMethod]
@@ -22367,6 +22726,21 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         #endregion
 
         #region LeaveRequest
+
+        #region Ethos Enabled
+        [TestMethod]
+        public void DefaultRoute_EmployeeLeaveRequest_EthosEnabled_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-requests", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("leave-requests", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EmployeeLeaveRequest", routeData.Values["Controller"]);
+            Assert.AreEqual("GetLeaveRequestsAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
+        #endregion
 
         [TestMethod]
         public void DefaultRoute_EmployeeLeaveRequest_Get()
@@ -23870,6 +24244,32 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         #endregion OfficeCodes
+
+        #region OrganizationalChart
+        [TestMethod]
+        public void DefaultRoute_OrganizationalChart_GetOrganizationalChartAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/org-chart");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("org-chart", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("OrganizationalChart", routeData.Values["Controller"]);
+            Assert.AreEqual("GetOrganizationalChartAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void OrganizationalChart_GetOrganizationalChartAsync_EthosEnabled()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/org-chart", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("org-chart", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("OrganizationalChart", routeData.Values["Controller"]);
+            Assert.AreEqual("GetOrganizationalChartAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
+        #endregion
 
         #region OrganizationalPersonPositions
 
@@ -25497,6 +25897,71 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         #endregion
 
         #region PayStatements
+        #region Ethos Enabled
+        [TestMethod]
+        public void DefaultRoute_PayStatements_EthosEnabled_GetPayStatementsSummary()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-statements", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("pay-statements", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPayStatementSummariesAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
+        #endregion
+
+        #region Pro-Code APIs
+        [TestMethod]
+        public void DefaultRoute__PayStatementInformation_GetPayStatementInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-statement-info/{id}");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("pay-statement-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPayStatementInformationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PayStatementInformation_GetPayStatementInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-statement-info/id", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("pay-statement-info/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPayStatementInformationAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEedmSupported"]);
+            Assert.IsTrue((bool)routeData.Values["IsEedmSupported"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute__PayStatementInformation_GetAllPayStatementInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-statement-info");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("pay-statement-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAllPayStatementInformationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PayStatementInformation_GetAllPayStatementInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-statement-info", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("pay-statement-info", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAllPayStatementInformationAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEedmSupported"]);
+            Assert.IsTrue((bool)routeData.Values["IsEedmSupported"]);
+        }
+        #endregion
+
         [TestMethod]
         public void DefaultRoute_PayStatements_GetPayStatementsSummary()
         {
@@ -25529,7 +25994,6 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("PayStatements", routeData.Values["Controller"]);
             Assert.AreEqual("QueryPayStatementPdfs", routeData.Values["Action"]);
         }
-
         #endregion
 
         #region PayScales
@@ -28748,6 +29212,20 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("PersonPositions", routeData.Values["Controller"]);
             Assert.AreEqual("GetPersonPositionsAsync", routeData.Values["Action"]);
         }
+
+        [TestMethod]
+        public void PersonPositions_EthosEnabled_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-positions", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("person-positions", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PersonPositions", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPersonPositionsAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+
+        }
         #endregion
 
         #region PersonPositionWages
@@ -29117,6 +29595,19 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("positions", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Positions", routeData.Values["Controller"]);
             Assert.AreEqual("GetPositionsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Positions_EthosEnabled_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/positions", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("positions", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Positions", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPositionsAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
         }
 
         #endregion
@@ -38683,6 +39174,28 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         [TestMethod]
+        public void DefaultRoute_Students_Register_Skip_Validations()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/students/studentGuid/register-skip-validations");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentGuid}/register-skip-validations", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("PostRegisterSkipValidationsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Students_Register_Skip_Validation_Only()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/students/studentGuid/register-validation-only");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentGuid}/register-validation-only", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("PostRegisterValidationOnlyAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Route_Students_GetRegistrationEligibility_1()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/id/registration-eligibility", _mediaTypeHeaderVersion1);
@@ -38726,6 +39239,27 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("GetRegistrationEligibility3Async", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void Route_Students_GetRegistrationPrioritiesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/registration-priorities", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/registration-priorities", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetRegistrationPrioritiesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Students_GetRegistrationPrioritiesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/registration-priorities");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/registration-priorities", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetRegistrationPrioritiesAsync", routeData.Values["Action"]);
+        }
 
         [TestMethod]
         public void DefaultRoute_Students_GetStudentRestrictions()
@@ -38884,6 +39418,28 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("students/{studentId}/academic-levels", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Students", routeData.Values["Controller"]);
             Assert.AreEqual("GetStudentAcademicLevelsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Students_PutStudentAsync_v1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/students/guid", "application/vnd.hedtech.integration.v7+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("PutStudentAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Students_PutStudentAsync_v2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/students/guid", "application/vnd.hedtech.integration.v16+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("PutStudent2Async", routeData.Values["Action"]);
         }
         #endregion Students
 
@@ -40803,6 +41359,69 @@ namespace Ellucian.Colleague.Api.Routing.Tests
 
         #region Timecards
 
+        #region Ethos Enabled
+        [TestMethod]
+        public void DefaultRoute_Timecards_EthosEnabled_Get()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/timecards", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("timecards", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("GetTimecards2Async", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
+
+        [TestMethod]
+        public void Route_Timecard_V2_EthosEnabled_Post()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/timecards", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("timecards", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("CreateTimecard2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Timecard_EthosEnabled_Put()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/timecards/{id}", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("timecards/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("UpdateTimecard2Async", routeData.Values["Action"]);
+        }
+        #endregion
+
+        #region Pro-Code APIs
+        [TestMethod]
+        public void DefaultRoute__PayPeriodInformation_GetPayPeriodInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/position-pay-periods-timecards");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("position-pay-periods-timecards", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPositionPayPeriodsTimecardsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PayPeriodInformation_GetPayPeriodInformationAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/position-pay-periods-timecards", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("position-pay-periods-timecards", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("GetPositionPayPeriodsTimecardsAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEedmSupported"]);
+            Assert.IsTrue((bool)routeData.Values["IsEedmSupported"]);
+        }
+        #endregion
+
         [TestMethod]
         public void DefaultRoute_Timecards_Get()
         {
@@ -40826,7 +41445,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         }
 
         [TestMethod]
-        public void DefaultRoute_Timecard_Get()
+        public void DefaultRoute_Timecard_GetByTimecardId()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/timecards/{id}");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
@@ -40846,7 +41465,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("Timecards", routeData.Values["Controller"]);
             Assert.AreEqual("CreateTimecard2Async", routeData.Values["Action"]);
         }
-
+               
         [TestMethod]
         public void DefaultRoute_Timecard_V3_Post()
         {
@@ -40857,7 +41476,7 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("Timecards", routeData.Values["Controller"]);
             Assert.AreEqual("BulkCreateTimecardsAsync", routeData.Values["Action"]);
         }
-
+              
         [TestMethod]
         public void DefaultRoute_Timecard_Put()
         {
@@ -40892,6 +41511,18 @@ namespace Ellucian.Colleague.Api.Routing.Tests
             Assert.AreEqual("GetTimecardsForLeaveAsync", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void BulkCreateTimecards_EthosEnabled()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/bulk-timecards", "application/vnd.hedtech.integration.v1.0.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("bulk-timecards", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("BulkCreateTimecardsAsync", routeData.Values["Action"]);
+            Assert.IsNotNull(routeData.Values["IsEthosEnabled"]);
+            Assert.IsTrue((bool)routeData.Values["IsEthosEnabled"]);
+        }
         #endregion
 
         #region TimecardHistories
@@ -42338,7 +42969,6 @@ namespace Ellucian.Colleague.Api.Routing.Tests
         private const string _mediaTypeHeaderEllucianPersonSearchFormatVersion1 = "application/vnd.ellucian-person-search-exact-match.v1+json";
 
         private const string _mediaTypeHeaderEllucianJsonPilotMediaTypeVersion1 = "application/vnd.ellucian-pilot.v1+json";
-
         #endregion Helper methods
     }
 }

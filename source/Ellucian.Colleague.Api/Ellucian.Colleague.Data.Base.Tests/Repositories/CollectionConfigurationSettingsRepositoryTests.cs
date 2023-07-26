@@ -1,4 +1,4 @@
-//Copyright 2020 Ellucian Company L.P. and its affiliates.  
+//Copyright 2020-2023 Ellucian Company L.P. and its affiliates.  
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -6,7 +6,6 @@ using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -24,8 +23,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
     [TestClass]
     public class CollectionConfigurationSettingsRepositoryTests
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
-
         /// <summary>
         /// Test class for CollectionConfigurationSettings codes
         /// </summary>
@@ -225,7 +222,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
 
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<BendedBase>("BENDED", It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
-                
+
                 var result = await collectionConfigurationSettingsRepo.GetAllBendedCodesAsync(false);
 
                 Assert.IsInstanceOfType(result, typeof(Dictionary<string, string>));
@@ -274,7 +271,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                 IclEthosPropertyNamesAssocMember = er.PropertyName
                             }).ToList())
                     }).ToList());
-                
+
                 dataAccessorMock.Setup(ac => ac.SelectAsync("INTG.COLLECT.SETTINGS", ""))
                     .ReturnsAsync(entityCollection.Select(ec => ec.Recordkey).ToArray());
 
@@ -287,7 +284,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     LdmdDfltAdmOfficeCodes = new List<string>() { "ADM", "AM" },
                     LdmdExcludeBenefits = new List<string>() { "4JAN", "STAN" },
                     LdmdLeaveStatusCodes = new List<string>() { "PR", "TE", "SW" },
-                    LdmdGuardianRelTypes = new List<string>() { "GU", "P"}                    
+                    LdmdGuardianRelTypes = new List<string>() { "GU", "P" }
                 };
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS", true)).ReturnsAsync(ldmDefaults);
 

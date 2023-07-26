@@ -109,7 +109,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencie
 		Dependencies\Ellucian.Web.Mvc.Install.XML = Dependencies\Ellucian.Web.Mvc.Install.XML
 		Dependencies\Ellucian.Web.Mvc.pdb = Dependencies\Ellucian.Web.Mvc.pdb
 		Dependencies\Ellucian.Web.Mvc.XML = Dependencies\Ellucian.Web.Mvc.XML
-		Dependencies\JsonDiffPatch.dll = Dependencies\JsonDiffPatch.dll
 		Dependencies\SlowCheetah.Tasks.dll = Dependencies\SlowCheetah.Tasks.dll
 		Dependencies\SlowCheetah.Transforms.targets = Dependencies\SlowCheetah.Transforms.targets
 	EndProjectSection

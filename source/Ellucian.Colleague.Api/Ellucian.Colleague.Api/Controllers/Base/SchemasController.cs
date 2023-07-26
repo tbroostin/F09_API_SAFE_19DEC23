@@ -1,37 +1,37 @@
-﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 // this controller is obselete as it is replaced by metadata endpoint. However
 // we are leaving the code here as it has some important logic that might be needed in the future. 
 // for generating schemas for self service APIs. 
 
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Schema;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Web.Http.Routing;
-using Ellucian.Colleague.Coordination.Base.Services;
-using slf4net;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Text.RegularExpressions;
-using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Linq;
-using System.Dynamic;
-using Ellucian.Web.Http.EthosExtend;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Dmi.Runtime;
-using System.Text;
-using Ellucian.Colleague.Api.Utility;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -49,6 +49,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private const string httpMethodConstraintName = "httpMethod";
         private const string headerVersionConstraintName = "headerVersion";
         private const string isEEdmSupported = "isEedmSupported";
+        private const string isEthosEnabled = "isEthosEnabled";
 
         private const string GUID_PATTERN = "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$";
 
@@ -59,10 +60,6 @@ namespace Ellucian.Colleague.Api.Controllers
         private readonly List<string> versionedSupportedMethods = new List<string>() { "put", "post", "get" };
         private readonly List<string> versionlessSupportedMethods = new List<string>() { "get", "delete" };
 
-        char _VM = Convert.ToChar(DynamicArray.VM);
-        char _SM = Convert.ToChar(DynamicArray.SM);
-        char _TM = Convert.ToChar(DynamicArray.TM);
-        char _XM = Convert.ToChar(250);
         /// <summary>
         ///SchemasController
         /// </summary>
@@ -86,7 +83,7 @@ namespace Ellucian.Colleague.Api.Controllers
             [FromUri] string selectedSchema = "", [FromUri] string selectedSchema2 = "",
            [FromUri] string selectedSchema3 = "", [FromUri] string criteria = "")
         {
-           
+
             bool bypassCache = false;
             if ((Request != null) && (Request.Headers.CacheControl != null))
             {
@@ -155,9 +152,10 @@ namespace Ellucian.Colleague.Api.Controllers
 
             var routeCollection = Configuration.Routes;
             var httpRoutes = routeCollection
-                   .Where(r => r.Defaults.Keys != null && r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true))
+                   .Where(r => r.Defaults.Keys != null && (r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true) ||
+                   r.Defaults.Keys.Contains(isEthosEnabled) && r.Defaults[isEthosEnabled].Equals(true)))
                      .ToList();
-           
+
             if (!string.IsNullOrEmpty(selectedSchema))
             {
                 httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith(selectedSchema)).ToList();
@@ -176,11 +174,11 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
 
-       /// <summary>
-       /// Update not supported
-       /// </summary>
-       /// <param name="schema"></param>
-       /// <returns></returns>
+        /// <summary>
+        /// Update not supported
+        /// </summary>
+        /// <param name="schema"></param>
+        /// <returns></returns>
         [HttpPut]
         [Obsolete]
         public IEnumerable<object> PutSchemas([FromBody] object schema)
@@ -190,11 +188,11 @@ namespace Ellucian.Colleague.Api.Controllers
 
         }
 
-       /// <summary>
-       /// Create not supported
-       /// </summary>
-       /// <param name="schema"></param>
-       /// <returns></returns>
+        /// <summary>
+        /// Create not supported
+        /// </summary>
+        /// <param name="schema"></param>
+        /// <returns></returns>
         [HttpPost]
         [Obsolete]
         public IEnumerable<object> PostSchemas([FromBody] object schema)
@@ -203,10 +201,10 @@ namespace Ellucian.Colleague.Api.Controllers
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
 
-       /// <summary>
-       /// Delete not supported
-       /// </summary>
-       /// <param name="id"></param>
+        /// <summary>
+        /// Delete not supported
+        /// </summary>
+        /// <param name="id"></param>
         [HttpDelete]
         [Obsolete]
         public void DeleteSchemas(string id)
@@ -240,12 +238,12 @@ namespace Ellucian.Colleague.Api.Controllers
             }
 
             #region data model resources 
-            /*
-             * At the moment, we only expose schemas for spec based endpoints, however, this section
-             * of code can be uncommented to expose native data model APIs.
-             * 
+
+            // At the moment, we only expose schemas for spec based endpoints, however, this section
+            // of code can be uncommented to expose native data model APIs.
+
             string[] headerVersionConstraintValue = null;
-          
+
             Assembly asm = Assembly.GetExecutingAssembly();
 
             var controlleractionlist = asm.GetTypes()
@@ -360,7 +358,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                     else
                         resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
-                   
+
                     var tempXMediaType = string.Empty;
                     if (headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && headerVersionConstraintValue[0].Contains(mediaFormat))
                     {
@@ -385,7 +383,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     var controllerType = controlleraction.DeclaringType;
 
                     var controllerAction = action.ToString();
-                   
+
                     if (controllerType != null)
                     {
                         MethodInfo[] methods = controllerType.GetMethods().Where(m => m.Name == controllerAction).ToArray();
@@ -418,7 +416,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     //no need to throw since not all routes will have _customMediaTypes field
                 }
             }
-            */
+
             #endregion
 
             #region extendedResources
@@ -441,7 +439,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                     ApiSchemas resourceDto = null;
 
-                   if (!resourcesList.Any(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase)))
+                    if (!resourcesList.Any(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase)))
                     {
                         if (resourceDto == null)
                             resourceDto = new ApiSchemas() { Name = apiName };
@@ -467,7 +465,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     };
                     var ethosApiConfiguration = await _ethosApiBuilderService.GetEthosApiConfigurationByResource(routeInfo);
 
-                    if ((represDto == null) && (string.IsNullOrEmpty(parentApi)))                
+                    if ((represDto == null) && (string.IsNullOrEmpty(parentApi)))
                     {
                         var supported = extendedEthosConfiguration.HttpMethodsSupported
                             .Where(z => versionlessSupportedMethods.Contains(z.ToLower()))
@@ -557,7 +555,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         else
                             resourceDto.Representations.Add(newRepresentation);
 
-            
+
                         if (newResourcesDto)
                         {
                             resourcesList.Add(resourceDto);
@@ -757,7 +755,7 @@ namespace Ellucian.Colleague.Api.Controllers
         [Obsolete]
         private int DefaultPageSize(Type T, string controllerAction)
         {
-           try
+            try
             {
                 var customAttribute = (PagingFilter)T.GetMethod(controllerAction).GetCustomAttribute(typeof(PagingFilter), false);
 
@@ -1033,11 +1031,11 @@ namespace Ellucian.Colleague.Api.Controllers
             Type dtoType = Type.GetType(dtoTypeNameInput);
 
             JsonSchemaGenerator g = new JsonSchemaGenerator();
-         
+
             JsonSchema s = g.Generate(dtoType);
-            
+
             s.AllowAdditionalProperties = false;
-             Dictionary<string, JsonSchema> properties = new Dictionary<string, JsonSchema>(s.Properties);
+            Dictionary<string, JsonSchema> properties = new Dictionary<string, JsonSchema>(s.Properties);
 
             var origProperties = dtoType.GetProperties();
 
@@ -1117,11 +1115,11 @@ namespace Ellucian.Colleague.Api.Controllers
 
                         fieldType = memberTypes.GetType();
                     }
-                   
+
                     if (!s.Properties.ContainsKey(memberName))
                     {
                         s.Properties.Add(memberName, new Newtonsoft.Json.Schema.JsonSchema());
-                        s.Properties[memberName].Type = JsonSchemaType.String;               
+                        s.Properties[memberName].Type = JsonSchemaType.String;
                     }
                     if (pi != null)
                     {
@@ -1139,7 +1137,7 @@ namespace Ellucian.Colleague.Api.Controllers
                             else if (underlyingType.BaseType == typeof(Enum))
                             {
                                 var enumNames = Enum.GetNames(underlyingType);
-                               
+
                                 s.Properties[memberName].Enum = new JArray(enumNames.Select(x => x.ToLowerInvariant()).ToArray());
                                 s.Properties[memberName].Type = JsonSchemaType.String;
                             }
@@ -1155,12 +1153,12 @@ namespace Ellucian.Colleague.Api.Controllers
                             s.Properties[memberName].Type = JsonSchemaType.String;
                         }
                     }
-                    
+
                     index++;
                 }
             }
 
-       
+
             string schemaJson = s.ToString();
             schemaJson = schemaJson.Replace("\r\n", "");  //remove all newline chars
             schemaJson = schemaJson.Replace(" ", "");    // remove all blanks
@@ -1177,9 +1175,9 @@ namespace Ellucian.Colleague.Api.Controllers
             if ((!string.IsNullOrEmpty(jsonTitle)) && (jsonTitle.EndsWith("[]")))
             {
                 return JsonSchemaType.Array;
-                
+
             }
-            
+
             if (string.IsNullOrEmpty(jsonPropertyType))
                 return jsonSchemaType;
 
@@ -1203,9 +1201,9 @@ namespace Ellucian.Colleague.Api.Controllers
                     else
                     {
                         jsonSchemaType = Newtonsoft.Json.Schema.JsonSchemaType.Integer;
-                    } 
+                    }
 
-                 
+
                     break;
                 case "date":
                     jsonSchemaType = JsonSchemaType.String;
@@ -1228,7 +1226,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private string GetJsonPropertyPattern(string jsonPropertyType)
 
         {
-           
+
             if (string.IsNullOrEmpty(jsonPropertyType))
                 return string.Empty;
 
@@ -1284,23 +1282,23 @@ namespace Ellucian.Colleague.Api.Controllers
                 schemaRootNode = existingSchema;
             else
             {
-           
+
                 schemaRootNode = new JsonSchema()
                 {
                     Id = id,
                     Description = string.IsNullOrEmpty(extendConfig.Description) ? "" :
-                        extendConfig.Description.Replace(_VM, ' ').Replace(_SM, ' '),
+                        extendConfig.Description.Replace(DmiString._VM, ' ').Replace(DmiString._SM, ' '),
                     Type = JsonSchemaType.Object,
-                    Properties = new Dictionary<string, JsonSchema>(),  
+                    Properties = new Dictionary<string, JsonSchema>(),
                     AllowAdditionalProperties = false,
                     AllowAdditionalItems = false,
                     Title = extendConfig.ApiResourceName + "_" + extendConfig.ApiVersionNumber
-                    
+
                 };
 
                 required.Add("id");
 
-               
+
 
                 if (!string.IsNullOrEmpty(ethosApiConfiguration.PrimaryGuidSource))
                     schemaRootNode.Properties.Add("id",
@@ -1320,7 +1318,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                        {
                                            Type = ConvertJsonPropertyType("string"),
                                            Title = "ID",
-                                           Description = "The derived identifier for the resource",                                     
+                                           Description = "The derived identifier for the resource",
                                            Required = true
                                        });
                 }
@@ -1339,10 +1337,10 @@ namespace Ellucian.Colleague.Api.Controllers
 
                     var count = propSplit.Count();
 
-                     if (count == 1)
-                    {                      
+                    if (count == 1)
+                    {
                         var response = BuildJsonSchemaResponse(extendedData);
-                        
+
                         schemaRootNode.Properties.Add(extendedData.JsonTitle.Replace("[]", ""), response);
                         if (response.Required == true)
                             required.Add(extendedData.JsonTitle);
@@ -1399,7 +1397,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 SchemaRequiredArray test = new SchemaRequiredArray();
                 test.Required = required;
                 var strRequired = JsonConvert.SerializeObject(required);
-                
+
                 var requiredBlock = ", \"required\": " + strRequired + " } ";
 
                 var schemaApplicationJson = schemaRootNode.ToString();
@@ -1437,7 +1435,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     jsonSchema.Pattern = GUID_PATTERN;
                     jsonSchema.MaximumLength = Guid.Empty.ToString().Length;
                     jsonSchema.Format = "guid";
-                    
+
                 }
                 else
                 {
@@ -1446,7 +1444,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             else if (!string.IsNullOrEmpty(extendedData.Conversion))
             {
-                jsonSchema.Format =  extendedData.Conversion;
+                jsonSchema.Format = extendedData.Conversion;
             }
 
             if (string.IsNullOrEmpty(jsonSchema.Pattern))
@@ -1463,23 +1461,23 @@ namespace Ellucian.Colleague.Api.Controllers
                 try
                 {
                     var jsonTitle = extendedData.JsonTitle.Replace("[]", "");
-                     jsonSchema.Title = Char.ToUpperInvariant(jsonTitle[0]) + jsonTitle.Substring(1);
+                    jsonSchema.Title = Char.ToUpperInvariant(jsonTitle[0]) + jsonTitle.Substring(1);
                 }
                 catch (Exception)
                 {
                     jsonSchema.Title = extendedData.JsonTitle;
                 }
-            
+
             }
-           
+
 
             if (!string.IsNullOrEmpty(extendedData.Description))
             {
-                jsonSchema.Description = extendedData.Description.Replace(_VM, ' ').Replace(_SM, ' ');
+                jsonSchema.Description = extendedData.Description.Replace(DmiString._VM, ' ').Replace(DmiString._SM, ' ');
             }
             if (extendedData.Required)
             {
-                jsonSchema.Required = extendedData.Required;          
+                jsonSchema.Required = extendedData.Required;
             }
             return jsonSchema;
         }
@@ -1545,5 +1543,5 @@ namespace Ellucian.Colleague.Api.Controllers
         }
     }
 
-    
+
 }

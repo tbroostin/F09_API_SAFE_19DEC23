@@ -397,5 +397,34 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             }
             else return false;
         }
+
+        public async Task<HousingOption>GetSetHousingOptionAsync(string studentId, string awardYear, string housingCode, string retrieveOption)
+        {
+            try
+            {
+                var housingResp = await studentChecklistRepository.GetSetHousingOptionAsync(studentId, awardYear, housingCode, retrieveOption);
+
+                if (housingResp != "")
+                {
+                    return new HousingOption()
+                    {
+                        AwardYear = awardYear,
+                        HousingOptionCode = housingResp
+                    };
+                }
+                return new HousingOption()
+                {
+                    AwardYear = awardYear,
+                    HousingOptionCode = null
+                };
+            }
+            catch(ColleagueException ex)
+            {
+                //throw new ColleagueException(string.Format("Unable to {0} housing option for {1}*{2}", retrieveOption, studentId, awardYear), ex);
+                //logger.Error(string.Format("Unable to {0} housing option for {1}*{2}", retrieveOption, studentId, awardYear));
+                logger.Error(ex, ex.Message);
+                throw;
+            }
+        }
     }
 }

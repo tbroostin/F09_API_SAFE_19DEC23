@@ -1,7 +1,9 @@
 ﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Finance;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.Payments;
@@ -26,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to get and update registration billing information", ApiDomain = "Finance")]
     public class PaymentControlsController : BaseCompressedApiController
     {
         private readonly IRegistrationBillingService _service;
@@ -52,6 +55,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="id">Registration payment control ID</param>
         /// <returns>The <see cref="RegistrationPaymentControl">Registration Payment Control</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public RegistrationPaymentControl Get(string id)
         {
             try
@@ -80,6 +85,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The list of <see cref="RegistrationPaymentControl">Registration Payment Control</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public IEnumerable<RegistrationPaymentControl> GetStudent(string studentId)
         {
             try
@@ -109,6 +116,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="documentId">Document ID</param>
         /// <returns>The <see cref="TextDocument">Text Document</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpGet]
         public TextDocument GetDocument(string id, string documentId)
         {
             try
@@ -164,6 +172,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="approval">The registration approval information</param>
         /// <returns>The updated <see cref="RegistrationTermsApproval">registration approval</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpPost]
         public RegistrationTermsApproval2 PostAcceptTerms2(PaymentTermsAcceptance2 approval)
         {
             try
@@ -191,6 +200,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="id">Registration payment control ID</param>
         /// <returns>The <see cref="ImmediatePaymentOptions">Immediate Payment Options</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public ImmediatePaymentOptions GetOptions(string id)
         {
             try
@@ -218,6 +229,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="rpcDto"><see cref="RegistrationPaymentControl">Registration Payment Control</see> DTO to update</param>
         /// <returns>The updated <see cref="RegistrationPaymentControl">Registration Payment Control</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpPut]
         public RegistrationPaymentControl Put(RegistrationPaymentControl rpcDto)
         {
             try
@@ -247,6 +259,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="amount">Total payment amount</param>
         /// <returns>The List of <see cref="Payment">payments</see> to be made</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public IEnumerable<Payment> GetSummary(string id, string payMethod, decimal amount)
         {
             try
@@ -274,6 +288,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="payment">The registration payment</param>
         /// <returns>Payment provider information to start a payment</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpPost]
         public PaymentProvider PostStartPayment(Payment payment)
         {
             try
@@ -326,6 +341,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="id">Terms approval ID</param>
         /// <returns>The <see cref="RegistrationTermsApproval2">terms approval</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public RegistrationTermsApproval2 GetTermsApproval2(string id)
         {
             try
@@ -350,6 +367,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>The proposed<see cref="PaymentPlan">Payment Plan</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to get proposed payment plan</exception>
         [ParameterSubstitutionFilter]
+        [HttpGet]
         public PaymentPlan GetProposedPaymentPlan(string payControlId, string receivableType)
         {
             try

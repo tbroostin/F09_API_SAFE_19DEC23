@@ -1,5 +1,4 @@
-﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -28,7 +27,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType]
     public class AdmissionApplicationSupportingItemsRepository : BaseColleagueRepository, IAdmissionApplicationSupportingItemsRepository, IEthosExtended
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private ApplValcodes _corrStatuses;
         protected const string suppItemsKeysCacheKey = "AllApplicationSupportingItemsKeys";
         protected const int suppItemsCacheTimeout = 20; // Clear from cache every 20 minutes
@@ -39,15 +37,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
-       }
-      
+        }
+
         /// <summary>
         /// Get the record key from a GUID
         /// </summary>
         /// <param name="guid">The GUID</param>
         /// <returns>Primary key</returns>
         public async Task<KeyValuePair<string, GuidLookupResult>> GetAdmissionApplicationSupportingItemsIdFromGuidAsync(string guid)
-        {                        
+        {
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid");
@@ -91,7 +89,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var corresReceivedId = supportingItemId.Split('*');
                 var applicationId = corresReceivedId[0] != null ? corresReceivedId[0] : string.Empty;
-                
+
                 var application = applicationsData.Where(a => a.Recordkey == applicationId).FirstOrDefault();
                 if (application != null && !string.IsNullOrEmpty(application.ApplApplicant))
                 {
@@ -136,7 +134,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             var criteria = "SAVING APPL.APPLICANT";
             var ids = new List<string>() { id };
-            var applicantId = await DataReader.SelectAsync("APPLICATIONS",ids.ToArray(), criteria);
+            var applicantId = await DataReader.SelectAsync("APPLICATIONS", ids.ToArray(), criteria);
             if (applicantId != null && applicantId.Any())
             {
                 return applicantId.ElementAt(0).ToString();
@@ -234,7 +232,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var secondaryKey = admissionApplicationSupportingItemId.Value.SecondaryKey;
             if (string.IsNullOrEmpty(admissionApplicationSupportingItemId.Value.SecondaryKey))
             {
-                throw new KeyNotFoundException(string.Format("AdmissionApplicationSupportingItem id not found for guid {0}" , guid));
+                throw new KeyNotFoundException(string.Format("AdmissionApplicationSupportingItem id not found for guid {0}", guid));
             }
             var corresReceivedId = secondaryKey.Split('*');
             var applicationId = corresReceivedId[0] != null ? corresReceivedId[0] : string.Empty;
@@ -262,7 +260,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>AdmissionApplicationSupportingItems domain entity object</returns>
         public async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> GetAdmissionApplicationSupportingItemsByIdAsync(string guid, string id, string corresReceivedCode, DateTime? CorresReceivedAssignDate, string CorresReceivedInstance)
         {
-             if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id", "ID is required to get a AdmissionApplicationSupportingItems.");
             }
@@ -359,10 +357,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
 
                     var paragraph = new List<string>();
-                    
-                    paragraph.Add("MIOSEL APPLICATIONS WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS = '" 
+
+                    paragraph.Add("MIOSEL APPLICATIONS WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS = '"
                             + (string.Join(" ", applStatusesNoSpCodeIds.Distinct())).Replace(" ", "' '") + "' AND WITH APPL.APPLICANT NE '' SAVING UNIQUE APPL.APPLICANT");
-                    
+
                     paragraph.Add("MIOSEL MAILING WITH MAILING.ADM.APP.SI.IDX NE '' BY.EXP MAILING.ADM.APP.SI.IDX SAVING MAILING.ADM.APP.SI.IDX REQUIRE.SELECT");
 
                     return new CacheSupport.KeyCacheRequirements()
@@ -385,8 +383,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             foreach (var supportingItemId in subList)
             {
                 var supportingItemKey = supportingItemId;
-                if (supportingItemId.Contains(_VM))
-                    supportingItemKey = supportingItemId.Split(_VM)[1];
+                if (supportingItemId.Contains(DmiString._VM))
+                    supportingItemKey = supportingItemId.Split(DmiString._VM)[1];
                 validSupportingItemIds.Add(supportingItemKey);
             }
 
@@ -455,7 +453,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         Id = guid,
                         SourceId = application.ApplApplicant
-                    });  
+                    });
                 }
                 else
                 {
@@ -573,7 +571,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // Comments from CC.COMMENTS
                 if (commentData != null)
                 {
-                    var comments = commentData.CcCommentsText.Replace(_VM, ' ');
+                    var comments = commentData.CcCommentsText.Replace(DmiString._VM, ' ');
                     admissionApplicationSupportingItem.Comment = comments;
                 }
                 // Required Flag
@@ -615,7 +613,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // verify the GUID exists to perform an update.  If not, perform a create instead
             var lookupResult = await GetAdmissionApplicationSupportingItemsIdFromGuidAsync(admissionApplictaionSupportingItem.Guid);
 
-            if (lookupResult.Value != null &&  !string.IsNullOrEmpty(lookupResult.Value.SecondaryKey))
+            if (lookupResult.Value != null && !string.IsNullOrEmpty(lookupResult.Value.SecondaryKey))
             {
                 var updateRequest = BuildUpdateRequest(admissionApplictaionSupportingItem);
 
@@ -658,7 +656,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (createResponse.UpdateAdmApplSupportingItemsErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred creating new admission application supporting item for person '{0}', application '{1}', item type '{2}': ",createResponse.PersonId, admissionApplictaionSupportingItem.ApplicationId, admissionApplictaionSupportingItem.ReceivedCode);
+                var errorMessage = string.Format("Error(s) occurred creating new admission application supporting item for person '{0}', application '{1}', item type '{2}': ", createResponse.PersonId, admissionApplictaionSupportingItem.ApplicationId, admissionApplictaionSupportingItem.ReceivedCode);
                 var exception = new RepositoryException(errorMessage);
                 createResponse.UpdateAdmApplSupportingItemsErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);

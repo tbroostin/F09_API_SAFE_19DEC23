@@ -81,6 +81,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>List of Leave Request DTO</returns>
         Task<IEnumerable<LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null);
 
+        /// <summary>
+        /// Gets the Leavetypes for Leave request Information
+        /// </summary>
+        /// <param name="effectivePersonId"></param>
+        /// <returns></returns>
+        Task<IEnumerable<LeaveRequestLeaveTypes>> GetLeaveTypesForLeaveRequestAsync(string effectivePersonId = null);
 
     }
 }

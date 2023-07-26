@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -61,5 +61,19 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Numeric position of the census date to check when deciding whether or not to present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution; today's date must be on or after the census date at the specified position for the course section being dropped
         /// </summary>
         public int? CensusDateNumberForPromptingIntentToWithdraw { get; set; }
+
+        /// <summary>
+        /// Seat Service will be used to determine section seat counts.
+        /// </summary>
+        public bool SeatServiceIsEnabled { get; set; }
+        /// <summary>
+        /// Indicates if capacity can be exceeded during registration when a student is given add authorization code.
+        /// </summary>
+        public bool ExceedAddAuthCapacity { get; set; }
+        /// <summary>
+        /// Indicates if faculty authorization can be skipped while adding a student to waitlist.
+        /// </summary>
+        public bool BypassAddAuthWaitlist { get; set; }
+
     }
 }

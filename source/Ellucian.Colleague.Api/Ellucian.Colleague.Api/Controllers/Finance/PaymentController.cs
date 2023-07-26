@@ -16,6 +16,9 @@ using System;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -25,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to process student payments.", ApiDomain = "Finance")]
     public class PaymentController : BaseCompressedApiController
     {
         private readonly IPaymentService _service;
@@ -57,6 +61,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="paymentMethod">Payment Method</param>
         /// <param name="amountToPay">Amount being paid</param>
         /// <returns>The <see cref="PaymentConfirmation">Payment Confirmation</see> information</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public PaymentConfirmation GetPaymentConfirmation(string distribution, string paymentMethod, string amountToPay)
         {
             try
@@ -85,6 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="paymentDetails">The <see cref="Payment">Payment</see> information</param>
         /// <returns>The <see cref="PaymentProvider">Payment Provider</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to make this payment</exception>
+        [HttpPost]
         public PaymentProvider PostPaymentProvider(Payment paymentDetails)
         {
             try
@@ -113,6 +120,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="transactionId">e-Commerce Transaction ID</param>
         /// <param name="cashReceiptId">Cash Receipt ID</param>
         /// <returns>The <see cref="PaymentReceipt">Payment Receipt</see> information</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public PaymentReceipt GetPaymentReceipt(string transactionId, string cashReceiptId)
         {
             try
@@ -153,6 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="paymentDetails">The <see cref="Payment">Payment</see> information</param>
         /// <returns>The <see cref="ElectronicCheckProcessingResult">Electronic Check Processing Result</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to make this payment</exception>
+        [HttpPost]
         public ElectronicCheckProcessingResult PostProcessElectronicCheck(Payment paymentDetails)
         {
             try
@@ -181,6 +191,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="personId">Payer ID</param>
         /// <returns>The <see cref="ElectronicCheckPayer">Electronic Check Payer</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to make this payment</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public ElectronicCheckPayer GetCheckPayerInformation(string personId)
         {
             try
@@ -211,6 +223,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="paymentProcess">Code of payment process</param>
         /// <returns>List of payment distributions</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public IEnumerable<string> GetPaymentDistributions(string studentId, string accountTypes, string paymentProcess)
         {
             var types = (string.IsNullOrEmpty(accountTypes)) ? new List<string>() : new List<string>(accountTypes.Split(','));
@@ -230,8 +244,12 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             }
         }
         /// <summary>
-        /// 
+        /// Retrieves a list of restricted payment methods
         /// </summary>
+        /// <param name="studentId">Student ID</param>
+        /// <returns>List of Available Payment Methods</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Finance.Configuration.AvailablePaymentMethod>> GetRestrictedPaymentMethodsAsync(string studentId)
         {
             try

@@ -16,6 +16,10 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Data.Colleague.Exceptions;
+using System.Web.Http.Description;
+using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Services;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -25,6 +29,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to get student financial account activity", ApiDomain = "Finance")]
     public class AccountActivityController : BaseCompressedApiController
     {
         private readonly IAccountActivityService _service;
@@ -51,6 +56,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The student's <see cref="AccountActivityPeriods">account activity period</see> data</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public AccountActivityPeriods GetAccountActivityPeriodsForStudent(string studentId)
         {
             try
@@ -104,6 +111,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The <see cref="DetailedAccountPeriod">detailed account period</see> for the specified student and term.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public DetailedAccountPeriod GetAccountActivityByTermForStudent2(string termId, string studentId)
         {
             try
@@ -158,6 +167,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The <see cref="DetailedAccountPeriod">Detailed Account Period</see> for the specified student and period.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpPost]
         public DetailedAccountPeriod PostAccountActivityByPeriodForStudent2(AccountActivityPeriodArguments arguments, [FromUri]string studentId)
         {
             try
@@ -187,6 +197,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="awardYear">award year code</param>
         /// <param name="awardId">award id</param>
         /// <returns>StudentAwardDisbursementInfo DTO</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public async Task<StudentAwardDisbursementInfo> GetStudentAwardDisbursementInfoAsync([FromUri]string studentId, [FromUri]string awardYear, [FromUri]string awardId)
         {
             if (string.IsNullOrEmpty(studentId))

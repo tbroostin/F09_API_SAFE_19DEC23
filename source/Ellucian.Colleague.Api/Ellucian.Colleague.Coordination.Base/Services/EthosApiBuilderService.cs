@@ -286,10 +286,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="id">the guid for extended data record</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
+        /// <param name="ethosResourceRouteInfo"></param>
+        /// <param name="filterDictionary"></param>
         /// <returns>Dtos.EthosApiBuilder</returns>
-        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
+        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, Web.Http.EthosExtend.EthosResourceRouteInfo ethosResourceRouteInfo, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary)
         {
+            var resourceName = ethosResourceRouteInfo.ResourceName;
+            var resourceVersionNumber = ethosResourceRouteInfo.ResourceVersionNumber;
+            var extendedSchemaId = ethosResourceRouteInfo.ExtendedSchemaResourceId;
+            var returnRestrictedFields = ethosResourceRouteInfo.ReturnRestrictedFields;
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+            var extendedDataConfig = await _configurationRepository.GetExtendedEthosConfigurationByResource(resourceName, resourceVersionNumber, extendedSchemaId);
 
             // These configuraiton properties must be set at run-time and cannot be cached.
             configuration.CurrentUserId = CurrentUser.PersonId;
@@ -372,7 +379,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 try
                 {
-                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields);
+                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields, extendedDataConfig);
                     EthosExtendedDataDictionary = responseDictionary.FirstOrDefault().Value;
                     extendedData._Id = responseDictionary.FirstOrDefault().Key;
                     _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -457,10 +464,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="id">the guid for extended data record</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
+        /// <param name="ethosResourceRouteInfo"></param>
+        /// <param name="filterDictionary"></param>
         /// <returns>Dtos.EthosApiBuilder</returns>
-        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
+        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, Web.Http.EthosExtend.EthosResourceRouteInfo ethosResourceRouteInfo, Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter> filterDictionary)
         {
+            var resourceName = ethosResourceRouteInfo.ResourceName;
+            var resourceVersionNumber = ethosResourceRouteInfo.ResourceVersionNumber;
+            var extendedSchemaId = ethosResourceRouteInfo.ExtendedSchemaResourceId;
+            var returnRestrictedFields = ethosResourceRouteInfo.ReturnRestrictedFields;
             var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+            var extendedDataConfig = await _configurationRepository.GetExtendedEthosConfigurationByResource(resourceName, resourceVersionNumber, extendedSchemaId);
 
             // These configuraiton properties must be set at run-time and cannot be cached.
             configuration.CurrentUserId = CurrentUser.PersonId;
@@ -491,7 +505,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 try
                 {
-                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields);
+                    var responseDictionary = await _ethosApiBuilderRepository.UpdateEthosBusinessProcessApiAsync(extendedDataRequest, configuration, filterDefinitions, returnRestrictedFields, extendedDataConfig);
                     EthosExtendedDataDictionary = responseDictionary.FirstOrDefault().Value;
                     extendedData._Id = responseDictionary.FirstOrDefault().Key;
                     _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;

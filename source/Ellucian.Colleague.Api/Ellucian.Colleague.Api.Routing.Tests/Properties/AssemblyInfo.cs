@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ellucian")]
 [assembly: AssemblyProduct("Ellucian.Colleague.Api.Routing.Tests")]
-[assembly: AssemblyCopyright("Copyright 2019-2022 Ellucian Company L.P. and its affiliates")]
+[assembly: AssemblyCopyright("Copyright 2019-2023 Ellucian Company L.P. and its affiliates")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -15,7 +15,11 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("5cf89e9c-80ac-48ea-a8d7-b3604f2a8f91")]
 
-// [assembly: AssemblyVersion("1.37.1.0")]
-[assembly: AssemblyVersion("1.37.1.0")]
-[assembly: AssemblyFileVersion("1.37.1.2")]
+// [assembly: AssemblyVersion("1.40.0.0")]
+[assembly: AssemblyVersion("1.40.0.0")]
+[assembly: AssemblyFileVersion("1.40.0.11")]
+
+
+
+
 

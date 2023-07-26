@@ -1,23 +1,22 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
-using Ellucian.Dmi.Runtime;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
-using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -27,7 +26,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class VoucherRepository : BaseColleagueRepository, IVoucherRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         /// <summary>
         /// This constructor allows us to instantiate a voucher repository object.
         /// </summary>
@@ -170,7 +168,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             var name = response.OutPersonNames[x];
                             if (!string.IsNullOrEmpty(name))
                             {
-                                    requestorName = name;
+                                requestorName = name;
                             }
                         }
                     }
@@ -974,11 +972,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     address.VendorId = response.APersonId;
                     // there may be multiple (sub-valued) messages for name.
-                    address.VendorNameLines = !string.IsNullOrEmpty(response.APersonName) ? response.APersonName.Split(_SM).ToList() : new List<string>();
+                    address.VendorNameLines = !string.IsNullOrEmpty(response.APersonName) ? response.APersonName.Split(DmiString._SM).ToList() : new List<string>();
                     address.AddressId = response.APersonAddrId;
                     address.FormattedAddress = response.APersonFormattedAddress;
                     // there may be multiple (sub-valued) messages for address.
-                    address.AddressLines = !string.IsNullOrEmpty(response.APersonAddress) ? response.APersonAddress.Split(_SM).ToList() : new List<string>();
+                    address.AddressLines = !string.IsNullOrEmpty(response.APersonAddress) ? response.APersonAddress.Split(DmiString._SM).ToList() : new List<string>();
                     address.City = response.APersonCity;
                     address.Country = response.APersonCountry;
                     address.State = response.APersonState;

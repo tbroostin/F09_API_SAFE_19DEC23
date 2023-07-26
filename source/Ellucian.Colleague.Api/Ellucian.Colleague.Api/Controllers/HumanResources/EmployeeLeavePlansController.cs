@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -23,6 +23,8 @@ using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -144,6 +146,51 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Debug("********* Start - Process to get employee leave plans - V2 - Start *********");
                 var leavePlans =  await employeeLeavePlansService.GetEmployeeLeavePlansV2Async(effectivePersonId: effectivePersonId, bypassCache: false);
                 logger.Debug("********* End - Process to get employee leave plans - V2 - End *********");
+                return leavePlans;
+            }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                logger.Error(csse, csse.Message);
+                throw CreateHttpResponseException(invalidSessionErrorMessage, HttpStatusCode.Unauthorized);
+            }
+
+            catch (PermissionsException pe)
+            {
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException(invalidPermissionsErrorMessage, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(unexpectedGenericErrorMessage);
+            }
+        }
+
+        /// <summary>
+        /// Returns all EmployeeLeavePlan objects that you have permission to access. As an employeee, you will have access to only your leave plans.
+        /// As a supervisor (or the proxy of a supervisor), you will have access to the leave plans of your (or your proxy's) direct reports.
+        /// As a leave approver, you have access to the leave plans of the employees whose leave requests you handle.
+        /// This is used by Self Service.
+        /// </summary>
+        /// <param name="effectivePersonId">Optional parameter for passing the effective person id in a proxy scenario</param>
+        /// <accessComments>
+        /// 1. As an employee you have access to your own leave plans.
+        /// 2. As the proxy of a supervisor, you have access to that supervisor's leave plans and that supervisor's supervisees' leave plans.
+        /// 3. As an admin, you have access to anyone's leave plans.
+        /// 4. As a leave approver with the APPROVE.REJECT.LEAVE.REQUEST permission, you have access to the leave plans of the employees whose leave requests you handle.
+        /// </accessComments>
+        /// <returns>A collection of EmployeeLeavePlan objects</returns>
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets a list of EmployeeLeavePlan objects for the currently authenticated API user.",
+            HttpMethodDescription = "Gets a list of EmployeeLeavePlan objects for the currently authenticated API user.")]
+        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansV3Async(string effectivePersonId = null)
+        {
+            try
+            {
+                logger.Debug("********* Start - Process to get employee leave plans - V3 - Start *********");
+                var leavePlans = await employeeLeavePlansService.GetEmployeeLeavePlansV3Async(effectivePersonId: effectivePersonId, bypassCache: false);
+                logger.Debug("********* End - Process to get employee leave plans - V3 - End *********");
                 return leavePlans;
             }
             catch (ColleagueSessionExpiredException csse)

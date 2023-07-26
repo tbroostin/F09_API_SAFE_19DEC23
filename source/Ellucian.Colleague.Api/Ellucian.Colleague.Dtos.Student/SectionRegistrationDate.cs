@@ -1,13 +1,11 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Dtos.Student
 {
     /// <summary>
-    /// Registration date overrides specific to a particular section (based on the requesting person's registration group.
+    /// Registration date overrides specific to a particular section based on the requesting person's registration group.
     /// </summary>
     public class SectionRegistrationDate
     {
@@ -55,5 +53,15 @@ namespace Ellucian.Colleague.Dtos.Student
         /// List of Census Dates for this section
         /// </summary>
         public List<DateTime?> CensusDates { get; set; }
+        /// <summary>
+        /// Source of the registration date information:
+        ///  Term (ACTM),
+        ///  Section (SRGD),
+        ///  TermLocation (TLOC),
+        ///  RegistrationUserTerm (RGUT),
+        ///  RegistrationUserSection (RGUC),
+        ///  RegistrationUserTermLocation (RGUL)
+        /// </summary>
+        public RegistrationDateSource RegistrationDateSource { get; set; }
     }
 }

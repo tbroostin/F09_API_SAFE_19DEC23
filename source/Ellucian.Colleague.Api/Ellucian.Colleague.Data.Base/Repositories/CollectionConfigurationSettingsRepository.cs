@@ -1,5 +1,4 @@
-﻿/*Copyright 2020-2021 Ellucian Company L.P. and its affiliates. */
-
+﻿/*Copyright 2020-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,7 +7,6 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -25,7 +23,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class CollectionConfigurationSettingsRepository : BaseColleagueRepository, ICollectionConfigurationSettingsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        //public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
 
         public CollectionConfigurationSettingsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
@@ -163,10 +160,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var errorMessage = string.Format("Error(s) occurred updating collection-configuration-settings '{0}':", collectionConfigurationSettings.Guid);
                     var exception = new RepositoryException(errorMessage);
                     updateResponse.CollectionConfigErrors.ForEach(e => exception.AddError(new RepositoryError("Validation.Exception", string.Concat(e.ErrorCodes, ": ", e.ErrorMessages))
-                        {
-                            Id = collectionConfigurationSettings.Guid,
-                            SourceId = collectionConfigurationSettingsId
-                        }
+                    {
+                        Id = collectionConfigurationSettings.Guid,
+                        SourceId = collectionConfigurationSettingsId
+                    }
                     ));
                     logger.Error(errorMessage);
                     throw exception;
@@ -189,7 +186,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 ConfigId = collectionConfigurationSettingsEntity.Code,
                 ConfigTitle = collectionConfigurationSettingsEntity.Description,
                 Description = collectionConfigurationSettingsEntity.FieldHelp
-            }; 
+            };
             if (collectionConfigurationSettingsEntity.EthosResources != null && collectionConfigurationSettingsEntity.EthosResources.Any())
             {
                 foreach (var resource in collectionConfigurationSettingsEntity.EthosResources)
@@ -350,7 +347,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                 case "LDMD.EXCLUDE.BENEFITS":
                     {
-                        foreach(var includeCode in ldmDefaults.LdmdExcludeBenefits)
+                        foreach (var includeCode in ldmDefaults.LdmdExcludeBenefits)
                         {
                             var source = new CollectionConfigurationSettingsSource()
                             {

@@ -39,8 +39,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,12 +54,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApiSchemas.cs" />
+    <Compile Include="Attributes\MetadataAttribute.cs" />
     <Compile Include="CipCode.cs" />
     <Compile Include="AptitudeAssessmentSources.cs" />
     <Compile Include="CareerGoals.cs" />
     <Compile Include="AdmissionApplicationInfluences.cs" />
     <Compile Include="AdmissionApplicationSources.cs" />
     <Compile Include="BulkLoadGet.cs" />
+    <Compile Include="Converters\NullableBooleanConverter.cs" />
     <Compile Include="CourseAdditionalClassifications.cs" />
     <Compile Include="DtoProperties\FinancialAidEducationLevelDtoProperty.cs" />
     <Compile Include="DtoProperties\MaritalStatusDtoProperty.cs" />
@@ -135,6 +137,7 @@
     <Compile Include="MappingSettings.cs" />
     <Compile Include="MappingSettingsEthos.cs" />
     <Compile Include="MappingSettingsSource.cs" />
+    <Compile Include="PersonFilter2.cs" />
     <Compile Include="SectionRegistration5.cs" />
     <Compile Include="SectionRegistrations.cs" />
     <Compile Include="StudentTranscriptGradesIncompleteGrade.cs" />

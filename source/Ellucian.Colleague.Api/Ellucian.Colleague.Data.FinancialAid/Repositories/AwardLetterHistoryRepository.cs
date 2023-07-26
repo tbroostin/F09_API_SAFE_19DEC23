@@ -537,7 +537,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             try
             {
                 // Get the most recent AwardLetterHistory record for this student and year
-                string criteria = "WITH ALH.STUDENT.ID EQ '" + studentId + "' WITH ALH.AWARD.YEAR EQ '" + studentAwardYear.Code + "'";
+                // Use new ALH.INDEX.STUDENT.YEAR indexed field for performance
+                //string criteria = "WITH ALH.STUDENT.ID EQ '" + studentId + "' WITH ALH.AWARD.YEAR EQ '" + studentAwardYear.Code + "'";
+                string criteria = "WITH ALH.INDEX.STUDENT.YEAR EQ '" + studentId + "*" + studentAwardYear.Code +"'";
+                logger.Debug("Search criteria is: " + criteria);
                 var awardLetterHistoryRecords = await DataReader.BulkReadRecordAsync<AwardLetterHistory>(criteria);
 
                 //get the most recent award letter history record for the year

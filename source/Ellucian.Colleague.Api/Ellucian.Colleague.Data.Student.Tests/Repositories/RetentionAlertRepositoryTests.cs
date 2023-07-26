@@ -1,26 +1,26 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
-
-using Moq;
-using System;
-using slf4net;
-using System.Threading;
-using Ellucian.Web.Cache;
-using System.Threading.Tasks;
-using Ellucian.Data.Colleague;
-using System.Collections.Generic;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Repositories;
+﻿// Copyright 2019-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
-using Ellucian.Web.Http.Configuration;
-using System.Runtime.Caching;
-using System.Linq;
-using System.Collections.ObjectModel;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -1173,8 +1173,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private IRetentionAlertRepository retentionAlertRepository;
             GetRaCaseDetailsRequest getRequest;
 
-            public static char _SM = Convert.ToChar(Dmi.Runtime.DynamicArray.SM);
-
             [TestInitialize]
             public void Initialize()
             {
@@ -1231,14 +1229,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         new RAClosureReasons()
                         {
                             AlClosureReasons = "1",
-                            AlCases = string.Join(_SM.ToString(), new string[] {"10", "20", "30" } ),
-                            AlLastActionDates = string.Join(_SM.ToString(), new string[] {"12345", "12346", "12347"})
+                            AlCases = string.Join(DmiString.sSM, new string[] {"10", "20", "30" } ),
+                            AlLastActionDates = string.Join(DmiString.sSM, new string[] {"12345", "12346", "12347"})
                         },
                         new RAClosureReasons()
                         {
                             AlClosureReasons = "2",
-                            AlCases = string.Join(_SM.ToString(), new string [] {"11", "22", "33"} ),
-                            AlLastActionDates = string.Join(_SM.ToString(), new string[] {"12345", "12346", "12347"})
+                            AlCases = string.Join(DmiString.sSM, new string [] {"11", "22", "33"} ),
+                            AlLastActionDates = string.Join(DmiString.sSM, new string[] {"12345", "12346", "12347"})
                         }
                     }
                 };
@@ -1535,7 +1533,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await retentionAlertRepository.SearchStudentsByNameForExactMatchAsync(lastName);
                 Assert.AreEqual(0, result.Count());
             }
-            
+
         }
 
     }

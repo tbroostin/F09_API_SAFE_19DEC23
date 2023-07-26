@@ -1,5 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -148,8 +147,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     "AL"
                 },
                     EmerHospitalPref = "Fairfax Hospital",
-                    EmerInsuranceInfo = "Cigna " + Convert.ToChar(DynamicArray.VM) + " ID 3456789",
-                    EmerAddnlInformation = "Allergic to peanuts and penicillin." + Convert.ToChar(DynamicArray.VM) + "Epipen is always in my purse in a bright yellow container."
+                    EmerInsuranceInfo = "Cigna " + DmiString._VM + " ID 3456789",
+                    EmerAddnlInformation = "Allergic to peanuts and penicillin." + DmiString._VM + "Epipen is always in my purse in a bright yellow container."
 
                 };
 
@@ -165,8 +164,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.IsTrue(emerInfoEntity is EmergencyInformation);
                 Assert.AreEqual("0100000", emerInfoEntity.PersonId);
                 Assert.AreEqual(fullPersonEmer.EmerHospitalPref, emerInfoEntity.HospitalPreference);
-                Assert.AreEqual(fullPersonEmer.EmerInsuranceInfo.Replace(Convert.ToChar(DynamicArray.VM), '\n'), emerInfoEntity.InsuranceInformation);
-                Assert.AreEqual(fullPersonEmer.EmerAddnlInformation.Replace(Convert.ToChar(DynamicArray.VM), '\n'), emerInfoEntity.AdditionalInformation);
+                Assert.AreEqual(fullPersonEmer.EmerInsuranceInfo.Replace(DmiString._VM, '\n'), emerInfoEntity.InsuranceInformation);
+                Assert.AreEqual(fullPersonEmer.EmerAddnlInformation.Replace(DmiString._VM, '\n'), emerInfoEntity.AdditionalInformation);
                 Assert.AreEqual(fullPersonEmer.EmerLastConfirmedDate, emerInfoEntity.ConfirmedDate);
 
                 for (int i = 0; i < fullPersonEmer.EmerContactsEntityAssociation.Count(); i++)
@@ -231,8 +230,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         "XX"
                     },
                     EmerHospitalPref = "Fairfax Hospital",
-                    EmerInsuranceInfo = "Cigna " + Convert.ToChar(DynamicArray.VM) + " ID 3456789",
-                    EmerAddnlInformation = "Allergic to peanuts and penicillin." + Convert.ToChar(DynamicArray.VM) + "Epipen is always in my purse in a bright yellow container."
+                    EmerInsuranceInfo = "Cigna " + DmiString._VM + " ID 3456789",
+                    EmerAddnlInformation = "Allergic to peanuts and penicillin." + DmiString._VM + "Epipen is always in my purse in a bright yellow container."
                 };
 
                 dataAccessorMock.Setup<PersonEmer>(acc => acc.ReadRecord<PersonEmer>("0100000", false)).Returns(fullPersonEmer);
@@ -266,7 +265,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Set up data accessor for mocking (health Conditions mock).
                 ApplValcodes healthConditionsResponse = new ApplValcodes()
                 {
-                    ValsEntityAssociation = new List<ApplValcodesVals>() 
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
                    {
                        new ApplValcodesVals() {ValInternalCodeAssocMember = "DI"},
                        new ApplValcodesVals() {ValInternalCodeAssocMember = "AS"},
@@ -287,7 +286,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         [TestClass]
-        public class PersonEmergencyContacts_GetAll_GetById_Delete_Udate: BaseRepositorySetup
+        public class PersonEmergencyContacts_GetAll_GetById_Delete_Udate : BaseRepositorySetup
         {
             PersonContact pcWithError;
             PersonContact pc;
@@ -295,7 +294,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             EmergencyInformationRepository emergencyInformationRepository;
             Collection<PersonEmer> peDc = new Collection<PersonEmer>();
             Collection<PersonEmer> peDc1 = new Collection<PersonEmer>();
-            string[] personEmerIds = new string[] {"1"};
+            string[] personEmerIds = new string[] { "1" };
             string[] personEmerNames = new string[] { "Name1", "Name2" };
             List<string> personEmerkeys = new List<string> { };
 
@@ -522,7 +521,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetPersonContacts2Async_ContactFlag_RepositoryException()
-            {                
+            {
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PersonEmer>("PERSON.EMER", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(peDc1);
                 await emergencyInformationRepository.GetPersonContacts2Async(0, 100, It.IsAny<bool>(), personId, filterName, filterPersonIds);
@@ -547,7 +546,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPersonContactById2Async_Dictionary_Null()
             {
-                var id = peDc1.FirstOrDefault().Recordkey;                
+                var id = peDc1.FirstOrDefault().Recordkey;
                 dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                 await emergencyInformationRepository.GetPersonContactById2Async(id);
             }
@@ -689,7 +688,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             // Set up for testing.
             private EmergencyInformationRepository BuildEmergencyInformationRepository()
-            {                
+            {
                 // Feed my pretend repository the necessary tools. This will be called with the get. Does not actually contain the pretend DB record.
                 emergencyInformationRepository = new EmergencyInformationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
@@ -817,28 +816,28 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 fullEmergencyInformationEntity.AddHealthCondition("AL");
 
                 fullEmergencyInformationEntity.AddEmergencyContact(
-                    
+
                         // Note: The database will contain Y/N/null for the flags, but the repository code changes those to boolean true/false. 
-                        new EmergencyContact ("John Q. Public")
+                        new EmergencyContact("John Q. Public")
                         {
-                            DaytimePhone = "Day: 703-123-3456", 
-                            EveningPhone = "Eve: 540-234-1234", 
-                            OtherPhone = "Other: 703-098-6789", 
-                            Relationship = "Relation is Papa", 
-                            EffectiveDate = new DateTime (2014,06,27), 
+                            DaytimePhone = "Day: 703-123-3456",
+                            EveningPhone = "Eve: 540-234-1234",
+                            OtherPhone = "Other: 703-098-6789",
+                            Relationship = "Relation is Papa",
+                            EffectiveDate = new DateTime(2014, 06, 27),
                             IsEmergencyContact = true,
                             IsMissingPersonContact = false,
                             Address = "Papa's address"
                         });
 
                 fullEmergencyInformationEntity.AddEmergencyContact(
-                        new EmergencyContact ("Mary Q. Public")
+                        new EmergencyContact("Mary Q. Public")
                         {
-                            DaytimePhone = "Day: 703-234-5678", 
-                            EveningPhone = "EveHome 540-234-1234", 
-                            OtherPhone = "Other: 703-345-6789", 
-                            Relationship = "Relation is Mama", 
-                            EffectiveDate = new DateTime (2014,06,27), 
+                            DaytimePhone = "Day: 703-234-5678",
+                            EveningPhone = "EveHome 540-234-1234",
+                            OtherPhone = "Other: 703-345-6789",
+                            Relationship = "Relation is Mama",
+                            EffectiveDate = new DateTime(2014, 06, 27),
                             IsEmergencyContact = false,
                             IsMissingPersonContact = true,
                             Address = "Mama's address"
@@ -850,7 +849,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Mock the response and the callback to get the request.
                 UpdateEmergencyInformationResponse updateEmerInfoResponse = new UpdateEmergencyInformationResponse();
 
-                
+
                 mockManager.Setup(mgr => mgr.Execute<UpdateEmergencyInformationRequest, UpdateEmergencyInformationResponse>(It.IsAny<UpdateEmergencyInformationRequest>())).Returns(updateEmerInfoResponse).Callback<UpdateEmergencyInformationRequest>(req => updateRequest = req);
 
 
@@ -923,7 +922,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).DaytimePhone, updateRequest.DaytimePhones.ElementAt(i));
                     Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).EveningPhone, updateRequest.EveningPhone.ElementAt(i));
                     Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).OtherPhone, updateRequest.OtherPhones.ElementAt(i));
-                    Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).Relationship, updateRequest.ContactRelationships.ElementAt(i)); 
+                    Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).Relationship, updateRequest.ContactRelationships.ElementAt(i));
                     Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).EffectiveDate, updateRequest.ContactEffectiveDate.ElementAt(i));
                     Assert.AreEqual(fullEmergencyInformationEntity.EmergencyContacts.ElementAt(i).Address, updateRequest.ContactAddresses.ElementAt(i));
 
@@ -958,8 +957,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.IsTrue(emerInfoEntity is EmergencyInformation);
                 Assert.AreEqual("0100000", emerInfoEntity.PersonId);
                 Assert.AreEqual(fullPersonEmer.EmerHospitalPref, emerInfoEntity.HospitalPreference);
-                Assert.AreEqual(fullPersonEmer.EmerInsuranceInfo.Replace(Convert.ToChar(DynamicArray.VM), '\n'), emerInfoEntity.InsuranceInformation);
-                Assert.AreEqual(fullPersonEmer.EmerAddnlInformation.Replace(Convert.ToChar(DynamicArray.VM), '\n'), emerInfoEntity.AdditionalInformation);
+                Assert.AreEqual(fullPersonEmer.EmerInsuranceInfo.Replace(DmiString._VM, '\n'), emerInfoEntity.InsuranceInformation);
+                Assert.AreEqual(fullPersonEmer.EmerAddnlInformation.Replace(DmiString._VM, '\n'), emerInfoEntity.AdditionalInformation);
                 Assert.AreEqual(fullPersonEmer.EmerLastConfirmedDate, emerInfoEntity.ConfirmedDate);
 
                 int numberOfHealthConditionsA = emerInfoEntity.HealthConditions.Count;
@@ -1033,26 +1032,26 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 fullEmergencyInformationEntity.AddEmergencyContact(
                         // Note: The database will contain Y/N/null for the flags, but the repository code changes those to boolean true/false. 
-                        new EmergencyContact ("John Q. Public")
+                        new EmergencyContact("John Q. Public")
                         {
-                            DaytimePhone = "Day: 703-123-3456", 
-                            EveningPhone = "Eve: 540-234-1234", 
-                            OtherPhone = "Other: 703-098-6789", 
-                            Relationship = "Relation is Papa", 
-                            EffectiveDate = new DateTime (2014,06,27), 
+                            DaytimePhone = "Day: 703-123-3456",
+                            EveningPhone = "Eve: 540-234-1234",
+                            OtherPhone = "Other: 703-098-6789",
+                            Relationship = "Relation is Papa",
+                            EffectiveDate = new DateTime(2014, 06, 27),
                             IsEmergencyContact = true,
                             IsMissingPersonContact = false,
                             Address = "Papa's address"
                         });
 
                 fullEmergencyInformationEntity.AddEmergencyContact(
-                        new EmergencyContact ("Mary Q. Public")
+                        new EmergencyContact("Mary Q. Public")
                         {
-                            DaytimePhone = "Day: 703-234-5678", 
-                            EveningPhone = "EveHome 540-234-1234", 
-                            OtherPhone = "Other: 703-345-6789", 
-                            Relationship = "Relation is Mama", 
-                            EffectiveDate = new DateTime (2014,06,27), 
+                            DaytimePhone = "Day: 703-234-5678",
+                            EveningPhone = "EveHome 540-234-1234",
+                            OtherPhone = "Other: 703-345-6789",
+                            Relationship = "Relation is Mama",
+                            EffectiveDate = new DateTime(2014, 06, 27),
                             IsEmergencyContact = false,
                             IsMissingPersonContact = true,
                             Address = "Mama's address"
@@ -1061,13 +1060,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 // Mock the response and the callback to get the request.
                 UpdateEmergencyInformationResponse updateEmerInfoResponse = new UpdateEmergencyInformationResponse();
-                
+
                 // Dummy up some Colleague transaction errors.
                 updateEmerInfoResponse.ErrorMessages = new List<string>() { "CTX error message 1", "Error message 2" };
-                
+
                 mockManager.Setup(mgr => mgr.Execute<UpdateEmergencyInformationRequest, UpdateEmergencyInformationResponse>(It.IsAny<UpdateEmergencyInformationRequest>())).Returns(updateEmerInfoResponse).Callback<UpdateEmergencyInformationRequest>(req => updateRequest = req);
 
-                
+
 
                 // Act (call the method we want to test).
                 var emerInfoEntity = emergencyInfoRepo.UpdateEmergencyInformation(fullEmergencyInformationEntity);
@@ -1125,7 +1124,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                             IsMissingPersonContact = true,
                             Address = "Mama's address"
                         });
-                
+
                 // Mock the response and the callback to get the request.
                 UpdateEmergencyInformationResponse updateEmerInfoResponse = new UpdateEmergencyInformationResponse();
 
@@ -1157,7 +1156,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Set up data accessor for mocking (health Conditions mock).
                 ApplValcodes healthConditionsResponse = new ApplValcodes()
                 {
-                    ValsEntityAssociation = new List<ApplValcodesVals>() 
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
                    {
                        new ApplValcodesVals() {ValInternalCodeAssocMember = "DI"},
                        new ApplValcodesVals() {ValInternalCodeAssocMember = "AS"},
@@ -1166,7 +1165,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                    }
                 };
                 dataAccessorMock.Setup<ApplValcodes>(acc => acc.ReadRecord<ApplValcodes>("CORE.VALCODES", "HEALTH.CONDITIONS", true)).Returns(healthConditionsResponse);
-              
+
 
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
@@ -1176,6 +1175,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 return emergencyInfoRepo;
             }
 
-        }       
+        }
     }
 }

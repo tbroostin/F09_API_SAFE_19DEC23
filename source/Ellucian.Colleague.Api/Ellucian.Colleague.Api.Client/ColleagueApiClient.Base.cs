@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Client.Core;
+using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
@@ -5392,6 +5393,93 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get audit logging configuration data.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests a multifactor token based on the user credentials.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="password"></param>
+        /// <returns>Service token for use in future multifactor verification request</returns>
+        public async Task<string> RequestMultifactorTokenAsync(string userId, string password)
+        {
+            try
+            {
+                var urlPath = "session/multifactor-token";
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var credentials = new Credentials()
+                {
+                    UserId = userId,
+                    Password = password
+                };
+                return (await ExecutePostRequestWithResponseAsync<Credentials>(credentials, urlPath, headers: headers)).Content.ReadAsStringAsync().Result;
+
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error occurred requesting multifactor token.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Verify a multifactor login with service token and one-time password
+        /// </summary>
+        /// <param name="user">User name</param>
+        /// <param name="serviceToken">Multifactor Service Token</param>
+        /// <param name="oneTimePassword">Multifactor one-time password</param>
+        /// <returns>Session token</returns>
+        public async Task<string> VerifyMultifactorTokenAsync(string user, string serviceToken, string oneTimePassword)
+        {
+            try
+            {
+                var urlPath = "session/verify-multifactor-token";
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var credentialsWithMfaToken = new CredentialsWithMultifactorToken()
+                {
+                    UserId = user,
+                    MultifactorOneTimePassword = oneTimePassword,
+                    ServiceToken = serviceToken
+                };
+                return (await ExecutePostRequestWithResponseAsync<CredentialsWithMultifactorToken>(credentialsWithMfaToken, urlPath, headers: headers)).Content.ReadAsStringAsync().Result;
+
+            }
+            catch (LoginException liex)
+            {
+                if (liex.Message.Contains("10014"))
+                {
+                    throw new LoginDisabledException(liex.Message);
+                }
+                else
+                {
+                    logger.Debug(liex.Message);
+                    throw;
+                }
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                logger.Error(hrfe.Message);
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    throw new PasswordExpiredException(hrfe.Message);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (ResourceNotFoundException rnfex)
+            {
+                logger.Error(rnfex.Message);
+                throw new ListenerNotFoundException(rnfex.Message);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error occurred verifying multifactor token.");
                 throw;
             }
         }

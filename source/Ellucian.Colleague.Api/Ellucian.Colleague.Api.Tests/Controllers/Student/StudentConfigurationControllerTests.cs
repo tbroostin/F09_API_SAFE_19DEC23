@@ -1,20 +1,20 @@
 ﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Controllers.Student;
+using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Adapters;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Ellucian.Colleague.Api.Controllers.Student;
-using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Web.Adapters;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using slf4net;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Coordination.Student.Adapters;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -63,7 +63,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentConfigurationRepo = studentConfigurationRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
 
                 graduationConfigurationEntity = BuildGraduationConfiguration();
@@ -187,7 +186,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentConfigurationRepo = studentConfigurationRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
 
                 graduationConfigurationEntity = BuildGraduationConfiguration();
@@ -218,7 +216,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var graduationConfiguration2 = await studentConfigurationController.GetGraduationConfiguration2Async();
 
                 // Test Result
-                Assert.AreEqual(graduationConfiguration2.ExpandRequirementSetting,Dtos.Student.ExpandRequirementSetting.Expand);                   
+                Assert.AreEqual(graduationConfiguration2.ExpandRequirementSetting, Dtos.Student.ExpandRequirementSetting.Expand);
                 Assert.IsTrue(graduationConfiguration2 is Dtos.Student.GraduationConfiguration2);
                 Assert.AreEqual(graduationConfiguration2.ApplicationQuestions.Count(), graduationConfiguration2.ApplicationQuestions.Count());
                 Assert.AreEqual(graduationConfiguration2.GraduationTerms.Count(), graduationConfiguration2.GraduationTerms.Count());
@@ -329,7 +327,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 configurationService = configurationServiceMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
 
                 configurationEntity = BuildStudentRequestConfiguration();
@@ -364,7 +361,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.IsTrue(configuration.SendEnrollmentRequestConfirmation);
                 Assert.AreEqual("PRI", configuration.DefaultWebEmailType);
             }
-
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
@@ -436,7 +432,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 configurationService = configurationServiceMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
                 startTime = DateTime.Now.AddDays(-100);
                 endTime = DateTime.Now.AddDays(-10);
@@ -544,7 +539,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 configurationService = configurationServiceMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
                 startTime = DateTime.Now.AddDays(-100);
                 endTime = DateTime.Now.AddDays(-10);
@@ -652,7 +646,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 configurationService = configurationServiceMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
                 startTime = DateTime.Now.AddDays(-100);
                 endTime = DateTime.Now.AddDays(-10);
@@ -767,7 +760,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 logger = new Mock<ILogger>().Object;
                 startTime = DateTime.Now.AddDays(-100);
                 endTime = DateTime.Now.AddDays(-10);
-                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(true, 3);
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(true, false, false, 3);
 
                 studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
             }
@@ -782,7 +775,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_ReturnConfigDto()
             {
-                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(true, 3);
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(true, false, false, 3);
 
                 // Mock the respository get
                 studentConfigurationRepoMock.Setup(repo => repo.GetRegistrationConfigurationAsync()).Returns(Task.FromResult(configurationEntity));
@@ -800,12 +793,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(3, configuration.AddAuthorizationStartOffsetDays);
                 Assert.IsFalse(configuration.QuickRegistrationIsEnabled);
                 Assert.IsFalse(configuration.QuickRegistrationTermCodes.Any());
+                Assert.IsFalse(configuration.SeatServiceIsEnabled);
+                Assert.IsFalse(configuration.ExceedAddAuthCapacity);
+                Assert.IsFalse(configuration.BypassAddAuthWaitlist);
             }
 
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_ReturnConfigDto_Other()
             {
-                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(false, 0, true);
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(false, false, false, 0, true);
                 configurationEntity.AddQuickRegistrationTerm("2019/FA");
 
                 // Mock the respository get
@@ -821,11 +817,37 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 // Test Result
                 Assert.IsTrue(configuration is Dtos.Student.RegistrationConfiguration);
                 Assert.IsFalse(configuration.RequireFacultyAddAuthorization);
-                Assert.AreEqual(0,configuration.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(0, configuration.AddAuthorizationStartOffsetDays);
                 Assert.IsTrue(configuration.QuickRegistrationIsEnabled);
                 Assert.AreEqual(1, configuration.QuickRegistrationTermCodes.Count());
+                Assert.IsFalse(configuration.SeatServiceIsEnabled);
             }
 
+            [TestMethod]
+            public async Task GetRegistrationConfigurationAsync_ReturnConfigDto_Other2()
+            {
+                configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration(false, true, true, 0, true);
+
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(repo => repo.GetRegistrationConfigurationAsync()).Returns(Task.FromResult(configurationEntity));
+
+                // Mock the adapters
+                var configAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration, Ellucian.Colleague.Dtos.Student.RegistrationConfiguration>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration, Ellucian.Colleague.Dtos.Student.RegistrationConfiguration>()).Returns(configAdapter);
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetRegistrationConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.RegistrationConfiguration);
+                Assert.IsFalse(configuration.RequireFacultyAddAuthorization);
+                Assert.AreEqual(0, configuration.AddAuthorizationStartOffsetDays);
+                Assert.IsTrue(configuration.QuickRegistrationIsEnabled);
+                Assert.IsFalse(configuration.QuickRegistrationTermCodes.Any());
+                Assert.IsFalse(configuration.SeatServiceIsEnabled);
+                Assert.IsTrue(configuration.ExceedAddAuthCapacity);
+                Assert.IsTrue(configuration.BypassAddAuthWaitlist);
+            }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
@@ -842,7 +864,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     throw ex;
                 }
             }
-
         }
 
         [TestClass]
@@ -894,7 +915,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 configurationService = configurationServiceMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
-                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
                 logger = new Mock<ILogger>().Object;
 
                 configurationEntity = BuildStudentProfileConfiguration();
@@ -1100,14 +1120,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task GetInstantEnrollmentConfigurationAsync_ReturnConfigDto()
             {
                 configurationEntity = new Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(
-                    Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any, 
+                    Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any,
                     new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
                     {
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.DFLT", "2014X"),
                         new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", "2016"),
-                    }, "BANK", "US", true, "CEUSER", null, false, 
+                    }, "BANK", "US", true, "CEUSER", null, false,
                     new List<DemographicField>()
-                    { 
+                    {
                         new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
                         new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
                         new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
@@ -1266,7 +1286,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task GetAcademicRecordConfigurationAsync_ReturnConfigDto()
             {
                 var configurationDto = new Dtos.Student.AcademicRecordConfiguration()
-                { AnonymousGradingType = Dtos.Student.AnonymousGradingType.None};
+                { AnonymousGradingType = Dtos.Student.AnonymousGradingType.None };
 
                 // Mock the respository get
                 configurationServiceMock.Setup(svc => svc.GetAcademicRecordConfigurationAsync()).Returns(Task.FromResult(configurationDto));
@@ -1448,8 +1468,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [TestMethod]
             public async Task GetFacultyAttendanceConfigurationAsync_ReturnConfigDto()
             {
-                var configurationEntity = new Domain.Student.Entities.FacultyAttendanceConfiguration() 
-                { 
+                var configurationEntity = new Domain.Student.Entities.FacultyAttendanceConfiguration()
+                {
                     CloseAttendanceCensusTrackNumber = 1,
                     CloseAttendanceNumberOfDaysPastCensusTrackDate = 23,
                     CloseAttendanceNumberOfDaysPastSectionEndDate = null,

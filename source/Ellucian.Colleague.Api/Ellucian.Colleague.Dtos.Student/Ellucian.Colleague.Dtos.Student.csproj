@@ -42,8 +42,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -118,6 +118,12 @@
     <Compile Include="Portal\PortalUpdatedCoursesResult.cs" />
     <Compile Include="Portal\PortalUpdatedSectionsResult.cs" />
     <Compile Include="AnonymousGrading\PreliminaryAnonymousGrade.cs" />
+    <Compile Include="RegistrationDateSource.cs" />
+    <Compile Include="RegistrationPriority.cs" />
+    <Compile Include="SectionRegistrationActionResponse.cs" />
+    <Compile Include="StudentRegistrationValidationOnlyResponse.cs" />
+    <Compile Include="StudentRegistrationValidationOnlyRequest.cs" />
+    <Compile Include="StudentRegistrationSkipValidationsResponse.cs" />
     <Compile Include="Requirements\AcademicRequirementGroup.cs" />
     <Compile Include="Requirements\AcademicCredit.cs" />
     <Compile Include="RetentionAlertClosedCase.cs" />
@@ -182,6 +188,8 @@
     <Compile Include="RetentionAlertWorkCaseSendMail.cs" />
     <Compile Include="RetentionAlertSendEmailPreference.cs" />
     <Compile Include="SectionPage2.cs" />
+    <Compile Include="StudentRegistrationSkipValidationsRequest.cs" />
+    <Compile Include="SectionRegistrationGuid.cs" />
     <Compile Include="SectionSearchCriteria2.cs" />
     <Compile Include="SectionSearchCriteria.cs" />
     <Compile Include="CaseType.cs" />

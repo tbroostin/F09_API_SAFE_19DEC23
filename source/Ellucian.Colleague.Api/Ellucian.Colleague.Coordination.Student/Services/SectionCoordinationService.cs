@@ -586,7 +586,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             SectionRoster entity = await _sectionRepository.GetSectionRosterAsync(sectionId);
             Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity;
-            sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
+            sectionEntity = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             if (sectionEntity == null)
             {
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
@@ -619,7 +619,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Permission check
-            var section = await _sectionRepository.GetSectionAsync(sectionId);
+            var section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             CanViewSectionWaitlists(section, sectionId);
             SectionWaitlist entity = await _sectionRepository.GetSectionWaitlistAsync(sectionId);
 
@@ -640,7 +640,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Permission check
-            var section = await _sectionRepository.GetSectionAsync(sectionId);
+            var section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             CanViewSectionWaitlists(section, sectionId);
             IEnumerable<SectionWaitlistStudent> entity = await _sectionRepository.GetSectionWaitlist2Async(new List<string> { sectionId });
             List<Dtos.Student.SectionWaitlistStudent> waitlistDetails = new List<Dtos.Student.SectionWaitlistStudent>();
@@ -651,6 +651,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return waitlistDetails;
         }
+
         /// <summary>
         /// Gets a list of SectionWaitlistStudent for given sections or includes the cross listed sections data based on the query criteria
         /// </summary>
@@ -670,7 +671,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Permission check
             foreach (var sectionId in criteria.SectionIds)
             {
-                var section = await _sectionRepository.GetSectionAsync(sectionId);
+                var section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
                 CanViewSectionWaitlistInfo(section, sectionId);
                 sections.Add(section);
             }
@@ -732,7 +733,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Permission check
-            var section = await _sectionRepository.GetSectionAsync(sectionId);
+            var section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             CanViewSectionWaitlistInfo(section, sectionId);
             SectionWaitlistConfig entity = await _sectionRepository.GetSectionWaitlistConfigAsync(sectionId);
 
@@ -1251,7 +1252,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var textbookDtoAdapter = _adapterRegistry.GetAdapter<Dtos.Student.SectionTextbook, Domain.Student.Entities.SectionTextbook>();
             var textbookEntity = textbookDtoAdapter.MapToType(textbook);
             var bookAction = ConvertSectionBookActionDtoToDomainEntityAsync(textbook.Action);
-            var section = await _sectionRepository.GetSectionAsync(textbook.SectionId);
+            var section = await _sectionRepository.GetSectionAsync(textbook.SectionId, useSeatServiceWhenEnabled: true);
             var allDepartments = await AllDepartments();
             CanManageSectionTextbookAssignments(section, allDepartments);
             
@@ -11349,7 +11350,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     throw new KeyNotFoundException();
                 }
-                var section = await _sectionRepository.GetSectionAsync(meeting.SectionId);
+                var section = await _sectionRepository.GetSectionAsync(meeting.SectionId, useSeatServiceWhenEnabled: false);
                 // Remove from section any faculty that do not have the same instructional method
                 // as the meeting we are removing.  Then, section.Faculty.ToList() only contains
                 // the faculty objects we wish to delete.
@@ -14163,7 +14164,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Get the cached section record to check permissions for this service
             List<string> sectionIds = new List<string>() { sectionId };
             Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity;
-            sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
+            sectionEntity = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             if (sectionEntity == null)
             {
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
@@ -14338,7 +14339,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 //this will be retrieving non-cache course section 
-                sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
+                sectionEntity = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             }
             catch (ColleagueSessionExpiredException)
             {
@@ -14544,7 +14545,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <exception cref="KeyNotFoundException">Course section data could not be retrieved.</exception>
         private async Task<Domain.Student.Entities.Section> RetrieveCourseSectionInformation(string sectionId)
         {
-            var courseSections = await _sectionRepository.GetSectionAsync(sectionId);
+            var courseSections = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
             if (courseSections == null)
             {
                 throw new KeyNotFoundException(string.Format("Could not retrieve course section information for course section {0}.", sectionId));

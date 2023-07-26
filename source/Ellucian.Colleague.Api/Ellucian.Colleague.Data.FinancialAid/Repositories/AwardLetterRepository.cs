@@ -1,9 +1,4 @@
-﻿//Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text.RegularExpressions;
+﻿//Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 using Ellucian.Colleague.Data.FinancialAid.Transactions;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -14,6 +9,10 @@ using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -245,7 +244,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var awardCategoriesTitleList = new List<string>()
             {
                 awardLetterParametersData.AltrTitleGroup1,
-                awardLetterParametersData.AltrTitleGroup2                
+                awardLetterParametersData.AltrTitleGroup2
             };
 
             var awardCategoriesGroupList = new List<List<string>>()
@@ -464,14 +463,13 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var replace = source;
             if (!string.IsNullOrEmpty(source))
             {
-                char _vm = Convert.ToChar(DynamicArray.VM);
                 string paragraphSpacing = "" + Environment.NewLine;
                 if (spacing == "2")
                 {
                     paragraphSpacing += Environment.NewLine;
                 }
                 //first replace two _vms with a new line, then replace remaining single vms with a space
-                replace = source.Replace("" + _vm + _vm, paragraphSpacing).Replace(_vm, ' ');
+                replace = source.Replace("" + DmiString._VM + DmiString._VM, paragraphSpacing).Replace(DmiString._VM, ' ');
             }
             return replace;
         }

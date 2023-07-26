@@ -616,8 +616,15 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// Get a Person Filter by GUID
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
-        /// <returns>string list of Colleague person IDs</returns>
+        /// <returns>string list of Colleague person IDs from saved execution of person filter</returns>
         Task<string[]> GetPersonIdsByPersonFilterGuidAsync(string guid);
+
+        /// <summary>
+        /// Get a Person Filter by GUID
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>string list of Colleague person IDs from new execution of person filter</returns>
+        Task<string[]> GetPersonIdsByPersonFilterGuid2Async(string guid);
 
         /// <summary>
         /// Get a collection of PersonOriginCodes

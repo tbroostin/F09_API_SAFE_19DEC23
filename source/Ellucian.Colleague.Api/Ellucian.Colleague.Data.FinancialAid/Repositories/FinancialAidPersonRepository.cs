@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +13,7 @@ using Ellucian.Web.Http.Configuration;
 using System.Text.RegularExpressions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -139,6 +140,29 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             {
                 throw;
             }
+        }
+
+        public async Task<string> GetStwebDefaultsHierarchyAsync()
+        {
+
+            var result = await GetOrAddToCacheAsync<Data.FinancialAid.DataContracts.StwebDefaults>("StudentWebDefaults",
+            async () =>
+            {
+                Ellucian.Colleague.Data.FinancialAid.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.FinancialAid.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
+                if (stwebDefaults == null)
+                {
+                    if (logger.IsInfoEnabled)
+                    {
+                        var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                        logger.Info(errorMessage);
+                    }
+                    stwebDefaults = new StwebDefaults();
+                }
+                return stwebDefaults;
+            }, Level1CacheTimeoutValue);
+
+            return result.StwebDisplayNameHierarchy;
+
         }
 
         #region Helpers

@@ -1,4 +1,4 @@
-﻿/*Copyright 2022 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2023 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Web.Adapters;
@@ -36,6 +36,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
         public string LeavePlanDescription { get; private set; }
         public DateTime LeavePlanStartDate { get; private set; }
         public DateTime? LeavePlanEndDate { get; private set; }
+        public string LeavePlanType { get; private set; }
         public DateTime LeaveAllowedDate { get; set; }
         public decimal PriorPeriodLeaveBalance { get; private set; }
         public bool AllowNegativeBalance { get; private set; }
@@ -66,6 +67,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
             LeavePlanDescription = "Vacation - Hourly";
             LeavePlanStartDate = new DateTime(1964, 1, 1);
             LeavePlanEndDate = null;
+            LeavePlanType = "VAC";
             LeaveAllowedDate = new DateTime(2016, 1, 1);
             AllowNegativeBalance = false;
             IsLeaveReportingPlan = true;
@@ -84,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
             PlanYearStartMonth = 1;
             PlanYearStartDay = 1;
             LatestCarryoverDate = new DateTime(2022, 1, 1);
-            EmployeeLeavePlanEntity = new EmployeeLeavePlan(Id, EmployeeId, StartDate, EndDate, LeavePlanId, LeavePlanDescription, LeavePlanStartDate, LeavePlanEndDate,
+            EmployeeLeavePlanEntity = new EmployeeLeavePlan(Id, EmployeeId, StartDate, EndDate, LeavePlanId, LeavePlanDescription, LeavePlanStartDate, LeavePlanEndDate, LeavePlanType,
                                 LeavePlanTypeCategory, EarningsTypeId, EarningsTypeDescription, LeaveAllowedDate, PriorPeriodLeaveBalance, PlanYearStartMonth, PlanYearStartDay,
                                 IsLeaveReportingPlan, EarningTypeIDList, AccrualRate, AccrualLimit, AccrualMaxCarryOver, AccrualMaxRollOver, AccrualMethod, IsPlanYearStartDateDefined, LatestCarryoverDate, AllowNegativeBalance);
             employeeLeaveTransactionDtoComparer = this.EmployeeLeaveTransactionDtoComparer();
@@ -116,6 +118,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Adapters
             Assert.AreEqual(EmployeeLeavePlanEntity.IsPlanYearStartDateDefined, EmployeeLeavePlanDTO.IsPlanYearStartDateDefined);
             Assert.AreEqual(EmployeeLeavePlanEntity.LeaveAllowedDate, EmployeeLeavePlanDTO.LeaveAllowedDate);
             Assert.AreEqual(EmployeeLeavePlanEntity.LeavePlanDescription, EmployeeLeavePlanDTO.LeavePlanDescription);
+            Assert.AreEqual(EmployeeLeavePlanEntity.LeavePlanType, EmployeeLeavePlanDTO.LeavePlanType);
             Assert.AreEqual(EmployeeLeavePlanEntity.AccrualLimit, EmployeeLeavePlanDTO.AccrualLimit);
             Assert.AreEqual(EmployeeLeavePlanEntity.AccrualMaxCarryOver, EmployeeLeavePlanDTO.AccrualMaxCarryOver);
             Assert.AreEqual(EmployeeLeavePlanEntity.AccrualMaxRollOver, EmployeeLeavePlanDTO.AccrualMaxRollOver);

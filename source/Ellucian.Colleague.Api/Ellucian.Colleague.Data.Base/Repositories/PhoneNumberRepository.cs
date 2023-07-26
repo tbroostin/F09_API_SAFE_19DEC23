@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Data.Colleague;
@@ -19,8 +19,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class PhoneNumberRepository : BaseColleagueRepository, IPhoneNumberRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
-
         public PhoneNumberRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -135,7 +133,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         catch (Exception ex)
                         {
                             logger.Error(ex.Message);
-                            
+
                         }
                     }
                 }
@@ -151,9 +149,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             // Address Local Phones in Person data
                             // This could be subvalued so need to split on subvalue mark ASCII 252.
-                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(_SM);
-                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(_SM);
-                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(DmiString._SM);
+                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(DmiString._SM);
+                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(DmiString._SM);
                             for (int i = 0; i < localPhones.Length; i++)
                             {
                                 try
@@ -204,9 +202,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="personIds">Person IDs</param>
         /// <param name="pilotConfiguration">Pilot Configuration (User specified Primary Phone Types and SMS Phone Types)</param>
         /// <returns>PilotPhoneNumber Object for a list of persons - contains person ID, primary phone number, SMS phone number</returns>
-        public async Task<IEnumerable<PilotPhoneNumber>> GetPilotPersonPhonesByIdsAsync(List<string> personIds, PilotConfiguration pilotConfiguration)        
+        public async Task<IEnumerable<PilotPhoneNumber>> GetPilotPersonPhonesByIdsAsync(List<string> personIds, PilotConfiguration pilotConfiguration)
         {
-            List<PilotPhoneNumber> pilotPhoneNumbers = new List<PilotPhoneNumber>();             
+            List<PilotPhoneNumber> pilotPhoneNumbers = new List<PilotPhoneNumber>();
             List<PhoneNumber> phoneNumbers = new List<PhoneNumber>();
             var error = false;
             ICollection<Ellucian.Colleague.Data.Base.DataContracts.Person> personData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
@@ -297,7 +295,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                             }
                         }
-                        
+
                         // call constructor to add person to PilotPhoneNumber
                         // then add non-required primary and sms phone numbers
                         PilotPhoneNumber pilotPhoneNumber = new PilotPhoneNumber(personId);

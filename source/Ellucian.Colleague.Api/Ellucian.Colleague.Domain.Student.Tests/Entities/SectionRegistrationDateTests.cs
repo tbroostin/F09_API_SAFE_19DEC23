@@ -41,7 +41,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             dropEnd = DateTime.Today.AddDays(8);
             dropOther = DateTime.Today.AddDays(9);
             censusDates = null;
-            sectionRegDate = new SectionRegistrationDate(sectionId, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates);
+            sectionRegDate = new SectionRegistrationDate(sectionId, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates, RegistrationDateSource.RegistrationUserSection);
         }
 
         [TestCleanup]
@@ -54,14 +54,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void SectionRegistrationDate_EmptyTerm_Exception()
         {
-            sectionRegDate = new SectionRegistrationDate(string.Empty, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates);
+            sectionRegDate = new SectionRegistrationDate(string.Empty, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates, RegistrationDateSource.RegistrationUserSection);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void SectionRegistrationDate_NullTerm_Exception()
         {
-            sectionRegDate = new SectionRegistrationDate(null, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates);
+            sectionRegDate = new SectionRegistrationDate(null, locationCode, regStart, regEnd, preregStart, preregEnd, addStart, addEnd, dropStart, dropEnd, dropOther, censusDates, RegistrationDateSource.RegistrationUserSection);
         }
 
         [TestMethod]

@@ -72,6 +72,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             private EthosApiConfiguration ethosApiConfiguration;
             private EthosExtensibleData ethosExtensibleData;
+            private Web.Http.EthosExtend.EthosResourceRouteInfo routeInfo;
 
             private List<Domain.Base.Entities.EthosApiBuilder> ethosApiBuilderCollection;
             private const string ethosApiBuilderGuid = "a830e686-7692-4012-8da5-b1b5d44389b4";
@@ -125,6 +126,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     ColleagueTimeZone = ethosExtensibleData.ColleagueTimeZone,
                     ResourceId = ethosExtensibleData.ResourceId,
                     ExtendedSchemaType = ethosExtensibleData.ExtendedSchemaType
+                };
+                routeInfo = new Web.Http.EthosExtend.EthosResourceRouteInfo()
+                {
+                    ResourceName = ethosApiConfiguration.ResourceName,
+                    ReturnRestrictedFields = false
                 };
                 guidLookupResult = new GuidLookupResult()
                 {
@@ -245,7 +251,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task EthosApiBuilderService_PostEthosApiBuilder_ArgumentNullException()
             {
-                await _ethosApiBuilderService.PostEthosApiBuilderAsync(null, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PostEthosApiBuilderAsync(null, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
 
@@ -261,7 +267,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.UpdateEthosApiBuilderAsync(It.IsAny<Domain.Base.Entities.EthosApiBuilder>(), ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
 
-                var actual = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                var actual = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
 
                 Assert.AreEqual(ethosApiBuilder._Id, actual._Id, "Id");
             }
@@ -274,7 +280,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var ethosApiBuilderEntity = ethosApiBuilderCollection.FirstOrDefault(x => x.Guid == ethosApiBuilderGuid);
                 Dtos.EthosApiBuilder ethosApiBuilder = new Dtos.EthosApiBuilder();
 
-                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             [TestMethod]
@@ -290,7 +296,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.UpdateEthosApiBuilderAsync(It.IsAny<Domain.Base.Entities.EthosApiBuilder>(), ethosApiConfiguration)).Throws(new IntegrationApiException());
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
 
-                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             [TestMethod]
@@ -306,7 +312,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.UpdateEthosApiBuilderAsync(It.IsAny<Domain.Base.Entities.EthosApiBuilder>(), ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).Throws(new IntegrationApiException());
 
-                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             #endregion PostEthosApiBuilder
@@ -317,7 +323,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task EthosApiBuilderService_PutEthosApiBuilder_ArgumentNullException()
             {
-                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderGuid, null, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderGuid, null, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
 
@@ -334,7 +340,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetRecordInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookupResult);
 
-                var actual = await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                var actual = await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
 
                 Assert.AreEqual(ethosApiBuilder._Id, actual._Id, "Id");
             }
@@ -347,7 +353,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var ethosApiBuilderEntity = ethosApiBuilderCollection.FirstOrDefault(x => x.Guid == ethosApiBuilderGuid);
                 Dtos.EthosApiBuilder ethosApiBuilder = new Dtos.EthosApiBuilder();
 
-                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             [TestMethod]
@@ -364,7 +370,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetRecordInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
-                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             [TestMethod]
@@ -381,7 +387,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).ReturnsAsync(ethosApiBuilderEntity);
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetRecordInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "STUDENTS", PrimaryKey = "1" });
 
-                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             [TestMethod]
@@ -398,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetEthosApiBuilderByIdAsync(ethosApiBuilder._Id, ethosApiConfiguration)).Throws(new IntegrationApiException());
                 _ethosApiBuilderRepositoryMock.Setup(x => x.GetRecordInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookupResult);
 
-                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false);
+                await _ethosApiBuilderService.PutEthosApiBuilderAsync(ethosApiBuilderEntity.Guid, ethosApiBuilder, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>());
             }
 
             #endregion PutEthosApiBuilder

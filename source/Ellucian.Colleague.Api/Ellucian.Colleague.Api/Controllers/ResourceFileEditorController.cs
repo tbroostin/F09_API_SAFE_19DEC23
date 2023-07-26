@@ -1,18 +1,19 @@
 ﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
+using Ellucian.Colleague.Api.Helpers;
 using Ellucian.Colleague.Api.Models;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Mvc.Controller;
 using Ellucian.Web.Resource;
-using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Mvc;
 
@@ -32,7 +33,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Initializes a new instance of the <see cref="ResourceFileEditorController" /> class.
         /// </summary>
         /// <param name="resourceRepository">The resource repository.</param>
-        /// <param name="apiSettings">IConfigurationService instance</param>
+        /// <param name="apiSettings">API Settings</param>
         /// <param name="logger">The logger.</param>
         /// <exception cref="System.ArgumentNullException">resourceRepository</exception>
         public ResourceFileEditorController(IResourceRepository resourceRepository, ApiSettings apiSettings, ILogger logger)
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 var error = "You must login before accessing the Resource File Editor";
                 string returnUrl = Url.Action("ResourceFileEditor", "ResourceFileEditor");
-                return RedirectToAction("Login", "Admin", new { returnUrl = returnUrl, error = error }); 
+                return RedirectToAction("Login", "Admin", new { returnUrl = returnUrl, error = error });
             }
             return View();
         }
@@ -90,7 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return Json(currentFile, JsonRequestBehavior.AllowGet);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error(ex, ex.Message);
                 Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -110,16 +111,34 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="model">The resource file with the updated values</param>
         /// <returns></returns>
         [HttpPost]
-        public ActionResult SaveResourceFile(string model)
+        public async Task<ActionResult> SaveResourceFile(string model)
         {
             try
             {
-                ResourceFileModel file=Newtonsoft.Json.JsonConvert.DeserializeObject<ResourceFileModel>(model);
+                ResourceFileModel file = Newtonsoft.Json.JsonConvert.DeserializeObject<ResourceFileModel>(model);
                 ResourceFile updatedResourceFile = new ResourceFile(file.ResourceFileName);
+                ResourceFile oldResourceFile = resourceRepository.GetResourceFile(file.ResourceFilePath);
 
                 //Map the fileEntryModels to FileEntry object
                 updatedResourceFile.ResourceFileEntries = file.ResourceFileEntries.Select
                     (x => new ResourceFileEntry() { Key = x.Key, Value = x.Value, Comment = x.Comment, OriginalValue = x.OriginalValue }).ToList();
+
+                try
+                {
+                    var cookie = LocalUserUtilities.GetCookie(Request);
+
+                    IPrincipal localUser = null;
+                    if (cookie != null)
+                    {
+                        localUser = LocalUserUtilities.GetCurrentUser(Request);
+                    }
+                    var localUserName = localUser?.Identity.Name ?? "LocalAdmin";
+                    updatedResourceFile.AuditLogConfigurationChanges(oldResourceFile, localUserName);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Failed to audit log changes for web api resource file editor.");
+                }
 
                 resourceRepository.UpdateResourceFile(file.ResourceFilePath, updatedResourceFile);
                 PerformBackupConfig();
@@ -172,11 +191,10 @@ namespace Ellucian.Colleague.Api.Controllers
                     var currentChecksum = Utilities.GetMd5ChecksumString(configObject.ConfigData);
                     Utilities.SetLastRestoredChecksum(currentChecksum);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     logger.Error(e, "Configuration changes have been saved, but the backup to config storage service failed. See API log for more details.");
                 }
-
             }
             else
             {
@@ -203,7 +221,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     logger.Error(e, "Configuration changes have been saved, but the backup action failed. See API log for more details.");
                     throw;
                 }
-            }                
+            }
         }
     }
 }

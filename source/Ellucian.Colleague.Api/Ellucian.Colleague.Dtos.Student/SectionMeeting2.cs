@@ -25,7 +25,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// End time for this section
         /// </summary>
         public DateTimeOffset? EndTime { get; set; }
-
+        /// <summary>
+        /// Raw StartTime
+        /// </summary>
+        public DateTime? RawStartTime { get; set; }
         /// <summary>
         /// List of <see cref="DayOfWeek">days of week</see> this meeting occurs
         /// </summary>

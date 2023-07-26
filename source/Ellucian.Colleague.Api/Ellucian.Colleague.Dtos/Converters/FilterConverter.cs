@@ -290,7 +290,7 @@ namespace Ellucian.Colleague.Dtos.Converters
                                 if (jToken.Type == JTokenType.Array)
                                 {
                                     var obj1 = JArray.Parse(JsonConvert.SerializeObject(value,
-                                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })) as JArray;
+                                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore })) as JArray;
                                     if ((obj1 != null)) //&& (!JArray.DeepEquals(jToken, obj1)))
                                     {
                                         JArray obj2 = (JArray)jObject[jProperty.Name];
@@ -727,7 +727,7 @@ namespace Ellucian.Colleague.Dtos.Converters
             switch (jToken.Type)
             {
                 case JTokenType.Integer:
-                    if (type != typeof(int))
+                    if (type != typeof(int) && type != typeof(long) && type != typeof(float))
                         retval = true;
                     break;
                 case JTokenType.String:
@@ -926,6 +926,88 @@ namespace Ellucian.Colleague.Dtos.Converters
                     }
                     filterMemberInfo = new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, supportedOperators: supportedFilterDict);
 
+                }
+                else
+                {
+                    object[] matchingFilterAttributes = null;
+                    // See if this DTO is Ethos Enabled
+                    matchingProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(MetadataAttribute))
+                        && (((MetadataAttribute)Attribute.GetCustomAttribute(p, typeof(MetadataAttribute))).DataElementName != null)
+                        && p.Name.ToLower() == memberName.ToLower());
+
+                    if (matchingProperty != null)
+                    {
+                        matchingFilterAttributes = matchingProperty.GetCustomAttributes(typeof(FilterPropertyAttribute), false);
+                        if (matchingFilterAttributes == null || !matchingFilterAttributes.Any())
+                        {
+                            var propType = matchingProperty.PropertyType;
+                            if (IsNullableType(propType))
+                                propType = Nullable.GetUnderlyingType(matchingProperty.PropertyType);
+
+                            List<string> opers = new List<string>() { "$eq", "$ne" };
+                            if (propType != typeof(string) && propType != typeof(bool))
+                                opers.AddRange(new List<string>() { "$lt", "$gt", "$gte", "$lte" });
+
+                            matchingFilterAttributes = new object[] { new FilterPropertyAttribute("criteria", opers.ToArray()) };
+                        }
+                    }
+                    else
+                    {
+                        matchingProperty = properties.FirstOrDefault(p => p.Name.ToLower() == memberName.ToLower());
+                        if (matchingProperty != null)
+                        {
+                            var propType = matchingProperty.PropertyType;
+                            if (IsNullableType(propType))
+                                propType = Nullable.GetUnderlyingType(matchingProperty.PropertyType);
+
+                            List<string> opers = new List<string>() { "$eq", "$ne" };
+                            if (propType != typeof(string) && propType != typeof(bool))
+                                opers.AddRange(new List<string>() { "$lt", "$gt", "$gte", "$lte" });
+
+                            matchingFilterAttributes = new object[] { new FilterPropertyAttribute("criteria", opers.ToArray()) };
+                        }
+                    }
+
+                    if (matchingProperty != null)
+                    {
+                        if (matchingFilterAttributes != null)
+                        {
+                            foreach (FilterPropertyAttribute matchingFilterAttribute in matchingFilterAttributes)
+                            {
+                                if (matchingFilterAttribute != null)
+                                {
+                                    filterAttributes = (matchingFilterAttribute.Name).ToList();
+                                    filterAttributesDict.Add(filterAttributes, matchingFilterAttribute.Ignore);
+
+                                    if ((matchingFilterAttribute.SupportedOperators != null))
+                                    {
+                                        supportedFilterDict.Add((matchingFilterAttribute.Name).ToList(), (matchingFilterAttribute.SupportedOperators).ToList());
+                                    }
+                                }
+                            }
+                        }
+
+                        var type = isChild ? matchingProperty.DeclaringType : matchingProperty.PropertyType;
+
+                        var propertyType = matchingProperty.PropertyType;
+                        if (IsNullableType(propertyType))
+                            propertyType = Nullable.GetUnderlyingType(matchingProperty.PropertyType);
+                        if (propertyType.IsPrimitive || propertyType == typeof(string)
+                            || propertyType == typeof(DateTime) || propertyType == typeof(DateTimeOffset))
+                        {
+                            isPrimative = true;
+                        }
+
+                        var converters = matchingProperty.GetCustomAttributes(typeof(JsonConverterAttribute), false);
+
+                        var converter = (JsonConverterAttribute)matchingProperty.GetCustomAttribute(typeof(JsonConverterAttribute), false);
+                        if (converter != null)
+                        {
+                            var converterType = (JsonConverter)Activator.CreateInstance(converter.ConverterType, converter.ConverterParameters);
+                            return new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, converterType, supportedOperators: supportedFilterDict);
+                        }
+                        filterMemberInfo = new FilterMemberInfo(filterAttributesDict, type, matchingProperty.Name, isPrimative, supportedOperators: supportedFilterDict);
+                    }
                 }
             }
             catch (Exception e)

@@ -3769,5 +3769,49 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        public async Task<HousingOption> GetHousingOptionAsync(string studentId, string awardYear)
+        {
+            try
+            {
+                // Build url path
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, _financialAidChecklistPath, studentId, awardYear);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<HousingOption>(await response.Content.ReadAsStringAsync());
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Unable to get Housing Option for student {0} and year {1}", studentId, awardYear);
+                throw;
+            }
+        }
+
+        public async Task<HousingOption> SetHousingOptionAsync(string studentId, string awardYear, string housingOption, string forceOption)
+        {
+            try
+            {
+                // Build url path
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, _financialAidChecklistPath, studentId, awardYear, housingOption, forceOption);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the request or response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync("", urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<HousingOption>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set Housing Option to {0} for student {1} and year {2}", housingOption, studentId, awardYear);
+                throw;
+            }
+        }
+
     }
 }

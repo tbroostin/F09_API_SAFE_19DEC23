@@ -1,17 +1,15 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -19,11 +17,12 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -238,18 +237,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             try
             {
-                string coursesKey = CacheSupport.BuildCacheKey( AllCoursessCacheKey,
-                                                            string.IsNullOrEmpty( subject ) ? "" : subject,
-                                                            string.IsNullOrEmpty( number ) ? "" : number,
+                string coursesKey = CacheSupport.BuildCacheKey(AllCoursessCacheKey,
+                                                            string.IsNullOrEmpty(subject) ? "" : subject,
+                                                            string.IsNullOrEmpty(number) ? "" : number,
                                                             academicLevel != null && academicLevel.Any() ? academicLevel : null,
                                                             owningInstitutionUnit != null && owningInstitutionUnit.Any() ? owningInstitutionUnit : null,
                                                             titles != null && titles.Any() ? titles : null,
                                                             instructionalMethods != null && instructionalMethods.Any() ? instructionalMethods : null,
-                                                            string.IsNullOrEmpty( startOn ) ? "" : startOn,
-                                                            string.IsNullOrEmpty( endOn ) ? "" : endOn,
-                                                            string.IsNullOrEmpty( topic ) ? "" : topic,
+                                                            string.IsNullOrEmpty(startOn) ? "" : startOn,
+                                                            string.IsNullOrEmpty(endOn) ? "" : endOn,
+                                                            string.IsNullOrEmpty(topic) ? "" : topic,
                                                             categories != null && categories.Any() ? categories : null,
-                                                            string.IsNullOrEmpty( activeOn ) ? "" : activeOn);
+                                                            string.IsNullOrEmpty(activeOn) ? "" : activeOn);
 
 
                 var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
@@ -265,23 +264,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        AllCoursessCacheKeyTimeout,
                        async () =>
                        {
-                           string criteria = BuildCriteria( subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, activeOn );
+                           string criteria = BuildCriteria(subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, activeOn);
 
                            string[] courseIds = new string[] { };
 
-                           courseIds = await DataReader.SelectAsync( "COURSES", criteria );
+                           courseIds = await DataReader.SelectAsync("COURSES", criteria);
 
                            return new CacheSupport.KeyCacheRequirements()
                            {
                                limitingKeys = courseIds != null && courseIds.Any() ? courseIds.Distinct().ToList() : null,
                                criteria = criteria,
                            };
-                       } );
+                       });
 
 
-                if( keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any() )
+                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
                 {
-                    return new Tuple<IEnumerable<Course>, int>( new List<Course>(), 0 );
+                    return new Tuple<IEnumerable<Course>, int>(new List<Course>(), 0);
                 }
 
                 totalCount = keyCacheObject.TotalCount.Value;
@@ -802,14 +801,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var courseTypes = await GetCourseTypesAsync();
             var courseParameters = await GetCourseParametersAsync();
 
-            char _VM = Convert.ToChar(DynamicArray.VM);
             var courses = new Dictionary<string, Course>();
-            Course course = null;
+
             // If no data passed in, return a null collection
             if (courseData != null)
             {
                 foreach (var crs in courseData)
                 {
+                    Course course = null;
+
                     try
                     {
                         // Get the list of course statuses and identify the most recent one as the current status
@@ -878,7 +878,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                         }
 
-
                         try
                         {
                             course = new Course(crs.Recordkey,
@@ -896,7 +895,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             course.VerifyGrades = !string.IsNullOrEmpty(crs.CrsOvrVerifyGrades) ? crs.CrsOvrVerifyGrades.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false : default(bool?);
                             if (crs.CrsDesc != null)
                             {
-                                course.Description = crs.CrsDesc.Replace(_VM, ' ');
+                                course.Description = crs.CrsDesc.Replace(DmiString._VM, ' ');
                             }
                             course.LocationCodes = crs.CrsLocations;
                             course.TermSessionCycle = crs.CrsSessionCycle;
@@ -1029,7 +1028,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 // Don't do anything if an exception occurs, just move on. Corequisite course missing or invalid.
                                                 logger.Error(ex, "Corequisite course missing or invalid.");
                                             }
-
                                         }
                                     }
                                 }
@@ -1046,7 +1044,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         // Don't do anything. Skip this prereq and move on.
                                         logger.Error(ex, "Unable to get prerequisite.");
                                     }
-
                                 }
                                 if (requisites.Any())
                                 {
@@ -1179,7 +1176,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return courses;
         }
-
 
         /// <summary>
         /// Checks addErrorToCollection boolean to determine of error message should be added to the repository exception
@@ -1383,8 +1379,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Gets all equate codes from the repository and finds all of the courses that can be
         /// considered "equates" of this course. 
         /// Course equate codes consist of a list of course ids that are related to the code (record key).
-        /// Two courses are equated if they have exactly the same equate codes.
-        /// The two courses cannot be equated if one course has more equate codes than the other.
         /// </summary>
         /// <param name="courseId"></param>
         /// <param name="equateCodes"></param>

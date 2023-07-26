@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -27,7 +27,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class StudentConfigurationRepository : BaseStudentRepository, IStudentConfigurationRepository
     {
         private const string _preferredHierarchyCode = "PREFERRED";
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
+
         public StudentConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -1819,7 +1819,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var studentRecordReleaseConfiguration = new StudentRecordsReleaseConfig();
 
-                var stwebDefaults2 = await DataReader.ReadRecordAsync<StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2", false);               
+                var stwebDefaults2 = await DataReader.ReadRecordAsync<StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2", false);
                 if (stwebDefaults2 == null)
                 {
                     var errorMessage = "Unable to access student records release configuration information from ST.PARMS STWEB.DEFAULTS.2";
@@ -1829,8 +1829,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //replace two _vms with a new line and replace remaining single vms with a space. 
                 if (!string.IsNullOrEmpty(stwebDefaults2.Stweb2StRecRelText))
                 {
-                    string[] vmString = { _VM.ToString() + " " + _VM.ToString(), _VM.ToString() + _VM.ToString() };
-                    studentRecordReleaseConfiguration.Text = stwebDefaults2.Stweb2StRecRelText.Split(vmString, StringSplitOptions.None).Select(a => a.Replace(_VM, ' ')).ToList();
+                    string[] vmString = { DmiString.sVM + " " + DmiString.sVM, DmiString.sVM + DmiString.sVM };
+                    studentRecordReleaseConfiguration.Text = stwebDefaults2.Stweb2StRecRelText.Split(vmString, StringSplitOptions.None).Select(a => a.Replace(DmiString._VM, ' ')).ToList();
                 }
                 studentRecordReleaseConfiguration.IsPinRequired = (!string.IsNullOrEmpty(stwebDefaults2.Stweb2StRecRelPinReq) && stwebDefaults2.Stweb2StRecRelPinReq.ToUpper() == "Y") ? true : false;
 

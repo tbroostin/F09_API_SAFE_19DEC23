@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -2444,15 +2444,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>string list of person IDs</returns>
         public async Task<string[]> GetPersonIdsByPersonFilterGuidAsync(string guid)
         {
-            var lookupResult = new GuidLookupResult();
-            try
-            {
-                lookupResult = await GetGuidLookupResultFromGuidAsync(guid);
-            }
-            catch
-            {
-                return null;
-            }
+            GuidLookupResult lookupResult = await GetGuidLookupResultFromGuidAsync(guid);
+
             SaveListParms personFilter = await DataReader.ReadRecordAsync<SaveListParms>(lookupResult.PrimaryKey, true);
             if (personFilter != null && personFilter.Recordkey != null)
             {
@@ -2468,6 +2461,76 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         SaveListParmsId = personFilter.Recordkey,
                         Offset = i * batchLimit,
                         Limit = batchLimit
+                    };
+                    i++;
+                    // Execute request
+                    var response = await transactionInvoker.ExecuteAsync<GetPersonFilterRequest, GetPersonFilterResponse>(request);
+                    if (response != null)
+                    {
+                        if (response.ErrorMessages != null && response.ErrorMessages.Any())
+                        {
+                            // Throw exception if error encountered
+                            foreach (var message in response.ErrorMessages)
+                            {
+                                exception.AddError(new RepositoryError("invalid.personFillter", message));
+                            }
+                            throw exception;
+                        }
+                        if (response.PersonIds == null || !response.PersonIds.Any())
+                        {
+                            return null;
+                        }
+                        // add all retrieved person IDs to ongoing list                            
+                        personIds.AddRange(response.PersonIds);
+                        if (personIds.Count() >= response.TotalRecords)
+                        {
+                            // abort loop now that we have all personIds from the savedlist
+                            haveAllPersonIds = true;
+                        }
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                personIds = personIds.Distinct().ToList();
+                Array.Sort(personIds.ToArray());
+                return personIds.ToArray();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get a person filter
+        /// using a refreshed list from the SAVE.LIST.PARMS selection criteria
+        /// </summary>
+        /// <param name="guid">person filters GUID</param>
+        /// <returns>string list of person IDs</returns>
+        public async Task<string[]> GetPersonIdsByPersonFilterGuid2Async(string guid)
+        {
+            var lookupResult = await GetGuidLookupResultFromGuidAsync(guid);
+          
+            SaveListParms personFilter = await DataReader.ReadRecordAsync<SaveListParms>(lookupResult.PrimaryKey, true);
+            if (personFilter != null && personFilter.Recordkey != null)
+            {
+                var personFilterSavedlistKey = Guid.NewGuid().ToString();
+                var personIds = new List<string>();
+                // limit the size/amount of person IDs returned from Colleague because the list could potentially be large
+                var batchLimit = bulkReadSize * 10;
+                bool haveAllPersonIds = false;
+                int i = 0;
+                while (haveAllPersonIds == false)
+                {
+                    var request = new GetPersonFilterRequest()
+                    {
+                        SaveListParmsId = personFilter.Recordkey,
+                        Offset = i * batchLimit,
+                        Limit = batchLimit,
+                        RuntimeSavedlistKey = personFilterSavedlistKey,
+                        RefreshList = true
                     };
                     i++;
                     // Execute request

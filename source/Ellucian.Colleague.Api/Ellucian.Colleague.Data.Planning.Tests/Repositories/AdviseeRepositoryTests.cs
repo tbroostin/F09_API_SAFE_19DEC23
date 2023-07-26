@@ -72,7 +72,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
             string unknownStudentId = "999";
             string knownStudentId1 = "111";
             string knownStudentId2 = "222";
-            string[] onlyStudents = new string[] {"222" };
+            string[] onlyStudents = new string[] { "222" };
 
             [TestInitialize]
             public void Initialize()
@@ -119,15 +119,85 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.Person>(new string[] { "222" }, true)).ReturnsAsync(new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "222", LastName = "smith" } });
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.Person>(new string[] { "999" }, true)).ReturnsAsync(new Collection<Base.DataContracts.Person>());
 
+
+                //setup for BulkReadRecordWithInvalidRecordsAsync
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "111", "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Base.DataContracts.Person>()
+                 {
+                     BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "111", LastName = "brown" }, new Base.DataContracts.Person() { Recordkey = "222", LastName = "smith" } }
+                 });
+
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "111" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "111", LastName = "brown" } }
+                    });
+
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "222" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "222", LastName = "smith" } }
+                    });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "999" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>()
+                    });
+
+
+
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(new string[] { "999" }, true)).ReturnsAsync(new Collection<Student.DataContracts.Students>());
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(new string[] { "111", "222" }, true)).ReturnsAsync(new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null }, new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = null } });
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(new string[] { "111" }, true)).ReturnsAsync(new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null } });
-                dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(new string[] { "222" }, true)).ReturnsAsync(new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = new List<string>() {"MATH.BA"}}});
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(new string[] { "222" }, true)).ReturnsAsync(new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = new List<string>() { "MATH.BA" } } });
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Base.DataContracts.PersonSt>());
+
+                //BulkReadRecordWithInvalidRecordsAsync for students 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "999" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>()
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "111", "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null }, new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = null } }
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "111" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null } }
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = new List<string>() { "MATH.BA" } } }
+                 });
+
+                //BulkReadRecordWithInvalidRecordsAsync for personSt 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                 new BulkReadOutput<Base.DataContracts.PersonSt>()
+                 {
+                     BulkRecordsRead = new Collection<Base.DataContracts.PersonSt>()
+                 });
 
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.StudentAdvisement>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.ForeignPerson>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Base.DataContracts.ForeignPerson>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.Applicants>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.Applicants>)null);
+
+                //BulkReadRecordWithInvalidRecordsAsync for studentAdvisement 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                 {
+                     BulkRecordsRead = (Collection<Student.DataContracts.StudentAdvisement>)null
+                 });
+
 
                 dataReaderMock.Setup<string[]>(a => a.Select("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "'")).Returns(new string[] { "1" });
                 dataReaderMock.Setup<string[]>(a => a.Select("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "' '" + knownStudentId2 + "'")).Returns(new string[] { "1", "2" });
@@ -331,6 +401,26 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.ForeignPerson>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Base.DataContracts.ForeignPerson>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.Applicants>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.Applicants>)null);
 
+                //setup for BulkReadRecordWithInvalidRecordsAsync
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+                Task.FromResult(
+                new BulkReadOutput<Base.DataContracts.Person>() { BulkRecordsRead = BuildPeople(s) }
+                ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Student.DataContracts.Students>() { BulkRecordsRead = BuildStudents(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Base.DataContracts.PersonSt>() { BulkRecordsRead = BuildPersonStRecords(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                            new BulkReadOutput<Student.DataContracts.StudentAdvisement>() { BulkRecordsRead = (Collection<Student.DataContracts.StudentAdvisement>)null }
+               );
+
                 // Mock the read of the Preferred Name Address Hierarchy for the Preferred Name
                 dataReaderMock.Setup<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>(a =>
                     a.ReadRecord<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "PREFERRED", true))
@@ -358,16 +448,40 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 MockStudentData(studentId2);
                 // Mock bulk reads that must return a collection
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true))
-                    .ReturnsAsync(new Collection<Base.DataContracts.Person>() 
-                    { 
-                        new Base.DataContracts.Person() { Recordkey = studentId1, LastName = "last" + studentId1 }, 
-                        new Base.DataContracts.Person() { Recordkey = studentId2, LastName = "last" + studentId2 } 
+                    .ReturnsAsync(new Collection<Base.DataContracts.Person>()
+                    {
+                        new Base.DataContracts.Person() { Recordkey = studentId1, LastName = "last" + studentId1 },
+                        new Base.DataContracts.Person() { Recordkey = studentId2, LastName = "last" + studentId2 }
                     });
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true))
-                    .ReturnsAsync(new Collection<Student.DataContracts.Students>() 
-                    { 
-                        new Student.DataContracts.Students() { Recordkey = studentId1, StuAcadPrograms = null }, 
-                        new Student.DataContracts.Students() { Recordkey = studentId2, StuAcadPrograms = null } 
+                    .ReturnsAsync(new Collection<Student.DataContracts.Students>()
+                    {
+                        new Student.DataContracts.Students() { Recordkey = studentId1, StuAcadPrograms = null },
+                        new Student.DataContracts.Students() { Recordkey = studentId2, StuAcadPrograms = null }
+                    });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true))
+                   .ReturnsAsync(
+
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>()
+                   {
+                        new Base.DataContracts.Person() { Recordkey = studentId1, LastName = "last" + studentId1 },
+                        new Base.DataContracts.Person() { Recordkey = studentId2, LastName = "last" + studentId2 }
+                   }
+                    });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true))
+                   .ReturnsAsync(
+
+                    new BulkReadOutput<Student.DataContracts.Students>()
+                    {
+                        BulkRecordsRead = new Collection<Student.DataContracts.Students>()
+                   {
+                       new Student.DataContracts.Students() { Recordkey = studentId1, StuAcadPrograms = null },
+                        new Student.DataContracts.Students() { Recordkey = studentId2, StuAcadPrograms = null }
+                   }
                     });
             }
 
@@ -527,7 +641,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
                 // Set up transManagerMock as the object for the transaction manager
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
-             
+
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -553,6 +667,26 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.StudentAdvisement>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.ForeignPerson>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Base.DataContracts.ForeignPerson>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.Applicants>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.Applicants>)null);
+
+                //setup for BulkReadRecordWithInvalidRecordsAsync
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+                Task.FromResult(
+                new BulkReadOutput<Base.DataContracts.Person>() { BulkRecordsRead = BuildPeople(s) }
+                ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Student.DataContracts.Students>() { BulkRecordsRead = BuildStudents(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Base.DataContracts.PersonSt>() { BulkRecordsRead = BuildPersonStRecords(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                            new BulkReadOutput<Student.DataContracts.StudentAdvisement>() { BulkRecordsRead = (Collection<Student.DataContracts.StudentAdvisement>)null }
+               );
 
                 // Mock the read of the Preferred Name Address Hierarchy for the Preferred Name
                 dataReaderMock.Setup<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>(a =>
@@ -592,6 +726,29 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                         new Student.DataContracts.Students() { Recordkey = studentId1, StuAcadPrograms = null },
                         new Student.DataContracts.Students() { Recordkey = studentId2, StuAcadPrograms = null }
                     });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true))
+                   .ReturnsAsync(new BulkReadOutput<Base.DataContracts.Person>()
+                   {
+                       BulkRecordsRead =
+                    new Collection<Base.DataContracts.Person>()
+                   {
+                        new Base.DataContracts.Person() { Recordkey = studentId1, LastName = "last" + studentId1 },
+                        new Base.DataContracts.Person() { Recordkey = studentId2, LastName = "last" + studentId2 }
+                   }
+                   });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true))
+                    .ReturnsAsync(
+                    new BulkReadOutput<Student.DataContracts.Students>()
+                    {
+                        BulkRecordsRead =
+                    new Collection<Student.DataContracts.Students>()
+                    {
+                        new Student.DataContracts.Students() { Recordkey = studentId1, StuAcadPrograms = null },
+                        new Student.DataContracts.Students() { Recordkey = studentId2, StuAcadPrograms = null }
+                    }
+                    });
             }
 
             [TestCleanup]
@@ -624,7 +781,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
             [TestMethod]
             public async Task SearchByNameForExactMatchAsync_ReturnsEmptyListIfPersonSearchByNameReturnsEmptyList()
             {
-                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = new List<string>()  };
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = new List<string>() };
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
                         .ReturnsAsync(lookupStringResponse);
@@ -724,7 +881,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
                         .ReturnsAsync(lookupStringResponse);
-                
+
                 // mock for FilterByEntity
                 dataReaderMock.Setup(acc => acc.SelectAsync("STUDENTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(personIdsList);
                 // mock for GetCurrentPage, students who have requested review
@@ -793,7 +950,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null)).Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1))));
-                
+
                 // Build the test repository
                 adviseeRepository = BuildMockAdviseeRepository();
             }
@@ -813,6 +970,26 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) => Task.FromResult(BuildStudents(s)));
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) => Task.FromResult(BuildPersonStRecords(s)));
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>("STUDENT.ADVISEMENT", It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.StudentAdvisement>)null);
+
+                //setup for BulkReadRecordWithInvalidRecordsAsync
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+                Task.FromResult(
+                new BulkReadOutput<Base.DataContracts.Person>() { BulkRecordsRead = BuildPeople(s) }
+                ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Student.DataContracts.Students>() { BulkRecordsRead = BuildStudents(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).Returns((string[] s, bool b) =>
+               Task.FromResult(
+               new BulkReadOutput<Base.DataContracts.PersonSt>() { BulkRecordsRead = BuildPersonStRecords(s) }
+               ));
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                            new BulkReadOutput<Student.DataContracts.StudentAdvisement>() { BulkRecordsRead = (Collection<Student.DataContracts.StudentAdvisement>)null }
+               );
 
                 // Mock the read of the Preferred Name Address Hierarchy for the Preferred Name
                 dataReaderMock.Setup<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>(a =>
@@ -1002,6 +1179,72 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.StudentAdvisement>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.ForeignPerson>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Base.DataContracts.ForeignPerson>)null);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Student.DataContracts.Applicants>(It.IsAny<string[]>(), true)).ReturnsAsync((Collection<Student.DataContracts.Applicants>)null);
+
+                //setup for BulkReadRecordWithInvalidRecordsAsync
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "111", "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Base.DataContracts.Person>()
+                 {
+                     BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "111", LastName = "brown" }, new Base.DataContracts.Person() { Recordkey = "222", LastName = "smith" } }
+                 });
+
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "111" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "111", LastName = "brown" } }
+                    });
+
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "222" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>() { new Base.DataContracts.Person() { Recordkey = "222", LastName = "smith" } }
+                    });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.Person>(new string[] { "999" }, true)).ReturnsAsync(
+                    new BulkReadOutput<Base.DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<Base.DataContracts.Person>()
+                    });
+
+                //BulkReadRecordWithInvalidRecordsAsync for students 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "999" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>()
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "111", "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null }, new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = null } }
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "111" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "111", StuAcadPrograms = null } }
+                 });
+
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.Students>(new string[] { "222" }, true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.Students>()
+                 {
+                     BulkRecordsRead = new Collection<Student.DataContracts.Students>() { new Student.DataContracts.Students() { Recordkey = "222", StuAcadPrograms = new List<string>() { "MATH.BA" } } }
+                 });
+
+                //BulkReadRecordWithInvalidRecordsAsync for personSt 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Base.DataContracts.PersonSt>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                 new BulkReadOutput<Base.DataContracts.PersonSt>()
+                 {
+                     BulkRecordsRead = new Collection<Base.DataContracts.PersonSt>()
+                 });
+
+                //BulkReadRecordWithInvalidRecordsAsync for studentAdvisement 
+                dataReaderMock.Setup(a => a.BulkReadRecordWithInvalidRecordsAsync<Student.DataContracts.StudentAdvisement>(It.IsAny<string[]>(), true)).ReturnsAsync(
+                 new BulkReadOutput<Student.DataContracts.StudentAdvisement>()
+                 {
+                     BulkRecordsRead = (Collection<Student.DataContracts.StudentAdvisement>)null
+                 });
 
                 dataReaderMock.Setup<string[]>(a => a.Select("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "'")).Returns(new string[] { "1" });
                 dataReaderMock.Setup<string[]>(a => a.Select("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "' '" + knownStudentId2 + "'")).Returns(new string[] { "1", "2" });

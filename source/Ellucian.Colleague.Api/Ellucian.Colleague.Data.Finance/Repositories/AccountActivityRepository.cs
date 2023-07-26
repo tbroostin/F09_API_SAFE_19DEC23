@@ -1,22 +1,22 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Finance.DataContracts;
 using Ellucian.Colleague.Data.Finance.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Finance;
+using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
-using Ellucian.Colleague.Domain.Finance.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Finance.DataContracts;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -356,7 +356,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         private DetailedAccountPeriod ExecuteActivityByTermAdminCTX(string TermId, string StudentId)
         {
             var period = new DetailedAccountPeriod();
-            
+
             // Build outgoing Colleague Transaction
             StudentFinancialActivityAdminRequest colleagueTxRequest = new StudentFinancialActivityAdminRequest();
             colleagueTxRequest.PersonId = StudentId;
@@ -417,7 +417,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             colleagueTxRequest.InboundTerms = new List<InboundTerms>() { inboundTerm };
             colleagueTxRequest.StartDate = null;
             colleagueTxRequest.EndDate = null;
-            
+
             StudentFinancialActivityAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(colleagueTxRequest);
 
             // Create all of the expected categories
@@ -457,7 +457,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         private DetailedAccountPeriod ExecuteActivityByPeriodAdminCTX(IEnumerable<string> TermIds, DateTime? StartDate, DateTime? EndDate, string StudentId)
         {
             var period = new DetailedAccountPeriod();
-            
+
             // Build outgoing Colleague Transaction
             StudentFinancialActivityAdminRequest colleagueTxRequest = new StudentFinancialActivityAdminRequest();
             colleagueTxRequest.PersonId = StudentId;
@@ -529,7 +529,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             colleagueTxRequest.EndDate = EndDate;
 
             StudentFinancialActivityAdminResponse colleagueTxResponse = transactionInvoker.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(colleagueTxRequest);
-                        
+
             // Create all of the expected categories
             ChargesCategory charges = new ChargesCategory();
             DepositCategory deposits = new DepositCategory();
@@ -875,7 +875,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         private RefundVoucherStatus GetRefundVoucherStatus(string source)
         {
             RefundVoucherStatus status = RefundVoucherStatus.Unknown;
-            switch(source)
+            switch (source)
             {
                 case "Cancelled":
                     status = RefundVoucherStatus.Cancelled;
@@ -980,8 +980,8 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                     if (anticipatedAidTerms != null)
                     {
                         IEnumerable<AnticipatedAidTerms> awardItems = from aidTerms in anticipatedAidTerms
-                                                                       where (!string.IsNullOrEmpty(aidTerms.FaTermsPeriodAward) && aidTerms.FaTermsPeriodAward.Equals(newItem.PeriodAward))
-                                                                       select aidTerms;
+                                                                      where (!string.IsNullOrEmpty(aidTerms.FaTermsPeriodAward) && aidTerms.FaTermsPeriodAward.Equals(newItem.PeriodAward))
+                                                                      select aidTerms;
 
                         if (awardItems != null)
                         {
@@ -1015,9 +1015,8 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             List<string> convertedList = new List<string>();
             if (!string.IsNullOrEmpty(stringToConvert))
             {
-                char sm = Convert.ToChar(DynamicArray.SM);
-                var msgs = stringToConvert.Split(sm);
-                foreach(var msg in msgs)
+                var msgs = stringToConvert.Split(DmiString._SM);
+                foreach (var msg in msgs)
                 {
                     convertedList.Add(msg);
                 }

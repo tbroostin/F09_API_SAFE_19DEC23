@@ -157,6 +157,11 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return null;
         }
 
+        public async Task<IEnumerable<EthosExtensibleDataRow>> GetExtendedEthosDataRowDefault(List<EthosExtensibleDataRow> ethosExtensibleDataRows, bool bypassCache = false)
+        {
+            return null;
+        }
+
         public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, Dictionary<string, Dictionary<string, string>> allColumnData = null, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false, bool returnRestrictedFields = false)
         {
             var ethosExtensibleData = new List<EthosExtensibleData>();

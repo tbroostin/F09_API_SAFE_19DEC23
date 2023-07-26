@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public string leavePlanDescription;
         public DateTime leavePlanStartDate;
         public DateTime? leavePlanEndDate;
+        public string leavePlanType;
         public DateTime leaveAllowedDate;
         public decimal priorPayPeriodBalance;
         public bool allowNegativeBalance;
@@ -53,6 +54,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     leavePlanDescription,
                     leavePlanStartDate,
                     leavePlanEndDate,
+                    leavePlanType,
                     leavePlanTypeCategory,
                     earningsTypeId,
                     earningsTypeDescription,
@@ -83,6 +85,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             leavePlanDescription = "Vacation Hourly LeavePlan";
             leavePlanStartDate = new DateTime(1960, 1, 1);
             leavePlanEndDate = null;
+            leavePlanType = "VAC";
             leaveAllowedDate = startDate;
             priorPayPeriodBalance = 20;
             allowNegativeBalance = true;
@@ -286,6 +289,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void LeavePlanDescriptionTest()
             {
                 Assert.AreEqual(leavePlanDescription, employeeLeavePlan.LeavePlanDescription);
+            }
+
+            [TestMethod]
+            public void LeavePlanTypeTest()
+            {
+                Assert.AreEqual(leavePlanType, employeeLeavePlan.LeavePlanType);
             }
 
             [TestMethod]
@@ -1062,8 +1071,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 };
                 planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
 
-                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
-                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 10);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 12);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, 12);
@@ -1110,9 +1119,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 };
                 planWithTransactions.AddLeaveTransactionRange(transactionsToAdd.ToArray());
 
-                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, 2);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearStartingBalance, -14);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearEarnedHours, 0);
-                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, -16);
+                Assert.AreEqual(planWithTransactions.CurrentPlanYearUsedHours, 0);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearAdjustedHours, 0);
                 Assert.AreEqual(planWithTransactions.CurrentPlanYearBalance, -14);
             }

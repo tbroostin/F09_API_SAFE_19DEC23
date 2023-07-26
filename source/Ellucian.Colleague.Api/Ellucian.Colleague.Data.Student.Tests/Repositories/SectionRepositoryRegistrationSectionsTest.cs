@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -32,7 +32,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         private ApiSettings apiSettingsMock;
 
-        [TestMethod][Ignore]
+        [TestMethod]
+        [Ignore]
         public async Task SectionRepositoryRegistrationTestAgainstEnvironment()
         {
             var settings = new DmiSettings();
@@ -40,7 +41,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             settings.IpAddress = "yourserver.yourschool.com";
             settings.Port = 9999;
             settings.SharedSecret = "sharedsecret123";
-            var token = new ColleagueSessionRepository(settings).LoginAsync("student_userid", "student_password");
+            var token = new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LoginAsync("student_userid", "student_password");
 
             var principal = JwtHelper.CreatePrincipal(token.Result);
             var sessionClaim = (principal as IClaimsPrincipal).Identities.First().Claims.FirstOrDefault(c => c.ClaimType == "sid");
@@ -54,14 +55,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             apiSettingsMock = new ApiSettings("null");
 
             var regTerms = await new TermRepository(cacheProvider, txFactory, logger).GetRegistrationTermsAsync();
-            var sectionRepo = new SectionRepository(cacheProvider, txFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(),  apiSettingsMock);
+            var sectionRepo = new SectionRepository(cacheProvider, txFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(), apiSettingsMock);
             var sw = new Stopwatch();
             sw.Start();
             var count = (await sectionRepo.GetRegistrationSectionsAsync(regTerms)).Count();
             sw.Stop();
             Console.WriteLine("Read " + count + " registration sections in " + sw.ElapsedMilliseconds + "ms");
 
-            new ColleagueSessionRepository(settings).LogoutAsync(token.Result);
+            new ColleagueSessionRepository(settings, new MemoryCacheProvider()).LogoutAsync(token.Result);
         }
     }
 

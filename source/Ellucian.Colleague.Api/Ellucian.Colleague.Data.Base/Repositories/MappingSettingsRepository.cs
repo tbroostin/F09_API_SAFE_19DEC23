@@ -1,15 +1,13 @@
-﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
-
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -18,8 +16,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -27,7 +25,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class MappingSettingsRepository : BaseColleagueRepository, IMappingSettingsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        //public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
         const int AllIntgMappingSettingsCacheTimeout = 20; // Clear from cache every 20 minutes
         const string AllIntgMappingSettingsCache = "AllIntgMappingSettings";
@@ -49,7 +46,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="bypassCache">Bypass cache flag</param>
         /// <returns>Collection of IntgMappingSettings</returns>
         public async Task<Tuple<IEnumerable<MappingSettings>, int>> GetMappingSettingsAsync(int offset, int limit, List<string> resources, List<string> propertyNames, bool bypassCache)
-        {            
+        {
             string[] intgMappingSettingsIds = new string[] { };
             int totalCount = 0;
             string[] subList = null;
@@ -925,11 +922,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 /// 
                 var enumerations = new List<string>();
                 if (intgMappingInfo.ImnEthosEnumsValcodeId != null)
-                {                    
+                {
                     switch (intgMappingInfo.ImnEthosEnumsValcodeId.ToUpperInvariant())
                     {
                         case "INTG.EMAIL.TYPES":
-                            enumerations = await GetAllValcodeItemDescriptionsAsync("CORE.VALCODES", 
+                            enumerations = await GetAllValcodeItemDescriptionsAsync("CORE.VALCODES",
                                 intgMappingInfo.ImnEthosEnumsValcodeId.ToUpperInvariant(), bypassCache);
                             break;
                         case "INTG.PHONE.TYPES":

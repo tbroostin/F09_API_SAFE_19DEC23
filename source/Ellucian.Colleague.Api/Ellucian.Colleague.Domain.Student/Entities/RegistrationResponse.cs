@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,18 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public List<string> RegisteredSectionIds { get; private set; }
 
         /// <summary>
+        /// List of results for each requested registration action
+        /// </summary>
+        public List<SectionRegistrationActionResult> RegistrationActionResults { get; set; }
+
+        /// <summary>
+        /// Returns a token to stored validata data when the registration request is for a validation only registration and
+        /// specifies that validation data is to be stored.
+        /// This token would be passed to a subsequent skip validations registration that corresponds to the validation only registration.
+        /// </summary>
+        public string ValidationToken { get; set; }
+
+        /// <summary>
         /// Creates a new <see cref="RegistrationResponse"/>
         /// </summary>
         /// <param name="messages">List of <see cref="RegistrationMessage">messages</see></param>
@@ -35,6 +47,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             Messages = new List<RegistrationMessage>(messages != null ? messages.Where(m => m != null) : new List<RegistrationMessage>());
             PaymentControlId = rpcId;
             RegisteredSectionIds = registeredSectionIds == null ? new List<string>() : registeredSectionIds.Where(rsi => !string.IsNullOrEmpty(rsi)).Distinct().ToList();
+            RegistrationActionResults = new List<SectionRegistrationActionResult>();
         }
     }
 }

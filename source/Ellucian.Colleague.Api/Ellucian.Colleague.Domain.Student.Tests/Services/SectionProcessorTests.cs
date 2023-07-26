@@ -588,6 +588,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             private RegistrationDate termdates;
             private RegistrationDate otherDates;
             private RegistrationDate otherDatesMain;
+            private RegistrationDate dates2012FaNw;
             private Mock<ILogger> loggerMock;
             private ILogger logger;
 
@@ -610,15 +611,22 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 var term = regTerms.Where(t => t.Code == "2012/FA").FirstOrDefault();
                 termdates = term.RegistrationDates.Where(r => r.Location == null).FirstOrDefault();
 
-                registrationGroup = new RegistrationGroup("REGISTRAR");
                 // Add a section specific override for section 15 in term 2012/FA.
-                section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
+                registrationGroup = new RegistrationGroup("REGISTRAR");
+                section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null, RegistrationDateSource.RegistrationUserSection);
                 registrationGroup.AddSectionRegistrationDate(section15overrides);
-                // Add a section specific override for section 165 with no term.
-                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
 
+                // Add a section specific override for section 165 with no term.
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null, RegistrationDateSource.RegistrationUserSection);
+
+                //non-section registration dates
                 otherDates = new RegistrationDate(null, date1.AddYears(1), date2.AddYears(1), date3.AddYears(1), date4.AddYears(1), date5.AddYears(1), date6.AddYears(1), date7.AddYears(1), date8.AddYears(1), date9.AddYears(1), null);
+
+                //term 2013/SP location MAIN
                 otherDatesMain = new RegistrationDate("MAIN", date1.AddYears(2), date2.AddYears(2), date3.AddYears(2), date4.AddYears(2), date5.AddYears(2), date6.AddYears(2), date7.AddYears(2), date8.AddYears(2), date9.AddYears(2), null);
+
+                //term 2012/FA location NW
+                dates2012FaNw = new RegistrationDate("NW", new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 02, 01), new DateTime(2021, 05, 02), new DateTime(2021, 06, 02) });
 
                 registrationGroup.AddSectionRegistrationDate(section165overrides);
 
@@ -673,17 +681,34 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             public void GetSectionRegistrationaDates_NonTermSectionsWithNoOverridesReturnsNone()
             {
                 // Sections with no terms and no overrides will not return any DTOs with date information.
-                requestedSections = allSections.Where(s => string.IsNullOrEmpty(s.TermId));
+                requestedSections = allSections.Where(s => string.IsNullOrEmpty(s.TermId) && s.Id != "165"); // exclde 165 which has reguser override
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
                 Assert.AreEqual(0, sectionRegistrationDates.Count());
             }
 
             public void GetSectionRegistrationaDates_MixOfTermAndNonTermReturnsBoth()
             {
+                // This is test is failing because of a bug in the SectionProcessor.GetSectionRegistrationDates method
+                /*
+                 * comment states combine filtered terms and non-terms however 
+                 * it is using an Intersect operator and discarding the result 
+                 * resulting in only filter term section will be used
+                 * all non-term sections will return a null object from this method
+                 * 
+                 * // Combine non-term and registration term sections for processing
+                 * filteredSections.Intersect(nonTermSections);
+                 * 
+                 * to actually combine the collections - both a union operator and a variable for the returned results needs to be used
+                 * filteredSections = filteredSections.Union(nonTermSections).ToList();
+                 */
+
                 // Section 15 has a term and section 165 has no term. Both have the same overrides so both should have an item returned.
                 requestedSections = allSections.Where(s => s.Id == "15" || s.Id == "165");
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
+
                 Assert.AreEqual(2, sectionRegistrationDates.Count());
+
+                // term section with registration user group section overrides 
                 var section15dates = sectionRegistrationDates.Where(s => s.SectionId == "15").FirstOrDefault();
                 Assert.AreEqual(section15overrides.PreRegistrationStartDate, section15dates.PreRegistrationStartDate);
                 Assert.AreEqual(section15overrides.RegistrationStartDate, section15dates.RegistrationStartDate);
@@ -694,6 +719,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(section15overrides.AddEndDate, section15dates.AddEndDate);
                 Assert.AreEqual(section15overrides.DropEndDate, section15dates.DropEndDate);
                 Assert.AreEqual(section15overrides.DropGradeRequiredDate, section15dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.RegistrationUserSection, section15dates.RegistrationDateSource);
+
+                // non-term section with registration user group section overrides 
                 var section165dates = sectionRegistrationDates.Where(s => s.SectionId == "165").FirstOrDefault();
                 Assert.AreEqual(section15overrides.PreRegistrationStartDate, section165dates.PreRegistrationStartDate);
                 Assert.AreEqual(section15overrides.RegistrationStartDate, section165dates.RegistrationStartDate);
@@ -704,21 +732,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(section15overrides.AddEndDate, section165dates.AddEndDate);
                 Assert.AreEqual(section15overrides.DropEndDate, section165dates.DropEndDate);
                 Assert.AreEqual(section15overrides.DropGradeRequiredDate, section165dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.RegistrationUserSection, section165dates.RegistrationDateSource);
             }
 
             [TestMethod]
             public void GetSectionRegistrationDates_SectionWithRegUserSectionOverrideReturnsOverrides()
             {
-                // Prepare
-
-                // section 15 has registration User Section override
-                requestedSections = allSections.Where(s => s.Id == "15" || s.Id == "16");
-
-                // Act
+                requestedSections = allSections.Where(s => s.Id == "15" || s.Id == "16" || s.Id == "7");
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
 
-                // Verify
-                Assert.AreEqual(2, sectionRegistrationDates.Count());
+                Assert.AreEqual(3, sectionRegistrationDates.Count());
+
+                // section 15 has registration User Section override
                 var section15dates = sectionRegistrationDates.Where(s => s.SectionId == "15").FirstOrDefault();
                 Assert.AreEqual(section15overrides.PreRegistrationStartDate, section15dates.PreRegistrationStartDate);
                 Assert.AreEqual(section15overrides.RegistrationStartDate, section15dates.RegistrationStartDate);
@@ -729,18 +754,83 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(section15overrides.AddEndDate, section15dates.AddEndDate);
                 Assert.AreEqual(section15overrides.DropEndDate, section15dates.DropEndDate);
                 Assert.AreEqual(section15overrides.DropGradeRequiredDate, section15dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.RegistrationUserSection, section15dates.RegistrationDateSource);
 
-                // And the one with no override should show the term dates
+                // section 16 has term location of NW with term location override and will show the term location dates
                 var section16dates = sectionRegistrationDates.Where(s => s.SectionId == "16").FirstOrDefault();
-                Assert.AreEqual(termdates.PreRegistrationStartDate, section16dates.PreRegistrationStartDate);
-                Assert.AreEqual(termdates.RegistrationStartDate, section16dates.RegistrationStartDate);
-                Assert.AreEqual(termdates.AddStartDate, section16dates.AddStartDate);
-                Assert.AreEqual(termdates.DropStartDate, section16dates.DropStartDate);
-                Assert.AreEqual(termdates.PreRegistrationEndDate, section16dates.PreRegistrationEndDate);
-                Assert.AreEqual(termdates.RegistrationEndDate, section16dates.RegistrationEndDate);
-                Assert.AreEqual(termdates.AddEndDate, section16dates.AddEndDate);
-                Assert.AreEqual(termdates.DropEndDate, section16dates.DropEndDate);
-                Assert.AreEqual(termdates.DropGradeRequiredDate, section16dates.DropGradeRequiredDate);
+                Assert.AreEqual(dates2012FaNw.PreRegistrationStartDate, section16dates.PreRegistrationStartDate);
+                Assert.AreEqual(dates2012FaNw.RegistrationStartDate, section16dates.RegistrationStartDate);
+                Assert.AreEqual(dates2012FaNw.AddStartDate, section16dates.AddStartDate);
+                Assert.AreEqual(dates2012FaNw.DropStartDate, section16dates.DropStartDate);
+                Assert.AreEqual(dates2012FaNw.PreRegistrationEndDate, section16dates.PreRegistrationEndDate);
+                Assert.AreEqual(dates2012FaNw.RegistrationEndDate, section16dates.RegistrationEndDate);
+                Assert.AreEqual(dates2012FaNw.AddEndDate, section16dates.AddEndDate);
+                Assert.AreEqual(dates2012FaNw.DropEndDate, section16dates.DropEndDate);
+                Assert.AreEqual(dates2012FaNw.DropGradeRequiredDate, section16dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.TermLocation, section16dates.RegistrationDateSource);
+
+                //section 7 has location of MAIN with no term location override will show the term dates
+                var section7dates = sectionRegistrationDates.Where(s => s.SectionId == "7").FirstOrDefault();
+                Assert.AreEqual(termdates.PreRegistrationStartDate, section7dates.PreRegistrationStartDate);
+                Assert.AreEqual(termdates.RegistrationStartDate, section7dates.RegistrationStartDate);
+                Assert.AreEqual(termdates.AddStartDate, section7dates.AddStartDate);
+                Assert.AreEqual(termdates.DropStartDate, section7dates.DropStartDate);
+                Assert.AreEqual(termdates.PreRegistrationEndDate, section7dates.PreRegistrationEndDate);
+                Assert.AreEqual(termdates.RegistrationEndDate, section7dates.RegistrationEndDate);
+                Assert.AreEqual(termdates.AddEndDate, section7dates.AddEndDate);
+                Assert.AreEqual(termdates.DropEndDate, section7dates.DropEndDate);
+                Assert.AreEqual(termdates.DropGradeRequiredDate, section7dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.Term, section7dates.RegistrationDateSource);
+            }
+
+            [TestMethod]
+            public void GetSectionRegistrationDates_SectionsWithNoOverrideReturnsTerm()
+            {
+                // term 2012/FA section 1 has null location, section 7 has location of main, and 13 has empty location
+                requestedSections = allSections.Where(s => s.Id == "1" || s.Id == "7" || s.Id == "13");
+
+                var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
+
+                Assert.AreEqual(3, sectionRegistrationDates.Count());
+
+                // section with null location and no override should show the term dates
+                var section1dates = sectionRegistrationDates.Where(s => s.SectionId == "1").FirstOrDefault();
+                Assert.AreEqual(termdates.PreRegistrationStartDate, section1dates.PreRegistrationStartDate);
+                Assert.AreEqual(termdates.RegistrationStartDate, section1dates.RegistrationStartDate);
+                Assert.AreEqual(termdates.AddStartDate, section1dates.AddStartDate);
+                Assert.AreEqual(termdates.DropStartDate, section1dates.DropStartDate);
+                Assert.AreEqual(termdates.PreRegistrationEndDate, section1dates.PreRegistrationEndDate);
+                Assert.AreEqual(termdates.RegistrationEndDate, section1dates.RegistrationEndDate);
+                Assert.AreEqual(termdates.AddEndDate, section1dates.AddEndDate);
+                Assert.AreEqual(termdates.DropEndDate, section1dates.DropEndDate);
+                Assert.AreEqual(termdates.DropGradeRequiredDate, section1dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.Term, section1dates.RegistrationDateSource);
+
+                // section with MAIN location and no term location override should show the term dates
+                var section7dates = sectionRegistrationDates.Where(s => s.SectionId == "7").FirstOrDefault();
+                Assert.AreEqual(termdates.PreRegistrationStartDate, section7dates.PreRegistrationStartDate);
+                Assert.AreEqual(termdates.RegistrationStartDate, section7dates.RegistrationStartDate);
+                Assert.AreEqual(termdates.AddStartDate, section7dates.AddStartDate);
+                Assert.AreEqual(termdates.DropStartDate, section7dates.DropStartDate);
+                Assert.AreEqual(termdates.PreRegistrationEndDate, section7dates.PreRegistrationEndDate);
+                Assert.AreEqual(termdates.RegistrationEndDate, section7dates.RegistrationEndDate);
+                Assert.AreEqual(termdates.AddEndDate, section7dates.AddEndDate);
+                Assert.AreEqual(termdates.DropEndDate, section7dates.DropEndDate);
+                Assert.AreEqual(termdates.DropGradeRequiredDate, section7dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.Term, section7dates.RegistrationDateSource);
+
+                // section with blank location and no override should show the term dates
+                var section13dates = sectionRegistrationDates.Where(s => s.SectionId == "13").FirstOrDefault();
+                Assert.AreEqual(termdates.PreRegistrationStartDate, section13dates.PreRegistrationStartDate);
+                Assert.AreEqual(termdates.RegistrationStartDate, section13dates.RegistrationStartDate);
+                Assert.AreEqual(termdates.AddStartDate, section13dates.AddStartDate);
+                Assert.AreEqual(termdates.DropStartDate, section13dates.DropStartDate);
+                Assert.AreEqual(termdates.PreRegistrationEndDate, section13dates.PreRegistrationEndDate);
+                Assert.AreEqual(termdates.RegistrationEndDate, section13dates.RegistrationEndDate);
+                Assert.AreEqual(termdates.AddEndDate, section13dates.AddEndDate);
+                Assert.AreEqual(termdates.DropEndDate, section13dates.DropEndDate);
+                Assert.AreEqual(termdates.DropGradeRequiredDate, section13dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.Term, section13dates.RegistrationDateSource);
             }
 
             [TestMethod]
@@ -751,10 +841,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 sec17.RegistrationDateOverrides = otherDates;
                 requestedSections = new List<Section>() { sec17 };
 
-                // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
 
                 Assert.AreEqual(1, sectionRegistrationDates.Count());
+
                 var section17dates = sectionRegistrationDates.Where(s => s.SectionId == "17").FirstOrDefault();
                 Assert.AreEqual(otherDates.PreRegistrationStartDate, section17dates.PreRegistrationStartDate);
                 Assert.AreEqual(otherDates.RegistrationStartDate, section17dates.RegistrationStartDate);
@@ -765,6 +855,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(otherDates.AddEndDate, section17dates.AddEndDate);
                 Assert.AreEqual(otherDates.DropEndDate, section17dates.DropEndDate);
                 Assert.AreEqual(otherDates.DropGradeRequiredDate, section17dates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.Section, section17dates.RegistrationDateSource);
             }
 
             [TestMethod]
@@ -772,15 +863,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             {
                 // Stage: Give HIST-200 Intermediate History Section 01 Term 2013/SP a TermLocation override specific to the reg User for term 2013/SP and location MAIN.
                 registrationGroup.AddTermRegistrationDate(new TermRegistrationDate("2013/SP", "MAIN", otherDatesMain.RegistrationStartDate, otherDatesMain.RegistrationEndDate, otherDatesMain.PreRegistrationStartDate, otherDatesMain.PreRegistrationEndDate, otherDatesMain.AddStartDate, otherDatesMain.AddEndDate, otherDatesMain.DropStartDate, otherDatesMain.DropEndDate, otherDatesMain.DropGradeRequiredDate, null));
-
                 var section = allSections.Where(s => s.CourseId == "42" && s.TermId == "2013/SP" && s.Number == "01").FirstOrDefault();
                 requestedSections = new List<Section>() { section };
 
-                // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
 
-                // Assert
                 Assert.AreEqual(1, sectionRegistrationDates.Count());
+
                 var sectionDates = sectionRegistrationDates.Where(s => s.SectionId == section.Id).FirstOrDefault();
                 Assert.AreEqual(otherDatesMain.PreRegistrationStartDate, sectionDates.PreRegistrationStartDate);
                 Assert.AreEqual(otherDatesMain.RegistrationStartDate, sectionDates.RegistrationStartDate);
@@ -791,6 +880,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(otherDatesMain.AddEndDate, sectionDates.AddEndDate);
                 Assert.AreEqual(otherDatesMain.DropEndDate, sectionDates.DropEndDate);
                 Assert.AreEqual(otherDatesMain.DropGradeRequiredDate, sectionDates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.RegistrationUserTermLocation, sectionDates.RegistrationDateSource);
             }
 
             [TestMethod]
@@ -800,14 +890,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 var term2013SP = regTerms.Where(t => t.Code == "2013/SP").FirstOrDefault();
                 term2013SP.RegistrationDates.Add(otherDatesMain);
                 var liteRegTerms = new List<Term>() { term2013SP };
-
                 var section = allSections.Where(s => s.CourseId == "42" && s.TermId == "2013/SP" && s.Number == "01").FirstOrDefault();
                 requestedSections = new List<Section>() { section };
 
-                // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, liteRegTerms);
 
                 Assert.AreEqual(1, sectionRegistrationDates.Count());
+
                 var sectionDates = sectionRegistrationDates.Where(s => s.SectionId == section.Id).FirstOrDefault();
                 Assert.AreEqual(otherDatesMain.PreRegistrationStartDate, sectionDates.PreRegistrationStartDate);
                 Assert.AreEqual(otherDatesMain.RegistrationStartDate, sectionDates.RegistrationStartDate);
@@ -818,6 +907,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(otherDatesMain.AddEndDate, sectionDates.AddEndDate);
                 Assert.AreEqual(otherDatesMain.DropEndDate, sectionDates.DropEndDate);
                 Assert.AreEqual(otherDatesMain.DropGradeRequiredDate, sectionDates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.TermLocation, sectionDates.RegistrationDateSource);
             }
 
             [TestMethod]
@@ -825,14 +915,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             {
                 // Stage: Give reg user a registration term override for 2013/SP - NO LOCATION.
                 registrationGroup.AddTermRegistrationDate(new TermRegistrationDate("2013/SP", null, otherDates.RegistrationStartDate, otherDates.RegistrationEndDate, otherDates.PreRegistrationStartDate, otherDates.PreRegistrationEndDate, otherDates.AddStartDate, otherDates.AddEndDate, otherDates.DropStartDate, otherDates.DropEndDate, otherDates.DropGradeRequiredDate, otherDates.CensusDates));
-
                 var section = allSections.Where(s => s.CourseId == "42" && s.TermId == "2013/SP" && s.Number == "01").FirstOrDefault();
                 requestedSections = new List<Section>() { section };
 
-                // Act
                 var sectionRegistrationDates = SectionProcessor.GetSectionRegistrationDates(registrationGroup, requestedSections, regTerms);
 
                 Assert.AreEqual(1, sectionRegistrationDates.Count());
+
                 var sectionDates = sectionRegistrationDates.Where(s => s.SectionId == section.Id).FirstOrDefault();
                 Assert.AreEqual(otherDates.PreRegistrationStartDate, sectionDates.PreRegistrationStartDate);
                 Assert.AreEqual(otherDates.RegistrationStartDate, sectionDates.RegistrationStartDate);
@@ -843,6 +932,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 Assert.AreEqual(otherDates.AddEndDate, sectionDates.AddEndDate);
                 Assert.AreEqual(otherDates.DropEndDate, sectionDates.DropEndDate);
                 Assert.AreEqual(otherDates.DropGradeRequiredDate, sectionDates.DropGradeRequiredDate);
+                Assert.AreEqual(RegistrationDateSource.RegistrationUserTerm, sectionDates.RegistrationDateSource);
             }
         }
 
@@ -977,11 +1067,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 var section165 = allSections.Where(s => s.Id == "165").FirstOrDefault();
 
                 // Add a section specific override for section 15 in term 2012/FA.
-                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
+                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null, RegistrationDateSource.Section);
                 section15.RegistrationDateOverrides = section15overrides;
 
                 // Add a section specific override for section 165 with no term.
-                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null);
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, null, RegistrationDateSource.Section);
                 section165.RegistrationDateOverrides = section165overrides;
 
                 var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);
@@ -1005,11 +1095,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 var section165 = allSections.Where(s => s.Id == "165").FirstOrDefault();
 
                 // Add a section specific override for section 15 in term 2012/FA.
-                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>());
+                var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>(), RegistrationDateSource.Section);
                 section15.RegistrationDateOverrides = section15overrides;
 
                 // Add a section specific override for section 165 with no term.
-                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>());
+                var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9, new List<DateTime?>(), RegistrationDateSource.Section);
                 section165.RegistrationDateOverrides = section165overrides;
 
                 var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);
@@ -1031,12 +1121,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
 
                 // Add a section specific override for section 165 with no term.
                 var section15overrides = new SectionRegistrationDate("15", null, date1, date2, date3, date4, date5, date6, date7, date8, date9,
-                    new List<DateTime?>() { new DateTime(2021, 02, 02), new DateTime(2021, 05, 03), new DateTime(2021, 06, 04) });
+                    new List<DateTime?>() { new DateTime(2021, 02, 02), new DateTime(2021, 05, 03), new DateTime(2021, 06, 04) }, RegistrationDateSource.Section);
                 section15.RegistrationDateOverrides = section15overrides;
 
                 // Add a section specific override for section 165 with no term.
                 var section165overrides = new SectionRegistrationDate("165", null, date1, date2, date3, date4, date5, date6, date7, date8, date9,
-                    new List<DateTime?>() { new DateTime(2021, 04, 02), new DateTime(2021, 06, 04) });
+                    new List<DateTime?>() { new DateTime(2021, 04, 02), new DateTime(2021, 06, 04) }, RegistrationDateSource.Section);
                 section165.RegistrationDateOverrides = section165overrides;
 
                 var sectionCensusDates = SectionProcessor.GetSectionCensusDates(new List<Section>() { section15, section165 }, terms);

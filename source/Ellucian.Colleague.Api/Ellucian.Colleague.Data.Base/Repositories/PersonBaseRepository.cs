@@ -1,4 +1,23 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,25 +25,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Web.Dependency;
-using slf4net;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Exceptions;
-using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -40,22 +40,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         protected string Quote = '"'.ToString();
         protected const int PersonCacheTimeout = 120;
         protected const int AddressCacheTimeout = 120;
-        protected const int AllFilteredPersonsCacheTimeout = 20; 
+        protected const int AllFilteredPersonsCacheTimeout = 20;
         protected const string PersonContractCachePrefix = "PersonContract";
         protected const string AddressContractCachePrefix = "AddressContract";
         protected const string AllFilteredPersonsCache = "AllFilteredPersons";
-        protected const int AllOrganizationsCacheTimeout = 20; 
+        protected const int AllOrganizationsCacheTimeout = 20;
         protected const string AllOrganizationsCache = "AllOrganizations";
         private readonly string colleagueTimeZone;
         private int bulkReadSize;
         private RepositoryException exception = new RepositoryException();
-        private static char subValueMark = Convert.ToChar(DynamicArray.SM);
 
-        public static char SubValueMark
-        {
-            get { return subValueMark; }
-            set { subValueMark = value; }
-        }
+        public static char SubValueMark { get; set; } = DmiString._SM;
 
 
         /// <summary>
@@ -186,44 +181,44 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<NameAddressHierarchy> GetCachedNameAddressHierarchyAsync(string nameAddressHierarchyCode = _preferredHierarchyCode)
         {
-                NameAddressHierarchy requestedNameAddressHierarchy = await GetOrAddToCacheAsync<NameAddressHierarchy>(nameAddressHierarchyCode + "_NameAddressHierarchy",
-                   async () =>
+            NameAddressHierarchy requestedNameAddressHierarchy = await GetOrAddToCacheAsync<NameAddressHierarchy>(nameAddressHierarchyCode + "_NameAddressHierarchy",
+               async () =>
+               {
+                   NameAddrHierarchy nameAddrHierarchy = await DataReader.ReadRecordAsync<NameAddrHierarchy>("NAME.ADDR.HIERARCHY", nameAddressHierarchyCode);
+                   if (nameAddrHierarchy == null)
                    {
-                       NameAddrHierarchy nameAddrHierarchy = await DataReader.ReadRecordAsync<NameAddrHierarchy>("NAME.ADDR.HIERARCHY", nameAddressHierarchyCode);
-                       if (nameAddrHierarchy == null)
+                       if (nameAddressHierarchyCode != _preferredHierarchyCode)
                        {
-                           if (nameAddressHierarchyCode != _preferredHierarchyCode)
-                           {
                            // for all hierarchies except PREFERRED throw an error - this means nothing will be cached 
                            var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Cache not built.";
-                               logger.Info(errorMessage);
-                               throw new KeyNotFoundException(errorMessage);
-                           }
-                           else
-                           {
+                           logger.Info(errorMessage);
+                           throw new KeyNotFoundException(errorMessage);
+                       }
+                       else
+                       {
                            // All clients are expected to have a PREFERRED name address hierarchy. If they don't, report it but also default one so that it is cached.
                            var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Creating a basic preferred hierarchy with PF name type.";
-                               logger.Info(errorMessage);
+                           logger.Info(errorMessage);
                            // Construct a default one with the desired name type values.
                            nameAddrHierarchy = new NameAddrHierarchy();
-                               nameAddrHierarchy.Recordkey = _preferredHierarchyCode;
-                               nameAddrHierarchy.NahNameHierarchy = new List<string>() { "PF" };
-                           }
-
+                           nameAddrHierarchy.Recordkey = _preferredHierarchyCode;
+                           nameAddrHierarchy.NahNameHierarchy = new List<string>() { "PF" };
                        }
+
+                   }
                    // Build the NameAddressHierarchy Entity and cache that.
                    NameAddressHierarchy newHierarchy = new NameAddressHierarchy(nameAddrHierarchy.Recordkey);
-                       if (nameAddrHierarchy.NahNameHierarchy != null && nameAddrHierarchy.NahNameHierarchy.Any())
+                   if (nameAddrHierarchy.NahNameHierarchy != null && nameAddrHierarchy.NahNameHierarchy.Any())
+                   {
+                       foreach (var nameType in nameAddrHierarchy.NahNameHierarchy)
                        {
-                           foreach (var nameType in nameAddrHierarchy.NahNameHierarchy)
-                           {
-                               newHierarchy.AddNameTypeHierarchy(nameType);
-                           }
+                           newHierarchy.AddNameTypeHierarchy(nameType);
                        }
+                   }
 
-                       return newHierarchy;
-                   }, Level1CacheTimeoutValue);
-                return requestedNameAddressHierarchy;           
+                   return newHierarchy;
+               }, Level1CacheTimeoutValue);
+            return requestedNameAddressHierarchy;
         }
         #endregion
 
@@ -379,26 +374,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         public async Task<IEnumerable<Data.Base.DataContracts.Person>> GetPersonContractsAsync(IEnumerable<string> personIds)
         {
-                var personData = new List<Data.Base.DataContracts.Person>();
+            var personData = new List<Data.Base.DataContracts.Person>();
 
-                for (int i = 0; i < personIds.Count(); i += bulkReadSize)
+            for (int i = 0; i < personIds.Count(); i += bulkReadSize)
+            {
+                var subList = personIds.Skip(i).Take(bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", subList.ToArray());
+                if (records != null)
                 {
-                    var subList = personIds.Skip(i).Take(bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", subList.ToArray());
-                    if (records != null)
-                    {
-                        personData.AddRange(records);
-                        var message = string.Format("{0} records added in PersonBaseRepository", records.Count());
-                        logger.Info(message);
-                    }
+                    personData.AddRange(records);
+                    var message = string.Format("{0} records added in PersonBaseRepository", records.Count());
+                    logger.Info(message);
                 }
+            }
 
-                //personData = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
-                if (personData == null)
-                {
-                    throw new ArgumentOutOfRangeException("Person Ids " + string.Join(",", personIds) + " are not returning any data. Person records may be corrupted.");
-                }
-                return personData;            
+            //personData = await DataReader.BulkReadRecordAsync<Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
+            if (personData == null)
+            {
+                throw new ArgumentOutOfRangeException("Person Ids " + string.Join(",", personIds) + " are not returning any data. Person records may be corrupted.");
+            }
+            return personData;
         }
 
         public async Task<Data.Base.DataContracts.Address> GetPersonAddressContractAsync(string addressId, bool useCache = true)
@@ -2210,7 +2205,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 string filteredPersonsCacheKey = CacheSupport.BuildCacheKey(AllFilteredPersonsCache, personFilter,
                     personFilterCriteria != null ? personFilterCriteria.AlternativeCredentials : null,
-                    personFilterCriteria != null ? personFilterCriteria.Credentials :  null,
+                    personFilterCriteria != null ? personFilterCriteria.Credentials : null,
                     personFilterCriteria != null ? personFilterCriteria.Emails : null,
                     personNamesCriteriaString,
                     personFilterCriteria != null ? personFilterCriteria.Roles : null,
@@ -2322,7 +2317,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     personFilterKey = foundEntry.Value.PrimaryKey;
                 }
 
-                
+
                 var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
 
                         this,
@@ -3087,7 +3082,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
 
                 subList = keyCache.Sublist.ToArray();
-                if ( totalCount == 0)
+                if (totalCount == 0)
                     totalCount = keyCache.TotalCount.Value;
 
                 var idLookUpList2 = new List<RecordKeyLookup>();
@@ -3107,7 +3102,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         throw ex;
                     }
                 }
-                return new Tuple<IEnumerable<string>, int>(personGuids, totalCount);              
+                return new Tuple<IEnumerable<string>, int>(personGuids, totalCount);
             }
             #endregion
 
@@ -3153,17 +3148,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         var message = string.Empty;
                         try
                         {
-                            message = string.Format( "PERSON record '{0}' is missing a guid.", lookupResult.Key.Split( '+' )[ 1 ] );
-                            repoError = new Domain.Entities.RepositoryError( "Bad.Data", message );
-                            repoError.SourceId = lookupResult.Key.Split( '+' )[ 1 ];
+                            message = string.Format("PERSON record '{0}' is missing a guid.", lookupResult.Key.Split('+')[1]);
+                            repoError = new Domain.Entities.RepositoryError("Bad.Data", message);
+                            repoError.SourceId = lookupResult.Key.Split('+')[1];
                         }
-                        catch( Exception )
+                        catch (Exception)
                         {
-                            message = string.Format( "PERSON record '{0}' is missing a guid.", lookupResult.Key );
-                            repoError = new Domain.Entities.RepositoryError( "Bad.Data", message );
+                            message = string.Format("PERSON record '{0}' is missing a guid.", lookupResult.Key);
+                            repoError = new Domain.Entities.RepositoryError("Bad.Data", message);
                             repoError.SourceId = lookupResult.Key;
-                        }                        
-                        ex.AddError( repoError );
+                        }
+                        ex.AddError(repoError);
                         throw ex;
                     }
                 }
@@ -3568,7 +3563,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         exception.AddError(new RepositoryError("GUID.Not.Found", string.Format("Organization record '{0}' is missing a GUID.", org.Key.Split('+')[1]))
                         {
                             SourceId = org.Key.Split('+')[1]
-                        }); 
+                        });
                     }
                 }
             }
@@ -3598,47 +3593,47 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>list of Ids</returns>
         public async Task<IEnumerable<string>> SearchByNameAsync(string lastName, string firstName = null, string middleName = null)
         {
-                var watch = new Stopwatch();
-                watch.Start();
+            var watch = new Stopwatch();
+            watch.Start();
 
-                if (lastName == null || lastName.Trim().Count() < 2)
-                {
-                    throw new ArgumentNullException("lastName", "Supplied last name must be at least two characters");
-                }
+            if (lastName == null || lastName.Trim().Count() < 2)
+            {
+                throw new ArgumentNullException("lastName", "Supplied last name must be at least two characters");
+            }
 
-                // Trim spaces from each name part
-                lastName = lastName.Trim();
-                firstName = (firstName != null) ? firstName = firstName.Trim() : null;
-                middleName = (middleName != null) ? middleName = middleName.Trim() : null;
+            // Trim spaces from each name part
+            lastName = lastName.Trim();
+            firstName = (firstName != null) ? firstName = firstName.Trim() : null;
+            middleName = (middleName != null) ? middleName = middleName.Trim() : null;
 
-                // Call transaction that returns search string
-                var lookupStringRequest = new GetPersonLookupStringRequest();
-                lookupStringRequest.SearchString = lastName + "," + firstName + " " + middleName;
-                var response = await transactionInvoker.ExecuteAsync<GetPersonLookupStringRequest, GetPersonLookupStringResponse>(lookupStringRequest);
+            // Call transaction that returns search string
+            var lookupStringRequest = new GetPersonLookupStringRequest();
+            lookupStringRequest.SearchString = lastName + "," + firstName + " " + middleName;
+            var response = await transactionInvoker.ExecuteAsync<GetPersonLookupStringRequest, GetPersonLookupStringResponse>(lookupStringRequest);
 
-                var persons = new string[] { };
-                string searchString = string.Empty;
+            var persons = new string[] { };
+            string searchString = string.Empty;
 
-                if (string.IsNullOrEmpty(response.ErrorMessage))
-                {
-                    logger.Debug("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
-                    // Transaction returns something like ;PARTIAL.NAME.INDEX SMITH_BL. Parse out into valid query clause: WITH PARTIAL.NAME.INDEX EQ SMITH_BL
-                    var searchArray = (response.IndexString.Replace(";", string.Empty)).Split(' ');
-                    searchString = "WITH " + searchArray.ElementAt(0) + " EQ " + "\"" + searchArray.ElementAt(1) + "\"";
-                    logger.Debug("String passed for PERSON select :" + searchString);
+            if (string.IsNullOrEmpty(response.ErrorMessage))
+            {
+                logger.Debug("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
+                // Transaction returns something like ;PARTIAL.NAME.INDEX SMITH_BL. Parse out into valid query clause: WITH PARTIAL.NAME.INDEX EQ SMITH_BL
+                var searchArray = (response.IndexString.Replace(";", string.Empty)).Split(' ');
+                searchString = "WITH " + searchArray.ElementAt(0) + " EQ " + "\"" + searchArray.ElementAt(1) + "\"";
+                logger.Debug("String passed for PERSON select :" + searchString);
 
-                    // Select on person
-                    persons = await DataReader.SelectAsync("PERSON", searchString);
-                }
+                // Select on person
+                persons = await DataReader.SelectAsync("PERSON", searchString);
+            }
 
-                watch.Stop();
-                logger.Debug("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
-                if (persons != null)
-                {
-                    logger.Debug("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
-                }
+            watch.Stop();
+            logger.Debug("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
+            if (persons != null)
+            {
+                logger.Debug("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
+            }
 
-                return persons;           
+            return persons;
         }
 
 
@@ -3673,24 +3668,24 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var response = await transactionInvoker.ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(lookupStringRequest);
             watch.Stop();
             logger.Debug("Transaction GetPersonSearchKeyListRequest completed in " + watch.ElapsedMilliseconds.ToString());
-          
-            if(response==null)
+
+            if (response == null)
             {
                 logger.Error("Response from transaction GetPersonSearchKeyListRequest is null");
                 return persons;
             }
-            if(!string.IsNullOrEmpty(response.ErrorMessage))
+            if (!string.IsNullOrEmpty(response.ErrorMessage))
             {
                 logger.Error("Response have error returned from  transaction GetPersonSearchKeyListRequest- " + response.ErrorMessage);
                 return persons;
             }
-            if(response.KeyList==null)
+            if (response.KeyList == null)
             {
                 logger.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids are null");
                 return persons;
 
             }
-            if(response.KeyList.Count ==0)
+            if (response.KeyList.Count == 0)
             {
                 logger.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids count is 0");
                 return persons;

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Api.Client.Exceptions;
@@ -472,6 +472,9 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string _courseDelimiterPath = "course-delimiter";
         private static readonly string _curriculumTrackPath = "curriculum-tracks";
         private static readonly string _sessionSyncPath = "sync";
+        private static readonly string _registrationPrioritiesPath = "registration-priorities";
+        private static readonly string _organizationalChartPath = "org-chart";
+        private static readonly string _organizationalChartEmployeePath = "org-chart-employee";
 
         private static readonly string _academicRecordPath = "academic-record";
         private static readonly string _anonymousGradingIdsPath = "anonymous-grading-ids";

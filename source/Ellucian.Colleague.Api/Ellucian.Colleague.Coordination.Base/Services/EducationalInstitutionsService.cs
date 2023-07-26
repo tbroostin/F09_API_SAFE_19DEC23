@@ -1,22 +1,21 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Security;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Dependency;
-using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Dtos.DtoProperties;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Domain.Base;
-using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -29,7 +28,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IAdapterRegistry _iAdapterRegistry;
         private readonly ILogger _logger;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private IEnumerable<Domain.Base.Entities.SocialMediaType> _socialMediaTypes = null;
         private IEnumerable<Domain.Base.Entities.EmailType> _emailTypes = null;
         private IEnumerable<string> _homeInstitutionsList = null;
@@ -77,7 +75,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return _emailTypes;
         }
 
-       private async Task<IEnumerable<string>> GetHomeInstitutionIdList()
+        private async Task<IEnumerable<string>> GetHomeInstitutionIdList()
         {
             if (_homeInstitutionsList == null)
             {
@@ -200,7 +198,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (RepositoryException ex)
             {
-                IntegrationApiExceptionAddError(ex);              
+                IntegrationApiExceptionAddError(ex);
             }
             catch (Exception ex)
             {
@@ -290,7 +288,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("institution", "institution is a required property.");
             }
-            
+
             var educationInsitution = new EducationalInstitution();
 
             var educationInsitutionGuid = string.Empty;
@@ -300,7 +298,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 IntegrationApiExceptionAddError(string.Concat("Unable to locate guid for : '", institution.Id, "'"), "GUID.Not.Found", id: institution.Id);
             }
             else
-            {              
+            {
                 personGuidCollection.TryGetValue(institution.Id, out educationInsitutionGuid);
                 if (string.IsNullOrEmpty(educationInsitutionGuid))
                 {
@@ -353,7 +351,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                 };
             }
-           
+
             if (institution.EmailAddresses != null && institution.EmailAddresses.Any())
             {
                 var personEmailAddressDtos = await GetPersonEmailTypeDtoCollection(institution.EmailAddresses, institution.Id, bypassCache);
@@ -365,7 +363,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (institution.Addresses != null && institution.Addresses.Any())
             {
-                var personAddressDtos = await GetPersonAddressDtoCollectionAsync(institution.Addresses, institution.Id,  bypassCache);
+                var personAddressDtos = await GetPersonAddressDtoCollectionAsync(institution.Addresses, institution.Id, bypassCache);
                 if (personAddressDtos != null && personAddressDtos.Any())
                 {
                     educationInsitution.Addresses = personAddressDtos;
@@ -468,7 +466,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return emailAddressDtos;
         }
 
-        private async Task<List<PersonSocialMediaDtoProperty>> GetPersonSocialMediaDtoCollection(IEnumerable<SocialMedia> socialMediaCollection, string institutionId, bool bypassCache= false)
+        private async Task<List<PersonSocialMediaDtoProperty>> GetPersonSocialMediaDtoCollection(IEnumerable<SocialMedia> socialMediaCollection, string institutionId, bool bypassCache = false)
         {
             List<Dtos.DtoProperties.PersonSocialMediaDtoProperty> socialMediaEntries = new List<Dtos.DtoProperties.PersonSocialMediaDtoProperty>();
 
@@ -585,13 +583,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     Domain.Base.Entities.PhoneType phoneTypeEntity = null;
                     try
                     {
-                        phoneTypeEntity = phoneTypeEntities.FirstOrDefault(pt => pt.Code == phoneEntity.TypeCode);                      
+                        phoneTypeEntity = phoneTypeEntities.FirstOrDefault(pt => pt.Code == phoneEntity.TypeCode);
 
                         if ((phoneTypeEntity != null) && (!string.IsNullOrEmpty(phoneTypeEntity.Guid)))
                         {
                             guid = phoneTypeEntity.Guid;
-                            category = phoneTypeEntity.PhoneTypeCategory.ToString(); 
-                            
+                            category = phoneTypeEntity.PhoneTypeCategory.ToString();
+
                             var phoneDto = new Dtos.DtoProperties.PersonPhoneDtoProperty()
                             {
                                 Number = phoneEntity.Number,
@@ -620,7 +618,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return phoneDtos;
         }
 
-        private async Task<IEnumerable<Dtos.DtoProperties.PersonAddressDtoProperty>> GetPersonAddressDtoCollectionAsync(IEnumerable<Domain.Base.Entities.Address> addressEntities, string institutionId,  bool bypassCache = false)
+        private async Task<IEnumerable<Dtos.DtoProperties.PersonAddressDtoProperty>> GetPersonAddressDtoCollectionAsync(IEnumerable<Domain.Base.Entities.Address> addressEntities, string institutionId, bool bypassCache = false)
         {
             var addressDtos = new List<Dtos.DtoProperties.PersonAddressDtoProperty>();
             if (addressEntities != null && addressEntities.Count() > 0)
@@ -647,7 +645,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     if (addressEntity.TypeCode != null && !string.IsNullOrEmpty(addressEntity.TypeCode))
                     {
-                        string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                        string[] addrTypes = addressEntity.TypeCode.Split(DmiString._SM);
                         for (int i = 0; i < addrTypes.Length; i++)
                         {
                             var addrType = addrTypes[i];
@@ -672,7 +670,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                     }
                 }
-            }            
+            }
             return addressDtos;
         }
 

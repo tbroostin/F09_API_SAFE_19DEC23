@@ -1,30 +1,26 @@
-﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
-
+﻿//Copyright 2018-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Colleague.Domain.Base.Services;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GeographicAreasRepository : BaseColleagueRepository, IGeographicAreasRepository
     {
-        //public static char _VM = Convert.ToChar(DynamicArray.VM);
         const int AllGeographicAreasCacheTimeout = 20; // Clear from cache every 20 minutes
         const string AllGeographicAreasCache = "AllGeographicAreas";
 
@@ -120,7 +116,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             var keysSubList = keyCache.Sublist;
-            totalCount = keyCache.TotalCount.Value;                                  
+            totalCount = keyCache.TotalCount.Value;
 
             if (keysSubList.Any())
             {
@@ -151,7 +147,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     countiesCollection = await DataReader.BulkReadRecordAsync<Counties>("COUNTIES", countiesSubListKey.ToArray());
                 }
-                
+
                 var zipCodesSubListKey = new List<string>();
                 Collection<ZipCodeXlat> zipCodesCollection = null;
                 foreach (var key in keysSubList.Where(i => i.Split('*')[0].Equals("ZIPCODEXLAT")))
@@ -215,7 +211,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         throw new KeyNotFoundException(string.Format("Geographic area not found for ZIP.CODE.XLAT '{0}'. ", recordKey));
                                     }
                                     geographicAreaEntities.Add(new GeographicArea(zipCode.RecordGuid, zipCode.Recordkey, "Zipcode", "POST"));
-                                }      
+                                }
                                 else
                                 {
                                     throw new KeyNotFoundException(string.Format("Geographic area not found for ZIP.CODE.XLAT '{0}'. ", recordKey));

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Dtos.HumanResources;
 using System;
 using System.Collections.Generic;
@@ -40,5 +40,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             string payCycleIdFilter = null,
             DateTime? startDateFilter = null,
             DateTime? endDateFilter = null);
+
+        /// <summary>
+        /// Get the pay statement information for a given id.
+        /// </summary>
+        /// <param name="id">The id of the requested pay statement.</param>      
+        /// <returns>The requested PayStatementInformation DTO</returns>
+        Task<PayStatementInformation> GetPayStatementInformationAsync(string id);
     }
 }

@@ -12,6 +12,10 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Services;
+using System.Web.Http.Description;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -21,6 +25,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription="Provides access to data for accounts due", ApiDomain = "Finance")]
     public class AccountDueController : BaseCompressedApiController
     {
         private readonly IAccountDueService _service;
@@ -47,6 +52,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The student's <see cref="AccountDue">account due</see> data</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public AccountDue GetAccountDueForStudent(string studentId)
         {
             try
@@ -75,6 +82,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>The student's <see cref="AccountDuePeriod">account due period</see> data</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public AccountDuePeriod GetAccountDuePeriodForStudent(string studentId)
         {
             try

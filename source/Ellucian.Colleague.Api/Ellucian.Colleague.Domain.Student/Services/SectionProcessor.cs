@@ -609,9 +609,11 @@ namespace Ellucian.Colleague.Domain.Student.Services
             {
                 registrationTerms = new List<Term>();
             }
+
             var allSectionIds = sections.Select(s => s.Id).ToList();
             _logger.Info(string.Format("Getting section registration dates for sections {0}", string.Join(", ", allSectionIds)));
-            List<Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationDate> sectionRegistrationDatesEntities = new List<Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationDate>();
+
+            var sectionRegistrationDatesEntities = new List<Domain.Student.Entities.SectionRegistrationDate>();
 
             // Limit the sections processed to those that have a term within the current registration terms or that have no term.
             _logger.Info(string.Format("Section registration dates will only be retrieved for non-term sections and sections in registration terms {0}", string.Join(", ", registrationTerms.Select(t => t.Code))));
@@ -633,8 +635,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
             if (notProcessedIds.Any())
             {
                 _logger.Info(string.Format("The following sections will not be processed for registration dates because they are assigned to a non-registration term: {0}", string.Join(Environment.NewLine, notProcessedIds)));
-
             }
+
             foreach (var section in filteredSections)
             {
                 //if consider users group is false don't consider this
@@ -665,7 +667,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         section.RegistrationDateOverrides.DropStartDate,
                         section.RegistrationDateOverrides.DropEndDate,
                         section.RegistrationDateOverrides.DropGradeRequiredDate,
-                        section.RegistrationDateOverrides.CensusDates));
+                        section.RegistrationDateOverrides.CensusDates,
+                        RegistrationDateSource.Section));
                     continue;
                 }
 
@@ -684,7 +687,20 @@ namespace Ellucian.Colleague.Domain.Student.Services
                             if (termLocationDates != null)
                             {
                                 _logger.Debug(string.Format("Section {0} registration dates determined by term/location override (RGUS > RGUD > RGUL) for registration user {1}, term {2}, location {3}.", section.Id, registrationGroup.Id, section.TermId, section.Location));
-                                var sectionRegistrationDates = new SectionRegistrationDate(section.Id, section.Location, termLocationDates.RegistrationStartDate, termLocationDates.RegistrationEndDate, termLocationDates.PreRegistrationStartDate, termLocationDates.PreRegistrationEndDate, termLocationDates.AddStartDate, termLocationDates.AddEndDate, termLocationDates.DropStartDate, termLocationDates.DropEndDate, termLocationDates.DropGradeRequiredDate, termLocationDates.CensusDates);
+                                var sectionRegistrationDates = new SectionRegistrationDate(
+                                    section.Id, 
+                                    section.Location, 
+                                    termLocationDates.RegistrationStartDate, 
+                                    termLocationDates.RegistrationEndDate, 
+                                    termLocationDates.PreRegistrationStartDate, 
+                                    termLocationDates.PreRegistrationEndDate, 
+                                    termLocationDates.AddStartDate, 
+                                    termLocationDates.AddEndDate, 
+                                    termLocationDates.DropStartDate, 
+                                    termLocationDates.DropEndDate, 
+                                    termLocationDates.DropGradeRequiredDate, 
+                                    termLocationDates.CensusDates,
+                                    RegistrationDateSource.RegistrationUserTermLocation);
                                 sectionRegistrationDatesEntities.Add(sectionRegistrationDates);
                                 continue;
                             }
@@ -709,8 +725,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
                                     termLocation.DropStartDate,
                                     termLocation.DropEndDate,
                                     termLocation.DropGradeRequiredDate,
-                                    termLocation.CensusDates
-                                    ));
+                                    termLocation.CensusDates,
+                                    RegistrationDateSource.TermLocation));
                                 continue;
                             }
                         }
@@ -723,7 +739,20 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         if (termDates != null)
                         {
                             _logger.Debug(string.Format("Section {0} registration dates determined by term override (RGUS > RGUD > RGUT) for registration user {1}, term {2}.", section.Id, registrationGroup.Id, section.TermId));
-                            sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id, section.Location, termDates.RegistrationStartDate, termDates.RegistrationEndDate, termDates.PreRegistrationStartDate, termDates.PreRegistrationEndDate, termDates.AddStartDate, termDates.AddEndDate, termDates.DropStartDate, termDates.DropEndDate, termDates.DropGradeRequiredDate, termDates.CensusDates));
+                            sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(
+                                section.Id, 
+                                section.Location, 
+                                termDates.RegistrationStartDate, 
+                                termDates.RegistrationEndDate, 
+                                termDates.PreRegistrationStartDate, 
+                                termDates.PreRegistrationEndDate, 
+                                termDates.AddStartDate, 
+                                termDates.AddEndDate, 
+                                termDates.DropStartDate, 
+                                termDates.DropEndDate, 
+                                termDates.DropGradeRequiredDate, 
+                                termDates.CensusDates,
+                                RegistrationDateSource.RegistrationUserTerm));
                             continue;
                         }
                     }
@@ -747,8 +776,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
                                 termRegDates.DropStartDate,
                                 termRegDates.DropEndDate,
                                 termRegDates.DropGradeRequiredDate,
-                                termRegDates.CensusDates
-                                ));
+                                termRegDates.CensusDates,
+                                RegistrationDateSource.Term));
                             continue;
                         }
                     }

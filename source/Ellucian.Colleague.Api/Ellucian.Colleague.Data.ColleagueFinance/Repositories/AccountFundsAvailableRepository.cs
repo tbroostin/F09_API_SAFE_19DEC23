@@ -1,25 +1,24 @@
-﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Data.Colleague;
-using slf4net;
-using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Dmi.Runtime;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -30,7 +29,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     public class AccountFundsAvailableRepository : BaseColleagueRepository, IAccountFundsAvailableRepository
     {
         private readonly string _colleagueTimeZone;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -43,7 +42,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // Using Level 1 Cache Timeout Value for data that changes rarely.
             CacheTimeout = Level1CacheTimeoutValue;
             _colleagueTimeZone = apiSettings.ColleagueTimeZone;
-        }        
+        }
 
         /// <summary>
         /// Gets available funds
@@ -82,7 +81,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Check Available Funds
         /// </summary>
         /// <returns>The created FundsAvailable domain entity</returns>       
-        public async Task<List<FundsAvailable>>  CheckAvailableFundsAsync(List<FundsAvailable> fundsAvailable, 
+        public async Task<List<FundsAvailable>> CheckAvailableFundsAsync(List<FundsAvailable> fundsAvailable,
             string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "", List<string> bpoReqIds = null)
         {
             if (fundsAvailable == null || !fundsAvailable.Any())
@@ -90,7 +89,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("The accounting string must be specified to get available funds.");
             }
             var fundsResponseList = new List<FundsAvailable>();
-            
+
             // The AcctCheckAvailFunds parameter from GLAP is checked in the account funds
             // available subroutines used to verify if funds are available so we don't
             // need to identify this as non-applicable here in the API.  Instead, let the 
@@ -129,9 +128,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 glAvailableList.Add(glAvailable);
             }
 
-            var createRequest = new CheckAvailableFundsRequest() { GlAvailableList = glAvailableList,
+            var createRequest = new CheckAvailableFundsRequest()
+            {
+                GlAvailableList = glAvailableList,
                 DocSubmittedBy = documentSubmittedBy,
-                BpoNo = blanketPurchaseOrderNumber,  
+                BpoNo = blanketPurchaseOrderNumber,
                 PoId = purchaseOrderId,
                 VouId = voucherId,
                 ReqId = requisitionId,
@@ -140,7 +141,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // write the data
             var createResponse = await transactionInvoker.ExecuteAsync<CheckAvailableFundsRequest, CheckAvailableFundsResponse>(createRequest);
-            
+
             // Write informational messages to API log
             if (createResponse.InfoMessages != null && createResponse.InfoMessages.Any())
             {
@@ -155,7 +156,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var exception = new RepositoryException(errorMessage);
                 createResponse.ErrorMessages.ForEach
                     (e => exception.AddError(new RepositoryError("Validation.Exception", e)));
-                
+
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -170,7 +171,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var expenseClassValues = glClassConfiguration.ExpenseClassValues;
             var glClassLength = glClassConfiguration.GlClassLength;
             var glStartPosition = glClassConfiguration.GlClassStartPosition;
-      
+
             foreach (var glAvailableResponse in createResponse.GlAvailableList)
             {
                 var fundsResponse = new FundsAvailable(glAvailableResponse.AccountingStrings);
@@ -197,7 +198,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             glClass = glAvailableResponse.AccountingStrings.Substring(glStartPosition, glClassLength);
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         //var exception = new RepositoryException(ex.Message);
                         //exception.AddError(new RepositoryError("Invalid.AccountingString", ex.Message));
@@ -223,7 +224,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 if (glAvailableResponse.GlAmts != null && glAvailableResponse.GlAmts.HasValue)
                 {
-                    fundsResponse.Amount = Convert.ToDecimal(glAvailableResponse.GlAmts);                    
+                    fundsResponse.Amount = Convert.ToDecimal(glAvailableResponse.GlAmts);
                 }
                 fundsResponse.TransactionDate = glAvailableResponse.TransactionDate;
                 fundsResponse.CurrencyCode = glAvailableResponse.Currency;
@@ -233,7 +234,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 fundsResponse.OverrideMessage = glAvailableResponse.OverrideMessage;
                 fundsResponseList.Add(fundsResponse);
             }
-            return fundsResponseList;          
+            return fundsResponseList;
         }
 
         /// <summary>
@@ -370,7 +371,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subName in glStruct.AcctSubName)
                 {
-                    string[] subvalues = subName.Split(_SM);
+                    string[] subvalues = subName.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentList.Add(sub);
@@ -379,7 +380,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             return subcomponentList;
         }
-     
+
         // AcctSubStart is a list of strings but each string contains each subcomponent's start position separated by subvalue marks.
         // Example glStruct.AcctSubStart[0] contains "1":@SV:"3"
         private List<string> BuildSubcomponentStartList(Glstruct glStruct)
@@ -389,7 +390,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subStart in glStruct.AcctSubStart)
                 {
-                    string[] subvalues = subStart.Split(_SM);
+                    string[] subvalues = subStart.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentStartList.Add(sub);
@@ -408,7 +409,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var subLgth in glStruct.AcctSubLgth)
                 {
-                    string[] subvalues = subLgth.Split(_SM);
+                    string[] subvalues = subLgth.Split(DmiString._SM);
                     foreach (var sub in subvalues)
                     {
                         subcomponentLengthList.Add(sub);
@@ -446,7 +447,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns></returns>
         public async Task<FundsAvailable> GetProjectAvailableFundsAsync(string accountingString, decimal amountValue, string projectNumber, DateTime? balanceOn)
         {
-            string criteriaProject = string.Empty; 
+            string criteriaProject = string.Empty;
             string criteriaProjectLineItem = string.Empty;
 
             if (string.IsNullOrEmpty(accountingString))
@@ -461,10 +462,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             criteriaProject = string.Format("WITH PRJ.REF.NO EQ '{0}'", projectNumber);
             var resultProject = await DataReader.BulkReadRecordAsync<DataContracts.Projects>(criteriaProject);
-            if (resultProject == null || !resultProject.Any()) 
+            if (resultProject == null || !resultProject.Any())
             {
                 throw new KeyNotFoundException("The project specified is not valid.");
-            }            
+            }
 
             criteriaProjectLineItem = string.Format("WITH PRJLN.PROJECTS.CF EQ '{0}' AND WITH PRJLN.GL.ACCTS EQ '{1}'", resultProject[0].Recordkey, accountingString);
             var resultProjectLineItem = await DataReader.BulkReadRecordAsync<DataContracts.ProjectsLineItems>(criteriaProjectLineItem);
@@ -510,7 +511,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 Amount = amountValue,
                 ProjectStartDates = result.PrjcfPeriodStartDates,
                 ProjectEndDates = result.PrjcfPeriodEndDates
-            };            
+            };
             return fundsAvailable;
         }
 
@@ -525,22 +526,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             //Get only the open period
             var memos = result.MemosEntityAssociation
-                .FirstOrDefault(repo => repo.AvailFundsControllerAssocMember.Equals(year, StringComparison.OrdinalIgnoreCase) && 
+                .FirstOrDefault(repo => repo.AvailFundsControllerAssocMember.Equals(year, StringComparison.OrdinalIgnoreCase) &&
                                         repo.GlFreezeFlagsAssocMember.ToUpper().Equals("O", StringComparison.OrdinalIgnoreCase));
 
-            if (memos == null) 
+            if (memos == null)
             {
                 var exception = new RepositoryException();
                 exception.AddError(new RepositoryError(string.Concat("accounting string: ", result.Recordkey, " is not valid for the current fiscal year.")));
                 throw exception;
-            }            
+            }
 
-            FundsAvailable fundsAvailable = new FundsAvailable(result.Recordkey) 
+            FundsAvailable fundsAvailable = new FundsAvailable(result.Recordkey)
             {
                 TotalBudget = GetTotalBudget(memos),
-                TotalExpenses = GetTotalExpenses(amount, memos)                
+                TotalExpenses = GetTotalExpenses(amount, memos)
             };
-            
+
             return fundsAvailable;
         }
 
@@ -581,22 +582,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 totalExpenses = memos.GlActualPostedAssocMember.Value;
             }
 
-            if (memos.GlActualMemosAssocMember.HasValue) 
+            if (memos.GlActualMemosAssocMember.HasValue)
             {
                 totalExpenses += memos.GlActualMemosAssocMember.Value;
             }
 
-            if (memos.GlEncumbrancePostedAssocMember.HasValue) 
+            if (memos.GlEncumbrancePostedAssocMember.HasValue)
             {
                 totalExpenses += memos.GlEncumbrancePostedAssocMember.Value;
             }
 
-            if (memos.GlEncumbranceMemosAssocMember.HasValue) 
+            if (memos.GlEncumbranceMemosAssocMember.HasValue)
             {
                 totalExpenses += memos.GlEncumbranceMemosAssocMember.Value;
             }
 
-            if (memos.GlRequisitionMemosAssocMember.HasValue) 
+            if (memos.GlRequisitionMemosAssocMember.HasValue)
             {
                 totalExpenses += memos.GlRequisitionMemosAssocMember.Value;
             }
@@ -653,7 +654,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new KeyNotFoundException(string.Format("No item found for item number: {0}.", itemNumber));
             }
 
-            if (!string.IsNullOrEmpty(result.ItmPoId)) 
+            if (!string.IsNullOrEmpty(result.ItmPoId))
             {
                 string poCriteria = string.Format("WITH PURCHASE.ORDERS.ID EQ '{0}'", result.ItmPoId);
                 var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", poCriteria);

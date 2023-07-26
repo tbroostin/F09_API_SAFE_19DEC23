@@ -58,6 +58,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private Settings FakeSettings;
         private ColleagueSettings FakeColleagueSettings;
         private DmiSettings FakeDmiSettings;
+        private OauthSettings FakeOauthSettings;
         private ApiBackupConfigData FakeApiBackupConfigData;
 
         private Mock<IApiSettingsRepository> ApiSettingsRepositoryMock;
@@ -118,9 +119,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             FakeDmiSettings.AccountName = "test_rt";
             FakeDmiSettings.IpAddress = "1.2.3.4";
             FakeDmiSettings.SharedSecret = "secret";
+            FakeOauthSettings = new OauthSettings();
+            FakeOauthSettings.OauthIssuerUrl = "https://oauth.prod.10005.elluciancloud.com";
+            FakeOauthSettings.OauthProxyLogin = "oauth_proxy";
+            FakeOauthSettings.OauthProxyPassword = "password";
             FakeColleagueSettings = new ColleagueSettings();
             FakeColleagueSettings.DmiSettings = FakeDmiSettings;
-            FakeSettings = new Settings(FakeColleagueSettings, Serilog.Events.LogEventLevel.Information);
+            FakeSettings = new Settings(FakeColleagueSettings, FakeOauthSettings, Serilog.Events.LogEventLevel.Information);
 
             FakeApiBackupConfigData = new ApiBackupConfigData();
             FakeApiBackupConfigData.ApiSettings = FakeApiSettings;

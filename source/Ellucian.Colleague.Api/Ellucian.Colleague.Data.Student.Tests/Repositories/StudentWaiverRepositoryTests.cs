@@ -1,9 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.Caching;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -13,12 +8,17 @@ using Ellucian.Data.Colleague;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.Caching;
 using System.Threading;
-using Ellucian.Web.Http.Exceptions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -126,7 +126,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var waivers = await waiverRepo.GetSectionWaiversAsync("SEC1");
 
-                var expectedCommentLines = multiLineComment.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                var expectedCommentLines = multiLineComment.Replace(DmiString._VM, '\n');
                 Assert.AreEqual(expectedCommentLines, waivers.ElementAt(0).Comment);
             }
 
@@ -204,7 +204,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task ReturnsOnlyValidRequisiteWaiverItems()
             {
                 waiversResponseData.ElementAt(1).SrwvReqCoursesEntityAssociation.ElementAt(0).SrwvAcadReqmtsAssocMember = null;
-                dataAccessorMock.Setup < Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(waiversResponseData);
+                dataAccessorMock.Setup<Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(waiversResponseData);
 
                 // Verify that the original (two) waiver response items are returned even though one of the requisite items has invalid data
                 var waivers = await waiverRepo.GetSectionWaiversAsync("SEC1");
@@ -222,7 +222,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
                 // Set up repo response for waivers request
-                dataAccessorMock.Setup < Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(waiversResponseData);
+                dataAccessorMock.Setup<Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(waiversResponseData);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -242,12 +242,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 Exception expectedFailure = new Exception("fail");
 
-                dataAccessorMock.Setup < Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).Throws(expectedFailure);
+                dataAccessorMock.Setup<Task<Collection<StudentReqWaivers>>>(acc => acc.BulkReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).Throws(expectedFailure);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-                
+
                 StudentWaiverRepository repository = new StudentWaiverRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return repository;
@@ -265,7 +265,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 waiverData.SrwvSection = "SEC1";
                 waiverData.SrwvTerm = "2016/SP";
                 waiverData.SrwvReason = "OTHER";
-                multiLineComment = "Student 456 comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                multiLineComment = "Student 456 comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
                 waiverData.SrwvComments = multiLineComment;
                 waiverData.SrwvWaiverPersonId = "0000987";
                 waiverData.StudentReqWaiversChgdate = new DateTime(2015, 01, 21);
@@ -405,26 +405,26 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task RequisiteWaivers_Initialized()
             {
                 var waiver = await waiverRepo.GetAsync(waiverId);
-                    foreach (var responseReqWaiver in response.SrwvReqCoursesEntityAssociation)
+                foreach (var responseReqWaiver in response.SrwvReqCoursesEntityAssociation)
+                {
+                    var reqWaiver = waiver.RequisiteWaivers.Where(rw => rw.RequisiteId == responseReqWaiver.SrwvAcadReqmtsAssocMember).FirstOrDefault();
+                    Assert.AreEqual(responseReqWaiver.SrwvAcadReqmtsAssocMember, reqWaiver.RequisiteId);
+                    switch (responseReqWaiver.SrwvWaiveReqmtFlagAssocMember.ToUpper())
                     {
-                        var reqWaiver = waiver.RequisiteWaivers.Where(rw => rw.RequisiteId == responseReqWaiver.SrwvAcadReqmtsAssocMember).FirstOrDefault();
-                        Assert.AreEqual(responseReqWaiver.SrwvAcadReqmtsAssocMember, reqWaiver.RequisiteId);
-                        switch (responseReqWaiver.SrwvWaiveReqmtFlagAssocMember.ToUpper())
-                        {
-                            case "":
-                                Assert.AreEqual(WaiverStatus.NotSelected, reqWaiver.Status);
-                                break;
-                            case "Y":
-                                Assert.AreEqual(WaiverStatus.Waived, reqWaiver.Status);
-                                break;
-                            case "N":
-                                Assert.AreEqual(WaiverStatus.Denied, reqWaiver.Status);
-                                break;
-                            default:
-                                Assert.AreEqual(WaiverStatus.NotSelected, reqWaiver.Status);
-                                break;
-                        }
+                        case "":
+                            Assert.AreEqual(WaiverStatus.NotSelected, reqWaiver.Status);
+                            break;
+                        case "Y":
+                            Assert.AreEqual(WaiverStatus.Waived, reqWaiver.Status);
+                            break;
+                        case "N":
+                            Assert.AreEqual(WaiverStatus.Denied, reqWaiver.Status);
+                            break;
+                        default:
+                            Assert.AreEqual(WaiverStatus.NotSelected, reqWaiver.Status);
+                            break;
                     }
+                }
             }
 
             [TestMethod]
@@ -432,7 +432,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var waiver = await waiverRepo.GetAsync(waiverId);
 
-                var expectedCommentLines = multiLineComment.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                var expectedCommentLines = multiLineComment.Replace(DmiString._VM, '\n');
                 Assert.AreEqual(expectedCommentLines, waiver.Comment);
             }
 
@@ -464,7 +464,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Set up repo response for waivers request
                 StudentReqWaivers nullResponse = null;
-                dataAccessorMock.Setup < Task<StudentReqWaivers>>(acc => acc.ReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(nullResponse);
+                dataAccessorMock.Setup<Task<StudentReqWaivers>>(acc => acc.ReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).ReturnsAsync(nullResponse);
                 var waiver = await waiverRepo.GetAsync(waiverId);
             }
 
@@ -472,11 +472,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task ThrowsExceptionIfExceptionThrownByDataReader()
             {
-                dataAccessorMock.Setup <Task<StudentReqWaivers>>(acc => acc.ReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).Throws(new Exception());
+                dataAccessorMock.Setup<Task<StudentReqWaivers>>(acc => acc.ReadRecordAsync<StudentReqWaivers>(It.IsAny<string>(), true)).Throws(new Exception());
                 var waiver = await waiverRepo.GetAsync(waiverId);
             }
 
-             private StudentWaiverRepository BuildValidWaiverRepository()
+            private StudentWaiverRepository BuildValidWaiverRepository()
             {
                 transFactoryMock = new Mock<IColleagueTransactionFactory>();
                 dataAccessorMock = new Mock<IColleagueDataReader>();
@@ -492,8 +492,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-                
-                 StudentWaiverRepository repository = new StudentWaiverRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                StudentWaiverRepository repository = new StudentWaiverRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 return repository;
             }
 
@@ -512,7 +512,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-                
+
                 StudentWaiverRepository repository = new StudentWaiverRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
                 return repository;
@@ -527,7 +527,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 waiverData1.SrwvSection = "SEC1";
                 waiverData1.SrwvTerm = "2016/SP";
                 waiverData1.SrwvReason = "LIFE";
-                multiLineComment = "Student 456 comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                multiLineComment = "Student 456 comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
                 waiverData1.SrwvComments = multiLineComment;
                 waiverData1.SrwvWaiverPersonId = "0000987";
                 waiverData1.StudentReqWaiversChgdate = new DateTime(2015, 02, 14);
@@ -749,7 +749,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 CreateStudentReqWaiverResponse createResponse = new CreateStudentReqWaiverResponse();
                 mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentReqWaiverRequest, CreateStudentReqWaiverResponse>(It.Is<CreateStudentReqWaiverRequest>(r => !string.IsNullOrEmpty(r.ASectionId)))).Throws(new Exception());
-                var newWaiver = await waiverRepo.CreateSectionWaiverAsync(waiverToAdd);                
+                var newWaiver = await waiverRepo.CreateSectionWaiverAsync(waiverToAdd);
             }
 
             [TestMethod]
@@ -787,7 +787,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-                
+
                 StudentWaiverRepository repository = new StudentWaiverRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 return repository;
             }
@@ -983,7 +983,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 waiverData.SrwvSection = "SEC1";
                 waiverData.SrwvTerm = "2016/SP";
                 waiverData.SrwvReason = "OTHER";
-                multiLineComment = "Student 456 comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                multiLineComment = "Student 456 comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
                 waiverData.SrwvComments = multiLineComment;
                 waiverData.SrwvWaiverPersonId = "0000987";
                 waiverData.StudentReqWaiversChgdate = new DateTime(2015, 01, 21);

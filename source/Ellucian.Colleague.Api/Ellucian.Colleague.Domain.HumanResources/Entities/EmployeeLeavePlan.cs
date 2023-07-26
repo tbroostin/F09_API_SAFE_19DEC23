@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -49,6 +49,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// The end date of the LeavePlan definition. If null, leave plan definition has no end date
         /// </summary>
         public DateTime? LeavePlanEndDate { get; private set; }
+
+        /// <summary>
+        /// The Leave Type associated to the Leave Plan.
+        /// </summary>
+        public string LeavePlanType { get; set; }
 
         /// <summary>
         /// The end date of the probationary period for this employee's leave plan
@@ -221,10 +226,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 {
                     return -1;
                 }
-                // Sort leave transactions by date then by id
-                leaveTransactions = leaveTransactions.OrderBy(slt => slt.Date)
-                    .ThenBy(slt => slt.Id)
-                    .ToList();
+                leaveTransactions = leaveTransactions.OrderBy(slt => slt.Id).ToList();
 
                 var index = leaveTransactions.BinarySearch(endTransaction);
                 if (index < 0)
@@ -406,8 +408,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public virtual decimal CurrentPlanYearAdjustedHours {
             get {
-                var startingTransactionIndex = SortedPriorPlanYearEndIndex + 1; //index of the first transaction in the plan year
-                // Take J, C, R records after starting transaction
+                    var startingTransactionIndex = SortedPriorPlanYearEndIndex + 1; //index of the first transaction in the plan year
+                // Take J, C and R records after starting transaction
                 var currentPlanYearAdjustedTransactions = SortedLeaveTransactions
                     .Skip(startingTransactionIndex)
                     .Where(trans => (trans.Type == LeaveTransactionType.Adjusted || trans.Type == LeaveTransactionType.MidYearBalanceAdjustment || trans.Type == LeaveTransactionType.Rollover) &&
@@ -416,7 +418,29 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 // if there is a "B" record - USE NEW METHOD
                 if (StartingBalanceTransaction != null)
                 {
-                    // use logic above
+                    // for R transactions - only add them to Adjusted hours if the ID is greater than the starting balance transaction's ID
+                    currentPlanYearAdjustedTransactions = SortedLeaveTransactions
+                        .Skip(startingTransactionIndex)
+                        .Where(trans => (trans.Type == LeaveTransactionType.Adjusted || trans.Type == LeaveTransactionType.MidYearBalanceAdjustment) &&
+                            trans.Date >= CurrentPlanYearStartDate);
+
+                    var rolloverTransactionsAfterStartingBalance = SortedLeaveTransactions
+                    .Skip(startingTransactionIndex)
+                    .Where(trans => (trans.Type == LeaveTransactionType.Rollover &&
+                        trans.Date >= CurrentPlanYearStartDate && 
+                        trans.Id > StartingBalanceTransaction.Id));
+                    // add in R trx to the adjusted sum 
+                    currentPlanYearAdjustedTransactions = currentPlanYearAdjustedTransactions.Union(rolloverTransactionsAfterStartingBalance);
+
+                    // find r trxs that are in the plan year before the starting balance record
+                    var rolloverTransactionsBeforeStartingBalance = SortedLeaveTransactions
+                    .Skip(startingTransactionIndex)
+                    .Where(trans => (trans.Type == LeaveTransactionType.Rollover &&
+                        trans.Date >= CurrentPlanYearStartDate &&
+                        trans.Id < StartingBalanceTransaction.Id));
+                    // filter out r trxs from leaveTransactions list, which effectively removes it from the related leave transaction lists.
+                    leaveTransactions = leaveTransactions.Where(lt => !rolloverTransactionsBeforeStartingBalance.Any(trans => trans.Id == lt.Id)).ToList();
+
                 }
                 else if (PriorPlanYearEndTransaction != null)
                 {
@@ -448,14 +472,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         }
 
         /// <summary>
-        /// The Leave Transactions associated to this plan, sorted by AddDate then by TransactionId;
+        /// The Leave Transactions associated to this plan, sorted by TransactionId;
         /// </summary>
         public virtual ReadOnlyCollection<EmployeeLeaveTransaction> SortedLeaveTransactions {
             get {
                 // sort leave transactions by date then by id
                 List<EmployeeLeaveTransaction> sortedLeaveTransactions = leaveTransactions
-                    .OrderBy(slt => slt.Date)
-                    .ThenBy(slt => slt.Id)
+                    .OrderBy(slt => slt.Id)
                     .ToList();
                 return sortedLeaveTransactions.AsReadOnly();
             }
@@ -534,6 +557,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="leavePlanDescription"></param>
         /// <param name="leavePlanStartDate"></param>
         /// <param name="leavePlanEndDate"></param>
+        /// <param name="leavePlanType"></param>
         /// <param name="leavePlanTypeCategory"></param>
         /// <param name="earningsTypeId"></param>
         /// <param name="earningsTypeDescription"></param>
@@ -560,6 +584,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             string leavePlanDescription,
             DateTime leavePlanStartDate,
             DateTime? leavePlanEndDate,
+            string leavePlanType,
             LeaveTypeCategory leavePlanTypeCategory,
             string earningsTypeId,
             string earningsTypeDescription,
@@ -611,6 +636,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 throw new ArgumentOutOfRangeException("leavePlanEndDate", "leavePlanEndDate cannot be before leavePlanStartDate");
             }
 
+            if (string.IsNullOrWhiteSpace(leavePlanType))
+            {
+                throw new ArgumentNullException("LeavePlanType");
+            }
+
             if (planYearStartMonth < 1 || planYearStartMonth > 12)
             {
                 throw new ArgumentOutOfRangeException("planYearStartMonth", "planYearStartMonth must be between 1 and 12");
@@ -645,6 +675,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             LeavePlanDescription = leavePlanDescription;
             LeavePlanStartDate = leavePlanStartDate;
             LeavePlanEndDate = leavePlanEndDate;
+            LeavePlanType = leavePlanType;
             LeavePlanTypeCategory = leavePlanTypeCategory;
             EarningsTypeId = earningsTypeId;
             EarningsTypeDescription = earningsTypeDescription;

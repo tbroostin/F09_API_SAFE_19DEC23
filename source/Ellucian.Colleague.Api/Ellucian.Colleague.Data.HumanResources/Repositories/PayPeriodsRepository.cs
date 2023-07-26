@@ -1,7 +1,5 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 //Copyright 2017 Ellucian Company L.P. and its affiliates.
@@ -9,24 +7,21 @@ using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PayPeriodsRepository : BaseColleagueRepository, IPayPeriodsRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
-
         /// <summary>
         /// ..ctor
         /// </summary>
@@ -91,14 +86,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             int index = 0;
             foreach (var payCycleId in payCyclesIds)
             {
-                var payCycleKey = payCycleId.Split(_VM)[0] + '*' + payCycleDates[index];
+                var payCycleKey = payCycleId.Split(DmiString._VM)[0] + '*' + payCycleDates[index];
                 payCyclesIds2.Add(payCycleKey);
                 index++;
             }
 
             totalCount = payCyclesIds2.Count();
             payCyclesIds2.Sort();
-            
+
             var keysSubList = payCyclesIds2.Skip(offset).Take(limit).ToArray().Distinct();
             if (!string.IsNullOrEmpty(convertedStartOn) || !string.IsNullOrEmpty(convertedEndOn))
             {
@@ -122,7 +117,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             foreach (var p in pc.PcyEndDate)
                             {
                                 if (p.HasValue)
-                                    payCntrlKeys.Add(string.Concat(DmiString.DateTimeToPickDate((DateTime) p), "*", pc.Recordkey));
+                                    payCntrlKeys.Add(string.Concat(DmiString.DateTimeToPickDate((DateTime)p), "*", pc.Recordkey));
                             }
                         });
                 }
@@ -380,7 +375,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         #endregion
-        
+
         /// <summary>
         /// Return a GUID for an Entity and Record Key
         /// </summary>

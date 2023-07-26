@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -19,7 +19,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
     public class AgreementsRepositoryTests : BaseRepositorySetup
     {
         private AgreementsRepository repository;
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         [TestInitialize]
         public void AgreementsRepositoryTests_Initialize()
@@ -53,8 +52,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var agreementPeriods = await repository.GetAgreementPeriodsAsync();
                 Assert.IsNotNull(agreementPeriods);
-                Assert.AreEqual(agreementPeriodsData.Count-1, agreementPeriods.Count());
-                for(int i = 0; i < agreementPeriodsData.Count-1; i++)
+                Assert.AreEqual(agreementPeriodsData.Count - 1, agreementPeriods.Count());
+                for (int i = 0; i < agreementPeriodsData.Count - 1; i++)
                 {
                     Assert.AreEqual(agreementPeriodsData[i].Recordkey, agreementPeriods.ElementAt(i).Code);
                     Assert.AreEqual(agreementPeriodsData[i].AgreementPeriodDescription, agreementPeriods.ElementAt(i).Description);
@@ -81,7 +80,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     new Data.Base.DataContracts.PersonAgreements() { Recordkey = "1", PagrTitle = "Person Agreement 1", PagrAllowDecline = "Y", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "2019FA", PagrText = "This is the text of Agreement 1.", PagrCode = "AGR1", PagrPersonId = "0001234", PagrAgreeStatus = "A", PagrActionDate = DateTime.Today.AddDays(-3), PagrActionTime = DateTime.Today.AddHours(-4) },
                     new Data.Base.DataContracts.PersonAgreements() { Recordkey = "2", PagrTitle = "Person Agreement 2", PagrAllowDecline = "N", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "2019FA", PagrText = null, PagrCode = "AGR2", PagrPersonId = "0001234", PagrAgreeStatus = string.Empty, PagrActionDate = null, PagrActionTime = null },
-                    new Data.Base.DataContracts.PersonAgreements() { Recordkey = "3", PagrTitle = "Person Agreement 3"+_VM+"Line 2"+_VM+"Line 3", PagrAllowDecline = "Y", PagrDueDate = DateTime.Today.AddDays(28), PagrPeriod = "2019FA", PagrText = "This is the text of Agreement 3."+_VM+"Line 2"+_VM+"Line 3", PagrCode = "AGR2", PagrPersonId = "0001234", PagrAgreeStatus = "D", PagrActionDate = DateTime.Today.AddDays(-2), PagrActionTime = DateTime.Today.AddHours(-3) },
+                    new Data.Base.DataContracts.PersonAgreements() { Recordkey = "3", PagrTitle = "Person Agreement 3"+DmiString._VM+"Line 2"+DmiString._VM+"Line 3", PagrAllowDecline = "Y", PagrDueDate = DateTime.Today.AddDays(28), PagrPeriod = "2019FA", PagrText = "This is the text of Agreement 3."+DmiString._VM+"Line 2"+DmiString._VM+"Line 3", PagrCode = "AGR2", PagrPersonId = "0001234", PagrAgreeStatus = "D", PagrActionDate = DateTime.Today.AddDays(-2), PagrActionTime = DateTime.Today.AddHours(-3) },
                     new Data.Base.DataContracts.PersonAgreements() { Recordkey = "4", PagrTitle = "Person Agreement 4", PagrAllowDecline = "N", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "2019FA", PagrText = null, PagrCode = "AGR2", PagrPersonId = string.Empty, PagrAgreeStatus = "A"}, // No PAGR.PERSON.ID, should not be built
                     new Data.Base.DataContracts.PersonAgreements() { Recordkey = string.Empty, PagrTitle = "No Code", PagrAllowDecline = "N", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "2019FA", PagrText = null, PagrCode = "AGR2", PagrPersonId = "0001234", PagrAgreeStatus = "A"}, // No PERSON.AGREEMENTS.ID, should not be built
                     new Data.Base.DataContracts.PersonAgreements() { Recordkey = "5", PagrTitle = "Person Agreement 5", PagrAllowDecline = "N", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = string.Empty, PagrText = null, PagrCode = "AGR2", PagrPersonId = "0001234", PagrAgreeStatus = "A"}, // No PAGR.PERIOD, should not be built
@@ -132,7 +131,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(personAgreementsData[2].PagrCode, personAgreements.ElementAt(2).AgreementCode);
                 Assert.AreEqual(personAgreementsData[2].PagrPeriod, personAgreements.ElementAt(2).AgreementPeriodCode);
                 Assert.IsTrue(personAgreements.ElementAt(2).PersonCanDeclineAgreement);
-                Assert.AreEqual("Person Agreement 3" + _VM + "Line 2" + _VM + "Line 3", personAgreements.ElementAt(2).Title);
+                Assert.AreEqual("Person Agreement 3" + DmiString._VM + "Line 2" + DmiString._VM + "Line 3", personAgreements.ElementAt(2).Title);
                 Assert.AreEqual(personAgreementsData[2].PagrDueDate, personAgreements.ElementAt(2).DueDate);
                 Assert.AreEqual(3, personAgreements.ElementAt(2).Text.Count());
                 Assert.AreEqual("This is the text of Agreement 3.", personAgreements.ElementAt(2).Text.ElementAt(0));
@@ -170,7 +169,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 now = DateTimeOffset.Now;
                 agreement = new PersonAgreement("1", "0001234", "AGR1", "PER1", true, "Agreement 1 Line 2 Line 3", DateTime.Today.AddDays(30), new List<string>() { "This is the text of agreement 1.", "Line 2", "Line 3" }, PersonAgreementStatus.Accepted, now);
-                agreementData = new Data.Base.DataContracts.PersonAgreements() { Recordkey = "1", PagrTitle = "Agreement 1 Line 2 Line 3", PagrAllowDecline = "Y", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "PER1", PagrText = "This is the text of agreement 1." + _VM + "Line 2" + _VM + "Line 3", PagrCode = "AGR1", PagrPersonId = "0001234", PagrAgreeStatus = "A", PagrActionDate = now.Date, PagrActionTime = now.DateTime };
+                agreementData = new Data.Base.DataContracts.PersonAgreements() { Recordkey = "1", PagrTitle = "Agreement 1 Line 2 Line 3", PagrAllowDecline = "Y", PagrDueDate = DateTime.Today.AddDays(30), PagrPeriod = "PER1", PagrText = "This is the text of agreement 1." + DmiString._VM + "Line 2" + DmiString._VM + "Line 3", PagrCode = "AGR1", PagrPersonId = "0001234", PagrAgreeStatus = "A", PagrActionDate = now.Date, PagrActionTime = now.DateTime };
 
                 SetupPersonAgreementsData(agreementData);
             }

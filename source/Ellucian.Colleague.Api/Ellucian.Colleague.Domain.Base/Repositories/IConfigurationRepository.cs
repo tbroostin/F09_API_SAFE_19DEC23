@@ -91,6 +91,14 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<EthosSecurity>> GetEthosDataPrivacyConfiguration(bool bypassCache);
 
         /// <summary>
+        /// Update the Ethos data row values from data stored in RT.FIELDS
+        /// </summary>
+        /// <param name="schemasAttributes"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns>SchemasProperty</returns>
+        Task<IEnumerable<EthosExtensibleDataRow>> GetExtendedEthosDataRowDefault(List<EthosExtensibleDataRow> ethosExtensibleDataRows, bool bypassCache);
+
+        /// <summary>
         /// Gets the extended data available on a resource, returns an empty list if there are no 
         /// </summary>
         /// <param name="resourceName">name of the resource (api) </param>

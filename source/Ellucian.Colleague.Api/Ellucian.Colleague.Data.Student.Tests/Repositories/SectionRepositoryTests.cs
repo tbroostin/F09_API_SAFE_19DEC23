@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
@@ -28,8 +29,6 @@ using System.Reflection;
 using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -3165,9 +3164,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task BookstoreTemplate_RemovedValueMarks()
             {
-                char _VM = Convert.ToChar(DynamicArray.VM);
                 StwebDefaults stwebDefaults = new StwebDefaults();
-                stwebDefaults.StwebBookstoreUrlTemplate = "abc" + _VM + "zyx";
+                stwebDefaults.StwebBookstoreUrlTemplate = "abc" + DmiString._VM + "zyx";
                 dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
                 List<string> sectionIds = new List<string>() { "1", "2", "3" };
                 IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);

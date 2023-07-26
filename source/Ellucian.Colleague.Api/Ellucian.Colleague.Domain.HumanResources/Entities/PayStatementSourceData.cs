@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 
@@ -107,13 +107,34 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public string Comments { get; private set; }
 
         /// <summary>
+        /// Total taxes for the period
+        /// </summary>
+        public decimal PeriodTotalTaxes { get; private set; }
+
+        /// <summary>
+        /// Total benefits and deductions for the period
+        /// </summary>
+        public decimal PeriodTotalBenDeds { get; private set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="id"></param>
         /// <param name="employeeId"></param>
+        /// <param name="employeeName"></param>
+        /// <param name="employeeSsn"></param>
+        /// <param name="employeeMailingLabel"></param>
+        /// <param name="paycheckReferenceId"></param>
+        /// <param name="statementReferenceId"></param>
         /// <param name="payDate"></param>
+        /// <param name="periodEndDate"></param>
         /// <param name="periodGrossPay"></param>
         /// <param name="periodNetPay"></param>
+        /// <param name="yearToDateGrossPay"></param>
+        /// <param name="yearToDateNetPay"></param>
+        /// <param name="comments"></param>
+        /// <param name="periodTotalTaxes"></param>
+        /// <param name="periodTotalBenDeds"></param>
         public PayStatementSourceData(
             string id, 
             string employeeId, 
@@ -128,7 +149,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal periodNetPay,
             decimal yearToDateGrossPay,
             decimal yearToDateNetPay,
-            string comments
+            string comments,
+            decimal periodTotalTaxes,
+            decimal periodTotalBenDeds
         )
         {
             if(string.IsNullOrWhiteSpace(id))
@@ -157,9 +180,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             PeriodNetPay = periodNetPay;
             YearToDateGrossPay = yearToDateGrossPay;
             YearToDateNetPay = yearToDateNetPay;
-
             SourceBankDeposits = new List<PayStatementSourceBankDeposit>();
             Comments = comments;
+            PeriodTotalTaxes = periodTotalTaxes;
+            PeriodTotalBenDeds = periodTotalBenDeds;
         }
         public override bool Equals(object obj)
         {

@@ -1,4 +1,4 @@
-﻿/// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
+﻿/// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -27,9 +27,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private RepositoryException exception = new RepositoryException();
         const string AllSelectedRecordsCache = "AllSelectedRecordKeys";
         const int AllSelectedRecordsCacheTimeout = 20;
-        char _VM = Convert.ToChar(DynamicArray.VM);
-        char _SM = Convert.ToChar(DynamicArray.SM);
-        char _TM = Convert.ToChar(DynamicArray.TM);
         char _XM = Convert.ToChar(250);
 
         /// <summary>
@@ -97,7 +94,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     dictionaryItems.Add(dictItem.Key, dictItem.Value != null && dictItem.Value.FilterValue != null ? dictItem.Value.FilterValue.ToString() : null);
                 }
             }
-            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache,fileName, dictionaryItems);
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache, fileName, dictionaryItems);
 
             int totalCount = 0;
 
@@ -119,9 +116,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             // Main Selection Criteria
             criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", configuration.SavingField,
-                configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns, 
+                configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns,
                 configuration.CurrentUserId);
-            
+
             if (selectParagraph != null && selectParagraph.Any())
             {
                 // If we don't have any criteria but we still have a paragraph to execute
@@ -196,7 +193,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 if (!string.IsNullOrEmpty(primaryKeyList[i]) && !string.IsNullOrEmpty(secondaryKeyList[i]))
                                 {
                                     // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
-                                    limitKeys.Add(physicalFileName + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                                    limitKeys.Add(physicalFileName + "+" + primaryKeyList[i].Split(DmiString._VM)[0] + "+" + secondaryKeyList[i]);
                                 }
                             }
                         }
@@ -240,12 +237,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var primaryKeyList = await DataReader.SelectAsync(fileName, primaryKeys, primarySelect);
                     primarySelect = string.Concat(primarySelect, " SAVING " + secondaryKeyName);
                     var secondaryKeyList = await DataReader.SelectAsync(fileName, primaryKeys, primarySelect);
+                    var totalSecondaryKeys = secondaryKeyList.Count();
                     for (int i = 0; i < primaryKeyList.Count(); i++)
                     {
-                        if (!string.IsNullOrEmpty(primaryKeyList[i]) && !string.IsNullOrEmpty(secondaryKeyList[i]))
+                        if (i < totalSecondaryKeys && !string.IsNullOrEmpty(primaryKeyList[i]) && !string.IsNullOrEmpty(secondaryKeyList[i]))
                         {
                             // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
-                            limitKeys.Add(fileName + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                            limitKeys.Add(fileName + "+" + primaryKeyList[i].Split(DmiString._VM)[0] + "+" + secondaryKeyList[i]);
                         }
                     }
                     if (limitKeys != null && limitKeys.Any())
@@ -393,7 +391,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             {
                                                 limitingKeys = limitingKeys.Select(gv => gv.Split('+')[1]).ToArray();
                                             }
-                                             var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
+                                            var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
 
                                             if (newLimitingKeys == null || !newLimitingKeys.Any())
                                             {
@@ -445,7 +443,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
 
                     limitingKeys = await GetRecordKeysHookAsync(configuration.PrimaryEntity, limitingKeys, configuration.ResourceName, "", true, bypassCache);
-                    
+
                     // When working with a BPA (Business Process API) then we may need to figure out the keys
                     // required for a single form phantom properties.  Only do this for BPA types. (API Type = "T")
                     if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(savingFileName) && !string.IsNullOrEmpty(savingCriteria))
@@ -495,7 +493,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             totalCount = keyCacheObject.TotalCount.Value;
 
-            var subList = keyCacheObject.Sublist.ToArray();          
+            var subList = keyCacheObject.Sublist.ToArray();
 
             List<EthosApiBuilder> extendedDatas = new List<EthosApiBuilder>();
 
@@ -536,10 +534,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     string recordKey = id.Contains('+') ? id.Split('+')[1] : id;
                     if (recordKey.Contains("~")) recordKey = recordKey.Split('~')[0];
-                    string guid = EncodePrimaryKey(id.Replace('~',_XM));
+                    string guid = EncodePrimaryKey(id.Replace('~', _XM));
                     if (configuration.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase))
                     {
-                        guid = EncodePrimaryKey(await AssembleKeyFromSpecsAsync(id.Replace('~',_XM), configuration, filterDictionary));
+                        guid = EncodePrimaryKey(await AssembleKeyFromSpecsAsync(id.Replace('~', _XM), configuration, filterDictionary));
                     }
                     else
                     {
@@ -668,7 +666,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     string columnValue = string.Empty;
                     if (readResult != null && readResult.TryGetValue(configuration.SecondaryKeyName, out columnValue))
                     {
-                        var columnSplit = columnValue.Replace(_SM, _VM).Split(_VM);
+                        var columnSplit = columnValue.Replace(DmiString._SM, DmiString._VM).Split(DmiString._VM);
                         if (!columnSplit.Contains(secondaryKey))
                         {
                             throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
@@ -761,7 +759,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         string columnValue = string.Empty;
                         if (readResult != null && readResult.TryGetValue("VAL.INTERNAL.CODE", out columnValue))
                         {
-                            var columnSplit = columnValue.Replace(_SM, _VM).Split(_VM);
+                            var columnSplit = columnValue.Replace(DmiString._SM, DmiString._VM).Split(DmiString._VM);
                             if (!columnSplit.Contains(guidEntity.SecondaryKey))
                             {
                                 throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
@@ -884,7 +882,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 AddOrUpdateCacheAsync,
                 transactionInvoker,
                 selectedRecordCacheKey,
-                selectFileName,  0, 1,
+                selectFileName, 0, 1,
                 AllSelectedRecordsCacheTimeout,
                 async () =>
                 {
@@ -985,10 +983,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
                 var exception = new RepositoryException();
                 updateResponse.UpdateEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
-                    {
-                        SourceId = updateRequest.RecordKey == "$NEW" ? string.Empty : updateRequest.RecordKey,
-                        Id = updateRequest.RecordGuid
-                    })
+                {
+                    SourceId = updateRequest.RecordKey == "$NEW" ? string.Empty : updateRequest.RecordKey,
+                    Id = updateRequest.RecordGuid
+                })
                 );
 
                 logger.Error(errorMessage);
@@ -1007,7 +1005,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="configuration">Configuration from EthosApiBuilder</param>
         /// <param name="filterDictionary">Dictionary of filter items to build a key from the POST or PUT request body</param>
         /// <returns>Dictionary of Response Data coming from the UI form process</returns>
-        public async Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder extendedDataRequest, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields)
+        public async Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder extendedDataRequest, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields, EthosExtensibleData extendedDataConfig)
         {
             Dictionary<string, Dictionary<string, string>> allColumnData = new Dictionary<string, Dictionary<string, string>>();
 
@@ -1164,6 +1162,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             updateRequest.CallChain = updateRequest.CallChain.Distinct().ToList();
 
+            // Update the specifications columns to include each requested column from the API.
+            // This allows us to compare access to restricted fields and log the view
+            // only if the API contains the column to be viewed.
+            if (extendedDataConfig != null)
+            {
+                foreach (var columnData in extendedDataConfig.ExtendedDataList)
+                {
+                    var columnName = columnData.ColleagueColumnName;
+                    string jsonPath = columnData.FullJsonPath;
+                    if (updateRequest.SpecColumnData.FirstOrDefault(cd => cd.SpecColumnNames.Contains(columnName)) == null)
+                    {
+                        updateRequest.SpecColumnData.Add(new SpecColumnData() { SpecColumnNames = columnName, SpecColumnPaths = jsonPath });
+                    }
+                }
+            }
+
             // Update the prepared Responses from the Configuration or from the update payload
             updateRequest.PreparedResponses = new List<PreparedResponses>();
             if (configuration.PreparedResponses != null)
@@ -1227,7 +1241,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 if (!responseDictionary.ContainsKey(cd.ColumnNames))
                 {
-                    responseDictionary.Add(cd.ColumnNames, cd.ColumnValues.TrimEnd(_VM).TrimEnd(_SM).TrimEnd(_TM).Replace(_SM, _VM).Replace(_TM, _SM).Replace(_XM, _SM));
+                    responseDictionary.Add(cd.ColumnNames, cd.ColumnValues.TrimEnd(DmiString._VM).TrimEnd(DmiString._SM).TrimEnd(DmiString._TM).Replace(DmiString._SM, DmiString._VM).Replace(DmiString._TM, DmiString._SM).Replace(_XM, DmiString._SM));
                 }
             }
 
@@ -1520,7 +1534,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var guidCollection = new Dictionary<string, string>();
             Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
             string primaryFileName = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
-            
+
             if (configuration.PrimaryGuidDbType == "K" || string.IsNullOrEmpty(configuration.PrimaryGuidDbType))
             {
                 if (await IsEthosFileSuiteTemplateFile(primaryFileName, false))
@@ -1814,7 +1828,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 return false;
             }
-            var secondaryData = entityData[fieldName].Split(_VM);
+            var secondaryData = entityData[fieldName].Split(DmiString._VM);
             if (!secondaryData.Contains(secondaryKey))
             {
                 return false;
@@ -2235,7 +2249,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private List<string> BuildParagraphForFilter(string value, EthosExtensibleDataFilter configuration)
         {
             var returnParagraph = new List<string>();
-            
+
             if (configuration.SelectParagraph != null && configuration.SelectParagraph.Any())
             {
                 var paragraph = new List<string>();
@@ -2613,7 +2627,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     bool includeKey = false;
                     if (columnData.DatabaseUsageType != null && (columnData.DatabaseUsageType.Equals("K", StringComparison.OrdinalIgnoreCase)
-                        || (columnData.DatabaseUsageType.Equals("D", StringComparison.OrdinalIgnoreCase) 
+                        || (columnData.DatabaseUsageType.Equals("D", StringComparison.OrdinalIgnoreCase)
                         && columnData.ColleagueFileName.Equals(primaryEntity, StringComparison.OrdinalIgnoreCase))))
                     {
                         includeKey = true;
@@ -2631,7 +2645,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             bool tryAgain = false;
                             try
                             {
-                                dataRecordColumns = await DataReader.ReadRecordColumnsAsync(primaryEntity, primaryKeyList[i].Split(_VM)[0], columnNames.ToArray());
+                                dataRecordColumns = await DataReader.ReadRecordColumnsAsync(primaryEntity, primaryKeyList[i].Split(DmiString._VM)[0], columnNames.ToArray());
                             }
                             catch
                             {
@@ -2641,7 +2655,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 try
                                 {
-                                    dataRecordColumns = await DataReader.ReadRecordColumnsAsync("VALCODES", primaryKeyList[i].Split(_VM)[0], columnNames.ToArray());
+                                    dataRecordColumns = await DataReader.ReadRecordColumnsAsync("VALCODES", primaryKeyList[i].Split(DmiString._VM)[0], columnNames.ToArray());
                                 }
                                 catch
                                 {
@@ -2659,8 +2673,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             string secondaryKey = string.Empty;
                             if (dataRecordColumns != null && dataRecordColumns.TryGetValue(secondaryKeyName, out secondaryKey) && dataRecordColumns.TryGetValue(columnData.ColleagueColumnName, out filterData))
                             {
-                                var splitSecondary = secondaryKey.Split(_VM);
-                                var splitFilterData = filterData.Split(_VM);
+                                var splitSecondary = secondaryKey.Split(DmiString._VM);
+                                var splitFilterData = filterData.Split(DmiString._VM);
                                 int idx = 0;
                                 foreach (var secondary in splitSecondary)
                                 {
@@ -2690,7 +2704,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (includeKey)
                     {
                         // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
-                        limitKeys.Add(primaryEntity + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                        limitKeys.Add(primaryEntity + "+" + primaryKeyList[i].Split(DmiString._VM)[0] + "+" + secondaryKeyList[i]);
                     }
                 }
             }
@@ -2703,7 +2717,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="filterValue"></param>
         /// <param name="columnData"></param>
         /// <returns></returns>
-        private async Task<string> ConvertFilterValue(string filterValue,EthosExtensibleDataFilter columnData)
+        private async Task<string> ConvertFilterValue(string filterValue, EthosExtensibleDataFilter columnData)
         {
             string propertyType = columnData.JsonPropertyType;
             string transFileName = columnData.TransFileName;

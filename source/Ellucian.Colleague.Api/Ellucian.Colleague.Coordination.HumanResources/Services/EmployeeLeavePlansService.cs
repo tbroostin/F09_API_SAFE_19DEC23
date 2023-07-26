@@ -292,6 +292,76 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
+        /// V3 Gets all EmployeeLeavePlan objects for the effective person id (supports employee, supervisor, leave approver, supervisor proxy access)
+        /// Used by Self Service in the Leave area
+        /// </summary>
+        /// <returns>A list of EmployeeLeavePlan Dto objects</returns>
+        public async Task<IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>> GetEmployeeLeavePlansV3Async(string effectivePersonId = null, bool bypassCache = false)
+        {
+            logger.Debug("********* Start - Service to get employee leave plans - Start *********");
+            //determine the effective person id and whether the current user needs/has proxy authority for that effective person id
+            if (string.IsNullOrWhiteSpace(effectivePersonId))
+            {
+                effectivePersonId = CurrentUser.PersonId;
+            }
+            //To view other's info, logged in user must be a proxy or time history admin or a leave approver
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
+            {
+                throw new PermissionsException(string.Format("User {0} does not have permission to view employee leave plan information for person {1}", CurrentUser.PersonId, effectivePersonId));
+            }
+
+            var leavePlans = await GetLeavePlansV2Async(bypassCache);
+            var leaveTypes = await GetLeaveCategoriesAsync(bypassCache);
+            var earningTypes = await GetEarningTypes2Async(bypassCache);
+
+            //returns this list when we have no leave plans or leave types
+            var EmptyLeavePlans = new List<Dtos.HumanResources.EmployeeLeavePlan>();
+
+            if (leavePlans == null || !leavePlans.Any())
+            {
+                logger.Error("No leave plans defined.");
+                return EmptyLeavePlans;
+            }
+
+            if (leaveTypes == null || !leaveTypes.Any())
+            {
+                logger.Error("No leave categories defined.");
+                return EmptyLeavePlans;
+            }
+
+            if (earningTypes == null || !earningTypes.Any())
+            {
+                throw new ArgumentException("No earning types defined.");
+            }
+
+            var employeeIds = new List<string>() { effectivePersonId };
+
+            // Supervisees for leave approver
+            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+            {
+                try
+                {
+                    employeeIds.AddRange((await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)));
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    logger.Error("Error getting supervisor employees", e.Message);
+                }
+            }
+            // Include the  leave plans without any associated earning types.
+            var employeeLeavePlanEntities = await employeeLeavePlansRepository.GetEmployeeLeavePlansByEmployeeIdsAsync(employeeIds.Distinct(), leavePlans, leaveTypes, earningTypes, true);
+            var employeeLeavePlanEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>();
+            logger.Debug("********* End - Service to get employee leave plans - End *********");
+            return employeeLeavePlanEntities.Select(lp => employeeLeavePlanEntityToDtoAdapter.MapToType(lp)).ToList();
+
+        }
+
+        /// <summary>
         /// Gets EmployeeLeavePlan objects for the specified criteria
         /// </summary>
         /// <param name="criteria"></param>
@@ -324,6 +394,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             else
             {
                 validEmployeeIds.Add(CurrentUser.PersonId);
+            }
+
+            // if the admin is querying, allow them to retrieve data for the employees requested
+            if (HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) && employeeIds.Any())
+            {
+                validEmployeeIds.AddRange(employeeIds);
             }
 
             var leavePlans = await GetLeavePlansV2Async(false);
@@ -419,17 +495,22 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
         /// <summary>
         /// Check permissions to view employee leave plans:
-        /// 1) when the supervisor id is defined in the criteria:
+        /// 1) The user is a Time History Admin with View All Time History permission codes
+        /// 2) when the supervisor id is defined in the criteria:
         ///     a) the authenticated user id must be the same as the supervisor id or be a proxy of a user with supervisor permission codes
         ///     b) the current user must have supervisor permissions to view superviee data
-        /// 2) when no supervisor id is defined in the criteria, the employee id defined in the criteria must be the current authenticated user
+        /// 3) when no supervisor id is defined in the criteria, the employee id defined in the criteria must be the current authenticated user
         /// </summary>
         /// <param name="supervisorId"></param>
         /// <param name="employeeIds"></param>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckEmployeeLeavePlansPermission(string supervisorId, IEnumerable<string> employeeIds)
         {
-            if (!string.IsNullOrEmpty(supervisorId))
+            if (HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory))
+            {
+                // The user is a TH Admin, allow them to proceed
+            }
+            else if (!string.IsNullOrEmpty(supervisorId))
             {
                 var hasProxyAccess = HasProxyAccessForPerson(supervisorId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval);
                 // the authenticated user id must be the same as the supervisor id or be a proxy of a user with supervisor permission codes
@@ -481,6 +562,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             catch (Exception e)
             {
                 logger.Error("Error getting supervisor employees", e.Message);
+            }
+
+            // if the admin is querying, allow them to retrieve data for the employees requested
+            if (HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) && employeeIds.Any())
+            {
+                supervisedEmployeeIds = supervisedEmployeeIds.Concat(employeeIds);
             }
 
             // when both the supervisor id and a limit list of employee ids are defined in criteria, verify all supervisees in list are supervised by this supervisor and return that list

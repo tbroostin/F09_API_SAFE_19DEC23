@@ -137,7 +137,7 @@ namespace Ellucian.Web.Http.Filters
                             if (customMediaTypeAttributeFilter)
                             {
                                 var exceptionObject = new IntegrationApiException();
-                                exceptionObject.AddError(new IntegrationApiError("Global.Internal.Error",
+                                exceptionObject.AddError(new IntegrationApiError("Global.SchemaValidation.Error", "Errors parsing input JSON.",
                                     ex.Message.Replace(Environment.NewLine, " ").Replace("\n", " ")));
                                 var serialized = JsonConvert.SerializeObject(exceptionObject);
                                 actionExecutedContext.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };

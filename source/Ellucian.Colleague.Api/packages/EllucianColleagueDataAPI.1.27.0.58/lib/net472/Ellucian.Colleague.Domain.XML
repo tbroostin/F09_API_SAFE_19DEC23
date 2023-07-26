@@ -1,0 +1,543 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Colleague.Domain</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Colleague.Domain.Entities.AuditLogCategory">
+            <summary>
+            Entity for the Valcodes for audit log categories.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.AuditLogCategory.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="!:AltIdTypes"/> class.
+            </summary>
+            <param name="guid">The Unique Identifier</param>
+            <param name="code">The code.</param>
+            <param name="description">The description.</param>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration">
+            <summary>
+            Indicates the audit log category and whether the category is enabled for audit logging.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration.EventId">
+            <summary>
+            Event ID key to Valcode associated to Audit Category
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration.Code">
+            <summary>
+            Short description from Valcode table
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration.Description">
+            <summary>
+            Description of the category from Valcode table
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration.IsEnabled">
+            <summary>
+            Flag to indicate if the audit category is enabled.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.AuditLogConfiguration.#ctor(System.String,System.String,System.String,System.Boolean)">
+            <summary>
+            Creates an AuditLogConfiguration instance with the provided properties.
+            </summary>
+            <param name="eventId"></param>
+            <param name="code"></param>
+            <param name="description"></param>
+            <param name="isEnabled"></param>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.CodeItem">
+            <summary>
+            Base class for entities that have a minimum of code/description fields. 
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.CodeItem.Code">
+            <summary>
+            An internal code value.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.CodeItem.Description">
+            <summary>
+            A user-facing description or "translation" of the code.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.CodeItem.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Domain.Entities.CodeItem"/> class.
+            </summary>
+            <param name="code">The code which must not be null or empty.</param>
+            <param name="description">The description which must not be null.</param>
+            <exception cref="T:System.ArgumentNullException">
+            code
+            or
+            description
+            </exception>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.CodeItem.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object" /> is equal to this instance.
+            Two instances of the same CodeItem shall be considered equal if their code values are equal.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object" /> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.CodeItem.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.GuidCodeItem">
+            <summary>
+            Base class for entities that have a minimum of GUID, code and description fields. 
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.GuidCodeItem.Guid">
+            <summary>
+            The Globally Unique ID (GUID) for this code. Always in lowercase.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.GuidCodeItem.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Domain.Entities.GuidCodeItem" /> class.
+            </summary>
+            <param name="guid">The GUID which must not be null or empty. Will be converted to lowercase.</param>
+            <param name="code">The code which must not be null or empty.</param>
+            <param name="description">The description which must not be null.</param>
+            <exception cref="T:System.ArgumentNullException">code
+            or
+            description</exception>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.GuidCodeItem.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object" /> is equal to this instance.
+            Two instances of the same GuidCodeItem shall be considered equal if their GUID and code values are equal.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object" /> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.GuidCodeItem.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.Permission">
+            <summary>
+            Represents a permission.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.Permission.Code">
+            <summary>
+            Gets the code of this permission.
+            </summary>
+            <value>
+            The code.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.Permission.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Domain.Entities.Permission"/> class.
+            </summary>
+            <param name="code">The code.</param>
+            <exception cref="T:System.ArgumentNullException">code</exception>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.RepositoryError">
+            <summary>
+            A repository error
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.RepositoryError.Code">
+            <summary>
+            An error code
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.RepositoryError.Message">
+            <summary>
+            Message providing specifics about the error
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.RepositoryError.Id">
+            <summary>
+            The global identifier of the resource in error
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.RepositoryError.SourceId">
+            <summary>
+            The source applications data reference identifier for the primary data entity used to create the resource
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.RepositoryError.#ctor(System.String,System.String)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="code">Error code, required</param>
+            <param name="message">Optional message</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.RepositoryError.#ctor(System.String,System.String,System.String,System.String)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="id">The global identifier of the resource in error</param>
+            <param name="sourceId">The source applications data reference identifier for the primary data entity used to create the resource</param>
+            <param name="code">Error code, required</param>
+            <param name="message">Optional message</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.RepositoryError.ToString">
+            <summary>
+            Output formatted error information
+            </summary>
+            <returns>Formatted error</returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.Role">
+            <summary>
+            Represents a role of a Colleague web user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.Role.Id">
+            <summary>
+            Gets the ID of this role.
+            </summary>
+            <value>
+            The ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.Role.Title">
+            <summary>
+            Gets the title of this role.
+            </summary>
+            <value>
+            The title.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.Role.#ctor(System.Int32,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Domain.Entities.Role"/> class.
+            </summary>
+            <param name="id">The ID.</param>
+            <param name="title">The title.</param>
+            <exception cref="T:System.ArgumentNullException">title</exception>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.Role.Permissions">
+            <summary>
+            Gets the list of permissions this Role has.
+            </summary>
+            <value>
+            The permissions.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.Role.AddPermission(Ellucian.Colleague.Domain.Entities.Permission)">
+            <summary>
+            Adds the specified permission to this role.
+            </summary>
+            <param name="permission">The permission.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.Role.RemovePermission(Ellucian.Colleague.Domain.Entities.Permission)">
+            <summary>
+            Removes the specified permission from this role.
+            </summary>
+            <param name="permission">The permission.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.Role.HasPermission(System.String)">
+            <summary>
+            Determines whether this role has the specified permission.
+            </summary>
+            <param name="permissionCode">The permission code.</param>
+            <returns>
+              <c>true</c> if the role has the specified permission; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Entities.User">
+            <summary>
+            Represents a Colleague web user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Entities.User.Login">
+            <summary>
+            Returns the Login ID.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Entities.User.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Colleague.Domain.Entities.User"/> class.
+            </summary>
+            <param name="login">The login.</param>
+            <exception cref="T:System.ArgumentNullException">login</exception>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Exceptions.RepositoryException">
+            <summary>
+            A repository exception
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Exceptions.RepositoryException.Errors">
+            <summary>
+            List of repository errors associated with this exception
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.#ctor(System.String)">
+            <summary>
+            Constructor with message
+            </summary>
+            <param name="message">Exception message</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.#ctor(System.String,System.Exception)">
+            <summary>
+            Constructor with message and inner exception
+            </summary>
+            <param name="message">Exception message</param>
+            <param name="e">Inner exception</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Constructor used with serialization
+            </summary>
+            <param name="info">Data describing how to serialize or deserialize the exception</param>
+            <param name="context">Provides context for serialization</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.AddError(Ellucian.Colleague.Domain.Entities.RepositoryError)">
+            <summary>
+            Add a repository error to this exception
+            </summary>
+            <param name="error">A repository error</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.AddErrors(System.Collections.Generic.IEnumerable{Ellucian.Colleague.Domain.Entities.RepositoryError})">
+            <summary>
+            Add multiple repository errors to this exception
+            </summary>
+            <param name="errors">A repository error</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Exceptions.RepositoryException.ToString">
+            <summary>
+            Format the exception to be readable
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Repositories.IRoleRepository">
+            <summary>
+            Interface for role repositories.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Repositories.IRoleRepository.Roles">
+            <summary>
+            Gets the roles.
+            </summary>
+            <value>
+            The roles.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.IRoleRepository.GetRolesAsync">
+            <summary>
+            Gets the roles asynchronously.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Repositories.ISessionRepository">
+            <summary>
+            Interface for session repositories.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ProductName">
+            <summary>
+            Optional. For usage tracking. Will be sent to Colleague as part of the login process.
+            Will be trimmed to 10 characters or less.
+            </summary>
+            <value>
+            The name of the product.
+            </value>
+        </member>
+        <member name="P:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ProductVersion">
+            <summary>
+            Optional. For usage tracking. Will be sent to Colleague as part of the login process.
+            </summary>
+            <value>
+            The product version.
+            </value>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.Login(System.String,System.String)">
+            <summary>
+            Logs into Colleague and returns a JSON web token.
+            </summary>
+            <param name="userId">The user id.</param>
+            <param name="password">The password.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.LoginAsync(System.String,System.String)">
+            <summary>
+            Logs into Colleague asynchronously and returns a JSON web token.
+            </summary>
+            <param name="userId">The user id.</param>
+            <param name="password">The password.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ProxyLogin(System.String,System.String,System.String)">
+            <summary>
+            Logs into Colleague using a proxy and returns a JSON web token.
+            </summary>
+            <param name="proxyId">The proxy id.</param>
+            <param name="userId">The user id.</param>
+            <param name="proxyPassword">The proxy password.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ProxyLoginAsync(System.String,System.String,System.String,System.String)">
+            <summary>
+            Logs into Colleague asynchronously using a proxy and returns a JSON web token.
+            </summary>
+            <param name="proxyId">The proxy id.</param>
+            <param name="userId">The user id.</param>
+            <param name="proxyPassword">The proxy password.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetToken(System.String,System.String)">
+            <summary>
+            Creates a JSON web token for an existing Colleague session.
+            </summary>
+            <param name="colleagueSecurityToken">The Colleague security token.</param>
+            <param name="colleagueControlId">The Colleague control ID.</param>
+            <returns>
+            a JSON web token
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetTokenAsync(System.String,System.String)">
+            <summary>
+            Creates a JSON web token asynchronously for an existing Colleague session.
+            </summary>
+            <param name="colleagueSecurityToken">The Colleague security token.</param>
+            <param name="colleagueControlId">The Colleague control ID.</param>
+            <returns>
+            a JSON web token
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetToken(System.String)">
+            <summary>
+            Creates a JSON web token for an existing Colleague session.
+            </summary>
+            <param name="basicCredentials">The basic credentials value (Base64 username + ':' + password).</param>
+            <returns>
+            a JSON web token
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetTokenAsync(System.String)">
+            <summary>
+            Creates a JSON web token asynchronously for an existing Colleague session.
+            </summary>
+            <param name="basicCredentials">The basic credentials value (Base64 username + ':' + password).</param>
+            <returns>
+            a JSON web token
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetOauthProxyTokenAsync(System.String,System.String,System.String)">
+            <summary>
+            Creates a JSON web token for an existing Colleague session as an asynchronous transaction.
+            </summary>
+            <param name="proxyId">The proxy id.</param>
+            <param name="proxyPassword">The proxy password.</param>
+            <param name="personGuid">Person GUID string to represent person.</param>
+            <returns>
+            a JSON web token tuple with username for the person GUID passed in.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.Logout(System.String)">
+            <summary>
+            Logs out of Colleague.
+            </summary>
+            <param name="token">a JSON web token</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.LogoutAsync(System.String)">
+            <summary>
+            Logs out of Colleague as an asynchronous transaction.
+            </summary>
+            <param name="token">a JSON web token</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ChangePassword(System.String,System.String,System.String)">
+            <summary>
+            Changes the password.
+            </summary>
+            <param name="userId">The user id.</param>
+            <param name="oldPassword">The old password.</param>
+            <param name="newPassword">The new password.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.ChangePasswordAsync(System.String,System.String,System.String)">
+            <summary>
+            Changes the password as an asynchronous transaction.
+            </summary>
+            <param name="userId">The user id.</param>
+            <param name="oldPassword">The old password.</param>
+            <param name="newPassword">The new password.</param>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.SetProxySubjectAsync(System.String)">
+            <summary>
+            Asynchronously gets the updated JSON web token string with principal user's claims added.
+            </summary>
+            <param name="principalUserPersonId">The principal user's person ID.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.SyncSessionAsync(System.String,System.String)">
+            <summary>
+            Performs a CTRQ request which will sync the Colleague web session
+            token's idle timeout.
+            </summary>
+            <param name="securityToken">The session's security token.</param>
+            <param name="controlId">The session's control ID.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.GetMultifactorTokenAsync(System.String,System.String)">
+            <summary>
+            Sends the user a multifactor one-time password and
+            retrieves the temporary service token used in future verification
+            along with the MFA OTP.
+            </summary>
+            <param name="userId">User name</param>
+            <param name="password">Password</param>
+            <returns>Service token to use with the subsequent verification request</returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.ISessionRepository.LoginWithMultifactorAsync(System.String,System.String,System.String,System.String)">
+            <summary>
+            Logs into Colleague using a multifactor token verification, and returns a JSON web token.
+            </summary>
+            <param name="userId">The user id.</param>
+            <param name="mfaServiceToken">Multifactor service token</param>
+            <param name="mfaOneTimePassword">Multifactor one-time password</param>
+            <param name="personGuid">Person GUID string to represent person.</param>
+            <returns>
+            a JSON web token
+            </returns>
+        </member>
+        <member name="T:Ellucian.Colleague.Domain.Repositories.IUserRepository">
+            <summary>
+            Interface for user repositories.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.IUserRepository.GetMatchingUsers(System.String)">
+            <summary>
+            Returns the users whose login name begins with the specified string.
+            </summary>
+            <param name="partialLogin">The partial login search string.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Colleague.Domain.Repositories.IUserRepository.GetMatchingUsersAsync(System.String)">
+            <summary>
+            Asynchronously returns the users whose login name begins with the specified string.
+            </summary>
+            <param name="partialLogin">The partial login search string.</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

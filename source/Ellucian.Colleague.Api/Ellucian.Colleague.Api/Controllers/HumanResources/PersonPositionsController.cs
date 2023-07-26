@@ -1,10 +1,13 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using slf4net;
 using System;
@@ -24,6 +27,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.HumanResources)]
+    [Metadata(ApiDescription = "Provides positions assigned to a person", ApiDomain = "Human Resources")]
     public class PersonPositionsController : BaseCompressedApiController
     {
         private readonly ILogger logger;
@@ -51,6 +55,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
         /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns>A list of PersonPosition objects</returns>
+        
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets a list of positions assigned to a user.",
+            HttpMethodDescription = "Gets a list of PersonPostion objects.")]
         public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -274,8 +274,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 regUserSection.RgucsDropStartDate,
                                                 regUserSection.RgucsDropEndDate,
                                                 regUserSection.RgucsDropGradeReqdDate,
-                                                null
-                                                );
+                                                null, 
+                                                RegistrationDateSource.RegistrationUserSection);
 
                                                 registrationGroup.AddSectionRegistrationDate(sectionRegistrationDate);
                                             }

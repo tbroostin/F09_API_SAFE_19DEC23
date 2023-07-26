@@ -1,31 +1,26 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonBenefitDependentsRepository : BaseColleagueRepository, IPersonBenefitDependentsRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
-
         /// <summary>
         /// ..ctor
         /// </summary>
@@ -58,7 +53,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var perbenIds2 = new List<string>();
             foreach (var perbenId in perbenIds)
             {
-                var perbenKey = perbenId.Split(_VM)[0];
+                var perbenKey = perbenId.Split(DmiString._VM)[0];
                 perbenIds2.Add(perbenKey);
             }
 

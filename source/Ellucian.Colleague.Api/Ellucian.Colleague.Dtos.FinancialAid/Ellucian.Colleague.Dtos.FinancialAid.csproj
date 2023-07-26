@@ -71,8 +71,8 @@
       <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="slf4net, Version=0.1.32.1, Culture=neutral, PublicKeyToken=592edb3b6b36b5ba, processorArchitecture=MSIL">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
@@ -81,6 +81,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -100,6 +101,22 @@
     <Compile Include="AcademicProgressStatus.cs" />
     <Compile Include="AcademicProgressStatusCategory.cs" />
     <Compile Include="AcademicProgressType.cs" />
+    <Compile Include="Address.cs" />
+    <Compile Include="AidApplicationAdditionalInfo.cs" />
+    <Compile Include="AidApplicationDemographics.cs" />
+    <Compile Include="AidApplicationResults.cs" />
+    <Compile Include="AidApplications.cs" />
+    <Compile Include="AidApplicationsParentMarital.cs" />
+    <Compile Include="AidApplicationsTaxFilingStatusDto.cs" />
+    <Compile Include="AidApplicationsTaxFormTypeDto.cs" />
+    <Compile Include="AidApplicationsTaxReturnFiledDto.cs" />
+    <Compile Include="AidApplicationsYesOrNoDto.cs" />
+    <Compile Include="AlternatePrimaryEfc.cs" />
+    <Compile Include="AssumedCitizenshipStatus.cs" />
+    <Compile Include="AssumedParentMaritalStatus.cs" />
+    <Compile Include="AssumedStudentDetails.cs" />
+    <Compile Include="AssumedStudentMaritalStatus.cs" />
+    <Compile Include="AssumedYesNo.cs" />
     <Compile Include="Award.cs" />
     <Compile Include="AverageAwardPackage.cs" />
     <Compile Include="AwardCategory.cs" />
@@ -124,6 +141,8 @@
     <Compile Include="AwardStatusCategory.cs" />
     <Compile Include="AwardType.cs" />
     <Compile Include="AwardYear.cs" />
+    <Compile Include="AidApplicationCitizenshipStatus.cs" />
+    <Compile Include="HousingOption.cs" />
     <Compile Include="CourseCreditAssociation.cs" />
     <Compile Include="AwardPeriodCredits.cs" />
     <Compile Include="AwardYearCredits.cs" />
@@ -132,7 +151,9 @@
     <Compile Include="ChecklistItemControlStatus.cs" />
     <Compile Include="ChecklistItem.cs" />
     <Compile Include="ChecklistItemType.cs" />
+    <Compile Include="AidApplicationsDegreeOrCert.cs" />
     <Compile Include="DocumentStatus.cs" />
+    <Compile Include="EfcChangeFlag.cs" />
     <Compile Include="FinancialAidExplanationType.cs" />
     <Compile Include="FinancialAidApplication.cs" />
     <Compile Include="FinancialAidApplication2.cs" />
@@ -146,10 +167,20 @@
     <Compile Include="FinancialAidOffice2.cs" />
     <Compile Include="FinancialAidOffice3.cs" />
     <Compile Include="FinancialAidPersonQueryCriteria.cs" />
+    <Compile Include="AidApplicationsGradLvlInCollege.cs" />
     <Compile Include="GroupType.cs" />
+    <Compile Include="HighSchoolDetails.cs" />
     <Compile Include="HousingCode.cs" />
+    <Compile Include="AidApplicationsHSGradType.cs" />
+    <Compile Include="AidApplicationsStudentMarital.cs" />
+    <Compile Include="AidApplicationsParentEdLevel.cs" />
+    <Compile Include="JudgementIndicator.cs" />
+    <Compile Include="LastNameChange.cs" />
+    <Compile Include="ParentMaritalInfo.cs" />
+    <Compile Include="ParentsIncome.cs" />
     <Compile Include="InformedBorrowerItem.cs" />
     <Compile Include="IpedsInstitution.cs" />
+    <Compile Include="LegalResidence.cs" />
     <Compile Include="Link.cs" />
     <Compile Include="LinkTypes.cs" />
     <Compile Include="LoanRequest.cs" />
@@ -157,10 +188,14 @@
     <Compile Include="LoanRequestStatus.cs" />
     <Compile Include="OfferLetterHousingEnrollmentItem.cs" />
     <Compile Include="OutsideAward.cs" />
+    <Compile Include="ParentDetails.cs" />
+    <Compile Include="ParentsInfo.cs" />
     <Compile Include="PlusApplicationItem.cs" />
     <Compile Include="PlusLoanItem.cs" />
     <Compile Include="PlusMpnItem.cs" />
     <Compile Include="ProfileApplication.cs" />
+    <Compile Include="SchoolCode.cs" />
+    <Compile Include="AidApplicationHousingPlanDto.cs" />
     <Compile Include="ShoppingSheet3.cs" />
     <Compile Include="ShoppingSheet2.cs" />
     <Compile Include="ShoppingSheet.cs" />
@@ -173,6 +208,7 @@
     <Compile Include="ShoppingSheetCostItem.cs" />
     <Compile Include="ShoppingSheetEfcOption.cs" />
     <Compile Include="ShoppingSheetOfficeType.cs" />
+    <Compile Include="SimplifiedNeedsTest.cs" />
     <Compile Include="StudentAwardPackage.cs" />
     <Compile Include="StudentAwardSummaryQueryCriteria.cs" />
     <Compile Include="FafsaQueryCriteria.cs" />
@@ -187,9 +223,11 @@
     <Compile Include="StudentDefaultAwardPeriod.cs" />
     <Compile Include="StudentDocument.cs" />
     <Compile Include="StudentFinancialAidChecklist.cs" />
+    <Compile Include="StudentIncome.cs" />
     <Compile Include="StudentLoanHistory.cs" />
     <Compile Include="StudentLoanSummary.cs" />
     <Compile Include="StudentLoanLimitation.cs" />
+    <Compile Include="StudentMaritalInfo.cs" />
     <Compile Include="StudentNsldsInformation.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -210,6 +248,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
       <Project>{28eb3cac-2fa7-401e-8246-0c03c50fdeda}</Project>
       <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0CA929CA-2370-4763-BE71-C91C244E0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

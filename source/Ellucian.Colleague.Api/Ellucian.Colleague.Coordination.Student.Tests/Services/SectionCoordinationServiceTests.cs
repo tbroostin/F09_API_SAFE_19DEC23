@@ -459,9 +459,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 section3.TermId = "2011/FA";
                 section3.EndDate = new DateTime(2011, 12, 21);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster1.SectionId, false)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster2.SectionId, false)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster3.SectionId, false)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster1.SectionId, false, true)).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster2.SectionId, false, true)).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionRoster3.SectionId, false, true)).ReturnsAsync(section3);
 
                 var sectionRosterAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRoster, Ellucian.Colleague.Dtos.Student.SectionRoster>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRoster, Ellucian.Colleague.Dtos.Student.SectionRoster>()).Returns(sectionRosterAdapter);
@@ -624,9 +624,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 section3 = null;
 
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3", false)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false, true)).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false, true)).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3", false, true)).ReturnsAsync(section3);
 
                 var sectionWaitlistAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist, Ellucian.Colleague.Dtos.Student.SectionWaitlist>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlist, Ellucian.Colleague.Dtos.Student.SectionWaitlist>()).Returns(sectionWaitlistAdapter);
@@ -784,9 +784,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 section3 = null;
 
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false)).ReturnsAsync(section2);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3", false)).ReturnsAsync(section3);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false, true)).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false, true)).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC3", false, true)).ReturnsAsync(section3);
 
                 var sectionWaitlistAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent, Ellucian.Colleague.Dtos.Student.SectionWaitlistStudent>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionWaitlistStudent, Ellucian.Colleague.Dtos.Student.SectionWaitlistStudent>()).Returns(sectionWaitlistAdapter);
@@ -3137,7 +3137,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task SectionService_Delete()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(meeting1.SectionId, false)).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(meeting1.SectionId, false, false)).ReturnsAsync(section1);
                 sectionRepoMock.Setup(repo => repo.DeleteSectionMeetingAsync(meeting1.Id, section1.Faculty.ToList()));
                 await sectionCoordinationService.DeleteInstructionalEventAsync(meeting1.Guid);
             }
@@ -11631,8 +11631,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 section1.AddFaculty("STU1");
                 section2 = new Ellucian.Colleague.Domain.Student.Entities.Section("SEC2", "1119", "02", new DateTime(2012, 09, 01), 3.0m, null, "Introduction to Art", "IN", dpts, levels, "UG", statuses2, true);
 
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).ReturnsAsync(section1);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false)).ReturnsAsync(section2);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false, true)).ReturnsAsync(section1);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC2", false, true)).ReturnsAsync(section2);
 
 
                 textbook = new Domain.Student.Entities.Book("", "123456789", "Title", "Author", "Publisher", "Copyright",
@@ -14012,7 +14012,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Test when the get section from the repository fails
                 string sectionId = "nullSection";
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).Returns(Task.FromResult<Section>(null));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false, true)).Returns(Task.FromResult<Section>(null));
                 var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
             }
 
@@ -14026,7 +14026,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
                         new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
                         new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).Returns(Task.FromResult<Section>(secEntity));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false, true)).Returns(Task.FromResult<Section>(secEntity));
 
                 // Current user is not a faculty member of the section
                 var dto = await sectionCoordinationService.GetSectionMidtermGradingCompleteAsync(sectionId);
@@ -14045,7 +14045,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
                         new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
                 secEntity.AddFaculty("STU1");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).Returns(Task.FromResult<Section>(secEntity));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false, true)).Returns(Task.FromResult<Section>(secEntity));
 
                 // Mock a midterm grading complete entity that the repository will return
                 var entity = new Ellucian.Colleague.Domain.Student.Entities.SectionMidtermGradingComplete(sectionId);
@@ -14297,7 +14297,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Section secEntity = new Section(sectionId, "crsId", "num", new DateTime(2010, 1, 1), 3, null, "title", "Inst",
                         new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
                         new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false)).Returns(Task.FromResult<Section>(secEntity));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(sectionId, false, true)).Returns(Task.FromResult<Section>(secEntity));
 
                 // Current user is not a faculty member of the section
                 var dto = await sectionCoordinationService.PostSectionMidtermGradingCompleteAsync(sectionId, postDto);
@@ -14737,7 +14737,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task SectionCoordinationService_CreateSectionCensusCertificationAsync_SectionToVerify_GetSection_ThrowsException()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new Exception("what happened!!"));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).Throws(new Exception("what happened!!"));
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -14746,7 +14746,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task SectionCoordinationService_CreateSectionCensusCertificationAsync_SectionToVerify_GetSection_ReturnsNull()
             {
                 Section sec = null;
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(sec);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(sec);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
             //person is not the faculty in section
@@ -14760,7 +14760,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         new List<OfferingDepartment> { new OfferingDepartment("DEPT1") }, new List<string> { "UG" }, "UG",
                         new List<SectionStatusItem> { new SectionStatusItem(SectionStatus.Active, "A", new DateTime(2010, 1, 1)) });
                 secEntity.AddFaculty("whoAreYou");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -14785,7 +14785,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -14819,7 +14819,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -14853,7 +14853,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -14885,7 +14885,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate,
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime,
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -14908,7 +14908,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate, 
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime, 
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -14931,7 +14931,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate,
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime,
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -14951,7 +14951,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate, 
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime, 
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
 
                 studentConfigRepoMock.Setup(repo => repo.GetSectionCensusConfiguration2Async()).Throws(new Exception("what happened!!"));
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -14973,7 +14973,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate, 
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime, 
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
 
                 Domain.Student.Entities.SectionCensusConfiguration2 sectionCensusConfig = null;
                 studentConfigRepoMock.Setup(repo => repo.GetSectionCensusConfiguration2Async()).ReturnsAsync(sectionCensusConfig);
@@ -14998,7 +14998,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     sectionCensusToCertify.CensusCertificationRecordedDate, 
                     sectionCensusToCertify.CensusCertificationRecordedTime.Value.DateTime, 
                     "0000678"));
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -15014,7 +15014,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(DateTime.Today);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -15030,7 +15030,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).Throws(new Exception());
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
@@ -15049,7 +15049,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(DateTime.Today);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -15067,7 +15067,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(DateTime.Today);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
             }
 
@@ -15092,7 +15092,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -15125,7 +15125,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);
@@ -15153,7 +15153,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 secEntity.AddFaculty("0000678");
                 sectionRegistrationDate.CensusDates = new List<DateTime?>();
                 sectionRegistrationDate.CensusDates.Add(sectionCensusToCertify.CensusCertificationDate);
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).ReturnsAsync(secEntity);
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).ReturnsAsync(secEntity);
                 sectionRepoMock.Setup(repo => repo.CreateSectionCensusCertificationAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(certifiedCensus);
 
                 Dtos.Student.SectionCensusCertification certifiedCensusDto = await sectionCoordinationService.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify, sectionRegistrationDate);

@@ -1,5 +1,4 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -26,8 +25,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class DocumentApprovalRepository : BaseColleagueRepository, IDocumentApprovalRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
-
         public DocumentApprovalRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -179,7 +176,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             return documentApproval;
-        } 
+        }
 
         /// <summary>
         /// Update approval information on a group of documents.
@@ -202,9 +199,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var returnDocumentFound = approvalDocumentRequests.Any(x => x.Return);
-            if(returnDocumentFound)
+            if (returnDocumentFound)
             {
-                if(approvalDocumentRequests.Count() > 1)
+                if (approvalDocumentRequests.Count() > 1)
                 {
                     throw new InvalidOperationException("There must be only one document for return request.");
                 }
@@ -212,10 +209,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var purchasingDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
                 if (purchasingDefaults != null)
                 {
-                    allowApprovalReturns = purchasingDefaults.PurApprAllowReturnFlag.ToUpper() == "Y"; 
+                    allowApprovalReturns = !string.IsNullOrEmpty(purchasingDefaults.PurApprAllowReturnFlag) ? purchasingDefaults.PurApprAllowReturnFlag.ToUpper() == "Y" : false;
                 }
 
-                if(!allowApprovalReturns)
+                if (!allowApprovalReturns)
                 {
                     throw new InvalidOperationException("Approval returns not enabled.");
                 }
@@ -263,15 +260,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             List<decimal?> documentOverAmounts = new List<decimal?>();
             List<string> documentTimestamps = new List<string>();
             List<string> documentItems = new List<string>();
-            List<string> itemTimestamps = new List<string>();            
+            List<string> itemTimestamps = new List<string>();
             List<string> returnComments = new List<string>();
             if (returnDocumentFound)
             {
-                var returnDocument = approvalDocumentRequests.First();                
+                var returnDocument = approvalDocumentRequests.First();
                 returnComments.Add(returnDocument.ReturnComments);
                 documentTypes.Add(returnDocument.DocumentType);
                 documentIds.Add(returnDocument.DocumentId);
-                documentNumbers.Add(returnDocument.DocumentNumber);                
+                documentNumbers.Add(returnDocument.DocumentNumber);
                 documentNextApprovers.Add(returnDocument.NextApprover);
                 documentOverAmounts.Add(returnDocument.OverBudgetAmount);
                 documentTimestamps.Add(returnDocument.ChangeDate + "*" + returnDocument.ChangeTime);
@@ -383,7 +380,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 // there may be multiple (sub-valued) messages for each approved document.
                                 if (approvedDocument.AlApprDocMsgs != null)
                                 {
-                                    string[] subvalues = approvedDocument.AlApprDocMsgs.Split(_SM);
+                                    string[] subvalues = approvedDocument.AlApprDocMsgs.Split(DmiString._SM);
                                     List<string> messages = new List<string>();
                                     messages.AddRange(subvalues);
                                     document.DocumentMessages = messages;
@@ -409,7 +406,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 // there may be multiple (sub-valued) messages for each non-updated document.
                                 if (notApprovedDocument.AlNoupdtReasons != null)
                                 {
-                                    string[] subvalues = notApprovedDocument.AlNoupdtReasons.Split(_SM);
+                                    string[] subvalues = notApprovedDocument.AlNoupdtReasons.Split(DmiString._SM);
                                     List<string> messages = new List<string>();
                                     messages.AddRange(subvalues);
                                     document.DocumentMessages = messages;

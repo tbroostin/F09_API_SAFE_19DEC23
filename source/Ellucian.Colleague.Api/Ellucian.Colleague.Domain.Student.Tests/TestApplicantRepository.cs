@@ -123,5 +123,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             }
 
         }
+
+        public async Task<string> GetStwebDefaultsHierarchyAsync()
+        {
+            return "true";
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private Dictionary<string, GuidLookupResult> dictResult;
 
         private string guid = "65eb3f15-139a-4884-9463-281872cbf2d3";
-        
+
         int offset = 0;
         int limit = 200;
 
@@ -120,15 +120,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             //var x = new StudentTypeInfo("ALUM", new DateTime(2018, 10, 31));
             //var x2 = new List<StudentTypeInfo>() { x };
             //var x3 = new List<StudentTypeInfo>() { new StudentTypeInfo("ALUM", new DateTime(2018, 10, 31)) };
-        
+
             var studentRecord1 = new Students()
             {
                 RecordGuid = "65eb3f15-139a-4884-9463-281872cbf2d3",
                 Recordkey = "0000123",
-                StuAcadPrograms = new List<string>() { "BA.ENGL"},
-                StuTypes = new List<string>() { "ALUM"},
+                StuAcadPrograms = new List<string>() { "BA.ENGL" },
+                StuTypes = new List<string>() { "ALUM" },
                 //StuTypeInfo = new List<StudentTypeInfo>() { new StudentTypeInfo("ALUM", new DateTime(2018, 10, 31)) }
-                StuAcadLevels = new List<string>() { "UG"}
+                StuAcadLevels = new List<string>() { "UG" }
             };
             var studentRecord2 = new Students()
             {
@@ -145,14 +145,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 RecordGuid = "46fdbd32-31fc-45a2-989d-4a442d2dcc15",
                 Recordkey = "0000123*BA.ENGL",
                 StprStartDate = new List<DateTime?> { new DateTime(2010, 10, 31) },
-                StprStatus = new List<string> { "A"}
+                StprStatus = new List<string> { "A" }
             };
             studentProgramData = new Collection<StudentPrograms>();
             studentProgramData.Add(studentProgram1);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<StudentPrograms>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentProgramData);
 
             var studentAcadLevel1 = new StudentAcadLevels()
-            {                
+            {
                 Recordkey = "0000123*UG",
                 StaClass = "FR",
                 StaStartTerm = "2010/FA"
@@ -160,8 +160,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             studentAcadLevelData = new Collection<StudentAcadLevels>();
             studentAcadLevelData.Add(studentAcadLevel1);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadLevels>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentAcadLevelData);
-            
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", It.IsAny<bool>())).ReturnsAsync (_studentProgramStatuses);
+
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", It.IsAny<bool>())).ReturnsAsync(_studentProgramStatuses);
 
             dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "0000123", "0000789" });
 
@@ -307,7 +307,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestMethod]
         public async Task StudentRepository_GetDataModelStudentGuid2_EmptySublist()
         {
-            var result = await _studentRepository.GetDataModelStudents2Async(0, 0, false, null, null, null, null);            
+            var result = await _studentRepository.GetDataModelStudents2Async(0, 0, false, null, null, null, null);
             Assert.AreEqual(result.Item1.Count(), 0, "Record count");
         }
 
@@ -317,7 +317,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var result = await _studentRepository.GetDataModelStudents2Async(offset, limit, false, null, null, null, null);
             Assert.AreEqual(result.Item1.Count(), 2, "Record count");
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task StudentRepository_GetDataModelStudentFromGuid2_ArgumentNullException()
@@ -331,7 +331,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             LdmGuid ldmGuid = new LdmGuid()
             {
                 LdmGuidEntity = "STUDENTS",
-                LdmGuidLdmName  = "students",
+                LdmGuidLdmName = "students",
                 LdmGuidPrimaryKey = "0000123",
                 Recordkey = guid
             };
@@ -380,7 +380,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var result = await _studentRepository.GetDataModelStudentFromGuid2Async(guid);
         }
     }
-        
+
     [TestClass]
     public class StudentRepositoryTests : BasePersonSetup
     {
@@ -462,7 +462,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
             IEnumerable<Domain.Student.Entities.Student> students = await studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData);
-            dataReaderMock.Verify(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>(new string[] { knownStudentId1 , knownStudentId1, knownStudentId2 }, It.IsAny<Boolean>()));
+            dataReaderMock.Verify(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>(new string[] { knownStudentId1, knownStudentId1, knownStudentId2 }, It.IsAny<Boolean>()));
         }
 
         [TestMethod]
@@ -475,7 +475,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
             IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
             IEnumerable<Domain.Student.Entities.Student> students = await studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData);
-            dataReaderMock.Verify(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>(new string[] { knownStudentId1,  knownStudentId2 }, It.IsAny<Boolean>()));
+            dataReaderMock.Verify(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>(new string[] { knownStudentId1, knownStudentId2 }, It.IsAny<Boolean>()));
         }
 
         [TestMethod]
@@ -1343,7 +1343,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock.Setup<Task<DataContracts.Students>>(a => a.ReadRecordAsync<DataContracts.Students>(knownStudentId3, true)).ReturnsAsync(students[2]);
             string[] knownStudentIds3 = { knownStudentId3 };
             dataReaderMock.Setup<Task<Collection<DataContracts.Students>>>(a => a.BulkReadRecordAsync<DataContracts.Students>(knownStudentIds3, true)).ReturnsAsync(new Collection<DataContracts.Students> { students[2] });
-            
+
             // mock data accessor APPLICANTS response - valid id 0000003
             dataReaderMock.Setup<Task<DataContracts.Applicants>>(a => a.ReadRecordAsync<DataContracts.Applicants>(knownStudentId3, true)).ReturnsAsync(applicants[2]);
 
@@ -1604,7 +1604,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             stwebDefaults.StwebRegUsersId = "REGUSERID";
             return stwebDefaults;
         }
-    }       
+    }
 
     [TestClass]
     public class StudentRepositoryTests_GetGradeRestrictions : BasePersonSetup
@@ -2220,7 +2220,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 if (term.TermCode == "term3")
                 {
-                    newTerm.TermAddCheckDate = DateTime.Today.AddYears(2); 
+                    newTerm.TermAddCheckDate = DateTime.Today.AddYears(2);
                 }
                 if (term.TermCode == "term4" || term.TermCode == "term5")
                 {
@@ -2823,8 +2823,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestMethod]
         public async Task GetTranscript_ReturnsText()
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
-            var response1 = new CreatePlainTextTranscriptResponse() { TranscriptText = "Transcript Text Line1" + _VM + "Transcript Text Line2" };
+            var response1 = new CreatePlainTextTranscriptResponse() { TranscriptText = "Transcript Text Line1" + DmiString._VM + "Transcript Text Line2" };
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<CreatePlainTextTranscriptRequest, CreatePlainTextTranscriptResponse>(It.IsAny<CreatePlainTextTranscriptRequest>()))
                 .ReturnsAsync(response1);
             var result = await studentRepository.GetTranscriptAsync(studentId, transcriptGrouping);
@@ -3063,11 +3062,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             MockCleanup();
         }
-        
+
         [TestMethod]
         // Verify that the respository RegisterAsync succsesfully passes data from the entity through to the CTX
         // Also test that error messages returned from the CTX are returned in the response domain entity.
-        public async Task StudentRepository_RegisterAsyncSuccess()            
+        public async Task StudentRepository_RegisterAsyncSuccess()
         {
             // A RegistrationRequest entity that will be passed to RegisterAsync
             string studentID = "astudent";
@@ -3281,7 +3280,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException),"NullErrorMessageStudent")]
+        [ExpectedException(typeof(InvalidOperationException), "NullErrorMessageStudent")]
         // Verify the error handling of an error message returned from the CTX.
         public async Task StudentRepository_ErrorMessageFromCTX()
         {
@@ -3541,7 +3540,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(0, result.Count());
         }
 
-      
+
 
         [TestMethod]
         public async Task SearchByNameForExactMatchAsync_ReturnsAdviseesRequestedReviewFirst()
@@ -3624,7 +3623,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         private void BuildMockStudentRepository()
         {
-             studentAcadLevels = new Collection<Student.DataContracts.StudentAcadLevels>();
+            studentAcadLevels = new Collection<Student.DataContracts.StudentAcadLevels>();
             studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*UG", StaClass = "first class", StaEndDate = DateTime.Today.AddYears(-3), StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2012/FA" }); //end date and start date in past
             studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*GR", StaAdmitStatus = "admitted", StaEndDate = DateTime.Today.AddYears(+3), StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2015/FA" }); //start date in past end date in future
             studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*CE", StaEndDate = null, StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2016/FA" }); //start date in past, no end date
@@ -3702,13 +3701,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentAcadLevels>(It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
             var result = await studentRepository.GetStudentAcademicLevelsAsync("no-pointer-records");
-            loggerMock.Verify(l=>l.Error("Cannot find any academic levels for the student no-pointer-records in STUDENT.ACAD.LEVELS file"));
+            loggerMock.Verify(l => l.Error("Cannot find any academic levels for the student no-pointer-records in STUDENT.ACAD.LEVELS file"));
         }
         //student academic level file does not have any records for the keys with studentId*acadLevel
         [TestMethod]
         public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentACadLevelPointerMissingFromAcadLevelFile()
         {
-           var result= await studentRepository.GetStudentAcademicLevelsAsync("000111");
+            var result = await studentRepository.GetStudentAcademicLevelsAsync("000111");
             Assert.IsNotNull(result);
             loggerMock.Verify(l => l.Error("Cannot find student's academic level for the key- 000111*not-found"));
         }
@@ -3725,7 +3724,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestMethod]
         public async Task StudentRepository_GetStudentAcademicLevelsAsync_HappyPath()
         {
-            var result =( await studentRepository.GetStudentAcademicLevelsAsync("000111")).ToList();
+            var result = (await studentRepository.GetStudentAcademicLevelsAsync("000111")).ToList();
             Assert.IsNotNull(result);
             Assert.AreEqual(4, result.Count);
             Assert.AreEqual("UG", result[0].AcademicLevel);
@@ -3763,4 +3762,501 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
     }
 
+    [TestClass]
+    public class StudentRepositoryTests_UpdateStudent : BasePersonSetup
+    {
+        private TestStudentRepository testStudentRepository;
+        private StudentRepository studentRepository;
+        const string CacheName = "Ellucian.Web.Student.Data.Colleague.Repository.StudentRepository";
+        private string knownStudentId1;
+        private string knownStudentId2;
+        private string knownStudentId3;
+        private string unknownStudentId;
+        private string[] acadPrograms;
+        private string quote;
+        private string educationalGoalDescription;
+
+        private Collection<DataContracts.Students> students;
+        private Collection<DataContracts.Applicants> applicants;
+        private Collection<Base.DataContracts.PersonSt> personStRecords;
+        private Collection<DataContracts.StudentAdvisement> studentAdvisements;
+        private Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> people;
+        private Collection<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson> foreignPeople;
+
+        private Mock<IColleagueTransactionInvoker> iColleagueTransactionInvokerMock;
+
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            testStudentRepository = new TestStudentRepository();
+            iColleagueTransactionInvokerMock = new Mock<IColleagueTransactionInvoker>();
+            students = new Collection<DataContracts.Students>();
+            applicants = new Collection<DataContracts.Applicants>();
+            personStRecords = new Collection<Base.DataContracts.PersonSt>();
+            studentAdvisements = new Collection<DataContracts.StudentAdvisement>();
+            people = new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>();
+            foreignPeople = new Collection<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>();
+            quote = '"'.ToString();
+            educationalGoalDescription = "Masters degree";
+            // Initialize person setup and Mock framework
+            PersonSetupInitialize();
+            SetupData();
+            studentRepository = BuildMockStudentRepository();
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            studentRepository = null;
+        }
+
+        [TestMethod]
+        public async Task StudentRepositoryTests_UpdateStudentAsync()
+        {
+            var guid = "65eb3f15-139a-4884-9463-281872cbf2d3";
+            Collection<DataContracts.Students> StudentDb = new Collection<DataContracts.Students>();
+
+            Domain.Student.Entities.Student studentEntity = new Ellucian.Colleague.Domain.Student.Entities.Student(guid, knownStudentId1, new List<string>() { "BA.ENGL" }, null, "*", false, null);
+
+            UpdateStudentInformationResponse updateResponse = new UpdateStudentInformationResponse()
+            {
+                ErrorFlag = false,
+                UpdateStudentInformationErrors = null
+            };
+
+            transManagerMock.Setup(i => i.ExecuteAsync<UpdateStudentInformationRequest, UpdateStudentInformationResponse>(It.IsAny<UpdateStudentInformationRequest>())).ReturnsAsync(updateResponse);
+
+            var result = await studentRepository.UpdateStudentAsync(studentEntity);
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Id, knownStudentId1);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task StudentRepositoryTests_RepositoryException()
+        {
+            var guid = "65eb3f15-139a-4884-9463-281872cbf2d3";
+            Collection<DataContracts.Students> StudentDb = new Collection<DataContracts.Students>();
+
+            Domain.Student.Entities.Student studentEntity = new Ellucian.Colleague.Domain.Student.Entities.Student(guid, knownStudentId1, new List<string>() { "BA.ENGL" }, null, "*", false, null);
+
+            UpdateStudentInformationResponse updateResponse = new UpdateStudentInformationResponse()
+            {
+                UpdateStudentInformationErrors = new List<UpdateStudentInformationErrors>() { new UpdateStudentInformationErrors() { ErrorCode = "001", ErrorMessage = "Failed to update student record." } }
+            };
+
+            transManagerMock.Setup(i => i.ExecuteAsync<UpdateStudentInformationRequest, UpdateStudentInformationResponse>(It.IsAny<UpdateStudentInformationRequest>())).ReturnsAsync(updateResponse);
+
+            var result = await studentRepository.UpdateStudentAsync(studentEntity);
+        }
+
+
+        private StudentRepository BuildMockStudentRepository()
+        {
+            // mock data accessor STUDENTS response - valid id 0000001
+            string[] knownStudentIds = { knownStudentId1 };
+            dataReaderMock.Setup<Task<DataContracts.Students>>(a => a.ReadRecordAsync<DataContracts.Students>(knownStudentId1, true)).ReturnsAsync(students[0]);
+            dataReaderMock.Setup<Task<Collection<DataContracts.Students>>>(a => a.BulkReadRecordAsync<DataContracts.Students>(knownStudentIds, true)).ReturnsAsync(new Collection<DataContracts.Students> { students[0] });
+
+            // mock data accessor APPLICANTS response - valid id 0000001
+            dataReaderMock.Setup<Task<DataContracts.Applicants>>(a => a.ReadRecordAsync<DataContracts.Applicants>(knownStudentId1, true)).ReturnsAsync(applicants[0]);
+            dataReaderMock.Setup<Task<Collection<DataContracts.Applicants>>>(a => a.BulkReadRecordAsync<DataContracts.Applicants>(knownStudentIds, true)).ReturnsAsync(new Collection<DataContracts.Applicants> { applicants[0] });
+
+            // mock data accessor PERSON response - valid id 0000001
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.Person>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentId1, true)).ReturnsAsync(people[0]);
+            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(a => a.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentIds, true)).ReturnsAsync(new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> { people[0] });
+
+            // mock data accessor FOREIGN.PERSON response - valid id 0000001
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>(knownStudentId1, true)).ReturnsAsync(foreignPeople[0]);
+            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>>>(a => a.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>(knownStudentIds, true)).ReturnsAsync(new Collection<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson> { foreignPeople[0] });
+
+            // mock data accessor STUDENTS response - valid id 0000002
+            string[] knownStudentIds2 = { knownStudentId2 };
+            dataReaderMock.Setup<Task<DataContracts.Students>>(a => a.ReadRecordAsync<DataContracts.Students>(knownStudentId2, true)).ReturnsAsync(students[1]);
+            dataReaderMock.Setup<Task<Collection<DataContracts.Students>>>(a => a.BulkReadRecordAsync<DataContracts.Students>(knownStudentIds2, true)).ReturnsAsync(new Collection<DataContracts.Students> { students[1] });
+
+            // mock data accessor APPLICANTS response - valid id 0000002
+            dataReaderMock.Setup<Task<DataContracts.Applicants>>(a => a.ReadRecordAsync<DataContracts.Applicants>(knownStudentId2, true)).ReturnsAsync(applicants[1]);
+
+            // mock data accessor PERSON response - valid id 0000002
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.Person>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentId2, true)).ReturnsAsync(people[1]);
+            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(a => a.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentIds2, true)).ReturnsAsync(new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> { people[1] });
+
+            // mock data accessor FOREIGN.PERSON response - valid id 0000002
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>(knownStudentId2, true)).ReturnsAsync(foreignPeople[1]);
+
+            // mock data accessor STUDENTS response - valid id 0000003
+            dataReaderMock.Setup<Task<DataContracts.Students>>(a => a.ReadRecordAsync<DataContracts.Students>(knownStudentId3, true)).ReturnsAsync(students[2]);
+            string[] knownStudentIds3 = { knownStudentId3 };
+            dataReaderMock.Setup<Task<Collection<DataContracts.Students>>>(a => a.BulkReadRecordAsync<DataContracts.Students>(knownStudentIds3, true)).ReturnsAsync(new Collection<DataContracts.Students> { students[2] });
+
+            // mock data accessor APPLICANTS response - valid id 0000003
+            dataReaderMock.Setup<Task<DataContracts.Applicants>>(a => a.ReadRecordAsync<DataContracts.Applicants>(knownStudentId3, true)).ReturnsAsync(applicants[2]);
+
+            // mock data accessor PERSON response - valid id 0000003
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.Person>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentId3, true)).ReturnsAsync(people[2]);
+            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(a => a.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", knownStudentIds3, true)).ReturnsAsync(new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> { people[2] });
+            // mock data accessor FOREIGN.PERSON response - valid id 0000003
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson>(knownStudentId3, true)).ReturnsAsync(foreignPeople[2]);
+
+            // mock data accessor STUDENTS response - unknown id 9999999
+            DataContracts.Students nullStudent = null;
+            dataReaderMock.Setup<Task<DataContracts.Students>>(a => a.ReadRecordAsync<DataContracts.Students>(unknownStudentId, true)).ReturnsAsync(nullStudent);
+
+            Ellucian.Colleague.Data.Base.DataContracts.Person nullPerson = null;
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.Person>>(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", unknownStudentId, true)).ReturnsAsync(nullPerson);
+
+            // mock data accessor STUDENT.PROGRAM.STATUSES
+            dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                a.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES", true))
+                .ReturnsAsync(new ApplValcodes()
+                {
+                    ValInternalCode = new List<string>() { "A" },
+                    ValExternalRepresentation = new List<string>() { "Active" },
+                    ValActionCode1 = new List<string>() { "2" },
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "A",
+                            ValExternalRepresentationAssocMember = "Active",
+                            ValActionCode1AssocMember = "2"
+                        }
+                    }
+                });
+
+            // mock data accessor PERSON.ETHNICS
+            dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                a.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.ETHNICS", true))
+                .ReturnsAsync(new ApplValcodes()
+                {
+                    ValInternalCode = new List<string>() { "W", "H" },
+                    ValExternalRepresentation = new List<string>() { "White", "Hispanic" },
+                    ValActionCode1 = new List<string>() { "W", "H" },
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "W",
+                            ValExternalRepresentationAssocMember = "White",
+                            ValActionCode1AssocMember = "W"
+                        },
+                                                new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "H",
+                            ValExternalRepresentationAssocMember = "Hispanic",
+                            ValActionCode1AssocMember = "H"
+                        }
+                    }
+                });
+
+            // mock data accessor PERSON.RACES
+            dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                a.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.RACES", true))
+                .ReturnsAsync(new ApplValcodes()
+                {
+                    ValInternalCode = new List<string>() { "CA", "PI" },
+                    ValExternalRepresentation = new List<string>() { "Caucasian", "Pacific Islander" },
+                    ValActionCode1 = new List<string>() { "1", "2" },
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "CA",
+                            ValExternalRepresentationAssocMember = "Caucasian",
+                            ValActionCode1AssocMember = "1"
+                        },
+                         new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "PI",
+                            ValExternalRepresentationAssocMember = "Pacific Islander",
+                            ValActionCode1AssocMember = "2"
+                        }
+                    }
+                });
+
+            // mock data accessor MARITAL.STATUSES
+            dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                a.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "MARITAL.STATUSES", true))
+                .ReturnsAsync(new ApplValcodes()
+                {
+                    ValInternalCode = new List<string>() { "S", "M", "D", "W" },
+                    ValExternalRepresentation = new List<string>() { "Single", "Married", "Divorced", "Widowed" },
+                    ValActionCode1 = new List<string>() { "1", "2", "3", "4" },
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "S",
+                            ValExternalRepresentationAssocMember = "Single",
+                            ValActionCode1AssocMember = "1"
+                        },
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "M",
+                            ValExternalRepresentationAssocMember = "Married",
+                            ValActionCode1AssocMember = "2"
+                        },
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "D",
+                            ValExternalRepresentationAssocMember = "Divorced",
+                            ValActionCode1AssocMember = "3"
+                        },
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "W",
+                            ValExternalRepresentationAssocMember = "Widowed",
+                            ValActionCode1AssocMember = "W"
+                        }
+                    }
+                });
+
+            // mock data accessor EDUCATION.GOALS
+            dataReaderMock.Setup<Task<ApplValcodes>>(a =>
+                a.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "EDUCATION.GOALS", true))
+                .ReturnsAsync(new ApplValcodes()
+                {
+                    ValInternalCode = new List<string>() { "MA" },
+                    ValExternalRepresentation = new List<string>() { educationalGoalDescription },
+                    ValsEntityAssociation = new List<ApplValcodesVals>()
+                    {
+                        new ApplValcodesVals()
+                        {
+                            ValInternalCodeAssocMember = "MA",
+                            ValExternalRepresentationAssocMember = educationalGoalDescription,
+                        }
+                    }
+                });
+
+            // mock DEFAULTS from CORE.PARMS
+            dataReaderMock.Setup<Task<Defaults>>(a =>
+                a.ReadRecordAsync<Defaults>("CORE.PARMS", "DEFAULTS", true))
+                .ReturnsAsync(new Defaults()
+                {
+                    DefaultHostCorpId = "0000024",
+
+                });
+
+            // mock data accessor STUDENT.PROGRAMS
+
+            string[] programs1 = { };
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentPrograms>>>(a => a.BulkReadRecordAsync<DataContracts.StudentPrograms>(programs1, true)).ReturnsAsync(new Collection<DataContracts.StudentPrograms>());
+
+            string[] programs2 = { "0000002*BA.CPSC" };
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentPrograms>>>(a =>
+                a.BulkReadRecordAsync<DataContracts.StudentPrograms>(programs2, true))
+                .ReturnsAsync(new Collection<DataContracts.StudentPrograms>()
+                {
+                    new DataContracts.StudentPrograms
+                    {
+                        Recordkey = knownStudentId2 + "*" + acadPrograms[0],
+                        StprStartDate = new List<DateTime?>() { new DateTime()},
+                        StprStatus = new List<string>() { "A" },
+                        StprCatalog = "2012"
+                    }
+                });
+
+            //dataReaderMock.Setup<Task<Collection<DataContracts.StudentPrograms>>(a => a.BulkReadRecordAsync<DataContracts.StudentPrograms>("STUDENT.PROGRAMS", "@ID LIKE '" + knownStudentId3 + "*...'"))
+            string[] programs3 = { "0000003*BA.CPSC", "0000003*BA-MATH" };
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentPrograms>>>(a => a.BulkReadRecordAsync<DataContracts.StudentPrograms>(programs3, true))
+                .ReturnsAsync(new Collection<DataContracts.StudentPrograms>()
+                {
+                    new DataContracts.StudentPrograms
+                    {
+                        Recordkey = knownStudentId3 + "*" + acadPrograms[0],
+                        StprStartDate = new List<DateTime?>() { new DateTime()},
+                        StprStatus = new List<string>() { "A" },
+                        StprCatalog = "2012"
+                    },
+                    new DataContracts.StudentPrograms
+                    {
+                        Recordkey = knownStudentId3 + "*" + acadPrograms[1],
+                        StprStartDate = new List<DateTime?>() { new DateTime()},
+                        StprStatus = new List<string>() { "A" },
+                        StprCatalog = "2011"
+                    },
+                    new DataContracts.StudentPrograms
+                    {   // ended student program
+                        Recordkey = knownStudentId3 + "*" + "BA.UNDC",
+                        StprStartDate = new List<DateTime?>() { new DateTime()},
+                        StprStatus = new List<string>() { "A" },
+                        StprEndDate = new List<DateTime?>() {DateTime.Today.AddDays(-60)},
+                        StprCatalog = "2010"
+                    }
+                });
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentPrograms>>>(a => a.BulkReadRecordAsync<DataContracts.StudentPrograms>("STUDENT.PROGRAMS", "@ID LIKE '" + unknownStudentId + "*...'", true)).ReturnsAsync(new Collection<DataContracts.StudentPrograms>());
+
+            // mock data accessor PERSON.ST response - valid id 0000001
+            dataReaderMock.Setup<Task<Base.DataContracts.PersonSt>>(a => a.ReadRecordAsync<Base.DataContracts.PersonSt>(knownStudentId1, true)).ReturnsAsync(personStRecords[0]);
+            dataReaderMock.Setup<Task<Collection<Base.DataContracts.PersonSt>>>(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(knownStudentIds, true)).ReturnsAsync(new Collection<Base.DataContracts.PersonSt> { personStRecords[0] });
+
+            // mock data accessor PERSON.ST response - valid id 0000002
+            dataReaderMock.Setup<Task<Base.DataContracts.PersonSt>>(a => a.ReadRecordAsync<Base.DataContracts.PersonSt>(knownStudentId2, true)).ReturnsAsync(personStRecords[1]);
+            dataReaderMock.Setup<Task<Collection<Base.DataContracts.PersonSt>>>(a => a.BulkReadRecordAsync<Base.DataContracts.PersonSt>(knownStudentIds2, true)).ReturnsAsync(new Collection<Base.DataContracts.PersonSt> { personStRecords[1] });
+
+            // mock data accessor PERSON.ST response - valid id 0000003
+            dataReaderMock.Setup<Task<Base.DataContracts.PersonSt>>(a => a.ReadRecordAsync<Base.DataContracts.PersonSt>(knownStudentId3, true)).ReturnsAsync(personStRecords[2]);
+
+            // mock data accessor DEGREE_PLANS response  - for student 0000001
+            dataReaderMock.Setup<Task<string[]>>(a => a.SelectAsync("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId1 + "'")).ReturnsAsync(new string[] { "1" });
+
+            // mock data accessor DEGREE_PLANS response  - for student 0000002
+            var multipleDegreePlanKeys = new string[] { "2", "3" };
+            dataReaderMock.Setup<Task<string[]>>(a => a.SelectAsync("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId2 + "'")).ReturnsAsync(multipleDegreePlanKeys);
+
+            // mock data accessor DEGREE_PLANS response  - for student 0000003
+            dataReaderMock.Setup<Task<string[]>>(a => a.SelectAsync("DEGREE_PLAN", "DP.STUDENT.ID EQ '" + knownStudentId3 + "'")).ReturnsAsync(new string[] { });
+
+            // mock data accessor STUDENT.ADVISEMENT for students with no advisor
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentAdvisement>>>(d => d.BulkReadRecordAsync<DataContracts.StudentAdvisement>(new List<string>().ToArray(), true)).ReturnsAsync(new Collection<DataContracts.StudentAdvisement>());
+
+            // mock data accessor STUDENT.ADVISEMENT for student 0000002
+            string[] student1AdvismentIds = new List<string>() { "21", "22" }.ToArray();
+            dataReaderMock.Setup<Task<Collection<DataContracts.StudentAdvisement>>>(d => d.BulkReadRecordAsync<DataContracts.StudentAdvisement>(student1AdvismentIds, true)).ReturnsAsync(studentAdvisements);
+
+            ////mock data accessor FIN.AID for each student
+            //foreach (var personId in personIds)
+            //{
+            //    var finAidResponse = finAidRecords.FirstOrDefault(f => f.Recordkey == personId);
+            //    dataReaderMock.Setup(d => d.ReadRecordAsync<FinAid>(personId, true)).ReturnsAsync(finAidResponse);
+            //}
+
+            var stWebDflt = BuildStwebDefaults();
+            //Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true)).ReturnsAsync(stWebDflt);
+
+            // mock data reader for getting the STUDENT Name Addr Hierarchy
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>>(a =>
+                a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "STUDENT", true))
+                .ReturnsAsync(new Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy()
+                {
+                    Recordkey = "STUDENT",
+                    NahNameHierarchy = new List<string>() { "YYY", "CHL", "PF" }
+                });
+
+
+            StudentRepository repository = new StudentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+            return repository;
+        }
+
+        private void SetupData()
+        {
+            unknownStudentId = "9999999";
+            acadPrograms = new string[] { "BA.CPSC", "BA-MATH" };
+
+            /* 
+             * student 0000001
+             * > no programs
+             * > one degree plan
+             * > one acad cred
+             * > no advisors
+             * > 2 emails - neither marked as preferred
+             */
+            knownStudentId1 = "0000001";
+            students.Add(new DataContracts.Students() { Recordkey = knownStudentId1, StuAcadPrograms = null });
+            applicants.Add(new DataContracts.Applicants() { Recordkey = knownStudentId1 });
+            personStRecords.Add(new Base.DataContracts.PersonSt() { Recordkey = "0000001", PstStudentAcadCred = new List<string>() { "19000" }, PstAdvisement = new List<string>(), PstRestrictions = new List<string>() { "R001", "R002" } });
+            Ellucian.Colleague.Data.Base.DataContracts.Person person1 = new Ellucian.Colleague.Data.Base.DataContracts.Person()
+            {
+                Recordkey = "0000001",
+                LastName = "Smith",
+                FirstName = "Legal First",
+                MiddleName = "Legal Middle",
+                PersonChosenLastName = "ChosenLast",
+                PersonChosenFirstName = "ChosenFirst",
+                Prefix = "Mr.",
+                PersonalPronoun = "XHE"
+            };
+            Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson ForeignPerson1 = new Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson() { Recordkey = "0000001" };
+            person1.PeopleEmailEntityAssociation = new List<PersonPeopleEmail>();
+            PersonPeopleEmail ppe1 = new PersonPeopleEmail() { PersonEmailAddressesAssocMember = "dsmith@yahoo.com", PersonEmailTypesAssocMember = "HOME", PersonPreferredEmailAssocMember = "" };
+            person1.PeopleEmailEntityAssociation.Add(ppe1);
+            PersonPeopleEmail ppe2 = new PersonPeopleEmail() { PersonEmailAddressesAssocMember = "junk@yahoo.com", PersonEmailTypesAssocMember = "BUS", PersonPreferredEmailAssocMember = "" };
+            person1.PeopleEmailEntityAssociation.Add(ppe2);
+            person1.MaritalStatus = "M";
+            person1.PerEthnics = new List<string> { "W", "H" };
+            person1.PerRaces = new List<string> { "CA", "PI" };
+            students[0].StuTypeInfoEntityAssociation = new List<StudentsStuTypeInfo>();
+            students[0].StuTypeInfoEntityAssociation.Add(new StudentsStuTypeInfo() { StuTypesAssocMember = "FF", StuTypeDatesAssocMember = DateTime.Today });
+            people.Add(person1);
+            foreignPeople.Add(ForeignPerson1);
+            /* 
+             * student 0000002
+             * > one program
+             * > two degree plans
+             * > two acad creds
+             * > one current advisor (but also a past advisor)
+             * > two emails - second marked as preferred
+             */
+            knownStudentId2 = "0000002";
+            personStRecords.Add(new Base.DataContracts.PersonSt()
+            {
+                Recordkey = "0000002",
+                PstStudentAcadCred = new List<string>() { "" },
+                PstAdvisement = new List<string>() { "21", "22" },
+                PstRestrictions = new List<string>(),
+                EducGoalsEntityAssociation = new List<Base.DataContracts.PersonStEducGoals>() {
+                        new PersonStEducGoals() {PstEducGoalsAssocMember = "BA", PstEducGoalsChgdatesAssocMember = new DateTime(2012, 05, 01)},
+                        new PersonStEducGoals() {PstEducGoalsAssocMember = "MA", PstEducGoalsChgdatesAssocMember = new DateTime(2013, 02, 03)}
+                    }
+            });
+            students.Add(new DataContracts.Students() { Recordkey = knownStudentId2, StuAcadPrograms = new List<string> { acadPrograms[0] } });
+            applicants.Add(new DataContracts.Applicants() { Recordkey = knownStudentId2 });
+            studentAdvisements.Add(new DataContracts.StudentAdvisement() { Recordkey = "21", StadStudent = "0000002", StadFaculty = "0000036", StadStartDate = new DateTime(2012, 7, 1), StadEndDate = null });
+            studentAdvisements.Add(new DataContracts.StudentAdvisement() { Recordkey = "22", StadStudent = "0000002", StadFaculty = "0000045", StadStartDate = new DateTime(2012, 7, 1), StadEndDate = new DateTime(2012, 8, 1) });
+            Ellucian.Colleague.Data.Base.DataContracts.Person person2 = new Ellucian.Colleague.Data.Base.DataContracts.Person()
+            {
+                Recordkey = "0000002",
+                LastName = "Jones",
+                FirstName = "Legal First",
+                PFormatEntityAssociation = new List<PersonPFormat>() { new PersonPFormat() { PersonFormattedNameTypesAssocMember = "XXX", PersonFormattedNamesAssocMember = "XXX Formatted Name" }, new PersonPFormat() { PersonFormattedNameTypesAssocMember = "YYY", PersonFormattedNamesAssocMember = "YYY Formatted Name" } }
+            };
+            Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson ForeignPerson2 = new Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson() { Recordkey = "0000002" };
+            person2.PeopleEmailEntityAssociation = new List<PersonPeopleEmail>();
+            PersonPeopleEmail ppe3 = new PersonPeopleEmail() { PersonEmailAddressesAssocMember = "junk@yahoo.com", PersonEmailTypesAssocMember = "HOME", PersonPreferredEmailAssocMember = "" };
+            person2.PeopleEmailEntityAssociation.Add(ppe3);
+            PersonPeopleEmail ppe4 = new PersonPeopleEmail() { PersonEmailAddressesAssocMember = "djones@yahoo.com", PersonEmailTypesAssocMember = "BUS", PersonPreferredEmailAssocMember = "Y" };
+            person2.PeopleEmailEntityAssociation.Add(ppe4);
+            people.Add(person2);
+            foreignPeople.Add(ForeignPerson2);
+            /* 
+             * student 0000003
+             * > two programs
+             * > no degree plan
+             * > three acad creds
+             * > no email addresses on file
+             */
+            knownStudentId3 = "0000003";
+            students.Add(new DataContracts.Students() { Recordkey = knownStudentId3, StuAcadPrograms = new List<string> { acadPrograms[0], acadPrograms[1] } });
+            applicants.Add(new DataContracts.Applicants() { Recordkey = knownStudentId3 });
+            personStRecords.Add(new Base.DataContracts.PersonSt() { Recordkey = "0000003", PstStudentAcadCred = new List<string>() { "19003", "19004", "19005" }, PstAdvisement = new List<string>(), PstRestrictions = new List<string>() });
+            Ellucian.Colleague.Data.Base.DataContracts.Person person3 = new Ellucian.Colleague.Data.Base.DataContracts.Person()
+            {
+                Recordkey = "0000003",
+                LastName = "Legal Last",
+                FirstName = "Legal First",
+                MiddleName = "Legal Middle",
+                Prefix = "Mr.",
+                Suffix = "Esq.",
+                PreferredName = "IM"
+            };
+            Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson ForeignPerson3 = new Ellucian.Colleague.Data.Base.DataContracts.ForeignPerson() { Recordkey = "0000003" };
+            person3.PeopleEmailEntityAssociation = new List<PersonPeopleEmail>();
+            people.Add(person3);
+            foreignPeople.Add(ForeignPerson3);
+        }
+
+
+        private static StwebDefaults BuildStwebDefaults()
+        {
+            StwebDefaults stwebDefaults = new StwebDefaults();
+            stwebDefaults.Recordkey = "STWEB.DEFAULTS";
+            stwebDefaults.StwebDisplayNameHierarchy = "STUDENT";
+            stwebDefaults.StwebRegUsersId = "REGUSERID";
+            return stwebDefaults;
+        }
+    }
 }

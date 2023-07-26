@@ -1,20 +1,17 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Security;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Dependency;
-using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base;
-using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -48,7 +45,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Collection of Comments DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Comments>, int>> GetCommentsAsync(int offset, int limit, string subjectMatter, string commentSubjectArea, bool bypassCache = false)
         {
-            
+
             var commentsCollection = new List<Ellucian.Colleague.Dtos.Comments>();
 
             #region  Convert and validate all input parameters
@@ -214,7 +211,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("comment", "Comments id required.");
             }
 
-         
+
             _remarkRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             #region create domain entity from request
@@ -445,9 +442,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             comments.Confidentiality = ConvertConfidentialityTypeEnumToConfidentialityCategoryEnum(source.RemarksPrivateType);
 
             if (!string.IsNullOrEmpty(source.RemarksText))
-                comments.Comment = source.RemarksText.Replace(Convert.ToChar(DynamicArray.VM), '\n')
-                                                      .Replace(Convert.ToChar(DynamicArray.TM), ' ')
-                                                      .Replace(Convert.ToChar(DynamicArray.SM), ' ');
+                comments.Comment = source.RemarksText.Replace(DmiString._VM, '\n')
+                                                      .Replace(DmiString._TM, ' ')
+                                                      .Replace(DmiString._SM, ' ');
             comments.EnteredOn = source.RemarksDate;
 
 

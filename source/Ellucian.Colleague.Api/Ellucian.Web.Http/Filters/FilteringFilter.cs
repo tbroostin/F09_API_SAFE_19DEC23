@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,19 +8,20 @@ using System.Web.Http.Filters;
 using System.Web;
 using System.Net.Http;
 using System.Net.Http.Formatting;
-using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Extensions;
-using System.Collections;
-using System.Web.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Ellucian.Web.Http.Utilities;
-using System.Net;
 using slf4net;
-using System.Collections.Specialized;
 using System.IO;
+using System.Web.Http.Controllers;
+using System.Threading;
+using Ellucian.Colleague.Dtos.Converters;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Controllers;
+using System.Net.Http.Headers;
 
 namespace Ellucian.Web.Http.Filters
 {
@@ -30,6 +31,7 @@ namespace Ellucian.Web.Http.Filters
     /// </summary>
     public class FilteringFilter : System.Web.Http.Filters.ActionFilterAttribute
     {
+        private const string CustomMediaType = "X-Media-Type";
 
         private ILogger logger;
         public ILogger Logger { get { return logger; } }
@@ -58,10 +60,114 @@ namespace Ellucian.Web.Http.Filters
         public bool IgnoreFiltering { get; set; }
 
         /// <summary>
+        /// Executed before the action method is called.
+        /// </summary>
+        /// <param name="actionExecutedContext"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public override Task OnActionExecutingAsync(HttpActionContext actionExecutedContext, CancellationToken cancellationToken)
+        {
+            if ((actionExecutedContext.Request != null) && (actionExecutedContext.Request.Method == HttpMethod.Get) && !IgnoreFiltering)
+            {
+                //Get the filter parameters from query string 
+                var queryString = HttpUtility.ParseQueryString(actionExecutedContext.Request.RequestUri.Query);
+                if (queryString["criteria"] != null)
+                {
+                    var jsonForQuery = actionExecutedContext.Request.GetQueryNameValuePairs().FirstOrDefault(nvp => nvp.Key == "criteria").Value;
+
+                    if (!string.IsNullOrEmpty(jsonForQuery))
+                    {
+                        var controllerAction = actionExecutedContext.ActionDescriptor.ActionName;
+                        var controllerType = actionExecutedContext.ControllerContext.Controller.GetType();
+
+                        if (controllerType != null && !string.IsNullOrEmpty(controllerAction))
+                        {
+                            //Get object type
+                            Type modeltype = GetModelType(controllerType, controllerAction);
+                            if (modeltype != null)
+                            {
+                                //Create JsonConverter to control how query string segment will be deserialized
+                                // this will also determine if invalid filter properties are received  
+                                try
+                                {
+                                    var filterConverter = new FilterConverter("criteria");
+
+                                    var filterObj = JsonConvert.DeserializeObject(jsonForQuery,
+                                        modeltype,
+                                       filterConverter);
+
+                                    if (filterConverter.ContainsInvalidFilterProperties())
+                                    {
+                                        throw new ColleagueWebApiException(filterConverter.GetInvalidFilterErrorMessage());
+                                    }
+
+                                    if (filterConverter.ContainsEmptyFilterProperties)
+                                    {
+                                        var emptyFilterPropertiesName = "EmptyFilterProperties";
+                                        object emptyQueryStringParms;
+                                        actionExecutedContext.Request.Properties.TryGetValue(emptyFilterPropertiesName, out emptyQueryStringParms);
+                                        if (emptyQueryStringParms == null)
+                                        {
+                                            actionExecutedContext.Request.Properties.Add(emptyFilterPropertiesName, true);
+                                        }
+                                    }
+
+                                    if (filterConverter.ContainsFilterProperties())
+                                    {
+                                        var filterPropertyName = "FilterProperties";
+                                        actionExecutedContext.Request.Properties.Add(filterPropertyName, filterConverter.GetFilterProperties);
+                                    }
+
+                                    var contextPropertyName = string.Format("FilterObject{0}", "criteria");
+                                    actionExecutedContext.Request.Properties.Add(contextPropertyName, filterObj);
+                                }
+                                catch (Exception ex)
+                                {
+                                    bool isEthosEnabled = false;
+                                    if (actionExecutedContext.Request.GetRouteData().Route.Defaults.ContainsKey("isEthosEnabled"))
+                                    {
+                                        isEthosEnabled = (bool)actionExecutedContext.Request.GetRouteData().Route.Defaults["isEthosEnabled"];
+                                    }
+                                    if (isEthosEnabled)
+                                    {
+                                        var exceptionObject = new IntegrationApiException();
+                                        exceptionObject.AddError(new IntegrationApiError("Global.SchemaValidation.Error", "Errors parsing input JSON.",
+                                            ex.Message.Replace(Environment.NewLine, " ").Replace("\n", " ")));
+                                        var serialized = JsonConvert.SerializeObject(exceptionObject);
+                                        actionExecutedContext.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };
+
+                                        actionExecutedContext.Response.Content.Headers.Remove(CustomMediaType);
+
+                                        IEnumerable<string> customMediaTypeValue = null;
+                                        if (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue))
+                                            actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, BaseCompressedApiController.IntegrationErrors2);
+
+                                        actionExecutedContext.Response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+                                        {
+                                            CharSet = Encoding.UTF8.WebName
+                                        };
+                                        IEnumerable<string> contentTypeValue = null;
+                                        if (!actionExecutedContext.Response.Content.Headers.TryGetValues("Content-Type", out contentTypeValue))
+                                            actionExecutedContext.Response.Content.Headers.Add("Content-Type", "application/json;charset=UTF-8");
+
+                                        return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
+                                    }
+                                    throw new ColleagueWebApiException(ex.Message, ex.InnerException);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
+        }
+
+        /// <summary>
         /// Filters the list for all filtering requests
         /// </summary>
         /// <param name="context">context</param>
-        public override void OnActionExecuted(HttpActionExecutedContext context)
+        public override async Task OnActionExecutedAsync(HttpActionExecutedContext context, CancellationToken cancellationToken)
         {
             //Resolve the logger instance directly from the Unity IoC Container
             if (this.logger == null)
@@ -73,7 +179,7 @@ namespace Ellucian.Web.Http.Filters
             try
             {
                 //Check for Response object NOT NULL
-                if (context.Response != null)
+                if (context.Response != null && context.Response.IsSuccessStatusCode && !IgnoreFiltering)
                 {
                     if (context.Response.Content != null && context.Response.Content is ObjectContent)
                     {
@@ -91,7 +197,7 @@ namespace Ellucian.Web.Http.Filters
                                 {
                                     IEnumerable<object> model = null;
                                     context.Response.TryGetContentValue(out model);
-                                    if (model != null)
+                                    if (model != null && model.Any())
                                     {
                                         if (!IgnoreFiltering)
                                         {
@@ -105,30 +211,45 @@ namespace Ellucian.Web.Http.Filters
                                                 var decodedValue = HttpUtility.UrlDecode(parsedQueryString.ToString());
 
                                                 //filtering logic
-                                                Expression filterExpression;
+                                                //Expression filterExpression;
                                                 Type modeltype = model.FirstOrDefault().GetType(); //Get object type
-
-                                                ParameterExpression param = Expression.Parameter(typeof(object), "p"); //Create parameter p of type object
-                                                                                                                       //Override the default JObject.Parse which ignores duplicate proprty keys
-                                                JToken parsedString = null;
-                                                using (StringReader srdr = new StringReader(decodedValue))
+                                                Type actualtype = modeltype;
+                                                if (actualtype.Name == "JObject")
                                                 {
-                                                    using (JsonTextReader jrdr = new JsonTextReader(srdr))
+                                                    var controllerAction = context.ActionContext.ActionDescriptor.ActionName;
+                                                    var controllerType = context.ActionContext.ControllerContext.Controller.GetType();
+                                                    modeltype = GetModelType(controllerType, controllerAction);
+                                                    if (modeltype == null)
                                                     {
-                                                        while (jrdr.Read())
-                                                        {
-                                                            if (jrdr.TokenType == JsonToken.StartObject)
-                                                                parsedString = ParseJsonString(jrdr);
-                                                        }
+                                                        modeltype = actualtype;
                                                     }
                                                 }
 
-                                                filterExpression = CreateExpression(parsedString, modeltype, param);
+                                                await ProcessFilterCriteriaString(context, cancellationToken, modeltype, actualtype, model, decodedValue);
+                                            }
+                                            else if (queryString["criteria"] != null)
+                                            {
+                                                var filterPropertyName = "FilterProperties";
+                                                object filterProperties = null;
+                                                context.Request.Properties.TryGetValue(filterPropertyName, out filterProperties);
 
-                                                var finalExpression = Expression.Lambda<Func<object, bool>>(filterExpression, param);
+                                                var contextPropertyName = string.Format("FilterObject{0}", "criteria");
+                                                object filterObj = null;
+                                                context.Request.Properties.TryGetValue(contextPropertyName, out filterObj);
 
-                                                model = model.AsQueryable().Where(finalExpression);
-                                                context.Response.Content = new ObjectContent<IEnumerable<dynamic>>(model, new JsonMediaTypeFormatter());
+                                                if (filterProperties != null && filterObj != null)
+                                                {
+                                                    //Retrieve the json values from querystring
+                                                    var parsedQueryString = HttpUtility.ParseQueryString(queryString["criteria"]);
+                                                    //Decode the encoded string
+                                                    var decodedValue = HttpUtility.UrlDecode(parsedQueryString.ToString());
+
+                                                    // Convert a JObject back into the an object of the original type.
+                                                    Type modeltype = filterObj.GetType(); //Get object type
+                                                    Type actualtype = model.FirstOrDefault().GetType(); //Get actual object type
+
+                                                    await ProcessFilterCriteriaString(context, cancellationToken, modeltype, actualtype, model, decodedValue);
+                                                }
                                             }
                                         }
                                     }
@@ -141,11 +262,128 @@ namespace Ellucian.Web.Http.Filters
             catch (Exception ex)
             {
                 Logger.Error(ex, ex.Message);
-                context.Response.SetErrorResponse(ex.Message);
+
+                bool isEthosEnabled = false;
+                if (context.Request.GetRouteData().Route.Defaults.ContainsKey("isEthosEnabled"))
+                {
+                    isEthosEnabled = (bool)context.Request.GetRouteData().Route.Defaults["isEthosEnabled"];
+                }
+                if (isEthosEnabled)
+                {
+                    var exceptionObject = new IntegrationApiException();
+                    exceptionObject.AddError(new IntegrationApiError("Global.SchemaValidation.Error", "Errors parsing input JSON.",
+                        ex.Message.Replace(Environment.NewLine, " ").Replace("\n", " ")));
+                    var serialized = JsonConvert.SerializeObject(exceptionObject);
+                    context.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };
+
+                    context.Response.Content.Headers.Remove(CustomMediaType);
+
+                    IEnumerable<string> customMediaTypeValue = null;
+                    if (!context.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue))
+                        context.Response.Content.Headers.Add(CustomMediaType, BaseCompressedApiController.IntegrationErrors2);
+
+                    context.Response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+                    {
+                        CharSet = Encoding.UTF8.WebName
+                    };
+                    IEnumerable<string> contentTypeValue = null;
+                    if (!context.Response.Content.Headers.TryGetValues("Content-Type", out contentTypeValue))
+                        context.Response.Content.Headers.Add("Content-Type", "application/json;charset=UTF-8");
+                }
+                else
+                {
+                    context.Response.SetErrorResponse(ex.Message);
+                }
             }
-            base.OnActionExecuted(context);
+            await base.OnActionExecutedAsync(context, cancellationToken);
         }
 
+        public Task OnActionExecutedAsync(HttpActionExecutedContext executedContext)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Process the filter string for both "criteria" and "filter" filters.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="cancellationToken"></param>
+        /// <param name="modeltype"></param>
+        /// <param name="actualtype"></param>
+        /// <param name="model"></param>
+        /// <param name="decodedValue"></param>
+        /// <returns></returns>
+        private async Task ProcessFilterCriteriaString(HttpActionExecutedContext context, CancellationToken cancellationToken, Type modeltype, Type actualtype, IEnumerable<object> model, string decodedValue)
+        {
+            //filtering logic
+            Expression filterExpression;
+            if (actualtype.Name == "JObject")
+            {
+                if (modeltype != null)
+                {
+                    // Setup the serialization settings
+                    JsonSerializerSettings jsonSettings = new JsonSerializerSettings()
+                    {
+                        NullValueHandling = NullValueHandling.Ignore
+                    };
+                    List<object> newModel = new List<object>();
+                    foreach (var jToken in model)
+                    {
+                        string jsonString = JsonConvert.SerializeObject(jToken, actualtype, jsonSettings);
+                        object modelObject = JsonConvert.DeserializeObject(jsonString, modeltype, jsonSettings);
+                        newModel.Add(modelObject);
+                    }
+                    model = newModel;
+                }
+            }
+
+            ParameterExpression param = Expression.Parameter(typeof(object), "p"); //Create parameter p of type object
+                                                                                   //Override the default JObject.Parse which ignores duplicate proprty keys
+            JToken parsedString = null;
+            using (StringReader srdr = new StringReader(decodedValue))
+            {
+                using (JsonTextReader jrdr = new JsonTextReader(srdr))
+                {
+                    while (jrdr.Read())
+                    {
+                        if (jrdr.TokenType == JsonToken.StartObject)
+                            parsedString = ParseJsonString(jrdr);
+                    }
+                }
+            }
+
+            filterExpression = CreateExpression(parsedString, modeltype, param);
+
+            var finalExpression = Expression.Lambda<Func<object, bool>>(filterExpression, param);
+
+            model = model.AsQueryable().Where(finalExpression);
+            context.Response.Content = new ObjectContent<IEnumerable<dynamic>>(model, new JsonMediaTypeFormatter());
+
+            // If we started with a JObject, it has been converted to it's original type.
+            // We now have to convert it back into a JObject
+            if (actualtype.Name == "JObject")
+            {
+                bool isEthosEnabled = false;
+                if (context.Request.GetRouteData().Route.Defaults.ContainsKey("isEthosEnabled"))
+                {
+                    isEthosEnabled = (bool)context.Request.GetRouteData().Route.Defaults["isEthosEnabled"];
+                }
+                if (isEthosEnabled)
+                {
+                    bool useCamelCase = false;
+
+                    var ethosEnabledAttributes = context.ActionContext
+                        .ActionDescriptor.GetCustomAttributes<EthosEnabledFilter>();
+
+                    if ((ethosEnabledAttributes != null) && (ethosEnabledAttributes.Any()))
+                    {
+                        useCamelCase = ethosEnabledAttributes.Any(x => x._useCamelCase == true);
+                    }
+                    var addFilter = new EthosEnabledFilter(useCamelCase);
+                    await addFilter.OnActionExecutedAsync(context, cancellationToken);
+                }
+            }
+        }
 
         /// <summary>
         /// Creates final expression needed for filtering
@@ -180,10 +418,23 @@ namespace Ellucian.Web.Http.Filters
                         }
                         else //Items in the array are JObject (eg:[ Age : {$gt:20 }, { Name : Jane}]) - recurse till JValue is reached
                         {
-
+                            Type memberType = parameterType;
+                            //Check for Property
+                            //PropertyInfo matchingProperty = parameterType.GetProperty(key,
+                            //                                             System.Reflection.BindingFlags.Public |
+                            //                                             System.Reflection.BindingFlags.Instance |
+                            //                                             System.Reflection.BindingFlags.IgnoreCase);
+                            //if (matchingProperty != null)
+                            //{
+                            //    memberType = matchingProperty.PropertyType;
+                            //    if (memberType != null && memberType.Name == "IEnumerable`1" || memberType.Name == "List`1")
+                            //    {
+                            //        memberType = memberType.GetGenericArguments().FirstOrDefault();
+                            //    }
+                            //}
                             foreach (JObject item in val.Children<JToken>())
                             {
-                                Expression subExpression = CreateExpression(item, parameterType, param);
+                                Expression subExpression = CreateExpression(item, memberType, param);
                                 arrExpression = AppendExpression(arrExpression, subExpression, key);
                             }
                         }
@@ -377,8 +628,42 @@ namespace Ellucian.Web.Http.Filters
             return new JValue(reader.Value);
         }
 
-    }
+        /// <summary>
+        /// Gets the DTO type from the Controller Return Type.
+        /// </summary>
+        /// <param name="controllerType"></param>
+        /// <param name="controllerAction"></param>
+        /// <returns></returns>
+        private Type GetModelType(Type controllerType, string controllerAction)
+        {
+            Type modeltype = null;
+            if (controllerType != null && !string.IsNullOrEmpty(controllerAction))
+            {
+                //Get the data model type (which DTO we are using)
+                MethodInfo[] methods = controllerType.GetMethods().Where(m => m.Name == controllerAction).ToArray();
+                if (methods != null && methods.Any())
+                {
+                    modeltype = methods.FirstOrDefault().ReturnParameter.ParameterType;
 
+                    if (modeltype != null && modeltype.Name == "Task`1")
+                    {
+                        modeltype = modeltype.GetGenericArguments().FirstOrDefault();
+                    }
+                    if (modeltype != null && modeltype.Name == "IEnumerable`1")
+                    {
+                        modeltype = modeltype.GetGenericArguments().FirstOrDefault();
+                    }
+                    if (modeltype != null && modeltype.IsInterface)
+                    {
+                        modeltype = null;
+                        this.IgnoreFiltering = true;
+                    }
+                }
+            }
+
+            return modeltype;
+        }
+    }
 
 }
 

@@ -14,6 +14,7 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -185,6 +186,46 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             }
 
             return studentChecklistList;
+        }
+        /// <summary>
+        /// Gets or sets a student's CS.HOUSING.CODE for a given year
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYear"></param>
+        /// <param name="housingCode"></param>
+        /// <param name="retrieveOption"></param>
+        /// <returns></returns>
+        public async Task<string> GetSetHousingOptionAsync(string studentId, string awardYear, string housingCode, string retrieveOption)
+        {
+            try
+            {
+                var housingCtxRequest = new InteractWithHousingRequest()
+                {
+                    StudentId = studentId,
+                    AwardYear = awardYear,
+                    HousingCode = housingCode,
+                    GetSet = retrieveOption
+                };
+
+                var response = await transactionInvoker.ExecuteAsync<InteractWithHousingRequest, InteractWithHousingResponse>(housingCtxRequest);
+                if (response.ErrorMessages != "")
+                {
+                    //Log error messages but return anyway since a null housing code will be provided in case of error
+                    logger.Error(response.ErrorMessages);
+                    throw new ColleagueException(response.ErrorMessages);
+                }
+                return response.HousingCode;
+            }
+            catch (ColleagueException ce)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to {0} housing option for {1}*{2}", retrieveOption, studentId, awardYear));
+                return null;
+            }
+
         }
     }
 }

@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
 
         Task<Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration);
 
-        Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields);
+        Task<Dictionary<string, Dictionary<string, string>>> UpdateEthosBusinessProcessApiAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool returnRestrictedFields, EthosExtensibleData extendedEthosVersion);
 
         Task DeleteEthosApiBuilderAsync(string id, EthosApiConfiguration configuration);
 

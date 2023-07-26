@@ -1,8 +1,13 @@
-﻿/*Copyright 2016-2020 Ellucian Company L.P. and its affiliates.*/
-
+﻿/*Copyright 2016-2023 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,12 +18,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Transactions;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -1303,7 +1302,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(result.TaxForm, voucherVendorResult.AlVendorTaxForm);
             Assert.AreEqual(result.TaxFormCode, voucherVendorResult.AlVendorTaxFormCode);
             Assert.AreEqual(result.TaxFormLocation, voucherVendorResult.AlVendorTaxFormLoc);
-            CollectionAssert.AreEqual(result.VendorApTypes, voucherVendorResult.AlVenApTypes.Split(Convert.ToChar(DynamicArray.SM)).ToList());
+            CollectionAssert.AreEqual(result.VendorApTypes, voucherVendorResult.AlVenApTypes.Split(DmiString._SM).ToList());
         }
 
         #region SearchByKeywordAsync
@@ -1538,7 +1537,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 AlVendorTaxForm = "1098",
                 AlVendorTaxFormCode = "NEC",
                 AlVendorTaxFormLoc = "FL",
-                AlVenApTypes = "AP" + Convert.ToChar(DynamicArray.SM) + "AP2"
+                AlVenApTypes = "AP" + DmiString._SM + "AP2"
             };
 
             voucherVendorRequest = new TxGetVoucherVendorResultsRequest()
@@ -1617,7 +1616,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 ATaxForm = "1098",
                 ATaxFormCode = "NEC",
                 ATaxFormLoc = "FL",
-                AlVenApTypes =  new List<string> { "AP", "AP2" }
+                AlVenApTypes = new List<string> { "AP", "AP2" }
             };
 
         }
@@ -1635,7 +1634,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         System.Collections.ObjectModel.Collection<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors> vendors;
         System.Collections.ObjectModel.Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> people;
         System.Collections.ObjectModel.Collection<Ellucian.Colleague.Data.Base.DataContracts.Address> address;
-      
+
         private Ellucian.Colleague.Domain.ColleagueFinance.Entities.Vendors vendorEntity;
         private CreateUpdateVendorResponse response;
         private VoucherVendorSearchResults voucherVendors;
@@ -1753,7 +1752,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             _dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", ids, true)).ReturnsAsync(corp);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>(expectedRecordKey, true)).ReturnsAsync(() => null);
 
-            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", null,  typesID);
+            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", null, typesID);
             Assert.IsNotNull(actuals);
         }
 
@@ -1771,7 +1770,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             _dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", ids, true)).ReturnsAsync(corp);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>(expectedRecordKey, true)).ReturnsAsync(() => null);
             List<string> statuses = new List<string>() { "active" };
-            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "",  statuses);
+            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", statuses);
             Assert.IsNotNull(actuals);
         }
 
@@ -1787,7 +1786,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             _dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", ids, true)).ReturnsAsync(corp);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>(expectedRecordKey, true)).ReturnsAsync(() => null);
             List<string> statuses = new List<string>() { "holdPayment" };
-            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "",  statuses);
+            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", statuses);
             Assert.IsNotNull(actuals);
         }
 
@@ -1803,7 +1802,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             _dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", ids, true)).ReturnsAsync(corp);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>(expectedRecordKey, true)).ReturnsAsync(() => null);
             List<string> statuses = new List<string>() { "approved" };
-            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "",  statuses);
+            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", statuses);
             Assert.IsNotNull(actuals);
         }
 
@@ -1841,7 +1840,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 .ReturnsAsync(people);
             _dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", ids, true)).ReturnsAsync(corp);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>(expectedRecordKey, true)).ReturnsAsync(() => null);
-            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", null, null,  taxId);
+            var actuals = await vendorRepository.GetVendorsMaximumAsync(offset, limit, "", null, null, taxId);
             Assert.IsNotNull(actuals);
         }
 
@@ -1894,7 +1893,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var expectedVendor = vendors.FirstOrDefault(i => i.RecordGuid.Equals(guid));
             var expectedPerson = people.FirstOrDefault(i => i.RecordGuid.Equals(guid));
             //var expectedAddress = address.FirstOrDefault(i => i.Recordkey.Equals(expectedPerson.PersonAddresses.FirstOrDefault().ToString()))
-   
+
             _dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(resultDict);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>(expectedRecordKey, true)).ReturnsAsync(expectedVendor);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedRecordKey, true)).ReturnsAsync(expectedPerson);
@@ -2073,7 +2072,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var actual = await vendorRepository.GetVendorsMaximumByGuidAsync(guid);
         }
 
-   
+
         private void BuildData()
         {
             vendors = new Collection<DataContracts.Vendors>()

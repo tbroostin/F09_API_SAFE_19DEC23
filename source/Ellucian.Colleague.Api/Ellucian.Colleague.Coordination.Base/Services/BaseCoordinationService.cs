@@ -1,20 +1,20 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
-using Ellucian.Web.Http.EthosExtend;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Domain.Exceptions;
 using System.Text;
-using Ellucian.Dmi.Runtime;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -27,10 +27,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IRoleRepository roleRepository;
         private readonly IStaffRepository staffRepository;
         private readonly IConfigurationRepository configurationRepository;
-
-        char _VM = Convert.ToChar(DynamicArray.VM);
-        char _SM = Convert.ToChar(DynamicArray.SM);
-        char _XM = Convert.ToChar(250);
 
         /// <summary>
         /// The logger
@@ -65,7 +61,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// value is value to save in, if empty string then this means it is meant to remove the data from colleague
         /// </summary>
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
-        
+
         /// <summary>
         /// Contains a Tuple where Item1 is a bool set to true if any fields are denied or secured, 
         /// Item2 is a list of DeniedAccess Fields and Item3 is a list of Restricted fields.
@@ -161,7 +157,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (IntegrationApiException == null)
                 IntegrationApiException = new IntegrationApiException();
-       
+
             IntegrationApiException.AddError(ConvertToIntegrationApiError(message, code, guid, id, httpStatusCode));
         }
 
@@ -184,17 +180,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 IntegrationApiException = new IntegrationApiException();
 
             IntegrationApiException.AddErrors(ex.Errors.ToList().ConvertAll(
-                x => ConvertToIntegrationApiError(x.Message, x.Code, 
+                x => ConvertToIntegrationApiError(x.Message, x.Code,
                 !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.Id : guid,
                 !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.SourceId : id,
                 httpStatusCode)));
 
-            if ((!string.IsNullOrEmpty(ex.Message)) 
+            if ((!string.IsNullOrEmpty(ex.Message))
                 && (!IntegrationApiException.Errors.Any(e => !string.IsNullOrEmpty(e.Message)
                     && e.Message.Equals(ex.Message, StringComparison.OrdinalIgnoreCase))))
             {
                 IntegrationApiException.AddError(ConvertToIntegrationApiError(ex.Message, string.IsNullOrEmpty(code) ? "Data.Access" : code, guid, id, httpStatusCode));
-            }           
+            }
         }
 
         /// <summary>
@@ -410,7 +406,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             return;
         }
-        
+
         /// <summary>
         /// Check for permissions and build error message.
         /// If multiple permissions are assigned, then only one is required for access.
@@ -421,10 +417,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// 2. string: http method (ex: "GET")
         /// 3. string: resource name (ex: 'person-holds')</param>
         /// <returns>bool</returns>
-        public bool ValidatePermissions(Tuple<string[], string,string> permissionsTuple)
+        public bool ValidatePermissions(Tuple<string[], string, string> permissionsTuple)
         {
-            bool hasPermission = false; 
-            
+            bool hasPermission = false;
+
             if (permissionsTuple == null)
             {
                 return hasPermission;
@@ -440,11 +436,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         break;
                 }
             }
-             if (!hasPermission)
+            if (!hasPermission)
             {
                 StringBuilder sb = new StringBuilder();
                 sb.Append("User '" + CurrentUser.UserId + "' does not have permission");
-               
+
                 switch (permissionsTuple.Item2)
                 {
                     case ("GET"):
@@ -463,7 +459,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     sb.Append(" " + permissionsTuple.Item3.ToLower());
                 }
                 sb.Append(".");
-                
+
                 logger.Error(sb.ToString());
                 throw new PermissionsException(sb.ToString());
             }
@@ -723,7 +719,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         if (matchingData != null)
                         {
                             bool matchFound = false;
-                            var matchingValue = matchingData.ExtendedDataValue.Split(_VM);
+                            var matchingValue = matchingData.ExtendedDataValue.Split(DmiString._VM);
                             foreach (var matchValue in matchingValue)
                             {
                                 if (matchValue.Equals(CurrentUser.PersonId, StringComparison.OrdinalIgnoreCase))
@@ -766,6 +762,24 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
+            throw noConfigError;
+        }
+
+        /// <summary>
+        /// Gets the extended data defaults from the run-time CDD
+        /// </summary>
+        /// <returns>SchemasAttribute</returns>
+        public async Task<IEnumerable<Domain.Base.Entities.EthosExtensibleDataRow>> GetExtendedEthosDataRowDefault(List<Domain.Base.Entities.EthosExtensibleDataRow> ethosExtensibleDataRows, bool bypassCache = false)
+        {
+            if (configurationRepository != null)
+            {
+                var extensibleData = await configurationRepository.GetExtendedEthosDataRowDefault(ethosExtensibleDataRows, bypassCache);
+
+                return extensibleData;
+            }
+
+            var noConfigError = new ArgumentNullException("Configuration Repository is not intialized for Attribute Defaults");
+            logger.Error(noConfigError, "Configuration Repository is not intialized for Attribute Defaults");
             throw noConfigError;
         }
 
@@ -876,8 +890,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             EthosExtendedDataDictionary = importedDataList;
         }
 
-
-        public IList<EthosExtensibleData> ConvertExtendedDataFromDomainToPlatform(IEnumerable<Domain.Base.Entities.EthosExtensibleData> domainExtensibleData)
+        private IList<EthosExtensibleData> ConvertExtendedDataFromDomainToPlatform(IEnumerable<Domain.Base.Entities.EthosExtensibleData> domainExtensibleData)
         {
 
             var platformExtensibleDatas = new List<EthosExtensibleData>();
@@ -903,125 +916,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 foreach (var dataRow in extDataItem.ExtendedDataList)
                 {
-                    var row = new EthosExtensibleDataRow
-                    {
-                        ColleagueColumnName = dataRow.ColleagueColumnName,
-                        ColleagueFileName = dataRow.ColleagueFileName,
-                        ColleaguePropertyPosition = dataRow.ColleaguePropertyPosition,
-                        Required = dataRow.Required,
-                        ColleaguePropertyLength = dataRow.ColleaguePropertyLength,
-                        FullJsonPath = dataRow.FullJsonPath,
-                        JsonPath = dataRow.JsonPath,
-                        JsonTitle = dataRow.JsonTitle,
-                        ExtendedDataValue = dataRow.ExtendedDataValue,
-                        AssociationController = dataRow.AssociationController,
-                        UsageType = dataRow.DatabaseUsageType,
-                        TransType = dataRow.TransType
-                        
-                    };
-
-                    switch (dataRow.JsonPropertyType.ToLower())
-                    {
-                        case "string":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
-                            break;
-                        case "number":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Number;
-                            break;
-                        case "date":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Date;
-                            break;
-                        case "time":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Time;
-                            break;
-                        case "datetime":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.DateTime;
-                            break;
-                        default:
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
-                            break;
-                    }
-
+                    var row = ConvertExtendedDataRowFromDomainToPlatform(dataRow);
                     newEthosDataItem.ExtendedDataList.Add(row);
                 }
 
                 foreach (var filterRow in extDataItem.ExtendedDataFilterList)
                 {
-                    var row = new EthosExtensibleDataFilter
-                    {
-                        ColleagueColumnName = filterRow.ColleagueColumnName,
-                        DatabaseUsageType = filterRow.DatabaseUsageType,
-                        ColleagueFileName = filterRow.ColleagueFileName,
-                        ColleaguePropertyLength = filterRow.ColleaguePropertyLength,
-                        ColleaguePropertyPosition = filterRow.ColleagueFieldPosition,
-                        Required = filterRow.Required,
-                        FullJsonPath = filterRow.FullJsonPath,
-                        JsonPath = filterRow.JsonPath,
-                        JsonTitle = filterRow.JsonTitle,
-                        GuidColumnName = filterRow.GuidColumnName,
-                        GuidDatabaseUsageType = filterRow.GuidDatabaseUsageType,
-                        GuidFileName = filterRow.GuidFileName,
-                        SavingField = filterRow.SavingField,
-                        SavingOption = filterRow.SavingOption,
-                        SelectColumnName = filterRow.SelectColumnName,
-                        SelectFileName = filterRow.SelectFileName,
-                        SelectSubroutineName = filterRow.SelectSubroutineName,
-                        SelectParagraph = filterRow.SelectParagraph,
-                        TransColumnName = filterRow.TransColumnName,
-                        TransFileName = filterRow.TransFileName,
-                        TransTableName = filterRow.TransTableName,
-                        FilterValue = filterRow.FilterValue,
-                        FilterOper = filterRow.FilterOper,
-                        ValidFilterOpers = filterRow.ValidFilterOpers,
-                        SelectRules = filterRow.SelectRules,
-                        QueryName = filterRow.NamedQuery && !filterRow.KeyQuery ? filterRow.JsonTitle : "criteria",
-                        KeyQuery = filterRow.KeyQuery
-                    };
-
-                    switch (filterRow.JsonPropertyType.ToLower())
-                    {
-                        case "string":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
-                            break;
-                        case "number":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Number;
-                            break;
-                        case "date":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Date;
-                            break;
-                        case "time":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.Time;
-                            break;
-                        case "datetime":
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.DateTime;
-                            break;
-                        default:
-                            row.JsonPropertyType = JsonPropertyTypeExtensions.String;
-                            break;
-                    }
-
-                    row.SelectionCriteria = new List<EthosApiSelectCriteria>();
-                    foreach (var selectionCriteria in filterRow.SelectionCriteria)
-                    {
-                        row.SelectionCriteria.Add(new EthosApiSelectCriteria(selectionCriteria.SelectConnector,
-                            selectionCriteria.SelectColumn,
-                            selectionCriteria.SelectOper,
-                            selectionCriteria.SelectValue)
-                        );
-                    }
-
-                    row.SortColumns = new List<EthosApiSortCriteria>();
-                    foreach (var sortCriteria in filterRow.SortColumns)
-                    {
-                        row.SortColumns.Add(new EthosApiSortCriteria(sortCriteria.SortColumn, sortCriteria.SortSequence));
-                    }
-
-                    row.Enumerations = new List<EthosApiEnumerations>();
-                    foreach (var enums in filterRow.Enumerations)
-                    {
-                        row.Enumerations.Add(new EthosApiEnumerations(enums.EnumerationValue, enums.ColleagueValue));
-                    }
-
+                    var row = ConvertExtendedDataFilterFromDomainToPlatform(filterRow);
                     newEthosDataItem.ExtendedDataFilterList.Add(row);
                 }
 
@@ -1029,6 +930,130 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             return platformExtensibleDatas;
+        }
+
+        private EthosExtensibleDataRow ConvertExtendedDataRowFromDomainToPlatform(Domain.Base.Entities.EthosExtensibleDataRow dataRow)
+        {
+            var row = new EthosExtensibleDataRow
+            {
+                ColleagueColumnName = dataRow.ColleagueColumnName,
+                Description = dataRow.Description,
+                ColleagueFileName = dataRow.ColleagueFileName,
+                ColleaguePropertyPosition = dataRow.ColleaguePropertyPosition,
+                Required = dataRow.Required,
+                ColleaguePropertyLength = dataRow.ColleaguePropertyLength,
+                FullJsonPath = dataRow.FullJsonPath,
+                JsonPath = dataRow.JsonPath,
+                JsonTitle = dataRow.JsonTitle,
+                ExtendedDataValue = dataRow.ExtendedDataValue,
+                AssociationController = dataRow.AssociationController,
+                UsageType = dataRow.DatabaseUsageType,
+                TransType = dataRow.TransType
+            };
+
+            switch (dataRow.JsonPropertyType.ToLower())
+            {
+                case "string":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                    break;
+                case "number":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Number;
+                    break;
+                case "date":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Date;
+                    break;
+                case "time":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Time;
+                    break;
+                case "datetime":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.DateTime;
+                    break;
+                default:
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                    break;
+            }
+
+            return row;
+        }
+
+        private EthosExtensibleDataFilter ConvertExtendedDataFilterFromDomainToPlatform(Domain.Base.Entities.EthosExtensibleDataFilter filterRow)
+        {
+            var row = new EthosExtensibleDataFilter
+            {
+                ColleagueColumnName = filterRow.ColleagueColumnName,
+                DatabaseUsageType = filterRow.DatabaseUsageType,
+                ColleagueFileName = filterRow.ColleagueFileName,
+                ColleaguePropertyLength = filterRow.ColleaguePropertyLength,
+                ColleaguePropertyPosition = filterRow.ColleagueFieldPosition,
+                Required = filterRow.Required,
+                FullJsonPath = filterRow.FullJsonPath,
+                JsonPath = filterRow.JsonPath,
+                JsonTitle = filterRow.JsonTitle,
+                GuidColumnName = filterRow.GuidColumnName,
+                GuidDatabaseUsageType = filterRow.GuidDatabaseUsageType,
+                GuidFileName = filterRow.GuidFileName,
+                SavingField = filterRow.SavingField,
+                SavingOption = filterRow.SavingOption,
+                SelectColumnName = filterRow.SelectColumnName,
+                SelectFileName = filterRow.SelectFileName,
+                SelectSubroutineName = filterRow.SelectSubroutineName,
+                SelectParagraph = filterRow.SelectParagraph,
+                TransColumnName = filterRow.TransColumnName,
+                TransFileName = filterRow.TransFileName,
+                TransTableName = filterRow.TransTableName,
+                FilterValue = filterRow.FilterValue,
+                FilterOper = filterRow.FilterOper,
+                ValidFilterOpers = filterRow.ValidFilterOpers,
+                SelectRules = filterRow.SelectRules,
+                QueryName = filterRow.NamedQuery && !filterRow.KeyQuery ? filterRow.JsonTitle : "criteria",
+                KeyQuery = filterRow.KeyQuery
+            };
+
+            switch (filterRow.JsonPropertyType.ToLower())
+            {
+                case "string":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                    break;
+                case "number":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Number;
+                    break;
+                case "date":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Date;
+                    break;
+                case "time":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.Time;
+                    break;
+                case "datetime":
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.DateTime;
+                    break;
+                default:
+                    row.JsonPropertyType = JsonPropertyTypeExtensions.String;
+                    break;
+            }
+
+            row.SelectionCriteria = new List<EthosApiSelectCriteria>();
+            foreach (var selectionCriteria in filterRow.SelectionCriteria)
+            {
+                row.SelectionCriteria.Add(new EthosApiSelectCriteria(selectionCriteria.SelectConnector,
+                    selectionCriteria.SelectColumn,
+                    selectionCriteria.SelectOper,
+                    selectionCriteria.SelectValue)
+                );
+            }
+
+            row.SortColumns = new List<EthosApiSortCriteria>();
+            foreach (var sortCriteria in filterRow.SortColumns)
+            {
+                row.SortColumns.Add(new EthosApiSortCriteria(sortCriteria.SortColumn, sortCriteria.SortSequence));
+            }
+
+            row.Enumerations = new List<EthosApiEnumerations>();
+            foreach (var enums in filterRow.Enumerations)
+            {
+                row.Enumerations.Add(new EthosApiEnumerations(enums.EnumerationValue, enums.ColleagueValue));
+            }
+
+            return row;
         }
 
         /// <summary>

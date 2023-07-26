@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -32,7 +32,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                         500,
                         5555,
                         5000,
-                        "stuff and things");
+                        "stuff and things",
+                        0.00M,
+                        0.00M);
                 }
             }
             public PayrollRegisterEntry payrollRegisterEntry
@@ -248,7 +250,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                         500,
                         5555,
                         5000,
-                        "comments");
+                        "comments",
+                        0.00M,
+                        0.00M);
 
                 payrollRegisterEntry = new PayrollRegisterEntry("re1", employeeId, periodStartDate, periodEndDate, "BW", 1, null,
                     null, false, checkDate, true);

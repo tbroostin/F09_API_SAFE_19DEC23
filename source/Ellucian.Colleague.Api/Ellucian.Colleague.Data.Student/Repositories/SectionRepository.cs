@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -487,8 +487,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Get a single section using an ID
         /// </summary>
         /// <param name="id">The section ID</param>
-        /// <returns>The section</returns>
-        public async Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false)
+        /// <param name="ignoreFaculty"></param>
+        /// <param name="useSeatServiceWhenEnabled">Indicates whether the external seat management service should be used for section seat counts
+        /// NOTE: Ethos endpoints should always set this parameter to false as Ethos is used to sync capacity data between the local database and the external seat service</param>
+        /// <returns>The section <see cref="Domain.Student.Entities.Section">Section</see></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public async Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false, bool useSeatServiceWhenEnabled = false)
         {
             Section section = null;
 
@@ -506,11 +511,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             // Build the section data
             bool bestFit = false;
-            section = (await BuildNonCachedSectionsAsync(new List<CourseSections>() { courseSection }, bestFit, ignoreFaculty)).FirstOrDefault();
+            section = (await BuildNonCachedSectionsAsync(new List<CourseSections>() { courseSection }, bestFit, ignoreFaculty, useSeatServiceWhenEnabled)).FirstOrDefault();
 
             return section;
         }
 
+        #region Ethos
         /// <summary>
         /// Create a SectionCrosslist
         /// </summary>
@@ -801,6 +807,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return sectionGuidCollection;
         }
+        #endregion Ethos
 
         /// <summary>
         /// Using a collection of section ids, get a dictionary collection of associated guids
@@ -859,6 +866,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionGuidCollection;
         }
 
+        #region Ethos
         /// <summary>
         /// Get the GUID for a section meeting using its ID
         /// </summary>
@@ -983,7 +991,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 try
                 {
-                    return await GetSectionAsync(sectionId, ignoreFaculty);
+                    return await GetSectionAsync(sectionId, ignoreFaculty, useSeatServiceWhenEnabled: false);
                 }
                 catch (RepositoryException ex)
                 {
@@ -1098,7 +1106,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             totalCount = keyCacheObject.TotalCount.Value;
             var sectionData = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", subList);
 
-            sections = await BuildNonCachedSectionsAsync(sectionData.ToList());
+            sections = await BuildNonCachedSectionsAsync(sectionData.ToList(), useSeatServiceWhenEnabled: false);
 
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
@@ -1157,7 +1165,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             bool bestFit = false;
             bool ignoreFaculty = true;
-            sections = await BuildNonCachedSectionsAsync(sectionData.ToList(), bestFit, ignoreFaculty);
+            sections = await BuildNonCachedSectionsAsync(sectionData.ToList(), bestFit, ignoreFaculty, useSeatServiceWhenEnabled: false);
             if (exception != null && exception.Errors != null && exception.Errors.Any())
             {
                 throw exception;
@@ -1709,10 +1717,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var sectionData = new List<CourseSections>();
             sectionData.AddRange(bulkData);
 
-            sections = await BuildNonCachedSectionsAsync(sectionData);
+            sections = await BuildNonCachedSectionsAsync(sectionData, useSeatServiceWhenEnabled: false);
 
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
+        #endregion Ethos
 
         /// <summary>
         /// Retrieve Instant Enrollment Sections.
@@ -1791,7 +1800,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 csData.AddRange(csBulkReadOutput.BulkRecordsRead);
                             }
-                            ieSections = (await BuildNonCachedSectionsAsync(csData)).ToList();
+                            ieSections = (await BuildNonCachedSectionsAsync(csData, useSeatServiceWhenEnabled: true)).ToList();
                         }
                     }
                     // Set timestamp for last time cache was built
@@ -1856,6 +1865,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return regControlsIdsDict;
         }
 
+        #region Ethos
         /// <summary>
         /// Get LdmdRegUsersId from LDM.DEFAULTS
         /// </summary>
@@ -2036,7 +2046,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var sectionData = new List<CourseSections>();
             sectionData.AddRange(bulkData);
 
-            sections = await BuildNonCachedSectionsAsync(sectionData);
+            sections = await BuildNonCachedSectionsAsync(sectionData, useSeatServiceWhenEnabled: false);
 
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
@@ -2170,6 +2180,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return keywordSections;
         }
+        #endregion Ethos
 
         /// <summary>
         /// Return a Unidata Formatted Date string from an input argument of string type
@@ -2183,6 +2194,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
         }
 
+        #region Ethos
         /// <summary>
         /// Post a single section
         /// </summary>
@@ -2312,7 +2324,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw exception;
             }
 
-            return string.IsNullOrEmpty(response.CourseSectionsId) ? null : await GetSectionAsync(response.CourseSectionsId);
+            return string.IsNullOrEmpty(response.CourseSectionsId) ? null : await GetSectionAsync(response.CourseSectionsId, useSeatServiceWhenEnabled: false);
         }
 
 
@@ -2419,7 +2431,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw exception;
             }
 
-            return string.IsNullOrEmpty(response.CourseSectionsId) ? null : await GetSectionAsync(response.CourseSectionsId);
+            return string.IsNullOrEmpty(response.CourseSectionsId) ? null : await GetSectionAsync(response.CourseSectionsId, useSeatServiceWhenEnabled: false);
         }
 
         private async Task<List<SecStatuses>> BuildSectionStatusesAsync(Section section)
@@ -2440,6 +2452,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return statuses;
         }
+        #endregion Ethos
 
         public async Task<IEnumerable<Section>> GetRegistrationSectionsAsync(IEnumerable<Term> registrationTerms)
         {
@@ -2534,7 +2547,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                   List<WaitList> waitlistData = await GetWaitListsAsync(queryQuotedTermIds);
                   var requisiteData = await GetRequisitesAsync(sectionData);
                   var regBillingRateData = await GetRegBillingRatesAsync(sectionData);
-                  sectionResult = await BuildSectionsAsync(sectionData, meetingData, facultyData, rosterData, portalSiteData, crosslistData, pendingData, waitlistData, requisiteData, regBillingRateData);
+                  sectionResult = await BuildSectionsAsync(sectionData, meetingData, facultyData, rosterData, portalSiteData,
+                      crosslistData, pendingData, waitlistData, requisiteData, regBillingRateData, useSeatServiceWhenEnabled: true);
               }
 
               // Before returning, since the section cache is now fresh, add an empty list to the ChangedRegistrationSectionsCache.
@@ -2673,6 +2687,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return waitlistData;
         }
 
+        #region Ethos
         public async Task<Tuple<IEnumerable<StudentSectionWaitlist>, int>> GetWaitlistsAsync(int offset, int limit)
         {
             string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllStudentSectionWaitListRecordsCache);
@@ -2759,6 +2774,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return new Tuple<IEnumerable<StudentSectionWaitlist>, int>(new List<StudentSectionWaitlist>(), 0);
             }
         }
+        #endregion Ethos
+
         /// <summary>
         /// To get the waitlist details based on the section and student id
         /// Sends back the details on rank and rating of the waitlisted student for the section along with the config details of show rank and show rating
@@ -2845,6 +2862,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        #region Ethos
         public async Task<StudentSectionWaitlist> GetWaitlistFromGuidAsync(string waitlistGuid)
         {
             WaitList wl;
@@ -2923,6 +2941,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("No waitlist found with GUID '" + waitlistGuid + "'.");
             }
         }
+        #endregion Ethos
 
         private async Task<Collection<CourseSecXlists>> GetCrossListedSectionsAsync(List<CourseSections> sectionData)
         {
@@ -3124,8 +3143,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 string selectCriteria = "WITH SEC.COURSE EQ " + courseQuotedIds + " AND SEC.START.DATE GE '" + beginningStartDate + "' AND SEC.START.DATE LE '" + endingStartDate + "'";
                 string[] sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", selectCriteria);
                 sections = await GetNonCachedSectionsAsync(sectionIds.AsEnumerable());
-
-
             }
             return sections;
         }
@@ -3195,8 +3212,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if ((sectionIds != null) && (sectionIds.Any()))
             {
                 List<CourseSections> sectionsToBuild = (await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", sectionIds.ToArray())).ToList();
-                sectionsRequested = (await BuildNonCachedSectionsAsync(sectionsToBuild, bestFit)).ToList();
-
+                sectionsRequested = (await BuildNonCachedSectionsAsync(sectionsToBuild, bestFit, useSeatServiceWhenEnabled: true)).ToList();
             }
 
             return sectionsRequested;
@@ -3206,11 +3222,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// to retrieve sections seats to check for availability
         /// </summary>
         /// <param name="sectionIds"></param>
-        /// <param name="bestFit"></param>
-        /// <returns></returns>
+        /// <returns>Dictionary of SectionId and SectionSeats</returns>
         public async Task<Dictionary<string, SectionSeats>> GetSectionsSeatsAsync(IEnumerable<string> sectionIds)
         {
-            List<CourseSections> sectionsToBuild = new List<CourseSections>();
+            var sectionsToBuild = new List<CourseSections>();
             var sectionsRequested = new Dictionary<string, SectionSeats>();
             if ((sectionIds != null) && (sectionIds.Any()))
             {
@@ -3221,6 +3236,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionsRequested;
         }
 
+        #region Ethos
         /// <summary>
         /// Checks addErrorToCollection boolean to determine of error message should be added to the repository exception
         /// Note - the exception is not thrown, but is only added to the collection.
@@ -3243,8 +3259,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 });
             }
         }
+        #endregion Ethos
 
-        private async Task<IEnumerable<Section>> BuildNonCachedSectionsAsync(List<CourseSections> sectionsToBuild, bool bestFit = false, bool ignoreFaculty = false)
+        //used by both Self-Service and Ethos
+        private async Task<IEnumerable<Section>> BuildNonCachedSectionsAsync(List<CourseSections> sectionsToBuild,
+            bool bestFit = false, bool ignoreFaculty = false, bool useSeatServiceWhenEnabled = false)
         {
 
             // Save the list of original section IDs for later
@@ -3311,7 +3330,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 requisiteData,
                                                 regBillingRatesData,
                                                 bestFit,
-                                                ignoreFaculty);
+                                                ignoreFaculty,
+                                                useSeatServiceWhenEnabled);
 
                 // Now return just the Ids of the sections requested - there could be additional cross listed sections in the list that are not needed.
                 foreach (var secId in sectionIds)
@@ -3347,6 +3367,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return sectionsToBuild;
         }
+
+        //used by Self-Service only
         private async Task<Dictionary<string, SectionSeats>> BuildSectionsSeatsAsync(List<CourseSections> sectionsToBuild)
         {
             Dictionary<string, SectionSeats> sectionDict = new Dictionary<string, SectionSeats>();
@@ -3376,8 +3398,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var pendingData = await GetPendingSectionsInBatchAsync(sectionsToBuildIds);
                 var waitlistData = await GetWaitListsAsync(sectionsToBuildIds);
                 sectionDict = await BuildSectionsSeatsAsync(sectionsToBuild,
-
-                                              crossListData,
+                                               crossListData,
                                                pendingData,
                                                waitlistData);
 
@@ -3386,10 +3407,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionDict;
         }
 
+        //used by Self-Service only
         private async Task<Dictionary<string, SectionSeats>> BuildSectionsSeatsAsync(List<CourseSections> sectionData,
-                                                 List<CourseSecXlists> crosslistData,
-                                                   List<CourseSecPending> pendingData,
-                                                List<WaitList> waitlistData)
+                                              List<CourseSecXlists> crosslistData,
+                                              List<CourseSecPending> pendingData,
+                                              List<WaitList> waitlistData)
         {
             var sectionsSeats = new Dictionary<string, SectionSeats>();
             // If no data passed in, return a null collection
@@ -3409,12 +3431,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 pendingData = new List<CourseSecPending>();
             }
             var groupedPendinglists = pendingData.ToLookup(p => p.Recordkey, p => p);
-            sectionsSeats = sectionData.ToDictionary(sec => sec.Recordkey, sec => new SectionSeats(sec.Recordkey, sec.SecAllowWaitlistFlag == "Y", sec.SecCloseWaitlistFlag == "Y")
 
+            //check if seat service has been enabled in Colleague on RGCR
+            bool isSeatServiceEnabled = false;
+            try
+            {
+                isSeatServiceEnabled = await IsSeatServiceEnabledAsync();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured reading registration parameters while building sections entity");
+            }
+
+            sectionsSeats = sectionData.ToDictionary(sec => sec.Recordkey, sec => new SectionSeats(
+                sec.Recordkey, sec.SecAllowWaitlistFlag == "Y", sec.SecCloseWaitlistFlag == "Y",
+                isSeatServiceEnabled: isSeatServiceEnabled, useSeatServiceWhenEnabled: true)
             {
                 Guid = sec.RecordGuid,
                 SectionCapacity = sec.SecCapacity
             });
+
             var waitlistCodesDict = (await GeWaitlistStatusCodesAsync()).ToDictionary(w => w.Code, w => w);
             foreach (var courseSection in sectionData)
             {
@@ -3509,6 +3549,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 }
             }
+
+            //update seat counts with Seat Service seat counts when enabled
+            if (isSeatServiceEnabled)
+            {
+                sectionsSeats = await UpdateSeatCountsFromExternalSeatService(sectionsSeats);
+            }
+
             return sectionsSeats;
         }
 
@@ -3603,7 +3650,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (sectionsToBuildIds != null && sectionsToBuildIds.Count > 0)
             {
                 pendingData = await DataReader.BulkReadRecordAsync<CourseSecPending>("COURSE.SEC.PENDING", sectionsToBuildIds.ToArray());
-
             }
             return pendingData;
         }
@@ -3614,8 +3660,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (sectionsToBuildIds != null && sectionsToBuildIds.Count > 0)
             {
                 pendingData = await RetrieveBulkDataInBatchAsync<CourseSecPending>(sectionsToBuildIds, "COURSE.SEC.PENDING");
-
-
             }
             return pendingData;
         }
@@ -3791,6 +3835,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionsRequested;
         }
 
+
         private async Task<Dictionary<string, Section>> BuildSectionsAsync(List<CourseSections> sectionData,
                                                    List<CourseSecMeeting> meetingData,
                                                    Collection<CourseSecFaculty> facultyData,
@@ -3802,7 +3847,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                    Collection<AcadReqmts> requisiteData,
                                                    Collection<RegBillingRates> regBillingRateData,
                                                    bool bestFit = false,
-                                                   bool ignoreFaculty = false)
+                                                   bool ignoreFaculty = false,
+                                                   bool useSeatServiceWhenEnabled = false)
         {
             var sections = new Dictionary<string, Section>();
             // If no data passed in, return a null collection
@@ -3823,12 +3869,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var allCourseTypes = await GetCourseTypesAsync();
             IEnumerable<InstructionalMethod> instructionalMethods = await InstructionalMethodsAsync();
             IEnumerable<CourseType> courseTypes = await GetCourseTypesAsync();
+
             foreach (var sec in sectionData)
             {
                 try
                 {
 
-                    var section = await BuildSectionAsync(sec, bestFit);
+                    var section = await BuildSectionAsync(sec, bestFit, useSeatServiceWhenEnabled);
 
                     var secFaculty = new List<CourseSecFaculty>();
                     if (groupedFaculty.ContainsKey(sec.Recordkey) && groupedFaculty[sec.Recordkey] != null)
@@ -4358,6 +4405,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
+
+            //check if seat service has been enabled in Colleague on RGCR
+            bool isSeatServiceEnabled = false;
+            try
+            {
+                isSeatServiceEnabled = await IsSeatServiceEnabledAsync();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured reading registration parameters while building sections entity");
+            }
+
+            //update seat counts with the external Seat Management service counts when enabled and not called by an Ethos endpoint
+            //useSeatServiceWhenEnabled will be false when called by Ethos endpoints
+            if (useSeatServiceWhenEnabled && isSeatServiceEnabled)
+            {
+                sections = await UpdateSeatCountsFromExternalSeatService(sections);
+            }
+
             return sections;
         }
 
@@ -4503,7 +4573,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
-        private async Task<Section> BuildSectionAsync(CourseSections sec, bool bestFit)
+        private async Task<Section> BuildSectionAsync(CourseSections sec, bool bestFit, bool useSeatServiceWhenEnabled)
         {
             List<SectionStatusItem> statuses = null;
             string courseDelimiter = "-";
@@ -4517,8 +4587,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Exception occured reading course delimter while buliding sections entity");
+                logger.Error(ex, "Exception occured reading course delimter while building sections entity");
             }
+
+            bool isSeatServiceEnabled = false;
+            try
+            {
+                isSeatServiceEnabled = await IsSeatServiceEnabledAsync();
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured reading registration parameters while building sections entity");
+            }
+
             if (sec.SecStatusesEntityAssociation != null)
             {
                 try
@@ -4538,6 +4623,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
+
             bool allowPassNoPass = sec.SecAllowPassNopassFlag == "Y";
             bool allowAudit = sec.SecAllowAuditFlag == "Y";
             bool onlyPassNoPass = sec.SecOnlyPassNopassFlag == "Y";
@@ -4558,10 +4644,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string sectionComments = string.Empty;
             if (!string.IsNullOrEmpty(sec.SecPrintedComments))
             {
-                sectionComments = sec.SecPrintedComments.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                sectionComments = sec.SecPrintedComments.Replace(DmiString._VM, '\n');
             }
 
-            //
             Section section;
             try
             {
@@ -4583,7 +4668,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                  allowWaitlist,
                  waitlistClosed,
                  consentRequired,
-                 hideInCatalog
+                 hideInCatalog,
+                 isSeatServiceEnabled,
+                 useSeatServiceWhenEnabled
                  )
                 {
                     Guid = sec.RecordGuid,
@@ -5133,6 +5220,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
 
+        #region Ethos
         /// <summary>
         /// Get a section meeting using its record ID
         /// </summary>
@@ -5774,6 +5862,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return await UpdateSectionFacultyAsync(sectionFaculty, guid);
         }
+        #endregion Ethos
 
         /// <summary>
         /// Gets the specified calendar schedule type.
@@ -6221,6 +6310,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionGradingStatus;
         }
 
+        #region Ethos
         private async Task<SectionFaculty> UpdateSectionFacultyAsync(SectionFaculty sectionFaculty, string guid)
         {
             var exception = new RepositoryException();
@@ -6386,9 +6476,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new ApplicationException(error);
             }
 
-            var sectionEntity = await GetSectionAsync(textbook.SectionId);
+            var sectionEntity = await GetSectionAsync(textbook.SectionId, useSeatServiceWhenEnabled: true);
             return sectionEntity;
         }
+        #endregion Ethos
 
         /// <summary>
         /// Gets the calendar schedule for a specific section
@@ -6481,6 +6572,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
 
+        #region Ethos
         /// <summary>
         /// Converts a <see cref="SectionBookAction"/> object to an appropriate internal code
         /// </summary>
@@ -6498,6 +6590,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return "U";
             }
         }
+        #endregion Ethos
 
         /// <summary>
         /// Build a section meeting
@@ -6528,6 +6621,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             meeting.EndTime = csm.CsmEndTime.HasValue ?
                 csm.CsmEndTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone) : null;
+
+            meeting.RawStartTime = csm.CsmStartTime;
 
             // Calculate the total minutes of this meeting
             try
@@ -6613,6 +6708,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        #region Ethos
         /// <summary>
         /// Build a SectionFaculty object from a CourseSecFaculty object
         /// </summary>
@@ -6642,6 +6738,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return sectionFacultyEntity;
         }
+        #endregion Ethos
 
         /// <summary>
         /// Calculate the days of the week to which the section meeting applies
@@ -6669,6 +6766,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return instruction != null && instruction.IsOnline;
         }
 
+        #region Ethos
         private async Task<SectionMeeting> UpdateSectionMeetingAsync(Section section, string meetingGuid)
         {
             if (section == null)
@@ -6900,6 +6998,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return string.IsNullOrEmpty(response.CourseSecMeetingId) ? null : await GetSectionMeetingAsync(response.CourseSecMeetingId);
         }
+        #endregion Ethos
 
         private async Task<IEnumerable<InstructionalMethod>> InstructionalMethodsAsync()
         {
@@ -6956,6 +7055,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        #region Ethos
         private async Task<SectionStatusIntegration> ConvertStatusCodeToSectionIntegrationStatusAsync(string status)
         {
             var statusCodes = await GetSectionStatusCodesAsync();
@@ -6990,6 +7090,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return retval;
         }
+        #endregion Ethos
 
         /// <summary>
         /// Return a Unidata Select formatted list of Section Status codes from a string of either
@@ -7079,6 +7180,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        #region Ethos
         /// <summary>
         /// Convert a section status action code into a section status type
         /// </summary>
@@ -7102,6 +7204,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return SectionStatusIntegration.Pending;
             }
         }
+        #endregion Ethos
 
         public async Task<IEnumerable<WaitlistStatusCode>> GeWaitlistStatusCodesAsync()
         {
@@ -7125,7 +7228,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return WaitlistStatus.Unknown;
         }
-
 
         private async Task<WaitlistStatus> GetWaitlistStatusAsync(string waitlistStatusCode)
         {
@@ -7205,8 +7307,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return null;
             }
         }
-
-
 
         private async Task<Data.Student.DataContracts.StwebDefaults> GetStwebDefaultsAsync()
         {
@@ -7488,6 +7588,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return postItems;
         }
+
         /// <summary>
         /// Read the international parameters records to extract date format used
         /// locally and setup in the INTL parameters.
@@ -7618,7 +7719,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return ChangedInstantEnrollmentSectionsCacheBuildTime;
         }
 
-
         private async Task<ApplValcodes> GetWaitlistStatusesAsync()
         {
             if (waitlistStatuses != null)
@@ -7743,7 +7843,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //if reached here then it means no errors occurred, we are going to return section certified census entity because that would be updated with latest census certification.
                 //certified censuses is linked entity to section therefore have to read course.sections file first and from there will retrieve census certification information for the census date and position passed.
                 //This call is to retrieve non-cached section details.
-                Section sectionEntity = await GetSectionAsync(sectionId);
+                Section sectionEntity = await GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
                 //modify null cert position to empty
                 string certPosition = censusCertificationPosition ?? string.Empty;
                 SectionCensusCertification certifiedCensus = sectionEntity.SectionCertifiedCensuses != null ? sectionEntity.SectionCertifiedCensuses.Where(s => s != null && s.CensusCertificationPosition == certPosition && s.CensusCertificationDate == censusCertificationDate).FirstOrDefault() : null;
@@ -8038,6 +8138,355 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return cdDefaults;
         }
 
+        private async Task<bool> IsSeatServiceEnabledAsync()
+        {
+            RegDefaults regDefaults = await GetRegDefaultsAsync();
+            bool isSeatServiceEnabled = !string.IsNullOrEmpty(regDefaults.RgdSeatServiceEnabled) && regDefaults.RgdSeatServiceEnabled.ToUpper() == "Y" ? true : false;
+            return isSeatServiceEnabled;
+        }
+
+        private async Task<RegDefaults> GetRegDefaultsAsync()
+        {
+            var registrationDefaults = await GetOrAddToCacheAsync<RegDefaults>("RegistrationDefaults",
+              async () =>
+              {
+                  RegDefaults regDefaults = await DataReader.ReadRecordAsync<RegDefaults>("ST.PARMS", "REG.DEFAULTS");
+                  if (regDefaults == null)
+                  {
+                      var errorMessage = "Unable to access registration defaults from ST.PARMS. REG.DEFAULTS." + Environment.NewLine
+                      + "Default values will be assumed for registration defaults in API." + Environment.NewLine
+                      + "You can build a REG.DEFAULTS record by accessing the RGPD form in Colleague UI.";
+                      logger.Info(errorMessage);
+                      regDefaults = new RegDefaults();
+                  }
+                  return regDefaults;
+              }, Level1CacheTimeoutValue);
+            return registrationDefaults;
+        }
+
+        private async Task<Dictionary<string, SectionSeats>> UpdateSeatCountsFromExternalSeatService(Dictionary<string, SectionSeats> sectionsSeats)
+        {
+            //do nothing if there are no sections
+            if (sectionsSeats == null || sectionsSeats.Count == 0)
+                return sectionsSeats;
+
+            // Extract the list of section ids to call external seat management service
+            var sectionIds = new List<string>(sectionsSeats.Keys);
+            logger.Info(string.Format("Sections Ids sent to the external Seat Management service: {0}", String.Join(", ", sectionIds)));
+
+
+            try
+            {
+                //call external seat management service for sections
+                GetSectionsSeatCountsRequest request = new GetSectionsSeatCountsRequest() { SectionIds = sectionIds };
+                var response = await transactionInvoker.ExecuteAsync<GetSectionsSeatCountsRequest, GetSectionsSeatCountsResponse>(request);
+
+                //check for errors - nothing was returned in the response from the external seat management service
+                if (response == null || response.SectionsSeatCounts == null || !response.SectionsSeatCounts.Any())
+                {
+                    logger.Error("Unable to retrieve section seat counts from the external Seat Management service");
+
+                    // set seat counts unavailable for all sections in this case, since seat service ctx returned nothing
+                    foreach (var sectionSeats in sectionsSeats.Values)
+                    {
+                        sectionSeats.AreSeatCountsAvailable = false;
+                        sectionSeats.GlobalCapacity = null;
+                        sectionSeats.SectionCapacity = null;
+                        sectionSeats.GlobalActiveOnWaitlist = null;
+                        sectionSeats.NumberOnWaitlist = null;
+                        sectionSeats.Available = null;
+                        sectionSeats.Enrolled = null;
+                    }
+                    return sectionsSeats;
+                }
+
+                foreach (var externalSectionSeatCounts in response.SectionsSeatCounts)
+                {
+                    if (!sectionsSeats.ContainsKey(externalSectionSeatCounts.SectionKeys))
+                    {
+                        // the section returned from the external seat management service was not found in the SectionSeats dictionary from colleague
+                        logger.Error("Unable to locate section returned from the external Seat Management service in Colleague SectionSeats dictionary for section id:" + externalSectionSeatCounts.SectionKeys);
+                        continue;
+                    }
+
+                    //find section to udpate 
+                    SectionSeats updateSectionSeats = sectionsSeats[externalSectionSeatCounts.SectionKeys];
+                    if (updateSectionSeats == null)
+                    {
+                        logger.Error("Unable to update section seat counts from the external Seat Management service for section id: " + externalSectionSeatCounts.SectionKeys);
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(externalSectionSeatCounts.ErrorMsgs))
+                    {
+                        // seat management service was not available or section was missing, clear any data from the seat count properties
+                        updateSectionSeats.AreSeatCountsAvailable = false;
+                        updateSectionSeats.GlobalCapacity = null;
+                        updateSectionSeats.SectionCapacity = null;
+                        updateSectionSeats.GlobalActiveOnWaitlist = null;
+                        updateSectionSeats.NumberOnWaitlist = null;
+                        updateSectionSeats.Available = null;
+                        updateSectionSeats.Enrolled = null;
+
+                        // either the external seat management service returned an empty 200 response and the section does not exist in the seat management service
+                        // or something else happened, like the external seat management service was unavailable
+                        // log the message and continue processing the remaining sections
+                        // either a section was not registered with the external seat management service or something else bad happened
+                        var errorMessage = "Unable to retrieve section seat counts from the external Seat Management service for section id: {0}"
+                            + Environment.NewLine + "Error: {1}";
+                        logger.Error(string.Format(errorMessage, externalSectionSeatCounts.SectionKeys, externalSectionSeatCounts.ErrorMsgs));
+                        continue;
+                    }
+
+                    // udpate the section with seat count data from the external seat management service
+                    updateSectionSeats.AreSeatCountsAvailable = true;
+                    updateSectionSeats.GlobalCapacity = Int32.TryParse(externalSectionSeatCounts.GlobalCapacity, out var globalCapacity) ? globalCapacity : (int?)null;
+                    updateSectionSeats.SectionCapacity = Int32.TryParse(externalSectionSeatCounts.LocalCapacity, out var localCapacity) ? localCapacity : (int?)null;
+                    updateSectionSeats.GlobalActiveOnWaitlist = Int32.TryParse(externalSectionSeatCounts.GlobalWait, out var globalWait) ? globalWait : (int?)null;
+                    updateSectionSeats.NumberOnWaitlist = Int32.TryParse(externalSectionSeatCounts.LocalWait, out var localWait) ? localWait : (int?)null;
+                    updateSectionSeats.Available = Int32.TryParse(externalSectionSeatCounts.RegAvail, out var regAvail) ? regAvail : (int?)null;
+                    if (updateSectionSeats.GlobalCapacity.HasValue)
+                    {
+                        updateSectionSeats.Enrolled = Int32.TryParse(externalSectionSeatCounts.GlobalUsed, out var globalUsed) ? globalUsed : (int?)null;
+                    }
+                    else
+                    {
+                        updateSectionSeats.Enrolled = Int32.TryParse(externalSectionSeatCounts.LocalUsed, out var localUsed) ? localUsed : (int?)null;
+                    }
+                }
+
+                // Extract the list of section ids returned from the external seat management service to check that all sections in the dictionary are updated
+                var seatServiceSectionIds = response.SectionsSeatCounts.Select(x => x.SectionKeys).ToList();
+
+                // missing section ids are in the section dictionary but were not returned in the response from the external seat management service
+                var missingSectionIds = sectionIds.Except(seatServiceSectionIds).ToList();
+
+                // set seat counts availabe to false for any section that has not been udpated by the seat management service
+                if (missingSectionIds != null && missingSectionIds.Any())
+                {
+                    logger.Error(string.Format("Sections Ids not found in the external Seat Management service: {0}", String.Join(", ", missingSectionIds)));
+                    foreach (var sectionId in missingSectionIds)
+                    {
+                        //find section to udpate 
+                        SectionSeats updateSectionSeats = sectionsSeats[sectionId];
+                        if (updateSectionSeats != null)
+                        {
+                            updateSectionSeats.AreSeatCountsAvailable = false;
+                            updateSectionSeats.GlobalCapacity = null;
+                            updateSectionSeats.SectionCapacity = null;
+                            updateSectionSeats.GlobalActiveOnWaitlist = null;
+                            updateSectionSeats.NumberOnWaitlist = null;
+                            updateSectionSeats.Available = null;
+                            updateSectionSeats.Enrolled = null;
+                        }
+                    }
+                }
+                return sectionsSeats;
+            }
+            catch (ColleagueTransactionException cex)
+            {
+                if (cex.Message.Contains("Error Subset Found: Server error-00301-The request timed out."))
+                {
+                    //log the exception and return sections without any seat counts
+                    var errorMessage = "Unable to retrieve section seat counts from the external Seat Management service "
+                        + Environment.NewLine + "Section Ids: {0}"
+                        + Environment.NewLine + "Error: {1}";
+                    logger.Error(cex, string.Format(errorMessage, String.Join(", ", sectionIds), cex.Message));
+
+
+                    //the external seat management service was available but timeout before returning seat counts for all the given sections
+                    foreach (var sectionSeats in sectionsSeats.Values)
+                    {
+                        sectionSeats.AreSeatCountsAvailable = false;
+                        sectionSeats.GlobalCapacity = null;
+                        sectionSeats.SectionCapacity = null;
+                        sectionSeats.GlobalActiveOnWaitlist = null;
+                        sectionSeats.NumberOnWaitlist = null;
+                        sectionSeats.Available = null;
+                        sectionSeats.Enrolled = null;
+                    }
+
+                    //return sections without any seat counts
+                    return sectionsSeats;
+                }
+                else
+                {
+                    logger.Error(cex, "Unable to retrieve section seat counts from the external Seat Management service.");
+                    throw;
+                }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section seat counts from the external Seat Management service.");
+                throw;
+            }
+        }
+
+        private async Task<Dictionary<string, Section>> UpdateSeatCountsFromExternalSeatService(Dictionary<string, Section> sections)
+        {
+            //do nothing if there are no sections
+            if (sections == null || sections.Count == 0)
+                return sections;
+
+            // Extract the list of section ids to call external seat service
+            var sectionIds = new List<string>(sections.Keys);
+            logger.Info(string.Format("Sections Ids sent to the external Seat Management service: {0}", String.Join(", ", sectionIds)));
+
+            try
+            {
+                //call external seat management service for sections
+                GetSectionsSeatCountsRequest request = new GetSectionsSeatCountsRequest() { SectionIds = sectionIds };
+                var response = await transactionInvoker.ExecuteAsync<GetSectionsSeatCountsRequest, GetSectionsSeatCountsResponse>(request);
+
+                //check for errors - nothing was returned in the response rom the external seat management service
+                if (response == null || response.SectionsSeatCounts == null || !response.SectionsSeatCounts.Any())
+                {
+                    logger.Error("Unable to retrieve section seat counts from the external Seat Management service");
+
+                    // set seat counts unavailable for all sections in this case, since seat service ctx returned nothing
+                    foreach (var section in sections.Values)
+                    {
+                        section.AreSeatCountsAvailable = false;
+                        section.GlobalCapacity = null;
+                        section.SectionCapacity = null;
+                        section.GlobalActiveOnWaitlist = null;
+                        section.NumberOnWaitlist = null;
+                        section.Available = null;
+                        section.Enrolled = null;
+                    }
+                    return sections;
+                }
+
+                foreach (var externalSectionSeatCounts in response.SectionsSeatCounts)
+                {
+                    if (!sections.ContainsKey(externalSectionSeatCounts.SectionKeys))
+                    {
+                        // the section returned from the external seat management service was not found in the Section dictionary from colleague
+                        logger.Error("Unable to locate section returned from the external seat management service in Colleague Section dictionary for section id: " + externalSectionSeatCounts.SectionKeys);
+                        continue;
+                    }
+
+                    //find section to udpate 
+                    Section updateSection = sections[externalSectionSeatCounts.SectionKeys];
+                    if (updateSection == null)
+                    {
+                        logger.Error("Unable to update section seat counts from the external seat management service for section id: " + externalSectionSeatCounts.SectionKeys);
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(externalSectionSeatCounts.ErrorMsgs))
+                    {
+                        // seat management service was not available or section was missing, clear any data from the seat count properties
+                        updateSection.AreSeatCountsAvailable = false;
+                        updateSection.GlobalCapacity = null;
+                        updateSection.SectionCapacity = null;
+                        updateSection.GlobalActiveOnWaitlist = null;
+                        updateSection.NumberOnWaitlist = null;
+                        updateSection.Available = null;
+                        updateSection.Enrolled = null;
+
+                        // either external seat management service returned an empty 200 response and the section does not exist in the external management seat service
+                        // or something else happened, like the external seat management service was unavailable
+                        // log the message and continue processing the remaining sections
+                        // either a section was not registered with the external seat management service or something else bad happened
+                        var errorMessage = "Unable to retrieve section seat counts from the external Seat Management service for section id: {0}"
+                            + Environment.NewLine + "Error: {1}";
+                        logger.Error(string.Format(errorMessage, externalSectionSeatCounts.SectionKeys, externalSectionSeatCounts.ErrorMsgs));
+                        continue;
+                    }
+
+                    // udpate the section with seat count data from the external seat management service
+                    updateSection.AreSeatCountsAvailable = true;
+                    updateSection.GlobalCapacity = Int32.TryParse(externalSectionSeatCounts.GlobalCapacity, out var globalCapacity) ? globalCapacity : (int?)null;
+                    updateSection.SectionCapacity = Int32.TryParse(externalSectionSeatCounts.LocalCapacity, out var localCapacity) ? localCapacity : (int?)null;
+                    updateSection.GlobalActiveOnWaitlist = Int32.TryParse(externalSectionSeatCounts.GlobalWait, out var globalWait) ? globalWait : (int?)null;
+                    updateSection.NumberOnWaitlist = Int32.TryParse(externalSectionSeatCounts.LocalWait, out var localWait) ? localWait : (int?)null;
+                    updateSection.Available = Int32.TryParse(externalSectionSeatCounts.RegAvail, out var regAvail) ? regAvail : (int?)null;
+                    if (updateSection.GlobalCapacity.HasValue)
+                    {
+                        updateSection.Enrolled = Int32.TryParse(externalSectionSeatCounts.GlobalUsed, out var globalUsed) ? globalUsed : (int?)null;
+                    }
+                    else
+                    {
+                        updateSection.Enrolled = Int32.TryParse(externalSectionSeatCounts.LocalUsed, out var localUsed) ? localUsed : (int?)null;
+                    }
+                }
+
+                // Extract the list of section ids returned from the external seat management service to check that all sections in the dictionary are updated
+                var seatServiceSectionIds = response.SectionsSeatCounts.Select(x => x.SectionKeys).ToList();
+
+                // missing section ids are in the section dictionary but were not returned in the response from the external seat management service
+                var missingSectionIds = sectionIds.Except(seatServiceSectionIds).ToList();
+
+                // set seat counts availabe to false for any section that has not been udpated by the seat management service
+                if (missingSectionIds != null && missingSectionIds.Any())
+                {
+                    logger.Error(string.Format("Sections Ids not found in the external Seat Management service: {0}", String.Join(", ", missingSectionIds)));
+                    foreach (var sectionId in missingSectionIds)
+                    {
+                        //find section to udpate 
+                        Section updateSection = sections[sectionId];
+                        if (updateSection != null)
+                        {
+                            updateSection.AreSeatCountsAvailable = false;
+                            updateSection.GlobalCapacity = null;
+                            updateSection.SectionCapacity = null;
+                            updateSection.GlobalActiveOnWaitlist = null;
+                            updateSection.NumberOnWaitlist = null;
+                            updateSection.Available = null;
+                            updateSection.Enrolled = null;
+                        }
+                    }
+                }
+
+                //return sections with updated seat counts from external Seat Management service
+                return sections;
+            }
+            catch (ColleagueTransactionException cex)
+            {
+                if (cex.Message.Contains("Error Subset Found: Server error-00301-The request timed out."))
+                {
+                    //log the exception and return sections without any seat counts
+                    var errorMessage = "Unable to retrieve section seat counts from the external seat management service "
+                        + Environment.NewLine + "Section Ids: {0}"
+                        + Environment.NewLine + "Error: {1}";
+                    logger.Error(cex, string.Format(errorMessage, String.Join(", ", sectionIds), cex.Message));
+
+                    //the external seat management service was available but timeout before returning seat counts for all the given sections
+                    foreach (var section in sections.Values)
+                    {
+                        section.AreSeatCountsAvailable = false;
+                        section.GlobalCapacity = null;
+                        section.SectionCapacity = null;
+                        section.GlobalActiveOnWaitlist = null;
+                        section.NumberOnWaitlist = null;
+                        section.Available = null;
+                        section.Enrolled = null;
+                    }
+
+                    //return sections without any seat counts
+                    return sections;
+                }
+                else
+                {
+                    logger.Error(cex, "Unable to retrieve section seat counts from the external management seat service.");
+                    throw;
+                }
+            }
+            catch (ColleagueSessionExpiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve section seat counts from the external seat management service.");
+                throw;
+            }
+        }
 
         /// <summary>
         /// Retrieves the data for departmental oversight person based  on the section name search performed
@@ -8124,6 +8573,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return deptOversightSearchResults;
         }
 
+        #region Ethos
         /// Get the start dates of specific sections
         /// </summary>
         /// Trimmed down creation of section entities for only incoming 
@@ -8155,12 +8605,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 foreach (var sec in sectionDataContracts)
                 {
-                    var section = await BuildSectionAsync(sec, false);
+                    var section = await BuildSectionAsync(sec, false, useSeatServiceWhenEnabled: false);
                     sectionEntities.Add(section);
                 }
             }
             return sectionEntities;
         }
+        #endregion Ethos
     }
 }
 

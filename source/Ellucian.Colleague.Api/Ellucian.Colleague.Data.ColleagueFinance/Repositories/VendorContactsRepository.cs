@@ -1,5 +1,4 @@
-﻿/*Copyright 2016-2022 Ellucian Company L.P. and its affiliates.*/
-
+﻿/*Copyright 2016-2023 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -31,7 +30,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         protected const int AllVendorsCacheTimeout = 20;
         protected const string AllVendorContactsFilter = "AllVendorContactsFilter";
         RepositoryException repositoryException = new RepositoryException();
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public VendorContactsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -64,8 +62,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                        AllVendorsCacheTimeout,
                        async () =>
                        {
-                           string criteria = !string.IsNullOrWhiteSpace(vendorId) ? 
-                           string.Format( "WITH OCN.VENDOR.CONTACT EQ 'Y' AND OCN.VENDOR.ID EQ '{0}'", vendorId) : 
+                           string criteria = !string.IsNullOrWhiteSpace(vendorId) ?
+                           string.Format("WITH OCN.VENDOR.CONTACT EQ 'Y' AND OCN.VENDOR.ID EQ '{0}'", vendorId) :
                                           "WITH OCN.VENDOR.ID NE '' AND OCN.VENDOR.CONTACT EQ 'Y'";
 
                            return new CacheSupport.KeyCacheRequirements()
@@ -127,7 +125,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw e;
             }
 
-        }       
+        }
 
         /// <summary>
         /// Get a list of vendor contacts for list of vendors
@@ -184,10 +182,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
                     }
-                   
+
                 }
 
-                if (newrepoError!= null && newrepoError.Errors.Any())
+                if (newrepoError != null && newrepoError.Errors.Any())
                 {
                     throw newrepoError;
                 }
@@ -209,11 +207,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="guid"></param>
         /// <returns></returns>
-        public async Task<OrganizationContact> GetGetVendorContactsByGuidAsync( string guid )
+        public async Task<OrganizationContact> GetGetVendorContactsByGuidAsync(string guid)
         {
-            if( string.IsNullOrWhiteSpace( guid ) )
+            if (string.IsNullOrWhiteSpace(guid))
             {
-                throw new ArgumentNullException( "guid", "Guid is required." );
+                throw new ArgumentNullException("guid", "Guid is required.");
             }
 
             try
@@ -221,41 +219,41 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 string id = string.Empty;
                 try
                 {
-                    id = await this.GetOrganizatonContactIdFromGuidAsync( guid );
-                    if( string.IsNullOrEmpty( id ) )
+                    id = await this.GetOrganizatonContactIdFromGuidAsync(guid);
+                    if (string.IsNullOrEmpty(id))
                     {
-                        repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "No vendor contact was found for GUID: '{0}'", guid ) ) );
+                        repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("No vendor contact was found for GUID: '{0}'", guid)));
                         throw repositoryException;
                     }
                 }
-                catch(RepositoryException)
+                catch (RepositoryException)
                 {
                     throw;
                 }
-                catch(Exception)
+                catch (Exception)
                 {
-                    repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "No vendor contact was found for GUID: '{0}'", guid ) ) );
+                    repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("No vendor contact was found for GUID: '{0}'", guid)));
                     throw repositoryException;
                 }
                 //ORGANIZATION.CONTACT
                 DataContracts.OrganizationContact orgContactData = null;
                 try
                 {
-                    orgContactData = await DataReader.ReadRecordAsync<DataContracts.OrganizationContact>( id );
+                    orgContactData = await DataReader.ReadRecordAsync<DataContracts.OrganizationContact>(id);
 
-                    if( orgContactData == null || ( string.IsNullOrEmpty( orgContactData.OcnVendorContact ) || !orgContactData.OcnVendorContact.Equals( "Y" ) ) )
+                    if (orgContactData == null || (string.IsNullOrEmpty(orgContactData.OcnVendorContact) || !orgContactData.OcnVendorContact.Equals("Y")))
                     {
-                        repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "No vendor contact was found for GUID: '{0}'", guid ) ) );
+                        repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("No vendor contact was found for GUID: '{0}'", guid)));
                         throw repositoryException;
                     }
                 }
-                catch( RepositoryException )
+                catch (RepositoryException)
                 {
                     throw;
                 }
-                catch( Exception )
+                catch (Exception)
                 {
-                    repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "No vendor contact was found for GUID: '{0}'", guid ) ) );
+                    repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("No vendor contact was found for GUID: '{0}'", guid)));
                     throw repositoryException;
                 }
                 /*
@@ -264,63 +262,63 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 try
                 {
-                    var vendor = await DataReader.ReadRecordAsync<DataContracts.Vendors>( orgContactData.OcnCorpId );
-                    if( vendor == null )
+                    var vendor = await DataReader.ReadRecordAsync<DataContracts.Vendors>(orgContactData.OcnCorpId);
+                    if (vendor == null)
                     {
-                        repositoryException.AddError( new RepositoryError( "Guid.Not.Found", string.Format( "Vendor record cannot be found for vendor id '{0}'. guid:'{1}'", orgContactData.OcnCorpId, guid ) ) { Id = guid, SourceId = id  } );
+                        repositoryException.AddError(new RepositoryError("Guid.Not.Found", string.Format("Vendor record cannot be found for vendor id '{0}'. guid:'{1}'", orgContactData.OcnCorpId, guid)) { Id = guid, SourceId = id });
                         throw repositoryException;
                     }
                 }
-                catch(RepositoryException)
+                catch (RepositoryException)
                 {
                     throw;
                 }
                 catch
                 {
-                    repositoryException.AddError( new RepositoryError( "Guid.Not.Found", string.Format( "Vendor record cannot be found for vendor id '{0}'. guid:'{1}'", orgContactData.OcnCorpId, guid ) ) { Id = guid, SourceId = id } );
+                    repositoryException.AddError(new RepositoryError("Guid.Not.Found", string.Format("Vendor record cannot be found for vendor id '{0}'. guid:'{1}'", orgContactData.OcnCorpId, guid)) { Id = guid, SourceId = id });
                     throw repositoryException;
                 }
 
                 //persons for address, phone info                
-                Person persons = await DataReader.ReadRecordAsync<Person>( orgContactData.OcnPersonId );
-                if( persons == null )
+                Person persons = await DataReader.ReadRecordAsync<Person>(orgContactData.OcnPersonId);
+                if (persons == null)
                 {
-                    repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "Person record cannot be found for person Id '{0}'", orgContactData.OcnPersonId ) ) { Id = guid, SourceId = id } );
+                    repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("Person record cannot be found for person Id '{0}'", orgContactData.OcnPersonId)) { Id = guid, SourceId = id });
                     throw repositoryException;
                 }
                 var addresses = new List<Address>();
-                if( !string.IsNullOrEmpty( orgContactData.OcnAddress ) )
+                if (!string.IsNullOrEmpty(orgContactData.OcnAddress))
                 {
-                    Address address = await DataReader.ReadRecordAsync<Address>( orgContactData.OcnAddress );
-                    if( address == null )
+                    Address address = await DataReader.ReadRecordAsync<Address>(orgContactData.OcnAddress);
+                    if (address == null)
                     {
-                        repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "Address record cannot be found for address Id '{0}'", orgContactData.OcnAddress ) ) { Id = guid, SourceId = id } );
+                        repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("Address record cannot be found for address Id '{0}'", orgContactData.OcnAddress)) { Id = guid, SourceId = id });
                         throw repositoryException;
                     }
                     else
                     {
-                        addresses.Add( address );
+                        addresses.Add(address);
                     }
 
                 }
 
                 //Relationship records
-                Relationship reletionships = await DataReader.ReadRecordAsync<Relationship>( orgContactData.OcnRelationship );
-                if( reletionships == null )
+                Relationship reletionships = await DataReader.ReadRecordAsync<Relationship>(orgContactData.OcnRelationship);
+                if (reletionships == null)
                 {
-                    repositoryException.AddError( new RepositoryError( "Bad.Data", string.Format( "Relationship record cannot be found for relationship Id '{0}'", orgContactData.OcnRelationship ) ) { Id = guid, SourceId = id } );
+                    repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("Relationship record cannot be found for relationship Id '{0}'", orgContactData.OcnRelationship)) { Id = guid, SourceId = id });
                     throw repositoryException;
                 }
 
-                var entity = BuildOrganizationContact( orgContactData, new Collection<Person>() { persons }, new Collection<Relationship>() { reletionships }, addresses );
+                var entity = BuildOrganizationContact(orgContactData, new Collection<Person>() { persons }, new Collection<Relationship>() { reletionships }, addresses);
 
-                if( repositoryException.Errors.Any() )
+                if (repositoryException.Errors.Any())
                 {
                     throw repositoryException;
                 }
                 return entity;
             }
-            catch( RepositoryException )
+            catch (RepositoryException)
             {
                 throw;
             }
@@ -449,16 +447,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     {
                                         if (!string.IsNullOrEmpty(p.AddrLocalPhoneAssocMember))
                                         {
-                                            string[] localPhones = p.AddrLocalPhoneAssocMember.Split(_SM);
-                                            string[] localPhoneTypes = p.AddrLocalPhoneTypeAssocMember.Split(_SM);
-                                            string[] localPhoneExts = p.AddrLocalExtAssocMember.Split(_SM);
+                                            string[] localPhones = p.AddrLocalPhoneAssocMember.Split(DmiString._SM);
+                                            string[] localPhoneTypes = p.AddrLocalPhoneTypeAssocMember.Split(DmiString._SM);
+                                            string[] localPhoneExts = p.AddrLocalExtAssocMember.Split(DmiString._SM);
                                             for (int i = 0; i < localPhones.Length; i++)
                                             {
                                                 ContactPhoneInfo ctPhoneInfo = new ContactPhoneInfo();
                                                 ctPhoneInfo.PhoneNumber = localPhones[i];//i.AddrLocalPhoneAssocMember;
-                                            ctPhoneInfo.PhoneType = localPhoneTypes[i];//i.AddrLocalPhoneTypeAssocMember;
-                                            ctPhoneInfo.PhoneExtension = localPhoneExts[i];//i.AddrLocalExtAssocMember;
-                                            contactPhoneInfoList.Add(ctPhoneInfo);
+                                                ctPhoneInfo.PhoneType = localPhoneTypes[i];//i.AddrLocalPhoneTypeAssocMember;
+                                                ctPhoneInfo.PhoneExtension = localPhoneExts[i];//i.AddrLocalExtAssocMember;
+                                                contactPhoneInfoList.Add(ctPhoneInfo);
                                             }
                                         }
                                     });
@@ -618,7 +616,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             var exception = new RepositoryException();
             var defaults = await DataReader.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS");
-            if ( defaults == null || (defaults != null && string.IsNullOrEmpty(defaults.DfltsOrgContactRelType)))
+            if (defaults == null || (defaults != null && string.IsNullOrEmpty(defaults.DfltsOrgContactRelType)))
             {
                 exception.AddError(new RepositoryError("Validation.Exception", "The default Organization Contact Relation Type is required on RELP in order to create a vendor contact."));
                 throw exception;
@@ -659,7 +657,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     EmailTypes = entity.EmailInfo.EmailType
                 });
             }
-            
+
             return request;
         }
 

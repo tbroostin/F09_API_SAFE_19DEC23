@@ -1,11 +1,14 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using slf4net;
 using System;
@@ -25,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.HumanResources)]
+    [Metadata(ApiDescription = "Provides Human Resources Employment Positions data", ApiDomain = "Human Resources")]
     public class PositionsController : BaseCompressedApiController
     {
         private readonly ILogger logger;
@@ -50,6 +54,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// The list is unfiltered and will return all active and inactive positions
         /// </summary>
         /// <returns>A List of Position objects</returns>
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets a list of employee positions for an institution.",
+             HttpMethodDescription = "Gets a list of Position objects.")]
         public async Task<IEnumerable<Position>> GetPositionsAsync()
         {
             try

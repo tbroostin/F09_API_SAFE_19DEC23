@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             public async Task PostProxyLoginAsyncThrowsColleagueDmiConnectionException_ReturnsUnauthorized()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new ColleagueDmiConnectionException("dmi error occurred"));
 
                 var result = await controllerUnderTest.PostProxyLoginAsync(proxyCredentials);
@@ -171,7 +171,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             public async Task PostProxyLoginAsyncThrowsLoginException_ReturnsUnauthorized()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new LoginException("10019", "login error occurred"));
 
                 var result = await controllerUnderTest.PostProxyLoginAsync(proxyCredentials);
@@ -181,7 +181,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             public async Task PostProxyLoginAsyncThrowsExpiredPasswordException_ReturnsForbidden()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new LoginException("10017", "password has expired"));
 
                 var result = await controllerUnderTest.PostProxyLoginAsync(proxyCredentials);
@@ -312,7 +312,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostProxyLogin2AsyncThrowsColleagueDmiConnectionException_ReturnsNotFound()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new ColleagueDmiConnectionException("dmi error occurred"));
 
                 try
@@ -329,7 +329,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             public async Task PostProxyLogin2AsyncThrowsLoginException_ReturnsUnauthorized()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new LoginException("10019", "login error occurred"));
 
                 var result = await controllerUnderTest.PostProxyLogin2Async(proxyCredentials);
@@ -339,7 +339,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             public async Task PostProxyLogin2AsyncThrowsExpiredPasswordException_ReturnsForbidden()
             {
-                sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                 sessionRepositoryMock.Setup(s => s.ProxyLoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .Throws(new LoginException("10017", "password has expired"));
 
                 var result = await controllerUnderTest.PostProxyLogin2Async(proxyCredentials);

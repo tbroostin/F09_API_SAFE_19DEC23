@@ -1,24 +1,23 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Utility;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -48,7 +47,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 , Level1CacheTimeoutValue);
 
                 //TODO: when method should return null object - but then fails as async
-                var creditTypes =await GetOrAddToCacheAsync<Collection<CredTypes>>("AllCreditTypes",
+                var creditTypes = await GetOrAddToCacheAsync<Collection<CredTypes>>("AllCreditTypes",
                    async () =>
                     {
                         var credTypes = await DataReader.BulkReadRecordAsync<CredTypes>("CRED.TYPES", "");
@@ -73,7 +72,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                logger.Error(ex,"Exception occurred while retrieving programs");
+                logger.Error(ex, "Exception occurred while retrieving programs");
                 throw;
             }
         }
@@ -116,7 +115,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 var ProgramData = (await GetAsync(stprIds)).First();
 
-                return new StudentProgram(id,programCode, ProgramData.StprCatalog)
+                return new StudentProgram(id, programCode, ProgramData.StprCatalog)
                 {
                     AnticipatedCompletionDate = ProgramData.StprAntCmplDate
                 };
@@ -129,8 +128,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<List<Program>> BuildProgramsAsync(Collection<AcadPrograms> programData, IEnumerable<TranscriptGroupings> transGroupData, IEnumerable<CredTypes> credTypeData)
         {
-
-            char _VM = Convert.ToChar(DynamicArray.VM);
             var programs = new List<Program>();
             // If no data passed in, return a null collection
             if (programData != null)
@@ -143,9 +140,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if (prog.AcpgDesc != null)
                         {
                             // If there is a double-VM, replace them with NewLines (so they get treated as "paragraphs")
-                            prog.AcpgDesc = prog.AcpgDesc.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+                            prog.AcpgDesc = prog.AcpgDesc.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
                             // If there is a single-VM, replace it with a space.
-                            prog.AcpgDesc = prog.AcpgDesc.Replace(_VM, ' ');
+                            prog.AcpgDesc = prog.AcpgDesc.Replace(DmiString._VM, ' ');
                         }
                         // Get the first item from the list of statuses and retrieve the corresponding entry from the valcode association
                         ApplValcodesVals codeItem = null;
@@ -238,11 +235,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                             }
                             //add schools, locations, divisions  to creditFilter
-                            if(trgrp.TrgpDivisions!=null && trgrp.TrgpDivisions.Count>0)
+                            if (trgrp.TrgpDivisions != null && trgrp.TrgpDivisions.Count > 0)
                             {
                                 creditFilter.Divisions.AddRange(trgrp.TrgpDivisions.Where(t => !string.IsNullOrEmpty(t)));
                             }
-                            if(trgrp.TrgpSchools!=null && trgrp.TrgpSchools.Count>0)
+                            if (trgrp.TrgpSchools != null && trgrp.TrgpSchools.Count > 0)
                             {
                                 creditFilter.Schools.AddRange(trgrp.TrgpSchools.Where(t => !string.IsNullOrEmpty(t)));
                             }
@@ -250,7 +247,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 creditFilter.Locations.AddRange(trgrp.TrgpLocations.Where(t => !string.IsNullOrEmpty(t)));
                             }
-                           
+
 
                             // Credit filter IncludeNeverGradedCredits defaults to true because the Colleague transcript grouping form
                             // defaults Incl No Grade to Yes.  If the transcript grouping has TrgpInclNoGradesFlag not Y then set it to false.
@@ -275,11 +272,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         program.UnofficialTranscriptGrouping = prog.AcpgUnoffTransGrouping;
                         program.OfficialTranscriptGrouping = prog.AcpgOfficialTransGrouping;
                         program.ProgramStartDate = prog.AcpgStartDate;
-                        program.ProgramEndDate = prog.AcpgEndDate;                       
+                        program.ProgramEndDate = prog.AcpgEndDate;
 
                         if (!string.IsNullOrEmpty(prog.AcpgDegree))
                         {
-                            var deg =(await studentReferenceRepo.GetDegreesAsync()).FirstOrDefault(dg => dg.Code == prog.AcpgDegree);
+                            var deg = (await studentReferenceRepo.GetDegreesAsync()).FirstOrDefault(dg => dg.Code == prog.AcpgDegree);
                             if (deg != null)
                             {
                                 program.Degree = deg.Description;

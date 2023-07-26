@@ -1,25 +1,26 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.Caching;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Tests;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Web.Cache;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using slf4net;
-using Ellucian.Web.Http.Configuration;
-using System.Threading.Tasks;
 using System.Threading;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Transactions;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -2218,7 +2219,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         private async Task<Dictionary<string, Transactions.SortStudentAcadCredsResponse>> BuildSortStudentAcadCredsResponses(IEnumerable<AcademicCredit> acadCredits, IEnumerable<string> sortSpecificationIds)
         {
-            char _SM = Convert.ToChar(Ellucian.Dmi.Runtime.DynamicArray.SM);
             var academicCreditIds = acadCredits.Select(ac => ac.Id).Where(ac => !string.IsNullOrEmpty(ac)).Distinct().ToList();
 
             Dictionary<string, Transactions.SortStudentAcadCredsResponse> dictionary = new Dictionary<string, Transactions.SortStudentAcadCredsResponse>();
@@ -2253,7 +2253,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     validResponse.SortedStudentAcadCreditsBySortSpecId.Add(new Transactions.SortedStudentAcadCreditsBySortSpecId()
                     {
                         OutDaSortSpecsIds = id,
-                        OutSortedStudentAcadCredIds = String.Join(_SM.ToString(), academicCreditIds)
+                        OutSortedStudentAcadCredIds = String.Join(DmiString.sSM, academicCreditIds)
                     });
                 }
             }
@@ -2270,13 +2270,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     duplicatesResponse.SortedStudentAcadCreditsBySortSpecId.Add(new Transactions.SortedStudentAcadCreditsBySortSpecId()
                     {
                         OutDaSortSpecsIds = id,
-                        OutSortedStudentAcadCredIds = String.Join(_SM.ToString(), academicCreditIds)
+                        OutSortedStudentAcadCredIds = String.Join(DmiString.sSM, academicCreditIds)
                     });
                 }
                 duplicatesResponse.SortedStudentAcadCreditsBySortSpecId.Add(new Transactions.SortedStudentAcadCreditsBySortSpecId()
                 {
                     OutDaSortSpecsIds = sortSpecificationIds.ToList()[0],
-                    OutSortedStudentAcadCredIds = String.Join(_SM.ToString(), academicCreditIds)
+                    OutSortedStudentAcadCredIds = String.Join(DmiString.sSM, academicCreditIds)
                 });
             }
 

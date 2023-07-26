@@ -420,7 +420,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Group group = new Group("G", "G", subrequirement);
             Assert.AreEqual("G G", group.ToString());
         }
-}
+    }
 
     [TestClass]
     public class GetRules
@@ -1082,7 +1082,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
         public void Credits_filtered_from_transcriptgrouping_With_MinCourses_Dept_Syntax()
         {
             Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
-             Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
             sreq.Requirement = requirement;
 
             //Take 2 courses from MATH
@@ -1090,7 +1090,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             gr.MinCourses = 2;
             gr.FromSubjects = new List<string>() { "MATH" };
 
-          
+
 
             //other acad credits
             AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1");
@@ -1111,7 +1111,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             acadcredit2.SubjectCode = "MATH";
             acadcredit2.SectionId = "sec2";
 
-          
+
             List<Override> overrides = new List<Override>();
             overrides.Add(new Override("group-1", new List<string>() { "acadcred-2" }, new List<string>()));
 
@@ -1121,12 +1121,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             List<AcadResult> acadresults = new List<AcadResult>();
             acadresults.Add(new CreditResult(acadcredit1));
 
-           GroupResult grResult= gr.Evaluate(acadresults, overrides, null, new List<AcademicCredit>() { acadcredit2 });
+            GroupResult grResult = gr.Evaluate(acadresults, overrides, null, new List<AcademicCredit>() { acadcredit2 });
 
             Assert.AreEqual(2, grResult.Results.Count());
             Assert.AreEqual(1, grResult.ForceAppliedAcademicCreditIds.Count());
             Assert.AreEqual("acadcred-2", grResult.ForceAppliedAcademicCreditIds[0]);
-            Assert.AreEqual("acadcred-2",grResult.Results[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.Results[0].GetAcadCredId());
             Assert.AreEqual("acadcred-1", grResult.Results[1].GetAcadCredId());
             Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
         }
@@ -1257,7 +1257,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             acadresults.Add(new CreditResult(acadcredit4));
             acadresults.Add(new CreditResult(acadcredit5));
 
-            GroupResult grResult = gr.Evaluate(acadresults, null, null, null,true,false);
+            GroupResult grResult = gr.Evaluate(acadresults, null, null, null, true, false);
 
             Assert.AreEqual(5, grResult.Results.Count());
             Assert.AreEqual(2, grResult.GetApplied().Count());
@@ -1364,14 +1364,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Course course = new Course("2", "short", "long", new List<OfferingDepartment>()
             {
                 new OfferingDepartment("MATH", 100m)
-            }, "MATH", "100", "2", new List<string>() {"100" }, 3m, null, new List<CourseApproval>()
+            }, "MATH", "100", "2", new List<string>() { "100" }, 3m, null, new List<CourseApproval>()
             {
                 new CourseApproval("A", DateTime.Today.AddDays(-7), "0000043", "0003315", DateTime.Today.AddDays(-7))
             });
 
             //MATH-100 is taken 1 time and planned twice in 2020/fa and 2021/fa terms. Since we are testing group evaluation then the academic credits and planned courses passed to 
             //evaluate method are already updated properly with Replaced and Replacement status. Therefore in data setup:
-            //MATH-100 have one academic credit and two planned courses - planed courses are always picked over completed courses and IP courses. 
+            //MATH-100 have one academic credit and two planned courses - planned courses are always picked over completed courses and IP courses. 
             //Therefore academic credit is possible be replaced by planned course in 2020/fa which will further possible be replace in progress with planned course in 2021/fa. Hence will be Related courses
             //Pnly planned course in 2021/fa will be planned applied in group. 
 
@@ -1453,7 +1453,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
 
             Assert.AreEqual("acadcred-1", grResult.GetRelated().ToList()[0].GetAcadCredId());
             Assert.AreEqual("acadcred-4", grResult.GetRelated().ToList()[1].GetAcadCredId());
-            Assert.AreEqual("2020/FA",( grResult.GetRelated().ToList()[2] as CourseResult).PlannedCourse.TermCode);
+            Assert.AreEqual("2020/FA", (grResult.GetRelated().ToList()[2] as CourseResult).PlannedCourse.TermCode);
             Assert.AreEqual("2021/FA", (grResult.GetRelated().ToList()[3] as CourseResult).PlannedCourse.TermCode);
             Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
         }
@@ -1477,8 +1477,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             gr.SubRequirement = sreq;
 
             //other acad credits
-            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1",new Course("ENGL-101","SHORT TITLE","LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng")}, 
-                "ENGL","101","UG",new List<string>() {"100" },2,0, new List<CourseApproval>() ),"sec1");
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1", new Course("ENGL-101", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "101", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec1");
             acadcredit1.AcademicLevelCode = "UG";
             acadcredit1.AddDepartment("ENGL");
             acadcredit1.CompletedCredit = 3m;
@@ -1510,7 +1510,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
             Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
         }
-       [TestMethod]
+        [TestMethod]
         public void NonOverrideApplied_NotEquals_ListOfCourses_NotSatisfied()
         {
             Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);

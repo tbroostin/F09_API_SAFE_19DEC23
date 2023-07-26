@@ -4422,5 +4422,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return await GetCodeItemAsync<StuReleaseAccess, StudentReleaseAccess>("StudentReleaseAccessRecords", "STU.RELEASE.ACCESS",
                  sr => new StudentReleaseAccess(sr.Recordkey, sr.SraDesc, sr.SraComments));
         }
+
+        /// <summary>
+        /// Returns all aid application type
+        /// </summary>
+        /// <param name="ignoreCache">Flag indicating whether or not to bypass the cache</param>
+        /// <returns>Collection of <see cref="AidApplicationType">aid application types</see></returns>
+        public async Task<IEnumerable<AidApplicationType>> GetAidApplicationTypesAsync(bool bypassCache = false)
+        {
+            return await GetValcodeAsync<AidApplicationType>("ST", "FA.APPLN.TYPES", r =>
+                (new AidApplicationType(r.ValInternalCodeAssocMember, r.ValExternalRepresentationAssocMember)), bypassCache: bypassCache);
+        }
     }
 }

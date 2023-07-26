@@ -1,22 +1,22 @@
-﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Data.HumanResources.Transactions;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
+using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ellucian.Data.Colleague;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
-using Ellucian.Colleague.Domain.Exceptions;
 using System.Linq;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Data.Colleague.Exceptions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -27,7 +27,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     public class BenefitsEnrollmentRepository : BaseColleagueRepository, IBenefitsEnrollmentRepository
     {
         private readonly ApiSettings apiSettings;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public BenefitsEnrollmentRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings) : base(cacheProvider, transactionFactory, logger)
         {
@@ -93,7 +92,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 BenefitsEnrollmentPageCustomText = response.BenefitsEnrollmentText,
                 ManageDepBenPageCustomText = response.ManageDepBenText
             };
-            
+
             logger.Debug(string.Format("EmployeeBenefitsEnrollmentEligibility domain entity containing benefits enrollment eligibility information obtained successfully for {0}", employeeId));
             logger.Debug(string.Format("The EnrollmentPeriodStartDate = {0}, EnrollmentPeriodEndDate = {1}", response.EnrollmentPeriodStartDate, response.EnrollmentPeriodEndDate));
             return EmployeeBenefitsEnrollmentEligibilityEntity;
@@ -148,7 +147,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 EmployeeBenefitsEnrollmentPoolItemEntities.Add(CreateEmployeeBenefitsEnrollmentPoolEntity(pool));
             }
-            
+
             logger.Debug(string.Format("List of EmployeeBenefitsEnrollmentPoolItem domain entities count: {0} containing benefits enrollment dependent and beneficiary pool information obtained successfully for {1}", EmployeeBenefitsEnrollmentPoolItemEntities.Count(), employeeId));
             return EmployeeBenefitsEnrollmentPoolItemEntities;
         }
@@ -570,12 +569,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 EnrollPeriodPercent = ebd.Percent,
                 EmployeeProviderId = !string.IsNullOrEmpty(ebd.EmployeeProviderId) ? ebd.EmployeeProviderId.Replace(";", "") : null,
                 EmployeeProviderName = !string.IsNullOrEmpty(ebd.EmployeeProviderName) ? ebd.EmployeeProviderName.Replace(";", "") : null,
-                DependentPoolIds = string.Join(_SM.ToString(), ebd.DependentPoolIds),
-                DependentProviderIds = string.Join(_SM.ToString(), ebd.DependentProviderIds),
-                DependentProviderNames = string.Join(_SM.ToString(), ebd.DependentProviderNames),
-                BeneficiaryPoolIds = string.Join(_SM.ToString(), ebd.BeneficiaryPoolIds),
-                BeneficiaryTypes = string.Join(_SM.ToString(), ebd.BeneficiaryTypes),
-                BeneficiaryPercents = string.Join(_SM.ToString(), ebd.BeneficiaryPercent),
+                DependentPoolIds = string.Join(DmiString.sSM, ebd.DependentPoolIds),
+                DependentProviderIds = string.Join(DmiString.sSM, ebd.DependentProviderIds),
+                DependentProviderNames = string.Join(DmiString.sSM, ebd.DependentProviderNames),
+                BeneficiaryPoolIds = string.Join(DmiString.sSM, ebd.BeneficiaryPoolIds),
+                BeneficiaryTypes = string.Join(DmiString.sSM, ebd.BeneficiaryTypes),
+                BeneficiaryPercents = string.Join(DmiString.sSM, ebd.BeneficiaryPercent),
             }).ToList();
             logger.Debug("enrollPeriodSelections obtained");
             var request = new UpdateBenefitSelectionRequest()
@@ -825,7 +824,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             logger.Debug("Start - Process to build and return the EmployeeBenefitsEnrollmentInfo entity object - Start");
             var employeeBenefitsEnrollmentDetails = new List<EmployeeBenefitsEnrollmentDetail>();
-            char specialChar = _SM;
 
             foreach (var benefitsEnrollmentInfoDetails in response.BenefitsEnrollmentInfoDetails)
             {
@@ -836,21 +834,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 employeeBenefitsEnrollmentDetailEntity.PeriodBenefitId = benefitsEnrollmentInfoDetails.EnrollmentPeriodBenefitIds;
                 employeeBenefitsEnrollmentDetailEntity.BenefitId = benefitsEnrollmentInfoDetails.BendedIds;
                 employeeBenefitsEnrollmentDetailEntity.BenefitDescription = benefitsEnrollmentInfoDetails.BendedDescriptions;
-                employeeBenefitsEnrollmentDetailEntity.CoverageLevels = benefitsEnrollmentInfoDetails.CoverageLevels != null ? benefitsEnrollmentInfoDetails.CoverageLevels.Split(specialChar).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.CoverageLevels = benefitsEnrollmentInfoDetails.CoverageLevels != null ? benefitsEnrollmentInfoDetails.CoverageLevels.Split(DmiString._SM).ToList() : null;
                 employeeBenefitsEnrollmentDetailEntity.Action = benefitsEnrollmentInfoDetails.ElectionActions;
                 employeeBenefitsEnrollmentDetailEntity.ActionDescription = benefitsEnrollmentInfoDetails.ElectionActionDescs;
                 employeeBenefitsEnrollmentDetailEntity.FlexBenefitRequired = benefitsEnrollmentInfoDetails.FlexBenefitIsRequired != null ? benefitsEnrollmentInfoDetails.FlexBenefitIsRequired.Equals("Y", StringComparison.InvariantCultureIgnoreCase) : false;
-                employeeBenefitsEnrollmentDetailEntity.DependentNames = benefitsEnrollmentInfoDetails.DependentNames != null ? benefitsEnrollmentInfoDetails.DependentNames.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.DependentIds = benefitsEnrollmentInfoDetails.DependentIds != null ? benefitsEnrollmentInfoDetails.DependentIds.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.DependentPoolIds = benefitsEnrollmentInfoDetails.DependentPoolIds != null ? benefitsEnrollmentInfoDetails.DependentPoolIds.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.DependentProviderIds = benefitsEnrollmentInfoDetails.DependentProviderIds != null ? benefitsEnrollmentInfoDetails.DependentProviderIds.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.DependentProviderNames = benefitsEnrollmentInfoDetails.DependentProviderNames != null ? benefitsEnrollmentInfoDetails.DependentProviderNames.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryNames = benefitsEnrollmentInfoDetails.BeneficiaryNames != null ? benefitsEnrollmentInfoDetails.BeneficiaryNames.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryIds = benefitsEnrollmentInfoDetails.BeneficiaryIds != null ? benefitsEnrollmentInfoDetails.BeneficiaryIds.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryPoolIds = benefitsEnrollmentInfoDetails.BeneficiaryPoolIds != null ? benefitsEnrollmentInfoDetails.BeneficiaryPoolIds.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryTypes = benefitsEnrollmentInfoDetails.BeneficiaryTypes != null ? benefitsEnrollmentInfoDetails.BeneficiaryTypes.Split(specialChar).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryPercent = benefitsEnrollmentInfoDetails.BeneficiaryPercent != null ? benefitsEnrollmentInfoDetails.BeneficiaryPercent.Split(specialChar).Select(p => (string.IsNullOrEmpty(p) ? null : (decimal?)Convert.ToDecimal(p))).ToList() : null;
-                employeeBenefitsEnrollmentDetailEntity.BeneficiaryDisplayInformation = benefitsEnrollmentInfoDetails.BeneficiaryText != null ? benefitsEnrollmentInfoDetails.BeneficiaryText.Split(specialChar).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.DependentNames = benefitsEnrollmentInfoDetails.DependentNames != null ? benefitsEnrollmentInfoDetails.DependentNames.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.DependentIds = benefitsEnrollmentInfoDetails.DependentIds != null ? benefitsEnrollmentInfoDetails.DependentIds.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.DependentPoolIds = benefitsEnrollmentInfoDetails.DependentPoolIds != null ? benefitsEnrollmentInfoDetails.DependentPoolIds.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.DependentProviderIds = benefitsEnrollmentInfoDetails.DependentProviderIds != null ? benefitsEnrollmentInfoDetails.DependentProviderIds.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.DependentProviderNames = benefitsEnrollmentInfoDetails.DependentProviderNames != null ? benefitsEnrollmentInfoDetails.DependentProviderNames.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryNames = benefitsEnrollmentInfoDetails.BeneficiaryNames != null ? benefitsEnrollmentInfoDetails.BeneficiaryNames.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryIds = benefitsEnrollmentInfoDetails.BeneficiaryIds != null ? benefitsEnrollmentInfoDetails.BeneficiaryIds.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryPoolIds = benefitsEnrollmentInfoDetails.BeneficiaryPoolIds != null ? benefitsEnrollmentInfoDetails.BeneficiaryPoolIds.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryTypes = benefitsEnrollmentInfoDetails.BeneficiaryTypes != null ? benefitsEnrollmentInfoDetails.BeneficiaryTypes.Split(DmiString._SM).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryPercent = benefitsEnrollmentInfoDetails.BeneficiaryPercent != null ? benefitsEnrollmentInfoDetails.BeneficiaryPercent.Split(DmiString._SM).Select(p => (string.IsNullOrEmpty(p) ? null : (decimal?)Convert.ToDecimal(p))).ToList() : null;
+                employeeBenefitsEnrollmentDetailEntity.BeneficiaryDisplayInformation = benefitsEnrollmentInfoDetails.BeneficiaryText != null ? benefitsEnrollmentInfoDetails.BeneficiaryText.Split(DmiString._SM).ToList() : null;
                 employeeBenefitsEnrollmentDetailEntity.Amount = benefitsEnrollmentInfoDetails.BenefitAmount;
                 employeeBenefitsEnrollmentDetailEntity.Percent = benefitsEnrollmentInfoDetails.BenefitPercent;
                 employeeBenefitsEnrollmentDetailEntity.InsuranceCoverageAmount = benefitsEnrollmentInfoDetails.BenefitInsureAmount;

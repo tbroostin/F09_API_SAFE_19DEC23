@@ -1,5 +1,4 @@
-﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -47,7 +46,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IRelationshipRepository _relationshipRepository;
         private readonly IProxyRepository _proxyRepository;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PersonService"/> class.
@@ -4752,7 +4750,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         // Repeate the address when we have multiple types.
                         // Multiple types are separated by sub-value marks.
                         var addressTypes = await GetAddressTypes2Async(bypassCache);
-                        string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                        string[] addrTypes = addressEntity.TypeCode.Split(DmiString._SM);
                         for (int i = 0; i < addrTypes.Length; i++)
                         {
                             var addrType = addrTypes[i];
@@ -4878,7 +4876,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         // Repeate the address when we have multiple types.
                         // Multiple types are separated by sub-value marks.
                         var addressTypes = await GetAddressTypes2Async(bypassCache);
-                        string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                        string[] addrTypes = addressEntity.TypeCode.Split(DmiString._SM);
                         for (int i = 0; i < addrTypes.Length; i++)
                         {
                             var addrType = addrTypes[i];
@@ -4984,7 +4982,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         // Repeate the address when we have multiple types.
                         // Multiple types are separated by sub-value marks.
                         var addressTypes = await GetAddressTypes2Async(bypassCache);
-                        string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                        string[] addrTypes = addressEntity.TypeCode.Split(DmiString._SM);
                         for (int i = 0; i < addrTypes.Length; i++)
                         {
                             var addrType = addrTypes[i];
@@ -10819,17 +10817,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         // Update the address type to include types from both address entities
                         var addrTypes = existingAddress.TypeCode;
                         var addrType = addressEntity.TypeCode;
-                        string[] newAddressTypes = addrTypes.Split(_SM);
+                        string[] newAddressTypes = addrTypes.Split(DmiString._SM);
                         if (!newAddressTypes.Contains(addrType))
                         {
                             if (addressEntity.IsPreferredResidence || addressEntity.IsPreferredAddress)
                             {
                                 // Put preferred address type first
-                                addrTypes = string.Concat(addrType, _SM, addrTypes);
+                                addrTypes = string.Concat(addrType, DmiString._SM, addrTypes);
                             }
                             else
                             {
-                                addrTypes = string.Concat(addrTypes, _SM, addrType);
+                                addrTypes = string.Concat(addrTypes, DmiString._SM, addrType);
                             }
                             addressEntity.TypeCode = addrTypes;
                         }

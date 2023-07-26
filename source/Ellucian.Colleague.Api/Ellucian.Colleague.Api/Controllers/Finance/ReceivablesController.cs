@@ -1,10 +1,14 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Finance;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.ModelBinding;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
@@ -17,6 +21,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.ModelBinding;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -26,6 +31,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to get and update Accounts Receivable information.", ApiDomain = "Finance")]
     public class ReceivablesController : BaseCompressedApiController
     {
         private readonly IAccountsReceivableService _service;
@@ -85,6 +91,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of account holders. In this situation, 
         /// all details except the advisee name are cleared from the specific AccountHolder object.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public async Task<AccountHolder> GetAccountHolder2Async(string personId, bool bypassCache)
         {
             try
@@ -234,7 +242,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// all details except the advisee name are cleared from the specific AccountHolder object.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         [HttpPost]
-        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPost3Async([FromBody] AccountHolderQueryCriteria criteria)
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        public async Task<IEnumerable<AccountHolder>> QueryAccountHoldersByPost3Async([ModelBinder(typeof(EthosEnabledBinder))] AccountHolderQueryCriteria criteria)
         {
             if (criteria == null)
             {
@@ -392,6 +401,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="paymentIds">Comma-delimited list of payment IDs</param>
         /// <returns>The collection of <see cref="ReceivablePayment">ReceivablePayment</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [HttpGet]
         public IEnumerable<ReceivablePayment> GetPayments(string paymentIds)
         {
             if (String.IsNullOrEmpty(paymentIds))
@@ -455,6 +465,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// Any authenticated user can get these resources
         /// </accessComments>
         /// <returns>A list of all <see cref="ReceivableType">receivable types</see></returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public IEnumerable<ReceivableType> GetReceivableTypes()
         {
             return _service.GetReceivableTypes();
@@ -536,6 +547,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// </accessComments>
         /// <returns>A list of all <see cref="ChargeCode">receivable types</see></returns>
         [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public async Task<IEnumerable<ChargeCode>> GetChargeCodesAsync()
         {
             try

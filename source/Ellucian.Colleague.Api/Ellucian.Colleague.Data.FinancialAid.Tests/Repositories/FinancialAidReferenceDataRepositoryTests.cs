@@ -1,8 +1,4 @@
-﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿/*Copyright 2014-2023 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 using Ellucian.Colleague.Data.FinancialAid.Repositories;
@@ -17,6 +13,10 @@ using Ellucian.Web.Http.TestUtil;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,14 +53,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 }
             }
 
-            private char _VM;
-
             [TestInitialize]
             public void Initialize()
             {
                 MockInitialize();
-
-                _VM = Convert.ToChar(DynamicArray.VM);
 
                 expectedRepository = new TestFinancialAidReferenceDataRepository();
                 actualRepository = BuildValidReferenceDataRepository();
@@ -135,8 +131,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public void DoubleValueMarksReplacedWithDoubleNewLinesTest()
             {
                 var testAward = expectedRepository.awardRecordData.First();
-                testAward.Explanation = "textBefore" + _VM + _VM + "textAfter";
-                var expectedExplanation = testAward.Explanation.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine);
+                testAward.Explanation = "textBefore" + DmiString._VM + DmiString._VM + "textAfter";
+                var expectedExplanation = testAward.Explanation.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine);
 
                 var actualAward = actualAwards.FirstOrDefault(a => a.Code == testAward.Code);
                 Assert.IsNotNull(actualAward);
@@ -148,8 +144,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public void SingleValueMarkReplacedWithSpaceTest()
             {
                 var testAward = expectedRepository.awardRecordData.First();
-                testAward.Explanation = "textBefore" + _VM + "textAfter";
-                var expectedExplanation = testAward.Explanation.Replace(_VM, ' ');
+                testAward.Explanation = "textBefore" + DmiString._VM + "textAfter";
+                var expectedExplanation = testAward.Explanation.Replace(DmiString._VM, ' ');
 
                 var actualAward = actualAwards.FirstOrDefault(a => a.Code == testAward.Code);
                 Assert.IsNotNull(actualAward);
@@ -164,7 +160,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 testAward.Explanation = "<a href=' http: // www.goog le.c   om'>hello</a>";
                 var expectedExplanation = "<a href='http://www.google.com'>hello</a>";
                 var actualAward = actualAwards.FirstOrDefault(a => a.Code == testAward.Code);
-                
+
                 Assert.AreEqual(expectedExplanation, actualAward.Explanation);
             }
 
@@ -172,7 +168,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public void NewLinesAndSpacesInsideExplanationLink_ExplanationFormattedAsExpectedTest()
             {
                 var testAward = expectedRepository.awardRecordData.First();
-                testAward.Explanation = "<a href='"+Environment.NewLine+" http: // www.goog le.c"+Environment.NewLine+"   om'>hello</a>";
+                testAward.Explanation = "<a href='" + Environment.NewLine + " http: // www.goog le.c" + Environment.NewLine + "   om'>hello</a>";
                 var expectedExplanation = "<a href='http://www.google.com'>hello</a>";
                 var actualAward = actualAwards.FirstOrDefault(a => a.Code == testAward.Code);
 
@@ -1387,11 +1383,11 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             {
                 expectedRepository.SuiteYears.Add("2010");
                 expectedRepository.BudgetComponentData.Add(new TestFinancialAidReferenceDataRepository.BudgetComponentRecord()
-                    {
-                        Code = "foobar",
-                        AwardYear = "2010",
-                        Description = "description"
-                    });
+                {
+                    Code = "foobar",
+                    AwardYear = "2010",
+                    Description = "description"
+                });
 
                 Assert.IsNull(actualBudgetComponenets.FirstOrDefault(b => b.AwardYear == "2010"));
                 Assert.IsNull(actualBudgetComponenets.FirstOrDefault(b => b.Code == "foobar"));
@@ -1479,11 +1475,11 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public void ExceptionCreatingBudgetComponent_BudgetNotAddedLogErrorTest()
             {
                 expectedRepository.BudgetComponentData.Add(new TestFinancialAidReferenceDataRepository.BudgetComponentRecord()
-                    {
-                        AwardYear = "2015",
-                        Code = "foobar",
-                        Description = string.Empty
-                    });
+                {
+                    AwardYear = "2015",
+                    Code = "foobar",
+                    Description = string.Empty
+                });
 
                 Assert.IsNull(actualBudgetComponenets.FirstOrDefault(budget => budget.Code == "foobar"));
 
@@ -1670,11 +1666,11 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public void UnknownChecklistItemTypeTest()
             {
                 expectedRepository.checklistItemData.Add(new TestFinancialAidReferenceDataRepository.FAChecklistItem()
-                    {
-                        Code = "FOOBAR",
-                        ItemDescription = "foo",
-                        SortNumber = 1
-                    });
+                {
+                    Code = "FOOBAR",
+                    ItemDescription = "foo",
+                    SortNumber = 1
+                });
 
                 Assert.IsNull(actualItems.FirstOrDefault(i => i.ChecklistItemCode == "FOOBAR"));
                 loggerMock.Verify(l => l.Info(It.IsAny<string>(), It.IsAny<object[]>()));
@@ -1708,7 +1704,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
             public FinancialAidReferenceDataRepository actualRepository;
             public IEnumerable<AcademicProgressStatus> actualStatuses;
-            
+
 
             [TestInitialize]
             public async void Initialize()
@@ -1842,7 +1838,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 expectedRepository.SapStatusInfoData.ForEach(s => s.Explained = expectedExplanation);
                 actualStatuses = await actualRepository.GetAcademicProgressStatusesAsync();
                 Assert.IsTrue(actualStatuses.All(s => s.Explanation == expectedExplanation));
-            }            
+            }
 
             [TestMethod]
             public async Task NullSapStatusInfoDataResultsinNullCategoryAndExplanation()
@@ -1891,12 +1887,12 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public TestFinancialAidReferenceDataRepository expectedRepository;
             public IEnumerable<AcademicProgressAppealCode> expectedAppeals
             {
-                get { return expectedRepository.GetAcademicProgressAppealCodesAsync().Result; }                
+                get { return expectedRepository.GetAcademicProgressAppealCodesAsync().Result; }
             }
 
             public FinancialAidReferenceDataRepository actualRepository;
             public IEnumerable<AcademicProgressAppealCode> actualAppeals;
-            
+
 
             [TestInitialize]
             public async void Initialize()
@@ -1923,7 +1919,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 return new FinancialAidReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             }
- 
+
 
             [TestMethod]
             public void AcademicProgressAppealCodes_EqualExpectedTest()
@@ -1967,7 +1963,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestInitialize]
-            public void Initalize(){
+            public void Initalize()
+            {
                 MockInitialize();
                 expectedRepository = new TestFinancialAidReferenceDataRepository();
                 actualRepository = BuildFinancialAidReferenceDataRepository();
@@ -2057,10 +2054,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                                 }).ToList()));
                     });
-                
+
                 loggerMock.Setup(l => l.IsInfoEnabled).Returns(true);
                 return new FinancialAidReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
-            }            
+            }
         }
         #endregion
 
@@ -2272,7 +2269,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                     record.AcDescription = item.Description;
                     record.Recordkey = item.Code;
                     record.AcIntgRestricted = item.restrictedFlag ? "Y" : "N";
-                    record.AcGrantFlag =  item.AwardCategoryType == AwardCategoryType.Grant ? "Y" : "N"; 
+                    record.AcGrantFlag = item.AwardCategoryType == AwardCategoryType.Grant ? "Y" : "N";
                     record.AcLoanFlag = item.AwardCategoryType == AwardCategoryType.Loan ? "Y" : "N";
                     record.AcScholarshipFlag = item.AwardCategoryType == AwardCategoryType.Scholarship ? "Y" : "N";
                     record.AcWorkFlag = item.AwardCategoryType == AwardCategoryType.Work ? "Y" : "N";
@@ -2617,7 +2614,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
                 return referenceDataRepo;
             }
-        }        
+        }
 
         [TestClass]
         public class GetFinancialAidExplanationTests : BaseRepositorySetup
@@ -2649,13 +2646,13 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             private void BuildRepository()
-            {                
+            {
                 actualRepository = new FinancialAidReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             }
 
             [TestMethod]
             public void GetFinancialAidExplanationsAsync_ReturnsNonEmptyListTest()
-            {               
+            {
                 Assert.IsNotNull(actualExplanations);
                 Assert.IsTrue(actualExplanations.Any());
             }
@@ -2663,7 +2660,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             [TestMethod]
             public void GetFinancialAidExplanationsAsync_ReturnsExpectedResultTest()
             {
-                for(var i = 0; i < actualExplanations.Count; i++)
+                for (var i = 0; i < actualExplanations.Count; i++)
                 {
                     Assert.AreEqual(expectedExplanations[i].ExplanationText, actualExplanations[i].ExplanationText);
                     Assert.AreEqual(expectedExplanations[i].ExplanationType, actualExplanations[i].ExplanationType);

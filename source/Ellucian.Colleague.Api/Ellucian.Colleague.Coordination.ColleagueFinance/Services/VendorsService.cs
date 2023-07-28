@@ -1,27 +1,26 @@
-﻿//Copyright 2016-2022 Ellucian Company L.P. and its affiliates
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Security;
-using slf4net;
-using System.Threading.Tasks;
+﻿//Copyright 2016-2023 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Domain.Exceptions;
-using VendorType = Ellucian.Colleague.Dtos.EnumProperties.VendorType;
 using Ellucian.Colleague.Dtos.Filters;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Web.Http.Exceptions;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using VendorType = Ellucian.Colleague.Dtos.EnumProperties.VendorType;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -36,7 +35,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IConfigurationRepository _configurationRepository;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public VendorsService(
             IColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository,
@@ -314,7 +312,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="vendorDto">Vendors DTO</param>
         /// <returns>Vendors domain entity</returns>
         public async Task<Vendors> PutVendorAsync(string guid, Vendors vendorDto)
-        {            
+        {
             if (vendorDto == null)
                 throw new ArgumentNullException("vendor", "Must provide a vendor for update");
             if (string.IsNullOrEmpty(vendorDto.Id))
@@ -752,7 +750,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         // do not throw error
                         logger.Error(ex, "Unable to add related vendor.");
-                    } 
+                    }
                 }
                 if (relatedVendors.Any())
                 {
@@ -961,7 +959,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-                        
+
             Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorsEntities = null;
             try
             {
@@ -977,14 +975,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 var institutions = await _institutionRepository.GetInstitutionsFromListAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
-                var personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(),"PO", DateTime.Today);
+                var personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(), "PO", DateTime.Today);
                 var personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(), "AP.CHECK", DateTime.Today);
                 var addressIds = new List<string>();
                 var poAddressIds = new List<string>();
                 var apAddressIds = new List<string>();
                 if (personPOAddressCollection != null && personPOAddressCollection.Any())
                     poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
-                if (personAPAddressCollection != null && personAPAddressCollection.Any())                
+                if (personAPAddressCollection != null && personAPAddressCollection.Any())
                     apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
                 addressIds = poAddressIds.Union(apAddressIds).ToList();
                 var addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
@@ -1028,7 +1026,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (vendors != null)
                 {
                     institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { vendors.Id })).ToList();
-                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { vendors.Id });                    
+                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { vendors.Id });
                     personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "PO", DateTime.Today);
                     personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "AP.CHECK", DateTime.Today);
                     var addressIds = new List<string>();
@@ -1041,7 +1039,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     addressIds = poAddressIds.Union(apAddressIds).ToList();
                     addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
                 }
-                var dto =  await ConvertVendorsEntityToDtoAsync2(vendors, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection);
+                var dto = await ConvertVendorsEntityToDtoAsync2(vendors, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection);
                 if (IntegrationApiException != null)
                 {
                     throw IntegrationApiException;
@@ -1214,7 +1212,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw IntegrationApiException;
             }
 
-            try 
+            try
             {
                 // create a Vendor entity in the database
                 createdVendor = await _vendorsRepository.CreateVendors2Async(vendorEntity);
@@ -1265,7 +1263,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return newDto;
         }
-                
+
         /// <summary>
         /// Helper method to validate vendors PUT/POST.
         /// </summary>
@@ -1295,7 +1293,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 if ((vendorDetail.Person != null) && ((vendorDetail.Organization != null) || (vendorDetail.Institution != null)))
                 {
-                    IntegrationApiExceptionAddError("Only one of either an organization, person or institution can be specified as a vendor.", "Validation.Exception", vendor.Id);                   
+                    IntegrationApiExceptionAddError("Only one of either an organization, person or institution can be specified as a vendor.", "Validation.Exception", vendor.Id);
                 }
                 if ((vendorDetail.Institution != null) && ((vendorDetail.Person != null) || (vendorDetail.Organization != null)))
                 {
@@ -1304,7 +1302,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if ((vendorDetail.Institution != null) && ((string.IsNullOrEmpty(vendorDetail.Institution.Id))
                      || (string.Equals(vendorDetail.Institution.Id, Guid.Empty.ToString()))))
                 {
-                    IntegrationApiExceptionAddError("The institution id is required when submitting a vendorDetail institution.", "Validation.Exception", vendor.Id);                  
+                    IntegrationApiExceptionAddError("The institution id is required when submitting a vendorDetail institution.", "Validation.Exception", vendor.Id);
                 }
                 if ((vendorDetail.Organization != null) && ((string.IsNullOrEmpty(vendorDetail.Organization.Id))
                      || (string.Equals(vendorDetail.Organization.Id, Guid.Empty.ToString()))))
@@ -1324,7 +1322,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 foreach (var classification in vendor.Classifications)
                 {
                     if (string.IsNullOrEmpty(classification.Id))
-                    IntegrationApiExceptionAddError("The classification id is required when submitting classifications.", "Validation.Exception", vendor.Id);
+                        IntegrationApiExceptionAddError("The classification id is required when submitting classifications.", "Validation.Exception", vendor.Id);
                 }
             }
 
@@ -1333,7 +1331,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 foreach (var paymentTerm in vendor.PaymentTerms)
                 {
                     if (string.IsNullOrEmpty(paymentTerm.Id))
-                    IntegrationApiExceptionAddError("The paymentTerms id is required when submitting paymentTerms.", "Validation.Exception", vendor.Id);
+                        IntegrationApiExceptionAddError("The paymentTerms id is required when submitting paymentTerms.", "Validation.Exception", vendor.Id);
                 }
             }
 
@@ -1365,12 +1363,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
 
             }
-            if (!string.IsNullOrEmpty(vendor.TaxId) && vendor.VendorDetail != null && vendor.VendorDetail.Person != null )
+            if (!string.IsNullOrEmpty(vendor.TaxId) && vendor.VendorDetail != null && vendor.VendorDetail.Person != null)
             {
                 IntegrationApiExceptionAddError("Corporate tax ID is not permissible for a person acting as a vendor.", "Validation.Exception", vendor.Id);
             }
 
-            
+
             if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
             {
                 throw IntegrationApiException;
@@ -1439,7 +1437,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var vendorDetail = vendorDto.VendorDetail;
                 Person person = null;
                 if (vendorDetail.Institution != null && !(string.IsNullOrEmpty(vendorDetail.Institution.Id)))
-                {                   
+                {
                     try
                     {
                         person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Institution.Id);
@@ -1589,7 +1587,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-            
+
 
             if (vendorDto.PaymentTerms != null && vendorDto.PaymentTerms.Any())
             {
@@ -1713,7 +1711,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var taxForms = await GetAllTaxForms2Async(bypassCache);
                 string taxBoxCode = string.Empty;
                 string taxFormCode = string.Empty;
-                if (taxBoxes != null && taxBoxes.Any()) 
+                if (taxBoxes != null && taxBoxes.Any())
                 {
                     var taxBox = taxBoxes.FirstOrDefault(aps => aps.Guid == vendorDto.DefaultTaxFormComponent.Id);
                     if (taxBox != null && !string.IsNullOrEmpty(taxBox.Code))
@@ -1732,7 +1730,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (taxForms != null && taxForms.Any())
                 {
                     if (!string.IsNullOrEmpty(taxBoxCode))
-                        {
+                    {
                         var taxForm = taxForms.FirstOrDefault(aps => aps.defaultTaxBox == taxBoxCode);
                         if (taxForm != null && !string.IsNullOrEmpty(taxForm.Code))
                         {
@@ -1801,8 +1799,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         , source.Id, source.Guid);
                 }
                 else
-                { 
-                personGuidCollection.TryGetValue(source.Id, out personGuid);
+                {
+                    personGuidCollection.TryGetValue(source.Id, out personGuid);
                     if (string.IsNullOrEmpty(personGuid))
                     {
                         IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Id, "'"), "GUID.Not.Found"
@@ -1906,12 +1904,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (vendorHoldReasons.Any())
                     vendors.VendorHoldReasons = vendorHoldReasons;
             }
-                    
+
             vendors.StartOn = source.AddDate;
-            
+
             if ((source.ApTypes != null) && (source.ApTypes.Any()))
             {
-                var paymentSources = new List<GuidObject2>();       
+                var paymentSources = new List<GuidObject2>();
                 foreach (var apType in source.ApTypes)
                 {
                     if (!string.IsNullOrEmpty(apType))
@@ -1957,7 +1955,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 source.Id, source.Guid);
                         }
-                    }                    
+                    }
                 }
                 if (paymentTerms.Any())
                 {
@@ -1985,7 +1983,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 source.Id, source.Guid);
                         }
-                    }                    
+                    }
                 }
                 if (classifications.Any())
                 {
@@ -2009,10 +2007,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (taxForms != null && taxForms.Any())
                 {
                     var taxForm = taxForms.FirstOrDefault(box => box.Code == source.TaxForm);
-                    if (taxForm != null )
-                    {                        
+                    if (taxForm != null)
+                    {
                         var taxBox = taxBoxes.FirstOrDefault(aps => aps.Code == taxForm.defaultTaxBox);
-                        if (taxBox != null) 
+                        if (taxBox != null)
                         {
                             if (!string.IsNullOrEmpty(taxBox.Guid))
                                 vendors.DefaultTaxFormComponent = new GuidObject2(taxBox.Guid);
@@ -2027,7 +2025,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'CORE-VALCODES, TAX.FORMS', Record ID:'", source.TaxForm, "'"), "GUID.Not.Found",
                                 source.Id, source.Guid);
                     }
-                }                
+                }
             }
 
             if (source.Categories != null)
@@ -2050,7 +2048,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 break;
                         }
                     }
-                    if (types!= null && types.Any())
+                    if (types != null && types.Any())
                     {
                         vendors.Types = types;
                     }
@@ -2096,7 +2094,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     IntegrationApiExceptionAddError("Address guid not found for addresss Id:", "GUID.Not.Found",
                         source.Id, source.Guid);
                 }
-                
+
             }
             //get APCHECK address
             var APCheckAddr = string.Empty;
@@ -2165,7 +2163,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             List<string> statuses = null;
             List<string> types = null;
             List<string> addresses = null;
- 
+
             //check if vendorDetail criteria present and get the id to send in to the repo
             if (!string.IsNullOrEmpty(vendorDetails))
             {
@@ -2215,7 +2213,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                         return new Tuple<IEnumerable<VendorsMaximum>, int>(new List<VendorsMaximum>(), 0);
                                 }
 
-                            } 
+                            }
                         }
                     }
                     catch
@@ -2302,7 +2300,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
 
 
-            }            
+            }
             //process statuses filter
             if (criteriaObj != null && criteriaObj.Statuses != null && criteriaObj.Statuses.Any())
             {
@@ -2376,7 +2374,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorsEntities = null;
             try
             {
-                vendorsEntities = await _vendorsRepository.GetVendorsMaximumAsync(offset, limit, vendorId, statuses, types, taxId,addresses);
+                vendorsEntities = await _vendorsRepository.GetVendorsMaximumAsync(offset, limit, vendorId, statuses, types, taxId, addresses);
             }
             catch (RepositoryException ex)
             {
@@ -2412,8 +2410,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     if (vendorsEntity.Guid != null)
                     {
-                            var vendorDto = await ConvertVendorsEntityToMaximumDtoAsync(vendorsEntity, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, vendorContacts, bypassCache);
-                            vendorsCollection.Add(vendorDto);                        
+                        var vendorDto = await ConvertVendorsEntityToMaximumDtoAsync(vendorsEntity, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, vendorContacts, bypassCache);
+                        vendorsCollection.Add(vendorDto);
                     }
                 }
                 if (IntegrationApiException != null)
@@ -2465,7 +2463,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         vendorContacts = (await _vendorContactRepository.GetVendorContactsForVendorsAsync(new string[] { vendors.Id })).ToList();
                     }
-                    catch(RepositoryException ex)
+                    catch (RepositoryException ex)
                     {
                         IntegrationApiExceptionAddError(ex);
                     }
@@ -2501,7 +2499,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ColleagueWebApiException("No vendor was found for guid  " + guid, ex);
             }
         }
-        
+
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -2607,7 +2605,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         {
                             vendorDetail.Person = new GuidObject2(personGuid);
                         }
-                        vendors.VendorDetail = vendorDetail;                        
+                        vendors.VendorDetail = vendorDetail;
                     }
                 }
             }
@@ -2626,7 +2624,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 vendors.Statuses = vendorsStatuses;
             }
             //process startOn
-            vendors.StartOn = source.AddDate;          
+            vendors.StartOn = source.AddDate;
 
             //get tax from components. If the VEN.TAX.FORM does not have a default box code in the 1st special processing of the TAX.FORMS valcode table, 
             //then omit the taxFormComponent object from the response.
@@ -2656,7 +2654,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-            
+
             //populate the default address Id and usage
             //get PO address
             var POAddr = string.Empty;
@@ -2748,7 +2746,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (vendorContacts != null && vendorContacts.Any())
             {
                 var orgContacts = vendorContacts.Where(con => con.VendorId == source.Id);
-               
+
                 if (orgContacts != null && orgContacts.Any())
                 {
                     vendors.Contacts = new List<VendorsMaximumContacts>();
@@ -2918,7 +2916,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         if (addressEntity.TypeCode != null && !string.IsNullOrEmpty(addressEntity.TypeCode))
                         {
-                            string[] addrTypes = addressEntity.TypeCode.Split(_SM);
+                            string[] addrTypes = addressEntity.TypeCode.Split(DmiString._SM);
                             for (int i = 0; i < addrTypes.Length; i++)
                             {
 
@@ -3060,10 +3058,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             phoneDto.Type = type;
                         }
                         if (!string.IsNullOrEmpty(phoneEntity.CountryCallingCode))
-                            phoneDto.CountryCallingCode = phoneEntity.CountryCallingCode;                       
+                            phoneDto.CountryCallingCode = phoneEntity.CountryCallingCode;
                         phoneDtos.Add(phoneDto);
-                    }    
-                    
+                    }
+
                 }
 
             }
@@ -3324,15 +3322,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return vendorDtos;
         }
 
-       /// <summary>
-       /// gets vendor default tax for info
-       /// </summary>
-       /// <param name="vendorId">vendor id</param>
-       /// <param name="apType">ap type</param>
-       /// <returns>Vendor default tax form info</returns>
+        /// <summary>
+        /// gets vendor default tax for info
+        /// </summary>
+        /// <param name="vendorId">vendor id</param>
+        /// <param name="apType">ap type</param>
+        /// <returns>Vendor default tax form info</returns>
         public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
-        {            
-            if(string.IsNullOrEmpty(vendorId))
+        {
+            if (string.IsNullOrEmpty(vendorId))
             {
                 string message = "vendor id must be specified.";
                 throw new ArgumentNullException(message);
@@ -3354,18 +3352,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Get the vendor default tax form info entity from repository
             var vendorDefaultTaxInfoEntity = await _vendorsRepository.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
 
-            
+
             Dtos.ColleagueFinance.VendorDefaultTaxFormInfo vendorDefaultTaxFormInfoDto = new Dtos.ColleagueFinance.VendorDefaultTaxFormInfo();
-            
+
             // Convert the vendor commodity entity to DTO
             var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorDefaultTaxFormInfo, Dtos.ColleagueFinance.VendorDefaultTaxFormInfo>();
-            
+
             if (vendorDefaultTaxInfoEntity != null)
             {
                 vendorDefaultTaxFormInfoDto = dtoAdapter.MapToType(vendorDefaultTaxInfoEntity);
             }
-            return vendorDefaultTaxFormInfoDto;            
-        }        
+            return vendorDefaultTaxFormInfoDto;
+        }
 
         /// <summary>
         /// Helper method to determine if the user has permission to view data.

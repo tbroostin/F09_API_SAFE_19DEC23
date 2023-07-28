@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -25,7 +24,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         const string AllInstitutionsCache = "AllInstitutions";
         const int AllInstitutionsCacheTimeout = 20; // Clear from cache every 20 minutes
         RepositoryException repositoryException = null;
@@ -54,15 +52,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             string[] subList = null;
             var defaultHostCorpId = string.Empty;
 
-            var institutionTypes = GetValcode<InstitutionType>("CORE", "INST.TYPES", 
+            var institutionTypes = GetValcode<InstitutionType>("CORE", "INST.TYPES",
                 ii => new InstitutionType(ii.ValInternalCodeAssocMember, ii.ValExternalRepresentationAssocMember, ii.ValActionCode1AssocMember));
 
             if (institutionTypes == null)
             {
                 return new Tuple<IEnumerable<Institution>, int>(new List<Institution>(), 0);
             }
-            
-            string institutionsCacheKey = CacheSupport.BuildCacheKey(AllInstitutionsCache, instType != null ? instType.ToString(): null);
+
+            string institutionsCacheKey = CacheSupport.BuildCacheKey(AllInstitutionsCache, instType != null ? instType.ToString() : null);
 
             var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
@@ -263,7 +261,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 return institutions;
             }
-            
+
             var defaultHostCorpId = string.Empty;
 
             var types = GetValcode<InstitutionType>("CORE", "INST.TYPES", ii => new InstitutionType(ii.ValInternalCodeAssocMember, ii.ValExternalRepresentationAssocMember, ii.ValActionCode1AssocMember));
@@ -384,7 +382,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var personIntgRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.PersonIntg>(record.Recordkey);
             var socialMediaRecords = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.SocialMediaHandles>("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID = '" + record.Recordkey + "'");
             List<DataContracts.Address> addressRecords = null;
-            if ( (personRecord != null) && (!string.IsNullOrEmpty(personRecord.PreferredAddress)))
+            if ((personRecord != null) && (!string.IsNullOrEmpty(personRecord.PreferredAddress)))
                 addressRecords = (await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(personRecord.PersonAddresses.Distinct().ToArray())).ToList();
 
             institution = BuildInstitution(types, defaultHostCorpId, faSystemParams, personRecord, personIntgRecord, addressRecords, socialMediaRecords.ToList(), record);
@@ -455,7 +453,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 Institution inst = new Institution(i.Recordkey, instType);
                                 inst.Ceeb = i.InstCeeb;
-                            
+
                                 // Update the Preferred Name and Address Data from Preferred Address
                                 var person = personLookup[i.Recordkey].FirstOrDefault();
                                 if (person != null)
@@ -501,7 +499,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 throw new ArgumentNullException("institutionTypes", "institutionTypes are a required parameter.");
             }
-            
+
             Institution inst = null;
             InstType instType;
 
@@ -581,7 +579,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="phones">List of <see cref="Phone"> phones</see></param>
         /// <param name="addresses">List of <see cref="Address">addresses</see></param>
         /// <returns>Boolean where true is success and false otherwise</returns>
-        private Tuple<List<EmailAddress>, List<Phone>, List<Domain.Base.Entities.Address>, List<Domain.Base.Entities.SocialMedia>, bool> GetPersonIntegrationDataAsync(string personId, 
+        private Tuple<List<EmailAddress>, List<Phone>, List<Domain.Base.Entities.Address>, List<Domain.Base.Entities.SocialMedia>, bool> GetPersonIntegrationDataAsync(string personId,
             DataContracts.Person personData, PersonIntg personIntgData, List<DataContracts.Address> addressData, List<DataContracts.SocialMediaHandles> socialMediaRecords)
         {
             List<Domain.Base.Entities.Address> addresses = new List<Domain.Base.Entities.Address>();
@@ -707,7 +705,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             IsPreferred = emailAddressPreferred.Equals("y", StringComparison.OrdinalIgnoreCase)
                         };
-                        
+
                         emailAddresses.Add(emailToAdd);
                     }
                     catch (Exception ex)
@@ -749,8 +747,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             if (!string.IsNullOrEmpty(assocEntity.AddrSeasonalStartAssocMember) && !string.IsNullOrEmpty(assocEntity.AddrSeasonalEndAssocMember))
                             {
                                 // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(_SM);
-                                string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(_SM);
+                                string[] startDate = assocEntity.AddrSeasonalStartAssocMember.Split(DmiString._SM);
+                                string[] endDate = assocEntity.AddrSeasonalEndAssocMember.Split(DmiString._SM);
                                 for (int i = 0; i < startDate.Length; i++)
                                 {
                                     try

@@ -169,5 +169,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             }
             return Task.FromResult(persons.AsEnumerable());
         }
+
+        public async Task<string> GetStwebDefaultsHierarchyAsync()
+        {
+            return "true";
+        }
     }
 }

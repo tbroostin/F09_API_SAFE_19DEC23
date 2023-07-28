@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
@@ -400,7 +400,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     webPayAdvice.netPay.Value,
                     webPayAdvice.ytdGrossPay.Value,
                     webPayAdvice.ytdNetPay.Value,
-                    webPayAdvice.comments
+                    webPayAdvice.comments,
+                    webPayAdvice.totalTaxes.Value,
+                    webPayAdvice.totalBendeds.Value
                 );
 
             foreach (var deposit in webPayAdvice.deposits)

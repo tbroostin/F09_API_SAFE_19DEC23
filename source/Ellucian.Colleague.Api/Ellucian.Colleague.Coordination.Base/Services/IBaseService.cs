@@ -47,7 +47,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
         Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds, bool bypassCache = false, bool useRecordKey = false);
 
-      
+        /// <summary>
+        /// Gets the extended data defaults from the run-time CDD
+        /// </summary>
+        /// <returns>Domain.Base.Entities.EthosExtensibleDataRow</returns>
+        Task<IEnumerable<Domain.Base.Entities.EthosExtensibleDataRow>> GetExtendedEthosDataRowDefault(List<Domain.Base.Entities.EthosExtensibleDataRow> ethosExtensibleDataRows, bool bypassCache = false);
+
+
         /// <summary>
         /// Import Extended Ethos Data
         /// </summary>

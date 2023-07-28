@@ -1,4 +1,4 @@
-//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.  
+//Copyright 2019-2023 Ellucian Company L.P. and its affiliates.  
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -25,8 +25,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
     [TestClass]
     public class DefaultSettingsRepositoryTests
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
-
         /// <summary>
         /// Test class for DefaultSettings codes
         /// </summary>
@@ -419,7 +417,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task UpdateDefaultSettingsAsynceDictionary()
             {
-                var result = await defaultSettingsRepo.UpdateDefaultSettingsAsync(_defaultSetting);                
+                var result = await defaultSettingsRepo.UpdateDefaultSettingsAsync(_defaultSetting);
             }
 
             [TestMethod]
@@ -444,7 +442,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     (It.IsAny<SearchDefaultSettingsRequest>())).ReturnsAsync(searchResponse);
 
                 var result = await defaultSettingsRepo.GetDefaultSettingsAdvancedSearchOptionsAsync("Smith", "1", true);
-            }            
+            }
 
             private DefaultSettingsRepository BuildValidDefaultSettingsRepository()
             {
@@ -480,7 +478,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                 IdsEthosPropertyNamesAssocMember = er.PropertyName
                             }).ToList())
                     }).ToList());
-                
+
                 dataAccessorMock.Setup(ac => ac.SelectAsync("INTG.DEFAULT.SETTINGS", ""))
                     .ReturnsAsync(entityCollection.Select(ec => ec.Recordkey).ToArray());
 
@@ -505,10 +503,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     LdmdDfltResLifeArType = "01",
                     LdmdBendedCode = new List<string>()
                     {
-                        string.Concat("CAPL", _SM, "ARBL", _SM),
-                        string.Concat(_SM, _SM),
-                        string.Concat("CAMB", _SM, _SM)
-                    }                    
+                        string.Concat("CAPL", DmiString._SM, "ARBL", DmiString._SM),
+                        string.Concat(DmiString._SM, DmiString._SM),
+                        string.Concat("CAMB", DmiString._SM, DmiString._SM)
+                    }
                 };
                 ldmDefaults.LdmdChargeTypes = new List<string>() { "tuition", "fee", "housing", "meal" };
                 ldmDefaults.LdmdDefaultArCodes = new List<string>() { "TUI", "ACTFE", "RESHL", "MEALS" };
@@ -760,7 +758,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(ac => ac.SelectAsync("ST.VALCODES", "COURSE.LEVELS"))
                      .ReturnsAsync(new string[] { "400" });
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "COURSE.LEVELS", It.IsAny<bool>())).ReturnsAsync(courseLevelsResponse);
-                
+
                 ApplValcodes courseStatusesResponse = new ApplValcodes
                 {
                     ValsEntityAssociation = new List<ApplValcodesVals>
@@ -783,7 +781,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(ac => ac.SelectAsync("ST.VALCODES", "TEACHING.ARRANGEMENTS"))
                      .ReturnsAsync(new string[] { "A" });
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "TEACHING.ARRANGEMENTS", It.IsAny<bool>())).ReturnsAsync(teachingArrangementsResponse);
-                
+
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
@@ -803,8 +801,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Dictionary<string, GuidLookupResult> defSettDict = new Dictionary<string, GuidLookupResult>();
                 defSettDict.Add("1", new GuidLookupResult() { Entity = "INTG.DEFAULT.SETTINGS", PrimaryKey = "1" });
                 dataAccessorMock.Setup(x => x.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(defSettDict);
-                colleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<UpdateDefaultSettingsRequest, UpdateDefaultSettingsResponse>(It.IsAny< UpdateDefaultSettingsRequest>())).ReturnsAsync(updateResponse);
-                      
+                colleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<UpdateDefaultSettingsRequest, UpdateDefaultSettingsResponse>(It.IsAny<UpdateDefaultSettingsRequest>())).ReturnsAsync(updateResponse);
+
                 var searchResponse = new SearchDefaultSettingsResponse()
                 {
                     MatchingData = new List<MatchingData>()
@@ -814,7 +812,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 };
                 colleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<SearchDefaultSettingsRequest, SearchDefaultSettingsResponse>
                 (It.IsAny<SearchDefaultSettingsRequest>())).ReturnsAsync(searchResponse);
-                               
+
                 // Construct repository
                 var apiSettings = new ApiSettings("TEST");
                 defaultSettingsRepo = new DefaultSettingsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);

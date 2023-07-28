@@ -232,5 +232,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }        
         }
+
+        public class GeneralEmployeeUserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser {
+                get {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "124",
+                        Name = "John",
+                        PersonId = "0014698",
+                        SecurityToken = "322",
+                        SessionTimeout = 30,
+                        UserName = "JohnDoe",
+                        Roles = new List<string>() { "EMPLOYEE", "VIEW.ORG.CHART"},
+                        SessionFixationId = "abc1234"
+                    });
+                }
+            }
+        }
     }
 }

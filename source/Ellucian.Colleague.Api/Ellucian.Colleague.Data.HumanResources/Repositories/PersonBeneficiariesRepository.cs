@@ -1,31 +1,26 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonBeneficiariesRepository : BaseColleagueRepository, IPersonBeneficiariesRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
-
         /// <summary>
         /// ..ctor
         /// </summary>
@@ -57,7 +52,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var perbenIds2 = new List<string>();
             foreach (var perbenId in perbenIds)
             {
-                var perbenKey = perbenId.Split(_VM)[0];
+                var perbenKey = perbenId.Split(DmiString._VM)[0];
                 perbenIds2.Add(perbenKey);
             }
 
@@ -73,7 +68,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var personsIds = perbensCollection.SelectMany(p => p.PerbenBeneficiaryId).Distinct().ToArray();
                 var personsCollection = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personsIds);
                 var institutionsCollection = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Institutions>("INSTITUTIONS", personsIds);
-                
+
                 foreach (var key in keysSubList)
                 {
 
@@ -137,12 +132,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                             Institution = true,
                                             PerbenBeneficiaryType = perbens.PerbenBeneficiaryType.Any() && perbens.PerbenBeneficiaryType.Count >= index + 1 && !string.IsNullOrEmpty(perbens.PerbenBeneficiaryType[index]) ? perbens.PerbenBeneficiaryType[index] : null,
                                             PerbenBfcyDesgntnPct = perbens.PerbenBfcyDesgntnPct.Any() && perbens.PerbenBfcyDesgntnPct.Count >= index + 1 ? perbens.PerbenBfcyDesgntnPct[index] : null,
-                                            PerbenBfcyStartDate =  perbens.PerbenBfcyStartDate.Any() && perbens.PerbenBfcyStartDate.Count >= index + 1 ? perbens.PerbenBfcyStartDate[index] : null, 
+                                            PerbenBfcyStartDate = perbens.PerbenBfcyStartDate.Any() && perbens.PerbenBfcyStartDate.Count >= index + 1 ? perbens.PerbenBfcyStartDate[index] : null,
                                             PerbenBfcyEndDate = perbens.PerbenBfcyEndDate.Any() && perbens.PerbenBfcyEndDate.Count >= index + 1 ? perbens.PerbenBfcyEndDate[index] : null
                                         });
                                     }
                                     else if (personsCollection != null && personsCollection.Where(p => p.Recordkey == personId) != null)
-                                    {   
+                                    {
                                         var personRecord = personsCollection.FirstOrDefault(p => p.Recordkey == personId);
                                         if (personRecord.PersonCorpIndicator != null && personRecord.PersonCorpIndicator.Equals("Y"))
                                         {
@@ -192,7 +187,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             }
                             //personBeneficiariesEntities.Add(new PersonBeneficiary(perbenGuidInfo, perbens.Recordkey)
                             //{
-                                
+
                             //    ProviderName = (perbens.PerbenDepProviderName.Any() && perbens.PerbenDepProviderName.Count >= index + 1 && !string.IsNullOrEmpty(perbens.PerbenDepProviderName[index])) ? perbens.PerbenDepProviderName[index] : null,
                             //    ProviderIdentification = (perbens.PerbenDepProviderId.Any() && perbens.PerbenDepProviderId.Count >= index + 1 && !string.IsNullOrEmpty(perbens.PerbenDepProviderId[index])) ? perbens.PerbenDepProviderId[index] : null,
                             //    CoverageStartOn = (perbens.PerbenDepStartDate.Any() && perbens.PerbenDepStartDate.Count >= index + 1) ? perbens.PerbenDepStartDate[index] : null,
@@ -229,7 +224,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var perbenIds2 = new List<string>();
             foreach (var perbenId in perbenIds)
             {
-                var perbenKey = perbenId.Split(_VM)[0];
+                var perbenKey = perbenId.Split(DmiString._VM)[0];
                 perbenIds2.Add(perbenKey);
             }
 

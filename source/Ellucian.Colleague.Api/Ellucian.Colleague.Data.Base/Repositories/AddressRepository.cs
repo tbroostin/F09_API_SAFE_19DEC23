@@ -1,5 +1,4 @@
-﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -8,13 +7,11 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Utility;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -28,7 +25,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class AddressRepository : BaseColleagueRepository, IAddressRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private Data.Base.DataContracts.IntlParams internationalParameters;
         private RepositoryException exception;
 
@@ -80,7 +76,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetOrAddToCacheAsync<ApplValcodes>("AddressRelationships",
                 async () =>
                 {
-                    ApplValcodes relationshipTable =await  DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "ADREL.TYPES");
+                    ApplValcodes relationshipTable = await DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "ADREL.TYPES");
                     if (relationshipTable == null)
                     {
                         var errorMessage = "Unable to access ADREL.TYPES valcode table.";
@@ -146,7 +142,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     .Distinct().ToList()
                     .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p.Split('-')[0].ToString().Replace(" ", ""), false)).ToArray();
                 var recordKeyLookupResults = await DataReader.SelectAsync(zipGuidLookup);
-                
+
                 foreach (var recordKeyLookupResult in recordKeyLookupResults)
                 {
                     if (recordKeyLookupResult.Value != null)
@@ -162,7 +158,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 zipGuidLookup = zipCodeIds
                     .Where(s => !string.IsNullOrWhiteSpace(s) && s.Length >= 3)
                     .Distinct().ToList()
-                    .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p.Length >= 3 ? p.Substring(0,3): p, false)).ToArray();
+                    .ConvertAll(p => new RecordKeyLookup("ZIP.CODE.XLAT", p.Length >= 3 ? p.Substring(0, 3) : p, false)).ToArray();
                 recordKeyLookupResults = await DataReader.SelectAsync(zipGuidLookup);
 
                 foreach (var recordKeyLookupResult in recordKeyLookupResults)
@@ -223,7 +219,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var intlParams = await GetInternationalParametersAsync();
             return intlParams.HostCountry;
         }
-        
+
         #endregion
 
         #region ByPerson
@@ -243,7 +239,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             string[] addressIds = person.PersonAddresses.ToArray();
             ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = DataReader.BulkReadRecord<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
-            
+
             if (addressesData == null)
             {
                 throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning address data.  Person or Address may be corrupted.");
@@ -287,42 +283,42 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("personId", "Person Id is required to retrieve the person's addresses.");
             }
             List<Address> addresses = new List<Address>();
-                Ellucian.Colleague.Data.Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personId);
-                if (person == null)
-                {
-                    throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning any data. Person may be corrupted.");
-                }
-                string[] addressIds = person.PersonAddresses.ToArray();
-                ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
+            Ellucian.Colleague.Data.Base.DataContracts.Person person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personId);
+            if (person == null)
+            {
+                throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning any data. Person may be corrupted.");
+            }
+            string[] addressIds = person.PersonAddresses.ToArray();
+            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", addressIds);
 
-                if (addressesData == null)
-                {
-                    throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning address data.  Person or Address may be corrupted.");
-                }
-                foreach (var addressData in addressesData)
-                {
-                    var addressId = addressData.Recordkey;
-                    Address address = new Address(addressId, personId);
+            if (addressesData == null)
+            {
+                throw new ArgumentOutOfRangeException("Person Id " + personId + " is not returning address data.  Person or Address may be corrupted.");
+            }
+            foreach (var addressData in addressesData)
+            {
+                var addressId = addressData.Recordkey;
+                Address address = new Address(addressId, personId);
 
-                    try
+                try
+                {
+                    address = await BuildAddressAsync(addressData, person);
+                    var phoneNumber = await BuildPhonesAsync(addressData, person);
+                    if (phoneNumber.PhoneNumbers.Count() > 0)
                     {
-                        address = await BuildAddressAsync(addressData, person);
-                        var phoneNumber =await BuildPhonesAsync(addressData, person);
-                        if (phoneNumber.PhoneNumbers.Count() > 0)
+                        foreach (var phone in phoneNumber.PhoneNumbers)
                         {
-                            foreach (var phone in phoneNumber.PhoneNumbers)
-                            {
-                                address.AddPhone(phone);
-                            }
+                            address.AddPhone(phone);
                         }
-                        addresses.Add(address);
                     }
-                    catch (Exception ex)
-                    {
-                        /// Don't do anything, just skip this address
-                        logger.Error(ex, "Cannot process address");
-                    }
+                    addresses.Add(address);
                 }
+                catch (Exception ex)
+                {
+                    /// Don't do anything, just skip this address
+                    logger.Error(ex, "Cannot process address");
+                }
+            }
             return addresses;
         }
 
@@ -405,14 +401,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>A collection of Place entities</returns>
         public async Task<IEnumerable<Place>> GetPlacesAsync()
         {
-              var places = await GetOrAddToCacheAsync<List<Place>>("AllPlaces",
-               async () =>
-               {
-                   Collection<DataContracts.Places> placeData = await DataReader.BulkReadRecordAsync<DataContracts.Places>("PLACES", "");
-                   var placesList = BuildPlaces(placeData.ToList());
-                   return placesList.ToList();
-               }
-            );
+            var places = await GetOrAddToCacheAsync<List<Place>>("AllPlaces",
+             async () =>
+             {
+                 Collection<DataContracts.Places> placeData = await DataReader.BulkReadRecordAsync<DataContracts.Places>("PLACES", "");
+                 var placesList = BuildPlaces(placeData.ToList());
+                 return placesList.ToList();
+             }
+          );
             return places;
         }
 
@@ -430,16 +426,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     try
                     {
-                       var placeItem = new Place();
-                       placeItem.PlacesCountry = place.PlacesCountry;
-                       placeItem.PlacesDesc = place.PlacesDesc;
-                       placeItem.PlacesRegion = place.PlacesRegion;
-                       placeItem.PlacesSubRegion = place.PlacesSubRegion;
-                       placeCollection.Add(placeItem);
+                        var placeItem = new Place();
+                        placeItem.PlacesCountry = place.PlacesCountry;
+                        placeItem.PlacesDesc = place.PlacesDesc;
+                        placeItem.PlacesRegion = place.PlacesRegion;
+                        placeItem.PlacesSubRegion = place.PlacesSubRegion;
+                        placeCollection.Add(placeItem);
                     }
                     catch (Exception ex)
                     {
-                        LogDataError("Place", place.Recordkey, null, ex); 
+                        LogDataError("Place", place.Recordkey, null, ex);
                     }
                 }
             }
@@ -509,7 +505,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="id">The address ID</param>
         /// <returns>The address</returns>
         public async Task<Address> GetAddressbyIDAsync(string id)
-        {          
+        {
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id", "ID is required to get an address.");
@@ -523,7 +519,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             // Build the address data
-            return  BuildAddress(record);   
+            return BuildAddress(record);
         }
 
         /// <summary>
@@ -610,7 +606,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="offset">The starting point to look at the list</param>
         /// <param name="limit">The amount of records to view</param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Address>, int>> GetAddressesAsync (int offset, int limit)
+        public async Task<Tuple<IEnumerable<Address>, int>> GetAddressesAsync(int offset, int limit)
         {
             string criteria = "WITH ADDRESS.LINES NE ''";
 
@@ -653,7 +649,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             var addressEntities = new List<Address>();
             try
-            {             
+            {
                 string addressesCacheKey = CacheSupport.BuildCacheKey(AllAddressesCache, filterPersonIds);
                 var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
                     this,
@@ -668,13 +664,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     AllAddressesCacheTimeout,
                     async () =>
                     {
-                        
+
                         if (filterPersonIds != null && filterPersonIds.ToList().Any())
                         {
                             // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
                             //limitingKeys = filterPersonIds;
                             var criteria = "WITH PERSON.ADDRESSES NE '' BY.EXP PERSON.ADDRESSES SAVING PERSON.ADDRESSES";
-                            limitingKeys = (await DataReader.SelectAsync("PERSON", filterPersonIds, criteria)).ToList();                           
+                            limitingKeys = (await DataReader.SelectAsync("PERSON", filterPersonIds, criteria)).ToList();
                         }
 
                         CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
@@ -790,7 +786,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     exception.AddError(new RepositoryError("invalid.AddressGuid", errorMessage));
                     throw exception;
                 }
-                
+
                 address.Guid = addressData.RecordGuid;
 
                 if (!string.IsNullOrEmpty(address.Type))
@@ -805,7 +801,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // Set Preferred Flags
                 address.IsPreferredAddress = false;
                 address.IsPreferredResidence = false;
-               
+
                 // If there is no translation for country, the country description carries the country code.
                 string countryDesc = null;
                 if (!string.IsNullOrEmpty(addressData.Country))
@@ -875,12 +871,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>An Address Entity</returns>
         private Address BuildAddress2(DataContracts.Address addressData)
         {
-            
+
             if (addressData == null)
                 return new Address();
 
             var repositoryException = new RepositoryException();
-            
+
             /*
             if (!addressData.AddressLines.Any())
             {
@@ -911,7 +907,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 address = new Address(addressData.Recordkey, false);
 
                 address.Guid = addressData.RecordGuid;
-                
+
                 if (!string.IsNullOrEmpty(address.Type))
                 {
                     var codeAddressRelationship = GetAddressRelationships().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
@@ -1016,9 +1012,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 //if multiple address types are specified then 
                 //deal with it separately
-                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(_SM))
+                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(DmiString._SM))
                 {
-                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(_SM);
+                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(DmiString._SM);
                     foreach (var typeCode in addressTypeCodes)
                     {
                         address.AddressTypeCodes.Add(typeCode);
@@ -1026,11 +1022,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
 
                 address.TypeCode = assoc.AddrTypeAssocMember;
-                if(!address.AddressTypeCodes.Any())
+                if (!address.AddressTypeCodes.Any())
                 {
                     address.AddressTypeCodes.Add(address.TypeCode);
                 }
-                address.Type = assoc.AddrTypeAssocMember;               
+                address.Type = assoc.AddrTypeAssocMember;
                 if (!string.IsNullOrEmpty(address.Type))
                 {
                     var codeAddressRelationship = GetAddressRelationships().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
@@ -1038,7 +1034,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         address.Type = codeAddressRelationship.ValExternalRepresentationAssocMember;
                     }
-                }                
+                }
                 address.AddressModifier = assoc.AddrModifierLineAssocMember;
                 address.EffectiveStartDate = assoc.AddrEffectiveStartAssocMember;
                 address.EffectiveEndDate = assoc.AddrEffectiveEndAssocMember;
@@ -1125,9 +1121,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 //if multiple address types are specified then 
                 //deal with it separately
-                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(_SM))
+                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(DmiString._SM))
                 {
-                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(_SM);
+                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(DmiString._SM);
                     foreach (var typeCode in addressTypeCodes)
                     {
                         address.AddressTypeCodes.Add(typeCode);
@@ -1142,7 +1138,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 address.Type = assoc.AddrTypeAssocMember;
                 if (!string.IsNullOrEmpty(address.Type))
                 {
-                    var codeAddressRelationship =( await GetAddressRelationshipsAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
+                    var codeAddressRelationship = (await GetAddressRelationshipsAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
                     if (codeAddressRelationship != null)
                     {
                         address.Type = codeAddressRelationship.ValExternalRepresentationAssocMember;
@@ -1246,14 +1242,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             // Address Local Phones in Person data
                             // This could be subvalued so need to split on subvalue mark ASCII 252.
-                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(_SM);
-                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(_SM);
-                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(DmiString._SM);
+                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(DmiString._SM);
+                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(DmiString._SM);
                             for (int i = 0; i < localPhones.Length; i++)
                             {
                                 // Only get Address Phone numbers of type "Home"
                                 var phoneType = GetPhoneTypes().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == localPhoneTypes[i]).FirstOrDefault();
-                                if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")              
+                                if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")
                                 {
                                     try
                                     {
@@ -1354,13 +1350,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             // Address Local Phones in Person data
                             // This could be subvalued so need to split on subvalue mark ASCII 252.
-                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(_SM);
-                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(_SM);
-                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                            string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(DmiString._SM);
+                            string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(DmiString._SM);
+                            string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(DmiString._SM);
                             for (int i = 0; i < localPhones.Length; i++)
                             {
                                 // Only get Address Phone numbers of type "Home"
-                                var phoneType =(await GetPhoneTypesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == localPhoneTypes[i]).FirstOrDefault();
+                                var phoneType = (await GetPhoneTypesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == localPhoneTypes[i]).FirstOrDefault();
                                 if (phoneType != null && phoneType.ValActionCode2AssocMember == "H")
                                 {
                                     try
@@ -1497,7 +1493,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 DeliveryPoint = addressEntity.DeliveryPoint,
                 GeographicArea = addressEntity.AddressChapter,
                 IntlLocality = addressEntity.City,
-                IntlRegion = string.IsNullOrEmpty(addressEntity.State)? addressEntity.IntlRegion : addressEntity.State,
+                IntlRegion = string.IsNullOrEmpty(addressEntity.State) ? addressEntity.IntlRegion : addressEntity.State,
                 IntlSubRegion = addressEntity.IntlSubRegion,
                 IntlPostalCode = addressEntity.IntlPostalCode,
                 Longitude = addressEntity.Longitude,
@@ -1512,11 +1508,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             var updateResponse = await transactionInvoker.ExecuteAsync<UpdateAddressRequest, UpdateAddressResponse>(updateRequest);
-            
+
             if (updateResponse.AddressErrors.Any())
             {
                 var exception = new RepositoryException();
-                updateResponse.AddressErrors.ForEach(e => 
+                updateResponse.AddressErrors.ForEach(e =>
                 {
                     // It is worth noting here that AddressException.ErrorCodes is a single string, not a list or array
                     var errorCodes = string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes;
@@ -1604,7 +1600,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 throw new ArgumentNullException("id");
             }
-            string addressKey =  await GetAddressFromGuidAsync(id);
+            string addressKey = await GetAddressFromGuidAsync(id);
 
             var request = new DeleteAddressRequest()
             {

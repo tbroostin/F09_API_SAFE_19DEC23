@@ -7,6 +7,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Client;
+using Ellucian.Logging;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -135,6 +136,9 @@ namespace Ellucian.Colleague.Api
             Ellucian.Logging.SerilogAdapter.Configure(LogFile, LoggingLevelSwitch, LogComponentName);
             ILogger logger = slf4net.LoggerFactory.GetLogger(LogCategory);
             container.RegisterInstance<ILogger>(logger);
+
+            AuditLoggingAdapter.Configure(Path.Combine(AppDomain.CurrentDomain.GetData("DataDirectory").ToString(), "Logs", "audit-collwebapi..log"));
+
 
             // [3] critical common components (depend on logging and settings)
             container.RegisterType<ISessionRepository, ColleagueSessionRepository>();

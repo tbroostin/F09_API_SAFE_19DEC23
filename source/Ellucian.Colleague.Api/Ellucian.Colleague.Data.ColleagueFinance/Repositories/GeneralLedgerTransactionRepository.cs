@@ -1,24 +1,23 @@
-﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates
-
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates
+using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
-using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Dependency;
-using slf4net;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
 using System.Text.RegularExpressions;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Base.Repositories;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -28,8 +27,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GeneralLedgerTransactionRepository : BaseColleagueRepository, IGeneralLedgerTransactionRepository, IEthosExtended
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
-
         public int GlSecurityTransactionCallCount { get; set; }
         private RepositoryException exception = new RepositoryException();
 
@@ -83,7 +80,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var source in intgGlPostings.IgpSource)
                 {
-                    if (!source.Equals("DN", StringComparison.OrdinalIgnoreCase) && !source.Equals("PL", StringComparison.OrdinalIgnoreCase) 
+                    if (!source.Equals("DN", StringComparison.OrdinalIgnoreCase) && !source.Equals("PL", StringComparison.OrdinalIgnoreCase)
                         && !source.Equals("DNE", StringComparison.OrdinalIgnoreCase) && !source.Equals("PLE", StringComparison.OrdinalIgnoreCase))
                     {
                         donationPledge = false;
@@ -235,7 +232,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
-            }  
+            }
             ////Guid reqdness HEDM-2628, 00000000-0000-0000-0000-000000000000 should not be validated
             if (!generalLedgerTransaction.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -292,7 +289,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         private GeneralLedgerTransaction BuildGeneralLedgerTransaction(IntgGlPostings integGlPosting, IEnumerable<IntgGlPostingsDetail> inteGlPostingDetails)
         {
-            var generalLedgerTransaction = new GeneralLedgerTransaction() { Id = integGlPosting.RecordGuid, ProcessMode = "Update",SubmittedBy = integGlPosting.IgpSubmittedBy };
+            var generalLedgerTransaction = new GeneralLedgerTransaction() { Id = integGlPosting.RecordGuid, ProcessMode = "Update", SubmittedBy = integGlPosting.IgpSubmittedBy };
             generalLedgerTransaction.GeneralLedgerTransactions = new List<GenLedgrTransaction>();
 
             foreach (var glTrans in integGlPosting.TranDetailEntityAssociation)
@@ -354,7 +351,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch
                     {
-                        throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));  
+                        throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));
                     }
                 }
             }
@@ -440,7 +437,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
                         generalLedgerTransaction.GeneralLedgerTransactions.Add(transactionItem);
                     }
-                    catch(ArgumentNullException e)
+                    catch (ArgumentNullException e)
                     {
                         string message = string.Format("{0}, Id: {1}", e.Message, integGlPosting.Recordkey);
                         exception.AddError(new RepositoryError("Bad.Data", message)
@@ -547,13 +544,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         detailSubmittedBy[xCtr] = detail.SubmittedBy;
                         xCtr += 1;
                     }
-                    tranDetSeqNo.Add(string.Join(_SM.ToString(), detailSeqNo));
-                    tranDetGl.Add(string.Join(_SM.ToString(), detailGl));
-                    tranDetProj.Add(string.Join(_SM.ToString(), detailProj));
-                    tranDetDesc.Add(string.Join(_SM.ToString(), detailDesc));
-                    tranDetAmt.Add(string.Join(_SM.ToString(), detailAmt));
-                    tranDetType.Add(string.Join(_SM.ToString(), detailType));
-                    tranDetSubmittedBy.Add(string.Join(_SM.ToString(), detailSubmittedBy));
+                    tranDetSeqNo.Add(string.Join(DmiString.sSM, detailSeqNo));
+                    tranDetGl.Add(string.Join(DmiString.sSM, detailGl));
+                    tranDetProj.Add(string.Join(DmiString.sSM, detailProj));
+                    tranDetDesc.Add(string.Join(DmiString.sSM, detailDesc));
+                    tranDetAmt.Add(string.Join(DmiString.sSM, detailAmt));
+                    tranDetType.Add(string.Join(DmiString.sSM, detailType));
+                    tranDetSubmittedBy.Add(string.Join(DmiString.sSM, detailSubmittedBy));
                 }
             }
             var request = new CreateGLPostingRequest()
@@ -663,7 +660,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             else
             {
-                var generalLedgerTransactionEntity = await this.GetById2Async(response.Id, personId, glAccessLevel); 
+                var generalLedgerTransactionEntity = await this.GetById2Async(response.Id, personId, glAccessLevel);
                 if (exception != null && exception.Errors != null && exception.Errors.Any())
                 {
                     throw exception;
@@ -671,15 +668,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 return generalLedgerTransactionEntity;
             }
         }
-        
+
         /// <summary>
-         /// Update a single general ledger transaction for the data model version 6
-         /// </summary>
-         /// <param name="generalLedgerTransaction">General Ledger Transaction to update</param>
-         /// <param name="id">The general ledger transaction GUID</param>
-         /// <param name="personId">The user ID</param>
-         /// <param name="glAccessLevel">The user GL account security level</param>
-         /// <returns>A single GeneralLedgerTransaction</returns>
+        /// Update a single general ledger transaction for the data model version 6
+        /// </summary>
+        /// <param name="generalLedgerTransaction">General Ledger Transaction to update</param>
+        /// <param name="id">The general ledger transaction GUID</param>
+        /// <param name="personId">The user ID</param>
+        /// <param name="glAccessLevel">The user GL account security level</param>
+        /// <returns>A single GeneralLedgerTransaction</returns>
         public async Task<GeneralLedgerTransaction> Update2Async(string id, GeneralLedgerTransaction generalLedgerTransaction, string personId, GlAccessLevel glAccessLevel, GeneralLedgerAccountStructure GlConfig)
         {
             if (string.IsNullOrEmpty(id))
@@ -696,7 +693,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             var response = await CreateGeneralLedgerTransaction2(generalLedgerTransaction, GlConfig);
-            if(response == null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (response == null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 if (exception != null && exception.Errors != null && exception.Errors.Any())
                 {
@@ -821,7 +818,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             detailAmt[xCtr] = detail.Amount.Value.Value.ToString();
                         }
-                        
+
                         detailType[xCtr] = detail.Type.ToString();
                         detailSubmittedBy[xCtr] = detail.SubmittedBy;
                         if (!string.IsNullOrEmpty(detail.EncAdjustmentType))
@@ -851,27 +848,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                         xCtr += 1;
                     }
-                    encAdjType.Add(string.Join(_SM.ToString(), detailEncAdjType));
-                    encCommitmentType.Add(string.Join(_SM.ToString(), detailEncCommitmentType));
-                    encLineItemNumber.Add(string.Join(_SM.ToString(), detailEncLineItemNumber));
-                    encNumber.Add(string.Join(_SM.ToString(), detailEncRefNumber));
-                    encSequenceNumber.Add(string.Join(_SM.ToString(), detailEncSequenceNumber));
-                    giftUnits.Add(string.Join(_SM.ToString(), detailEncGiftUnits));
+                    encAdjType.Add(string.Join(DmiString.sSM, detailEncAdjType));
+                    encCommitmentType.Add(string.Join(DmiString.sSM, detailEncCommitmentType));
+                    encLineItemNumber.Add(string.Join(DmiString.sSM, detailEncLineItemNumber));
+                    encNumber.Add(string.Join(DmiString.sSM, detailEncRefNumber));
+                    encSequenceNumber.Add(string.Join(DmiString.sSM, detailEncSequenceNumber));
+                    giftUnits.Add(string.Join(DmiString.sSM, detailEncGiftUnits));
 
-                    tranDetSeqNo.Add(string.Join(_SM.ToString(), detailSeqNo));
-                    tranDetGl.Add(string.Join(_SM.ToString(), detailGl));
-                    tranDetProj.Add(string.Join(_SM.ToString(), detailProj));
-                    tranDetDesc.Add(string.Join(_SM.ToString(), detailDesc));
-                    tranDetAmt.Add(string.Join(_SM.ToString(), detailAmt));
-                    tranDetType.Add(string.Join(_SM.ToString(), detailType));
-                    tranDetSubmittedBy.Add(string.Join(_SM.ToString(), detailSubmittedBy));  
+                    tranDetSeqNo.Add(string.Join(DmiString.sSM, detailSeqNo));
+                    tranDetGl.Add(string.Join(DmiString.sSM, detailGl));
+                    tranDetProj.Add(string.Join(DmiString.sSM, detailProj));
+                    tranDetDesc.Add(string.Join(DmiString.sSM, detailDesc));
+                    tranDetAmt.Add(string.Join(DmiString.sSM, detailAmt));
+                    tranDetType.Add(string.Join(DmiString.sSM, detailType));
+                    tranDetSubmittedBy.Add(string.Join(DmiString.sSM, detailSubmittedBy));
                 }
             }
             //Hard coded Mode = "update" per KJ, since these values changed in V12, they may create issues with V6/8
             var request = new CreateGLPostingRequest()
             {
                 PostingGuid = generalLedgerTransaction.Id,
-                Mode = (generalLedgerTransaction.ProcessMode != null && generalLedgerTransaction.ProcessMode.ToUpperInvariant().Equals("VALIDATE"))? "VALIDATE" : "UPDATE",
+                Mode = (generalLedgerTransaction.ProcessMode != null && generalLedgerTransaction.ProcessMode.ToUpperInvariant().Equals("VALIDATE")) ? "VALIDATE" : "UPDATE",
                 SubmittedBy = generalLedgerTransaction.SubmittedBy,
                 TranType = tranType,
                 TranRefNo = tranRefNo,

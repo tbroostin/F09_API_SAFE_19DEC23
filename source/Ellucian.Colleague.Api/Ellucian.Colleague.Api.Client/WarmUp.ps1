@@ -1,5 +1,5 @@
-# Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
-# Version 1.37.1 (Delivered with Colleague Web API 1.37.1)
+# Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
+# Version 1.40 (Delivered with Colleague Web API 1.40)
 
 # PURPOSE:
 # Warm up the Colleague Web API by pre-loading the most frequently-used and shared API data

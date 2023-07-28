@@ -15,6 +15,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Data.Colleague.DataContracts;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -435,6 +436,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 singleConfiguration.RejectedAwardCommunicationCode = officeParametersRecord.FopRejAwdsCcCode;
                 singleConfiguration.RejectedAwardCommunicationStatus = officeParametersRecord.FopRejAwdsCcSt;
 
+                try
+                {
+                    var allHousingOptions = GetHousingOptions();
+                    singleConfiguration.HousingOptions = (allHousingOptions.ValInternalCode.Except(officeParametersRecord.FopExclHousingOptions)).Select(ho => ho.ToString()).ToList();
+                }
+                catch
+                {//do nothing
+                }
+                
                 singleConfiguration.AllowNegativeUnmetNeedBorrowing =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopNegUnmetNeed) && officeParametersRecord.FopNegUnmetNeed.ToUpper() == "Y");
 
@@ -784,6 +794,26 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
             }
             return text;
+        }
+
+        /// <summary>
+        /// Helper method to get housing options from valcode table
+        /// </summary>
+        /// <returns>valcode values for housing options</returns>
+        private ApplValcodes GetHousingOptions()
+        {
+            return GetOrAddToCache<ApplValcodes>("HousingOptions",
+                () =>
+                {
+                    var housingTable = DataReader.ReadRecord<ApplValcodes>("ST.VALCODES", "FAFSA.HOUSING.CODES09");
+                    if (housingTable == null)
+                    {
+                        var message = "Unable to get ST->FAFSA.HOUSING.CODES09 valcode table";
+                        logger.Error(message);
+                        throw new ColleagueWebApiException(message);
+                    }
+                    return housingTable;
+                }, Level1CacheTimeoutValue);
         }
     }
 }

@@ -46,5 +46,10 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// The value of HRSS.LR.UNSUBMIT.WDRW option in LVSS form when the Leave Request is Withdrawn.
         /// </summary>
         public string WithdrawOption { get; set; }
+
+        /// <summary>
+        /// Flag denotes whether the incoming action type of the associated leave request(in the case POST/PUT), is already the latest action in the database
+        /// </summary>
+        public bool LatestStatusAlreadyExists { get; set; }
     }
 }

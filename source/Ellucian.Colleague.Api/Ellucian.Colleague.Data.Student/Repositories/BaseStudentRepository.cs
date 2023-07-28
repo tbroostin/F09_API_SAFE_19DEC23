@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         public async Task<RegistrationConfiguration> GetRegistrationConfigurationAsync()
         {
-            RegistrationConfiguration result = new RegistrationConfiguration(false, 0);
+            RegistrationConfiguration result = new RegistrationConfiguration(false, false, false, 0);
             RegistrationConfiguration configuration = await GetOrAddToCacheAsync<RegistrationConfiguration>("RegistrationConfiguration",
               async () =>
               {
@@ -41,8 +41,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                   }
                   else
                   {
+                      //Seat Service is only used when the flag is Y or y.
+                      var seatServiceIsEnabled = !string.IsNullOrEmpty(regDefaults.RgdSeatServiceEnabled) && regDefaults.RgdSeatServiceEnabled.ToUpper() == "Y" ? true : false;
+
                       //Add Authorization is required only if the flag is Y or y.
                       bool requireAddAuthorization = (!string.IsNullOrEmpty(regDefaults.RgdRequireAddAuthFlag) && regDefaults.RgdRequireAddAuthFlag.ToUpper() == "Y");
+                      bool exceedAddAuthCapacity = (!string.IsNullOrEmpty(regDefaults.RgdAddAuthExceedCapacity) && regDefaults.RgdAddAuthExceedCapacity.ToUpper() == "Y");
+                      bool bypassAddAuthWaitlist = (!string.IsNullOrEmpty(regDefaults.RgdBypassAddAuthWaitlist) && regDefaults.RgdBypassAddAuthWaitlist.ToUpper() == "Y");
                       int offsetDays = 0;
                       // Offset days are only applicable if require add authorization is true.
                       if (requireAddAuthorization)
@@ -53,12 +58,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                       {
                           var errorMessage = "Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS.";
                           logger.Info(errorMessage);
-                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays);
+                          result = new RegistrationConfiguration(requireAddAuthorization, exceedAddAuthCapacity, bypassAddAuthWaitlist, offsetDays, seatServiceIsEnabled: seatServiceIsEnabled);
                       }
                       else
                       {
                           var quickRegistrationIsEnabled = !string.IsNullOrEmpty(stwebDefaults.StwebEnableQuickReg) && stwebDefaults.StwebEnableQuickReg.ToUpper() == "Y" ? true : false;
-                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays, quickRegistrationIsEnabled);
+                          result = new RegistrationConfiguration(requireAddAuthorization, exceedAddAuthCapacity, bypassAddAuthWaitlist, offsetDays, quickRegistrationIsEnabled, seatServiceIsEnabled: seatServiceIsEnabled);
                           result.PromptForDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnPromptFlag) && stwebDefaults.StwebDropRsnPromptFlag.ToUpper() == "Y" ? true : false;
                           result.RequireDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnRequiredFlag) && stwebDefaults.StwebDropRsnRequiredFlag.ToUpper() == "Y" ? true : false;
                           result.ShowBooksOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowBksOnSchedPrt) && stwebDefaults.StwebShowBksOnSchedPrt.ToUpper() == "Y" ? true : false;
@@ -90,7 +95,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                           logger.Info(errorMessage);
                           result.AlwaysPromptUsersForIntentToWithdrawWhenDropping = false;
                           result.CensusDateNumberForPromptingIntentToWithdraw = null;
-                      } else
+                      }
+                      else
                       {
                           result.AlwaysPromptUsersForIntentToWithdrawWhenDropping = !string.IsNullOrEmpty(stwebDefaults2.Stweb2IntToWdrlAlways) && stwebDefaults2.Stweb2IntToWdrlAlways.ToUpper() == "Y" ? true : false;
                           result.CensusDateNumberForPromptingIntentToWithdraw = stwebDefaults2.Stweb2IntToWdrlCensus;
@@ -122,7 +128,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                       bool showNegativeSeatCounts = !string.IsNullOrEmpty(stwebDefaults.StwebShowNegativeSeats) && stwebDefaults.StwebShowNegativeSeats.ToUpper() == "Y" ? true : false;
                       bool includeSeatsTakenInAvailabilityInformation = !string.IsNullOrEmpty(stwebDefaults.StwebUseAtcwFormat) && stwebDefaults.StwebUseAtcwFormat.ToUpper() == "Y" ? true : false;
                       result = new SectionAvailabilityInformationConfiguration(showNegativeSeatCounts, includeSeatsTakenInAvailabilityInformation);
-                  }                  
+                  }
                   return result;
               });
             return configuration;

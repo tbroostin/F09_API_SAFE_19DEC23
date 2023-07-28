@@ -112,7 +112,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     // 06/13/2022: Added "R" as a supported approval flag for "Routing" (PO and Requisitions).
                     cfWebConfigurationEntity.PurchasingDefaults.IsRequisitionApprovalNeeded = purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "A" || purchaseDefaults.PurReqApprovalNeededFlag.ToUpper() == "R";
                     cfWebConfigurationEntity.PurchasingDefaults.IsPOApprovalNeeded = purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "Y" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "A" || purchaseDefaults.PurPoApprovalNeededFlag.ToUpper() == "R";
-                    cfWebConfigurationEntity.PurchasingDefaults.IsApprovalReturnsEnabled = purchaseDefaults.PurApprAllowReturnFlag.ToUpper() == "Y";
+                    cfWebConfigurationEntity.PurchasingDefaults.IsApprovalReturnsEnabled = !string.IsNullOrEmpty(purchaseDefaults.PurApprAllowReturnFlag) ? purchaseDefaults.PurApprAllowReturnFlag.ToUpper() == "Y": false;
                 }
 
                 if (attachmentParameters != null)

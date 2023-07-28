@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return section == null ? null : section.Id;
         }
 
-        public async Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false)
+        public async Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false, bool useSeatServiceWhenEnabled = false)
         {
             return (await GetAsync()).FirstOrDefault(x => x.Id == id);
         }

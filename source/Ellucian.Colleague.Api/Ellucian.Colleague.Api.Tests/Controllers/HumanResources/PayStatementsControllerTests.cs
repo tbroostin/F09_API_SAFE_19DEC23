@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,8 +25,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
     {
         public Mock<ILogger> loggerMock;
         public Mock<IPayStatementService> payStatementServiceMock;
-
         public PayStatementsController controllerUnderTest;
+        public PayStatementInformation payStatementInformation;
 
         public void PayStatementsControllerTestsInitialize()
         {
@@ -42,6 +42,16 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 new HttpRequest("", "http://tempuri.org", ""),
                 new HttpResponse(new StringWriter())
                 );
+
+            payStatementInformation = new PayStatementInformation()
+            {
+                GrossAmount = 10000.00m,
+                NetAmount = 8000.00m,
+                TaxAmount = 1000.00m,
+                DeductionAmount = 1000.00m
+            };
+
+            payStatementServiceMock.Setup(s => s.GetPayStatementInformationAsync(It.IsAny<string>())).ReturnsAsync(payStatementInformation);
         }
 
         [TestClass]
@@ -412,6 +422,139 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             //        throw;
             //    }
             //}
+        }
+
+        [TestClass]
+        public class GetPayStatementInformationTests : PayStatementsControllerTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            public string inputId;
+
+            public async Task<PayStatementInformation> getActual()
+            {
+                return await controllerUnderTest.GetPayStatementInformationAsync(inputId);
+            }
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                PayStatementsControllerTestsInitialize();
+                inputId = "3695";
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InputIdIsRequiredTest()
+            {
+                try
+                {
+                    inputId = null;
+                    await getActual();
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }         
+
+            [TestMethod]
+            public async Task PayStatementInfoDtoReturnedTest()
+            {
+                var actual = await getActual();
+                var expected = payStatementInformation;
+                Assert.AreEqual(expected, actual);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchPermissionExceptionTest()
+            {
+                payStatementServiceMock.Setup(s => s.GetPayStatementInformationAsync(It.IsAny<string>())).Throws(new PermissionsException("pex"));
+                try
+                {
+                    await getActual();
+                }
+                catch (HttpResponseException hre)
+                {
+                    loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), It.IsAny<string>()));
+                    Assert.AreEqual(HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchArgumentExceptionTest()
+            {
+                payStatementServiceMock.Setup(s => s.GetPayStatementInformationAsync(It.IsAny<string>())).Throws(new ArgumentException("ae"));
+                try
+                {
+                    await getActual();
+                }
+                catch (HttpResponseException hre)
+                {
+                    loggerMock.Verify(l => l.Error(It.IsAny<ArgumentException>(), It.IsAny<string>()));
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchApplicationExceptionTest()
+            {
+                payStatementServiceMock.Setup(s => s.GetPayStatementInformationAsync(It.IsAny<string>())).Throws(new ApplicationException("ae"));
+                try
+                {
+                    await getActual();
+                }
+                catch (HttpResponseException hre)
+                {
+                    loggerMock.Verify(l => l.Error(It.IsAny<ApplicationException>(), It.IsAny<string>()));
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CatchGenericExceptionTest()
+            {
+                payStatementServiceMock.Setup(s => s.GetPayStatementInformationAsync(It.IsAny<string>())).Throws(new Exception("ex"));
+                try
+                {
+                    await getActual();
+                }
+                catch (HttpResponseException hre)
+                {
+                    loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
         }
     }
 }

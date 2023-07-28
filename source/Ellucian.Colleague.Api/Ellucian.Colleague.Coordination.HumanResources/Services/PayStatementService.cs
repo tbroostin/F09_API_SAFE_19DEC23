@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -81,7 +81,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             this.personEmploymentStatusRepository = personEmploymentStatusRepository;
             this.positionRepository = positionRepository;
             this.studentReferenceDataRepository = studentReferenceDataRepository;
-        }
+        }             
 
         /// <summary>
         /// Gets a Pay Statement formatted as a PDF
@@ -554,6 +554,37 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return payStatementSummaryDtos;
         }
 
+        /// <summary>
+        /// Get the pay statement information for a given id.
+        /// </summary>
+        /// <param name="id">The id of the requested pay statement.</param>      
+        /// <returns>The requested PayStatementInformation DTO</returns>
+        public async Task<PayStatementInformation> GetPayStatementInformationAsync(string id)
+        {
+            logger.Debug("********* Start - Service to get pay statement information - Start *********");
+            var payStatementSource = await payStatementRepository.GetPayStatementSourceDataAsync(id);
+            
+            if(payStatementSource == null)
+            {
+                logger.Error("Error occurred while retrieving pay statement source data");
+                throw new ApplicationException("Error occurred while retrieving pay statement source data");
+            }
+            if(payStatementSource.EmployeeId != CurrentUser.PersonId)
+            {
+                logger.Debug("Current user doesn't have the permissions to access the requested data");
+                throw new PermissionsException("Current user doesn't have the permissions to access the requested data");
+            }
+
+            var payStatementInformation = new PayStatementInformation()
+            {
+                GrossAmount = payStatementSource.PeriodGrossPay,
+                NetAmount = payStatementSource.PeriodNetPay,
+                TaxAmount = payStatementSource.PeriodTotalTaxes,
+                DeductionAmount = payStatementSource.PeriodTotalBenDeds
+            };
+            logger.Debug("********* End - Service to get pay statement information - End *********");
+            return payStatementInformation;
+        }
 
         /// <summary>
         /// Helper to build a PayStatementReferenceDataUtility object

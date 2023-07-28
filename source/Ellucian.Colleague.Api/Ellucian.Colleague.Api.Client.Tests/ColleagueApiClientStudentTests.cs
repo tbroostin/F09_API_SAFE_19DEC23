@@ -4239,11 +4239,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
             [TestMethod]
             public async Task ClientGetRegistrationConfigurationAsync_ReturnsSerializedRegistrationConfiguration()
             {
-                // Arrange
-                var searchStartDate = DateTime.Now.AddDays(-180);
-                var searchEndDate = DateTime.Now.AddDays(180);
-
-
                 var registrationConfiguration = new RegistrationConfiguration();
                 registrationConfiguration.RequireFacultyAddAuthorization = true;
                 registrationConfiguration.AddAuthorizationStartOffsetDays = 3;
@@ -4255,16 +4250,48 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 var testHttpClient = new HttpClient(mockHandler);
                 testHttpClient.BaseAddress = new Uri(_serviceUrl);
-
                 var client = new ColleagueApiClient(testHttpClient, _logger);
 
-                // Act
                 var clientResponse = await client.GetRegistrationConfigurationAsync();
 
                 // Assert that the expected number of items is returned and each of the expected items is found in the response
                 Assert.IsNotNull(clientResponse);
                 Assert.IsTrue(clientResponse.RequireFacultyAddAuthorization);
                 Assert.AreEqual(3, clientResponse.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, clientResponse.QuickRegistrationIsEnabled);
+                Assert.IsNull(clientResponse.QuickRegistrationTermCodes);
+                Assert.AreEqual(false, clientResponse.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task ClientGetRegistrationConfigurationAsync_ReturnsSerializedRegistrationConfiguration2()
+            {
+                var registrationConfiguration = new RegistrationConfiguration();
+                registrationConfiguration.RequireFacultyAddAuthorization = true;
+                registrationConfiguration.AddAuthorizationStartOffsetDays = 3;
+                registrationConfiguration.QuickRegistrationIsEnabled = true;
+                registrationConfiguration.QuickRegistrationTermCodes = new List<string>() { "2019/FA", "2020/SP" };
+                registrationConfiguration.SeatServiceIsEnabled = true;
+
+                var serializedResponse = JsonConvert.SerializeObject(registrationConfiguration);
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetRegistrationConfigurationAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsTrue(clientResponse.RequireFacultyAddAuthorization);
+                Assert.AreEqual(3, clientResponse.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(true, clientResponse.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, clientResponse.QuickRegistrationTermCodes.Count());
+                Assert.AreEqual(true, clientResponse.SeatServiceIsEnabled);
             }
         }
 

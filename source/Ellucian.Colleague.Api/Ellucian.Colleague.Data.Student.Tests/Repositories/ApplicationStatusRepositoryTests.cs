@@ -1,24 +1,22 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Data.Colleague;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Ellucian.Colleague.Data.Base.Tests.Repositories;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Data.Colleague;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Web.Http.Configuration;
 using System.Threading;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.Student.Transactions;
-using Ellucian.Colleague.Domain.Exceptions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -28,7 +26,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         Collection<Applications> _applicationDataContracts;
         Collection<Applications> _admissionApplicationDataContracts;
         ApplicationStatus2 statusIn;
-        public static char _VM = Convert.ToChar(DynamicArray.VM);
         ApplicationStatusRepository _applicationStatusRepository;
         Dictionary<string, RecordKeyLookupResult> recordLookupDict;
         UpdateAdmApplStatusesResponse response;
@@ -53,13 +50,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             ////build the repository
             _applicationStatusRepository = BuildRepository();
-        }   
+        }
 
         [TestCleanup]
         public void Cleanup()
         {
             applicationGuid = null;
-       }
+        }
 
         [TestMethod]
         public async Task ApplicationStatusRepository_GetApplicationStatusesAsync()
@@ -178,7 +175,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             });
 
             recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
-           
+
             dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(applStatusesNoSpCodeIds);
             dataReaderMock.SetupSequence(repo => repo.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), "?", It.IsAny<bool>(), It.IsAny<int>()))
                 .Returns(Task.FromResult(applIds))

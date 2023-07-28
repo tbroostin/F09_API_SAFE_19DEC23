@@ -229,6 +229,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public bool AreFaCreditsVisible { get; set; }
 
         /// <summary>
+        /// List of available housing options for the FA SS checklist
+        /// </summary>
+        public List<string> HousingOptions { get; set; }
+
+        /// <summary>
         /// Constructor that accepts studentId and awardYearCode
         /// </summary>
         public StudentAwardYear(string studentId, string awardYearCode)

@@ -1,18 +1,16 @@
-﻿// Copyright 2017 - 2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2017 - 2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Security;
+using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
+using Newtonsoft.Json.Linq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Web.Http.EthosExtend;
-using Ellucian.Web.Security;
-using JsonDiffPatch;
-using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
-using Newtonsoft.Json.Linq;
-using slf4net;
-using Tavis;
 
 namespace Ellucian.Web.Http.Utilities
 {
@@ -37,12 +35,15 @@ namespace Ellucian.Web.Http.Utilities
                 if (jsonToExtend.Type == JTokenType.Array)
                 {
                     var jArray = new JArray();
-                    
+
                     jsonToExtend.ForEach(j =>
                     {
                         var id = (string)j.SelectToken("$._id", false);
                         if (string.IsNullOrEmpty(id)) id = (string)j.SelectToken("$.id", false);
-                        if(string.IsNullOrEmpty(id))
+                        if (string.IsNullOrEmpty(id)) id = (string)j.SelectToken("$.Id", false);
+                        if (string.IsNullOrEmpty(id)) id = (string)j.SelectToken("$.Code", false);
+                        if (string.IsNullOrEmpty(id)) id = (string)j.SelectToken("$.code", false);
+                        if (string.IsNullOrEmpty(id))
                         {
                             jArray.Add(j);
                             return;
@@ -54,7 +55,7 @@ namespace Ellucian.Web.Http.Utilities
                             return;
                         }
                         var extendedObject = ExtendSingleJsonObject(j, extendData, logger);
-                        if(extendedObject == null)
+                        if (extendedObject == null)
                         {
                             jArray.Add(j);
                             return;
@@ -68,7 +69,7 @@ namespace Ellucian.Web.Http.Utilities
                 {
                     return (JContainer)ExtendSingleJsonObject(jsonToExtend, extendedDataList.First(), logger);
                 }
-                
+
             }
             catch (Exception ex)
             {
@@ -104,29 +105,23 @@ namespace Ellucian.Web.Http.Utilities
                 return null;
             }
 
-            char _VM = Convert.ToChar(DynamicArray.VM);
-            char _SM = Convert.ToChar(DynamicArray.SM);
-
             try
             {
                 var objectToReturn = jsonObjectToExtend;
-                var patcher = new JsonPatcher();
+                var patchDocument = new JsonPatchDocument();
 
                 // A UI form may contain multiple key parts and each key part needs to be identified within
                 // the "id" object.  If only one record key part is defined, then move the value from the "_id"
                 // property to the "id" property and ignore the original value in the "_id" property.
                 if (extendConfig.ExtendedDataList.Count(edl => edl.FullJsonPath.StartsWith("/id/")) > 0 || extendConfig.ExtendedDataList.Count(edl => edl.FullJsonPath.Equals("/id", StringComparison.OrdinalIgnoreCase)) > 0)
                 {
-                    //var selectedToken = objectToReturn.SelectToken("$._id");
-                    //if (selectedToken != null)
-                    //{
-                    //    var path = "/_id";
-                    //    patcher.Patch(ref objectToReturn,
-                    //        new PatchDocument(new RemoveOperation()
-                    //        {
-                    //            Path = new JsonPointer(path)
-                    //        }));
-                    //}
+                    var selectedToken = objectToReturn.SelectToken("$._id");
+                    if (selectedToken != null)
+                    {
+                        var path = "/_id";
+                        patchDocument.Remove(path);
+                        patchDocument.ApplyTo(objectToReturn);
+                    }
                 }
                 else
                 {
@@ -134,21 +129,13 @@ namespace Ellucian.Web.Http.Utilities
                     var selectedToken = objectToReturn.SelectToken("$._id");
                     if (selectedToken != null)
                     {
-                        patcher.Patch(ref objectToReturn,
-                            new PatchDocument(new AddOperation()
-                            {
-                                Path = new JsonPointer("/id"),
-                                Value = new JValue(selectedToken.ToString())
-                            }));
-
-                        var path = "/_id";
-                        patcher.Patch(ref objectToReturn,
-                            new PatchDocument(new RemoveOperation()
-                            {
-                                Path = new JsonPointer(path)
-                            }));
+                        patchDocument.Add("/id", new JValue(selectedToken.ToString()));
+                        patchDocument.Remove("/_id");
+                        patchDocument.ApplyTo(objectToReturn);
                     }
                 }
+
+                patchDocument = new JsonPatchDocument();
 
                 // Extract all Array Objects with full path to array values as the key.
                 var arrayObjects = new Dictionary<string, List<EthosExtensibleDataRow>>();
@@ -205,8 +192,8 @@ namespace Ellucian.Web.Http.Utilities
 
                             if (count == 1)
                             {
-                                patcher.Patch(ref objectToReturn,
-                                    new PatchDocument(CreateAddOperation(extendedData)));
+                                var convertedValues = CreateAddOperation(extendedData);
+                                patchDocument.Add(convertedValues.Item1, convertedValues.Item2);
                             }
                             else
                             {
@@ -222,19 +209,14 @@ namespace Ellucian.Web.Http.Utilities
                                     if (selectedToken == null && i < count - 1)
                                     {
                                         var path = sb.ToString().Replace('.', '/').TrimStart('$').TrimEnd(']').TrimEnd('[');
-                                        patcher.Patch(ref objectToReturn,
-                                            new PatchDocument(new AddOperation()
-                                            {
-                                                Path = new JsonPointer(path),
-                                                Value = new JObject()
-                                            }));
+                                        patchDocument.Add(path, new JObject());
                                     }
                                     else if (selectedToken == null && i == count - 1)
                                     {
                                         try
                                         {
-                                            patcher.Patch(ref objectToReturn,
-                                                new PatchDocument(CreateAddOperation(extendedData)));
+                                            var convertedValues = CreateAddOperation(extendedData);
+                                            patchDocument.Add(convertedValues.Item1, convertedValues.Item2);
                                         }
                                         catch
                                         {
@@ -244,6 +226,9 @@ namespace Ellucian.Web.Http.Utilities
                                 }
                             }
                         }
+
+                        patchDocument.ApplyTo(objectToReturn);
+                        patchDocument = new JsonPatchDocument();
                     }
                     catch (Exception e)
                     {
@@ -253,7 +238,7 @@ namespace Ellucian.Web.Http.Utilities
                     }
 
                     // Now process all array objects
-                    objectToReturn = ProcessArrayObjects(objectToReturn, arrayObjects, patcher, logger);
+                    objectToReturn = ProcessArrayObjects(objectToReturn, arrayObjects, patchDocument, logger);
                 }
 
                 return objectToReturn;
@@ -266,11 +251,8 @@ namespace Ellucian.Web.Http.Utilities
             }
         }
 
-        private static JToken ProcessArrayObjects(JToken objectToReturn, Dictionary<string, List<EthosExtensibleDataRow>> ethosExtendedDataDictionary, JsonPatcher patcher, ILogger logger)
+        private static JToken ProcessArrayObjects(JToken objectToReturn, Dictionary<string, List<EthosExtensibleDataRow>> ethosExtendedDataDictionary, JsonPatchDocument patchDocument, ILogger logger)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
-            char _SM = Convert.ToChar(DynamicArray.SM);
-            char _TM = Convert.ToChar(DynamicArray.TM);
             char _XM = Convert.ToChar(250);
 
             // Process Array properties
@@ -286,19 +268,20 @@ namespace Ellucian.Web.Http.Utilities
                         int totalCount = 0;
                         foreach (var eo in ethosObjects)
                         {
-                            if (eo.ExtendedDataValue.Split(_VM).Count() > totalCount)
-                                totalCount = eo.ExtendedDataValue.Split(_VM).Count();
+                            if (eo.ExtendedDataValue.Split(DmiString._VM).Count() > totalCount)
+                                totalCount = eo.ExtendedDataValue.Split(DmiString._VM).Count();
                         }
 
                         for (int idx = 0; idx < totalCount; idx++)
                         {
                             var objectValues = new JObject();
+                            var objectPatchDocument = new JsonPatchDocument();
                             var arrayObjects = new Dictionary<string, List<EthosExtensibleDataRow>>();
                             foreach (var extendedData2 in ethosObjects)
                             {
                                 try
                                 {
-                                    var dataValues = extendedData2.ExtendedDataValue.Split(_VM);
+                                    var dataValues = extendedData2.ExtendedDataValue.Split(DmiString._VM);
                                     var dataType = extendedData2.JsonPropertyType;
                                     var propertyName = extendedData2.JsonTitle;
                                     if (dataValues.Count() > idx)
@@ -311,7 +294,7 @@ namespace Ellucian.Web.Http.Utilities
                                                 if (propertyName.EndsWith("[]"))
                                                 {
                                                     var jArray = new JArray();
-                                                    var subValues = dataValues[idx].Split(_SM);
+                                                    var subValues = dataValues[idx].Split(DmiString._SM);
                                                     foreach (var subval in subValues)
                                                     {
                                                         jArray.Add(ConvertValueToJValue(dataType, subval));
@@ -337,7 +320,7 @@ namespace Ellucian.Web.Http.Utilities
                                             var path = new StringBuilder();
 
                                             path.Append("/");
-                                            
+
                                             bool isArray = false;
                                             string pathKey = string.Empty;
                                             for (int i = 0; i < pathCount; i++)
@@ -400,17 +383,17 @@ namespace Ellucian.Web.Http.Utilities
                                                                 JsonPropertyType = extendedData2.JsonPropertyType
                                                             };
                                                             var tempDataValues = dataValues[idx];
-                                                            if (tempDataValues.Contains(_SM))
+                                                            if (tempDataValues.Contains(DmiString._SM))
                                                             {
-                                                                tempDataValues = tempDataValues.Replace(_SM, _VM);
+                                                                tempDataValues = tempDataValues.Replace(DmiString._SM, DmiString._VM);
                                                             }
-                                                            else if (tempDataValues.Contains(_TM))
+                                                            else if (tempDataValues.Contains(DmiString._TM))
                                                             {
-                                                                tempDataValues = tempDataValues.Replace(_TM, _VM);
+                                                                tempDataValues = tempDataValues.Replace(DmiString._TM, DmiString._VM);
                                                             }
                                                             else if (tempDataValues.Contains(_XM))
                                                             {
-                                                                tempDataValues = tempDataValues.Replace(_XM, _VM);
+                                                                tempDataValues = tempDataValues.Replace(_XM, DmiString._VM);
                                                             }
 
                                                             if (!string.IsNullOrEmpty(tempDataValues))
@@ -456,7 +439,7 @@ namespace Ellucian.Web.Http.Utilities
                                                             if (propertyName.EndsWith("[]"))
                                                             {
                                                                 var jArray = new JArray();
-                                                                var subValues = dataValues[idx].Split(_SM);
+                                                                var subValues = dataValues[idx].Split(DmiString._SM);
                                                                 foreach (var subval in subValues)
                                                                 {
                                                                     if (!string.IsNullOrEmpty(subval))
@@ -465,22 +448,12 @@ namespace Ellucian.Web.Http.Utilities
                                                                     }
                                                                 }
                                                                 selectedToken = objectValues.SelectToken("$");
-                                                                patcher.Patch(ref selectedToken,
-                                                                    new PatchDocument(new AddOperation()
-                                                                    {
-                                                                        Path = new JsonPointer(fullPath),
-                                                                        Value = jArray
-                                                                    }));
+                                                                objectPatchDocument.Add(fullPath, jArray);
                                                             }
                                                             else
                                                             {
                                                                 selectedToken = objectValues.SelectToken("$");
-                                                                patcher.Patch(ref selectedToken,
-                                                                    new PatchDocument(new AddOperation()
-                                                                    {
-                                                                        Path = new JsonPointer(fullPath),
-                                                                        Value = new JObject()
-                                                                    }));
+                                                                objectPatchDocument.Add(fullPath, new JObject());
                                                             }
                                                         }
                                                         else if (selectedToken == null && i == nestedCount - 1)
@@ -488,7 +461,7 @@ namespace Ellucian.Web.Http.Utilities
                                                             if (propertyName.EndsWith("[]"))
                                                             {
                                                                 var jArray = new JArray();
-                                                                var subValues = dataValues[idx].Split(_SM);
+                                                                var subValues = dataValues[idx].Split(DmiString._SM);
                                                                 foreach (var subval in subValues)
                                                                 {
                                                                     if (!string.IsNullOrEmpty(subval))
@@ -497,23 +470,13 @@ namespace Ellucian.Web.Http.Utilities
                                                                     }
                                                                 }
                                                                 selectedToken = objectValues.SelectToken("$");
-                                                                patcher.Patch(ref selectedToken,
-                                                                    new PatchDocument(new AddOperation()
-                                                                    {
-                                                                        Path = new JsonPointer(fullPath),
-                                                                        Value = jArray
-                                                                    }));
+                                                                objectPatchDocument.Add(fullPath, jArray);
                                                             }
                                                             else
                                                             {
                                                                 var propertyValue = new JValue(ConvertValueToJValue(dataType, dataValues[idx]));
                                                                 selectedToken = objectValues.SelectToken("$");
-                                                                patcher.Patch(ref selectedToken,
-                                                                    new PatchDocument(new AddOperation()
-                                                                    {
-                                                                        Path = new JsonPointer(fullPath),
-                                                                        Value = propertyValue
-                                                                    }));
+                                                                objectPatchDocument.Add(fullPath, propertyValue);
                                                             }
                                                         }
                                                     }
@@ -521,6 +484,8 @@ namespace Ellucian.Web.Http.Utilities
                                             }
                                         }
                                     }
+
+                                    objectPatchDocument.ApplyTo(objectValues);
                                 }
                                 catch (Exception e)
                                 {
@@ -532,9 +497,10 @@ namespace Ellucian.Web.Http.Utilities
                             // Look for array objects within the array
                             if (arrayObjects != null && arrayObjects.Any())
                             {
+                                objectPatchDocument = new JsonPatchDocument();
                                 // Now process all array objects
                                 var tempObjectToReturn = new JObject();
-                                var returnToken = ProcessArrayObjects(tempObjectToReturn, arrayObjects, patcher, logger);
+                                var returnToken = ProcessArrayObjects(tempObjectToReturn, arrayObjects, objectPatchDocument, logger);
                                 foreach (var arrayObj in arrayObjects)
                                 {
                                     var tempExtendedData = ethosExtendedDataDictionary.SelectMany(eed => eed.Value.Where(eedv => eedv.JsonPath.EndsWith(arrayObj.Key)));
@@ -543,12 +509,10 @@ namespace Ellucian.Web.Http.Utilities
                                     var path = string.Concat(partialPath.TrimEnd('/').TrimEnd(']').TrimEnd('['));
                                     var tokenValues = returnToken.Values().FirstOrDefault();
                                     var selectedToken = objectValues.SelectToken("$");
-                                    patcher.Patch(ref selectedToken,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path),
-                                            Value = tokenValues
-                                        }));
+
+                                    objectPatchDocument = new JsonPatchDocument();
+                                    objectPatchDocument.Add(path, tokenValues);
+                                    objectPatchDocument.ApplyTo(objectValues);
                                 }
                             }
                             if (objectValues != null && objectValues.HasValues)
@@ -576,42 +540,22 @@ namespace Ellucian.Web.Http.Utilities
                                 var selectedToken = objectToReturn.SelectToken(sb.ToString().TrimEnd(']').TrimEnd('['));
                                 if (selectedToken == null && i < count - 1)
                                 {
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = new JObject()
-                                        }));
+                                    patchDocument.Add(path.TrimEnd(']').TrimEnd('['), new JObject());
                                 }
                                 else if (selectedToken == null && i == count - 1)
                                 {
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = arrayValues
-                                        }));
+                                    patchDocument.Add(path.TrimEnd(']').TrimEnd('['), arrayValues);
                                 }
                                 else if (selectedToken != null && i == count - 1)
                                 {
                                     selectedToken.Parent.Remove();
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = arrayValues
-                                        }));
+                                    patchDocument.Add(path.TrimEnd(']').TrimEnd('['), arrayValues);
 
                                 }
                                 else if (selectedToken == null && i < count - 1)
                                 {
                                     selectedToken.Parent.Remove();
-                                    patcher.Patch(ref objectToReturn,
-                                        new PatchDocument(new AddOperation()
-                                        {
-                                            Path = new JsonPointer(path.TrimEnd(']').TrimEnd('[')),
-                                            Value = new JObject()
-                                        }));
+                                    patchDocument.Add(path.TrimEnd(']').TrimEnd('['), new JObject());
                                 }
                             }
                         }
@@ -624,32 +568,33 @@ namespace Ellucian.Web.Http.Utilities
                     }
                 }
             }
+
+            patchDocument.ApplyTo(objectToReturn);
+
             return objectToReturn;
         }
 
-        private static AddOperation CreateAddOperation(EthosExtensibleDataRow extendedDataRow)
+        private static Tuple<string, JToken> CreateAddOperation(EthosExtensibleDataRow extendedDataRow)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
-            char _SM = Convert.ToChar(DynamicArray.SM);
-
-            var addOp = new AddOperation { Path = new JsonPointer(extendedDataRow.FullJsonPath.TrimEnd(']').TrimEnd('[')) };
+            var path = extendedDataRow.FullJsonPath.TrimEnd(']').TrimEnd('[');
+            JToken value = "";
 
             if (extendedDataRow.JsonTitle.EndsWith("[]"))
             {
-                var extendedDataArray = extendedDataRow.ExtendedDataValue.Replace(_SM, _VM).Split(_VM);
+                var extendedDataArray = extendedDataRow.ExtendedDataValue.Replace(DmiString._SM, DmiString._VM).Split(DmiString._VM);
                 var arrayValues = new JArray();
                 foreach (var dataValue in extendedDataArray)
                 {
                     arrayValues.Add(ConvertValueToJValue(extendedDataRow.JsonPropertyType, dataValue));
                 }
-                addOp.Value = arrayValues;
+                value = arrayValues;
             }
             else
             {
-                addOp.Value = ConvertValueToJValue(extendedDataRow.JsonPropertyType, extendedDataRow.ExtendedDataValue);
+                value = ConvertValueToJValue(extendedDataRow.JsonPropertyType, extendedDataRow.ExtendedDataValue);
             }
 
-            return addOp;
+            return new Tuple<string, JToken>(path, value);
         }
 
         private static JValue ConvertValueToJValue(JsonPropertyTypeExtensions jsonPropertyType, string extendedDataValue)
@@ -701,14 +646,11 @@ namespace Ellucian.Web.Http.Utilities
         /// <returns>dictionary of the extended data, keyed by column name and value is the data present</returns>
         public static Dictionary<string, string> ExtractExtendedEthosData(JToken extendedObject, EthosExtensibleData extensibleDataDefinitions, ILogger logger)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM); //253
-            char _SM = Convert.ToChar(DynamicArray.SM); //252
-            char _TM = Convert.ToChar(DynamicArray.TM); //251
             char _XM = Convert.ToChar(250);
 
             var retDictionary = new Dictionary<string, string>();
             bool dataAdded = false;
-            
+
             //add the API version number being used for the colleague subroutine to use
             retDictionary.Add("EDME.VERSION.NUMBER", extensibleDataDefinitions.ApiVersionNumber);
 
@@ -728,7 +670,7 @@ namespace Ellucian.Web.Http.Utilities
 
                 // Since the "id" property can be either a property or an object containing multiple key values, then
                 // we need to modify the path if necessary to point to the property within the "id" object.
-                if (extensibleDataDefinitions.ColleagueKeyNames != null && extensibleDataDefinitions.ColleagueKeyNames.Count() > 1)
+                if (!string.IsNullOrEmpty(extensibleDataDefinitions.ApiType) && extensibleDataDefinitions.ApiType.Equals("T", StringComparison.OrdinalIgnoreCase) && extensibleDataDefinitions.ColleagueKeyNames != null && extensibleDataDefinitions.ColleagueKeyNames.Count() > 1)
                 {
                     if (extensibleDataDefinitions.ColleagueKeyNames.Contains(ethosExtensibleConfig.ColleagueColumnName))
                     {
@@ -738,7 +680,7 @@ namespace Ellucian.Web.Http.Utilities
                         }
                     }
                 }
-              
+
                 JToken jsonSelectObject = null;
 
                 try
@@ -746,7 +688,7 @@ namespace Ellucian.Web.Http.Utilities
                     if (jsonPathForProperty.Contains("[]"))
                     {
                         bool jsonPropertyFound = false;
-                        var delim = _SM;
+                        var delim = DmiString._SM;
                         // if (jsonPathForProperty.Split('[').Count() == 2)
                         // {
                         //    delim = _TM;
@@ -851,12 +793,12 @@ namespace Ellucian.Web.Http.Utilities
                                     else
                                     {
                                         //values = string.Concat(values, value.Value<string>().Replace(_SM, _TM).Replace(_VM, _SM), _XM);
-                                        values = string.Concat(values, value.Value<string>().Replace(_VM, _SM), _TM);
+                                        values = string.Concat(values, value.Value<string>().Replace(DmiString._VM, DmiString._SM), DmiString._TM);
                                     }
                                 }
 
                                 // if (values.EndsWith(_XM.ToString()))
-                                if (values.EndsWith(_TM.ToString()) || values.EndsWith(_XM.ToString()))
+                                if (values.EndsWith(DmiString.sTM) || values.EndsWith(_XM.ToString()))
                                 {
                                     values = values.Remove(values.Length - 1);
                                 }
@@ -870,7 +812,7 @@ namespace Ellucian.Web.Http.Utilities
                             //if (!string.IsNullOrEmpty(values.TrimEnd(delim)))
                             if (values.EndsWith(delim.ToString()) || string.IsNullOrEmpty(values))
                             {
-                                retDictionary.Add(ethosExtensibleConfig.ColleagueColumnName, string.IsNullOrEmpty(values) ? "": values.Remove(values.Length - 1));
+                                retDictionary.Add(ethosExtensibleConfig.ColleagueColumnName, string.IsNullOrEmpty(values) ? "" : values.Remove(values.Length - 1));
                                 dataAdded = true;
                             }
                             if (!string.IsNullOrEmpty(currentUserIdPath) && ethosExtensibleConfig.FullJsonPath.Equals(currentUserIdPath, StringComparison.OrdinalIgnoreCase) && dataAdded)
@@ -887,6 +829,16 @@ namespace Ellucian.Web.Http.Utilities
                     else
                     {
                         jsonSelectObject = extendedObject.SelectToken(jsonPathForProperty, false);
+                        if (jsonSelectObject == null && extensibleDataDefinitions.ColleagueKeyNames != null && extensibleDataDefinitions.ColleagueKeyNames.Count() > 1)
+                        {
+                            // If we couldn't find the property, then see if it's part of the "id" object
+                            var tempJsonPathForProperty = string.Concat("$.id", ethosExtensibleConfig.FullJsonPath.Replace('/', '.'));
+                            jsonSelectObject = extendedObject.SelectToken(jsonPathForProperty, false);
+                            if (jsonSelectObject != null)
+                            {
+                                jsonPathForProperty = tempJsonPathForProperty;
+                            }
+                        }
                     }
                 }
                 catch (FormatException ex)
@@ -1001,7 +953,7 @@ namespace Ellucian.Web.Http.Utilities
 
             if (extendedObject.Type == JTokenType.String && !string.IsNullOrEmpty(extendedObject.ToString()))
             {
-                returnValues.Add(extendedObject.Value<string>()); 
+                returnValues.Add(extendedObject.Value<string>());
                 return returnValues;
             }
 
@@ -1027,7 +979,7 @@ namespace Ellucian.Web.Http.Utilities
                     {
                         var path = new StringBuilder();
 
-                        for (int idx = i+1; idx < pathCount; idx++)
+                        for (int idx = i + 1; idx < pathCount; idx++)
                         {
                             path.Append("/");
                             path.Append(pathSplit[idx]);

@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -25,7 +25,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class AgreementsRepository : BaseColleagueRepository, IAgreementsRepository
     {
         private readonly string _colleagueTimeZone;
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReferenceDataRepository"/> class.
@@ -63,7 +62,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     catch (Exception)
                     {
                         throw new ApplicationException("Anonymous data reader request denied. Table is not public.");
-                    }                    
+                    }
                     return agreementPeriodList;
                 }, Level1CacheTimeoutValue);
 
@@ -100,7 +99,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 if (bulkReadOutput.InvalidRecords != null && bulkReadOutput.InvalidRecords.Any())
                 {
-                    foreach(var ir in bulkReadOutput.InvalidRecords)
+                    foreach (var ir in bulkReadOutput.InvalidRecords)
                     {
                         logger.Error("Invalid PERSON.AGREEMENTS record found. PERSON.AGREEMENTS.ID = {0}: {1}", ir.Key, ir.Value);
                     }
@@ -218,7 +217,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var status = ConvertStatusStringToPersonAgreementStatus(pa.PagrAgreeStatus);
                             var actionTimestamp = pa.PagrActionTime.ToPointInTimeDateTimeOffset(pa.PagrActionDate, _colleagueTimeZone);
                             var personCanDeclineAgreement = pa.PagrAllowDecline.ToUpperInvariant() == "Y";
-                            var text = pa.PagrText != null ? pa.PagrText.Split(_VM).ToList() : new List<string>();
+                            var text = pa.PagrText != null ? pa.PagrText.Split(DmiString._VM).ToList() : new List<string>();
                             Domain.Base.Entities.PersonAgreement personAgreementEntity = new Domain.Base.Entities.PersonAgreement(pa.Recordkey, pa.PagrPersonId, pa.PagrCode, pa.PagrPeriod, personCanDeclineAgreement, pa.PagrTitle, pa.PagrDueDate.Value, text, status, actionTimestamp);
                             personAgreements.Add(personAgreementEntity);
                         }

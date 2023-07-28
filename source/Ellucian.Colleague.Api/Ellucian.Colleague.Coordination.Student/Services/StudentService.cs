@@ -132,6 +132,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return _academicPrograms;
         }
+
+        private IEnumerable<Domain.Student.Entities.AdmissionResidencyType> _admissionResidencyType= null;
+        private async Task<IEnumerable<Domain.Student.Entities.AdmissionResidencyType>> GetAdmissionResidencysAsync(bool bypassCache)
+        {
+            if (_admissionResidencyType == null)
+            {
+                _admissionResidencyType = await _studentReferenceDataRepository.GetAdmissionResidencyTypesAsync(bypassCache);
+            }
+            return _admissionResidencyType;
+        }
         #endregion
 
         /// <summary>
@@ -257,7 +267,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Next determine if the student has any registration priority (or is missing one where required).
             // Registration priorities can affect the registration eligibility status for a term and the anticipated add date.
-            IEnumerable<RegistrationPriority> studentRegistrationPriorities = await _priorityRepository.GetAsync(studentId);
+            IEnumerable<Domain.Student.Entities.RegistrationPriority> studentRegistrationPriorities = await _priorityRepository.GetAsync(studentId);
 
             // Retrieve all terms for the priority checking (cannot just pull the registration ones due to the reporting term check).
             var allTerms = await _termRepository.GetAsync();
@@ -293,7 +303,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Next determine if the student has any registration priority (or is missing one where required).
             // Registration priorities can affect the registration eligibility status for a term and the anticipated add date.
-            IEnumerable<RegistrationPriority> studentRegistrationPriorities = await _priorityRepository.GetAsync(studentId);
+            IEnumerable<Domain.Student.Entities.RegistrationPriority> studentRegistrationPriorities = await _priorityRepository.GetAsync(studentId);
 
             // Retrieve all terms for the priority checking (cannot just pull the registration ones due to the reporting term check).
             var allTerms = await _termRepository.GetAsync();
@@ -309,6 +319,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Dtos.Student.RegistrationEligibility registrationEligibilityDto = registrationEligibilityDtoAdapter.MapToType(registrationEligibility);
 
             return registrationEligibilityDto;
+        }
+
+        /// <summary>
+        /// Retreive student's registration priority information
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <returns><see cref="RegistrationPriority">Registration Priority Information</see> for a student.</returns>
+        public async Task<IEnumerable<Dtos.Student.RegistrationPriority>> GetRegistrationPrioritiesAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Invalid Student Id");
+            }
+
+            // Make sure user has access to this student--If not, method throws exception
+            await CheckStudentAdvisorUserAccessAsync(studentId);
+
+            var studentRegistrationPriorities = await _priorityRepository.GetAsync(studentId);
+
+            // Build and return the student registration priority dtos
+            var registrationPriorityDtos = new List<Dtos.Student.RegistrationPriority>();
+            var registrationPriorityDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.RegistrationPriority, Dtos.Student.RegistrationPriority>();
+            foreach (var studentRegistrationPriority in studentRegistrationPriorities)
+            {
+                registrationPriorityDtos.Add(registrationPriorityDtoAdapter.MapToType(studentRegistrationPriority));
+            }
+
+            return registrationPriorityDtos;
         }
 
         public async Task<IEnumerable<Dtos.Student.Student>> SearchAsync(string lastName, DateTime? dateOfBirth, string firstName = "", string formerName = "", string studentId = "", string governmentId = "")
@@ -897,6 +935,223 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Execute a set of registration actions to validate success or failure, but do not actually record the registration in the database.
+        /// </summary>
+        /// <param name="studentGuid">GUID of student to register</param>
+        /// <param name="studentRegistrationRequest">A registration request</param>
+        /// <returns>Results of the registration</returns>
+        public async Task<Dtos.Student.StudentRegistrationValidationOnlyResponse> RegisterValidationOnlyAsync(string studentGuid, Dtos.Student.StudentRegistrationValidationOnlyRequest studentRegistrationRequest)
+        {
+            if (string.IsNullOrEmpty(studentGuid))
+            {
+                _logger.Error("Missing studentGuid");
+                throw new ArgumentNullException("studentGuid", "You must supply a student GUID");
+            }
+            if (studentRegistrationRequest == null || studentRegistrationRequest.SectionActionRequests == null || studentRegistrationRequest.SectionActionRequests.Count() == 0)
+            {
+                _logger.Error("Invalid studentRegistrationRequest");
+                throw new ArgumentNullException("studentRegistrationRequest", "You must supply section registration data to process");
+            }
+
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+            if (!userPermissions.Contains(StudentPermissionCodes.RegisterValidationOnly)) 
+            {
+                logger.Error("User " + CurrentUser.PersonId + " does not have permissions to execute validation-only registration.");
+                throw new PermissionsException("You do not have permissions to execute a validation-only registration.");
+            }
+
+            string studentId = await _personRepository.GetPersonIdFromGuidAsync(studentGuid);
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new KeyNotFoundException("Person ID associated to guid '" + studentGuid + "' not found in repository");
+            }
+
+            // Keep a list of sectionId/SectionGuid pairs to return section Guids without the overhead of extra queries upon return from the repository call.
+            var sectIdGuidDict = new Dictionary<string, string>();
+
+            // Build list of section registration entities based on the requested actions
+            var sectionRegistrationEntities = new List<Domain.Student.Entities.SectionRegistration>();
+            foreach (var sectionActionRequest in studentRegistrationRequest.SectionActionRequests)
+            {
+                string sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(sectionActionRequest.SectionGuid);
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new KeyNotFoundException("Section ID associated to guid '" + sectionActionRequest.SectionGuid + "' not found in repository");
+                }
+
+                sectIdGuidDict.Add(sectionId, sectionActionRequest.SectionGuid);
+
+                sectionRegistrationEntities.Add(new Domain.Student.Entities.SectionRegistration()
+                {
+                    Action = (Domain.Student.Entities.RegistrationAction)sectionActionRequest.Action,
+                    Credits = sectionActionRequest.Credits,
+                    SectionId = sectionId,
+                    DropReasonCode = sectionActionRequest.DropReasonCode,
+                    IntentToWithdrawId = sectionActionRequest.IntentToWithdrawId
+                });
+            }
+
+            // Build the parent registration request entity which includes the list of section actions just built
+            var request = new RegistrationRequest(studentId, sectionRegistrationEntities)
+            {
+                SkipValidationRegistration = false,
+                ValidationOnlyRegistration = true,
+                PreventDoubleRegistrationIntoSection = true,
+                DoNotAutoAddMissingCoreqSections = true,
+                RecordValidationData = studentRegistrationRequest.RecordValidationDataFlag ?? false,
+                CrossRegHomeStudent = studentRegistrationRequest.CrossRegHomeStudent ?? false,
+                // Validation only registration always skips capacity checking on the assumption that the caller is Experience which
+                // has checked capacity directly with the seat service.
+                SkipCapacityCheck = true
+            };
+
+            // Call repository to run registration CTX
+            var responseEntity = await _studentRepository.RegisterAsync(request);
+
+            // Populate response dto from response entity
+            var responseDto = new Dtos.Student.StudentRegistrationValidationOnlyResponse();
+
+            // Populate list of messages into the response dto
+            responseDto.Messages = new List<Dtos.Student.RegistrationMessage>();
+            foreach (var message in responseEntity.Messages)
+            {
+                responseDto.Messages.Add(new Dtos.Student.RegistrationMessage { Message = message.Message, SectionId = message.SectionId });
+            }
+
+            // Populate list of section action results into the response dto
+            responseDto.SectionActionResponses = new List<Dtos.Student.SectionRegistrationActionResponse>();
+            foreach (var actionResult in responseEntity.RegistrationActionResults)
+            {
+                if (!sectIdGuidDict.TryGetValue(actionResult.SectionId, out string sectionGuid))
+                {
+                    // Should never happen because the repository is coded to return results for the exact sectionIDs that were passed in.
+                    // Since this the CTX did not execute any registrations (validation only) we can throw an exception
+                    throw new ColleagueWebApiException("Unexpected section ID returned by RegisterAsync in RegistrationActionResults: " + actionResult.SectionId + " Not a section ID that was passed to the method.");
+                }
+                  
+                responseDto.SectionActionResponses.Add(new SectionRegistrationActionResponse()
+                {
+                    Action = (Dtos.Student.RegistrationAction)actionResult.Action,
+                    SectionActionSuccess = actionResult.RegistrationActionSuccess,
+                    SectionGuid = sectionGuid
+                });
+            }
+
+            responseDto.ValidationToken = responseEntity.ValidationToken;
+            return responseDto;
+        }
+
+        /// <summary>
+        /// Process course section registration requests for a student, bypassing validations. For use with cross-registration.
+        /// </summary>
+        /// <param name="studentGuid"></param>
+        /// <param name="studentRegistrationRequest">A registration request</param>
+        /// <returns>Results of the registration</returns>
+        /// <accessComments>
+        /// The user must have the REGISTER.SKIP.VALIDATION permission
+        /// </accessComments>
+        public async Task<Dtos.Student.StudentRegistrationSkipValidationsResponse> RegisterSkipValidationsAsync(string studentGuid, Dtos.Student.StudentRegistrationSkipValidationsRequest studentRegistrationRequest)
+        {
+            if (string.IsNullOrEmpty(studentGuid))
+            {
+                _logger.Error("Missing studentGuid");
+                throw new ArgumentNullException("studentGuid", "You must supply a student GUID");
+            }
+            if (studentRegistrationRequest == null || studentRegistrationRequest.SectionActionRequests == null || studentRegistrationRequest.SectionActionRequests.Count() == 0)
+            {
+                _logger.Error("Invalid studentRegistrationRequest");
+                throw new ArgumentNullException("studentRegistrationRequest", "You must supply section registration data to process");
+            }
+
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+            if (!userPermissions.Contains(StudentPermissionCodes.RegisterSkipValidation))
+            {
+                logger.Error("User " + CurrentUser.PersonId + " does not have permissions to execute validation-only registration.");
+                throw new PermissionsException("You do not have permissions to execute a skip-validations registration.");
+            }
+
+            string studentId = await _personRepository.GetPersonIdFromGuidAsync(studentGuid);
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new KeyNotFoundException("Person ID associated to guid '" + studentGuid + "' not found in repository");
+            }
+
+            // Keep a list of sectionId/SectionGuid pairs to return section Guids without the overhead of extra queries upon return from the repository call.
+            var sectIdGuidDict = new Dictionary<string, string>();
+
+            // Build list of section registration entities based on the requested actions
+            var sectionRegistrationEntities = new List<Domain.Student.Entities.SectionRegistration>();
+            foreach (var sectionActionRequest in studentRegistrationRequest.SectionActionRequests)
+            {
+                // If sectionGuid was passed in placeof sectionId, convert to sectionId
+                string sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(sectionActionRequest.SectionGuid);
+
+                sectIdGuidDict.Add(sectionId, sectionActionRequest.SectionGuid);
+
+                sectionRegistrationEntities.Add(new Domain.Student.Entities.SectionRegistration()
+                {
+                    Action = (Domain.Student.Entities.RegistrationAction)sectionActionRequest.Action,
+                    Credits = sectionActionRequest.Credits,
+                    SectionId = sectionId,
+                    DropReasonCode = sectionActionRequest.DropReasonCode,
+                    IntentToWithdrawId = sectionActionRequest.IntentToWithdrawId
+                });
+            }
+
+            // Build the parent registration request entity which includes the list of section actions just built
+            var request = new RegistrationRequest(studentId, sectionRegistrationEntities)
+            {
+                SkipValidationRegistration = true,
+                ValidationOnlyRegistration = false,
+                PreventDoubleRegistrationIntoSection = true,
+                DoNotAutoAddMissingCoreqSections = true,
+                ValidationToken = studentRegistrationRequest.ValidationToken,
+                CrossRegHomeStudent = studentRegistrationRequest.CrossRegHomeStudent ?? false,
+                CrossRegVisitingStudent = studentRegistrationRequest.CrossRegVisitingStudent ?? false,
+                // Skip-validation registration always skips capacity checking on the assumption that the caller is Experience which
+                // has checked capacity directly with the seat service.
+                SkipCapacityCheck = true
+            };
+
+            // Call repository to run registration CTX
+            var responseEntity = await _studentRepository.RegisterAsync(request);
+
+            // Populate response dto from response entity
+            var responseDto = new Dtos.Student.StudentRegistrationSkipValidationsResponse();
+
+            // Populate list of messages into the response dto
+            responseDto.Messages = new List<Dtos.Student.RegistrationMessage>();
+            foreach (var message in responseEntity.Messages)
+            {
+                responseDto.Messages.Add(new Dtos.Student.RegistrationMessage { Message = message.Message, SectionId = message.SectionId });
+            }
+
+            // Populate list of section action results into the response dto
+            responseDto.SectionActionResponses = new List<Dtos.Student.SectionRegistrationActionResponse>();
+            foreach (var actionResult in responseEntity.RegistrationActionResults)
+            {
+                if (!sectIdGuidDict.TryGetValue(actionResult.SectionId, out string sectionGuid))
+                {
+                    // Should never happen because the repository is coded to return results for the exact section IDs that were passed in.
+                    // Don't throw an exception because the registration actions have executed while an exception would suggest the student's record was not updated.
+                    // Return this entry with a null sectionID, return an additional message and log an error.
+                    string logMsg = "Unexpected section ID returned by RegisterAsync in RegistrationActionResults: " + actionResult.SectionId + " Not a section ID that was passed to the method.";
+                    string errMsg = "An unexpected error occurred determining the section GUID of the registration action result for Colleague section ID " + actionResult.SectionId;
+                    logger.Error(logMsg);
+                    responseDto.Messages.Add(new Dtos.Student.RegistrationMessage { Message = errMsg, SectionId = null });
+                }
+
+                responseDto.SectionActionResponses.Add(new SectionRegistrationActionResponse()
+                    { Action = (Dtos.Student.RegistrationAction)actionResult.Action,
+                        SectionActionSuccess = actionResult.RegistrationActionSuccess,
+                        SectionGuid = sectionGuid
+                });
+            }
+            responseDto.PaymentControlId = responseEntity.PaymentControlId;
+            return responseDto;
+        }
+
+        /// <summary>
         /// Process registration requests for a student
         /// </summary>
         /// <param name="studentId">Id of student</param>
@@ -1295,6 +1550,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return new PrivacyWrapper<List<Dtos.Student.Student>>(studentDtos, hasPrivacyRestriction);
         }
 
+        /// <summary>
+        /// Update a student.
+        /// </summary>
+        /// <param name="student">The <see cref="student">student</see> entity to update in the database.</param>
+        /// <returns>The newly updated <see cref="student">student</see></returns>
+        public async Task<Dtos.Students2> UpdateStudents2Async(Dtos.Students2 student, bool bypassCache = true)
+        {
+            if (student == null)
+                throw new ArgumentNullException("student", "Must provide a student for update");
+            if (string.IsNullOrEmpty(student.Id))
+                throw new ArgumentNullException("student", "Must provide a guid for student update");
+            var studentEntity = await ConvertStudents2ToStudentsEntity(student);
+            try
+            {
+                var studentUpdatedEntity = await _studentRepository.UpdateStudentAsync(studentEntity);
+                if (studentUpdatedEntity != null)
+                {
+                    var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentUpdatedEntity.Id });
+                    return await ConvertStudentsEntityToStudents2Dto(studentUpdatedEntity, personGuidCollection, bypassCache);
+                }
+                else
+                {
+                    throw new ArgumentException(string.Format("Unable to build Students object from '{0}'.", studentUpdatedEntity.Id));
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
 
         private void ParseNames(string criteria, ref string lastName, ref string firstName, ref string middleName)
         {
@@ -1365,7 +1658,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                section = await _sectionRepository.GetSectionAsync(sectionId);
+                section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
                 if (section == null)
                 {
                     var message = "Repository returned a null section for Id " + sectionId;
@@ -1557,7 +1850,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var residentTypeCollection = new List<Dtos.ResidentType>();
 
-            var residentTypeEntities = await _studentReferenceDataRepository.GetAdmissionResidencyTypesAsync(bypassCache);
+            var residentTypeEntities = await GetAdmissionResidencysAsync(bypassCache);
             if (residentTypeEntities != null && residentTypeEntities.Count() > 0)
             {
                 foreach (var residentType in residentTypeEntities)
@@ -2331,6 +2624,202 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts a Student domain entity to its corresponding Student  DTO
+        /// </summary>
+        /// <param name="studentDto">A list of <see cref="Dtos.Student">Student</see> domain entity</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>A <see cref="Dtos.Students">Students</see> DTO</returns>
+        private async Task<Domain.Student.Entities.Student> ConvertStudents2ToStudentsEntity(Students2 studentDto, bool bypassCache = false)
+        {
+            string studentId = string.Empty;
+            Domain.Student.Entities.Student studentEntity = null;
+
+            if (studentDto == null)
+            {
+                IntegrationApiExceptionAddError(string.Concat("Student is required"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(studentDto.Id))
+                {
+                    try
+                    {
+                        studentId = await _studentRepository.GetStudentIdFromGuidAsync(studentDto.Id);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Student id is required.", "Validation.Exception");
+                }
+                if (studentDto.Person != null && !string.IsNullOrEmpty(studentDto.Person.Id))
+                {
+                    try
+                    {
+                        var personIdFromGuid = await _personRepository.GetPersonIdFromGuidAsync(studentDto.Person.Id);
+                        if (personIdFromGuid != studentId)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("The student.Id and student.person.id does not point to the same person record."), "Validation.Exception", studentDto.Id, studentId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentDto.Id, studentId);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Student.person.id is required.", "Validation.Exception", studentDto.Id, studentId);
+                }
+
+                if (!string.IsNullOrEmpty(studentId))
+                {
+                    studentEntity = new Domain.Student.Entities.Student(studentDto.Id,
+                                   studentId,
+                                   null, null, "*", false);
+
+                    // Updating student type details in student entity from input student DTO
+                    if ((studentDto.Types != null) && (studentDto.Types.Any()))
+                    {
+                        studentEntity.StudentTypeInfo = new List<Domain.Student.Entities.StudentTypeInfo>();                        
+                        foreach (var studentType in studentDto.Types)
+                        {
+                             var studentTypeCode = string.Empty;
+                            if (studentType != null)
+                            {
+                               
+                                if (studentType.AdministrativePeriod != null)
+                                {
+                                    IntegrationApiExceptionAddError("Student.types.administrativePeriod is not supported.", "Validation.Exception", studentDto.Id, studentId);
+                                }
+                                if (studentType.Type != null && !string.IsNullOrEmpty(studentType.Type.Id))
+                                {
+                                    try
+                                    {
+                                        studentTypeCode = await ConvertStudentTypeGuidToId(studentType.Type.Id, false);
+                                        studentEntity.StudentTypeInfo.Add(new StudentTypeInfo(studentTypeCode, studentType.StartOn));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentDto.Id, studentId);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("student.types.type.id is required.", "Validation.Exception", studentDto.Id, studentId);
+
+                                }
+                                
+                                
+                            }
+                        }
+                    }
+
+                    // Updating student Residency details in student entity from input student DTO
+                    if ((studentDto.Residencies != null) && (studentDto.Residencies.Any()))
+                    {
+                        studentEntity.StudentResidencies = new List<Domain.Student.Entities.StudentResidency>();
+                        
+                        foreach (var studentResidency in studentDto.Residencies)
+                        {
+                            var residencyId = string.Empty;
+                            if (studentResidency != null)
+                            {
+                                if (studentResidency.AdministrativePeriod != null)
+                                {
+                                    IntegrationApiExceptionAddError("Student.residencies.administrativePeriod is not supported.", "Validation.Exception", studentDto.Id, studentId);
+
+                                }
+                                if (studentResidency.Residency != null && !string.IsNullOrEmpty(studentResidency.Residency.Id))
+                                {
+                                    try
+                                    {
+                                        residencyId = await ConvertResidencyGuidToId(studentResidency.Residency.Id, bypassCache);
+                                        if (!string.IsNullOrEmpty(residencyId))
+                                            studentEntity.StudentResidencies.Add(new StudentResidency(residencyId, studentResidency.StartOn));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentDto.Id, studentId);
+                                    }
+
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("Student.residencies.residency.id is required.", "Validation.Exception", studentDto.Id, studentId);
+                                }
+
+
+                            }
+                        }
+                    }
+
+                    // Updating student acedemic level details in student entity from input student DTO
+                    if (studentDto.LevelClassifications != null && studentDto.LevelClassifications.Any())                    {
+                       
+                            studentEntity.StudentAcademicLevels = new List<Domain.Student.Entities.StudentAcademicLevel>();
+                        
+                        foreach (var studentAcademicLevel in studentDto.LevelClassifications)
+                        {
+                            if (studentAcademicLevel != null)
+                            {
+                                // Convert Student Academic Level Guid Id to code
+                                var studentAcademicLevelCode = string.Empty;
+                                if (studentAcademicLevel.Level != null && !string.IsNullOrEmpty(studentAcademicLevel.Level.Id))
+
+
+                                    try
+                                    {
+                                        studentAcademicLevelCode = await ConvertAcademicLevelGuidToCode(studentAcademicLevel.Level.Id, bypassCache);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentDto.Id, studentId);
+                                    }
+
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("Student.levelClassifications.level.id is required.", "Validation.Exception", studentDto.Id, studentId);
+                                }
+
+
+                                // Convert Student Latest Level Classification Guid Id to code
+                                var studentClassificationCode = string.Empty;
+                                if (studentAcademicLevel.LatestClassification != null && !string.IsNullOrEmpty(studentAcademicLevel.LatestClassification.Id))
+                                {
+                                    try
+                                    {
+                                        studentClassificationCode = await ConvertStudentClassificationGuidToId(studentAcademicLevel.LatestClassification.Id, bypassCache);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentDto.Id, studentId);
+
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("Student.levelClassifications.latestClassification.id is required.", "Validation.Exception", studentDto.Id, studentId);
+                                }
+                                if (!string.IsNullOrEmpty(studentAcademicLevelCode) && !string.IsNullOrEmpty(studentClassificationCode))
+                                    studentEntity.StudentAcademicLevels.Add(new Domain.Student.Entities.StudentAcademicLevel(studentAcademicLevelCode, null, studentClassificationCode, null, null, true));
+                            }
+                        }
+                    }
+                    
+                }
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return studentEntity;
+        }
+
+        /// <summary>
         /// Helper method to determine if the user has permission to view persons.
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
@@ -2380,6 +2869,101 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
             return retval;
+        }
+
+        /// <summary>
+        /// Converts Academic Level Guid to code
+        /// </summary>
+        /// <param name="guid">Academic Level GUID</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>Academic Level Code</returns>
+        private async Task<string> ConvertAcademicLevelGuidToCode(string guid, bool bypassCache = false)
+        {
+            var acadLevelCode = string.Empty;
+
+            if (!string.IsNullOrEmpty(guid))
+            {
+                var acad = (await GetAcademicLevelsAsync(bypassCache)).FirstOrDefault(cat => cat.Guid == guid);
+                if (acad != null)
+                {
+                    acadLevelCode = acad.Code;
+                }
+                else
+                    throw new ArgumentException("AcademicLevel guid " + guid + " is invalid.");
+            }
+            return acadLevelCode;
+        }
+
+        /// <summary>
+        /// Converts Residency Type Guid to code
+        /// </summary>
+        /// <param name="guid">Residency Type GUID</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>Residency Type Code</returns>
+        private async Task<string> ConvertResidencyGuidToId(string guid, bool bypassCache = false)
+        {
+            var residentTypeCode = string.Empty;
+
+            if (!string.IsNullOrEmpty(guid))
+            {
+                var residentTypeEntity = (await GetResidentTypesAsync(bypassCache)).FirstOrDefault(rte => rte.Id == guid);
+                
+                if(residentTypeEntity != null)
+                {
+                    residentTypeCode = residentTypeEntity.Code;
+                }
+                else
+                    throw new ArgumentException("Resident Type guid " + guid + " is invalid.");
+            }
+            return residentTypeCode;
+        }
+
+        /// <summary>
+        /// Converts Student Type Guid to code
+        /// </summary>
+        /// <param name="guid">Student Type GUID</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>Residency Type Code</returns>
+        private async Task<string> ConvertStudentClassificationGuidToId(string guid, bool bypassCache = false)
+        {
+            var studentClassificationCode = string.Empty;
+
+            if (!string.IsNullOrEmpty(guid))
+            {
+                var studentClassificationEntity = (await GetAllStudentClassificationAsync(bypassCache)).FirstOrDefault(sc => sc.Guid == guid);
+
+                if (studentClassificationEntity != null)
+                {
+                    studentClassificationCode = studentClassificationEntity.Code;
+                }
+                else
+                    throw new ArgumentException("student-classifications " + guid + " is invalid.");
+            }
+            return studentClassificationCode;
+        }
+
+        /// <summary>
+        /// Converts Student Type Guid to code
+        /// </summary>
+        /// <param name="guid">Student Type GUID</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>Residency Type Code</returns>
+        private async Task<string> ConvertStudentTypeGuidToId(string guid, bool bypassCache = false)
+        {
+            var studentTypeCode = string.Empty;
+
+            if (!string.IsNullOrEmpty(guid))
+            {
+                var studentTypeEntity = (await GetStudentTypesAsync(bypassCache)).FirstOrDefault(ste => ste.Guid == guid);
+
+                if (studentTypeEntity != null)
+                {
+                    studentTypeCode = studentTypeEntity.Code;
+                }
+                else
+                    throw new ArgumentException("students Type guid " + guid + " is invalid.");
+            }
+            return studentTypeCode;
         }
         #endregion
 

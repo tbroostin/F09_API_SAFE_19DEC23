@@ -215,10 +215,17 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                     if (currConfiguration != null && !string.IsNullOrEmpty(currConfiguration.FaCreditsVisibilityRule))
                     {
-                        logger.Error("Evaluating rule table {0} for office*year {1}*{2} for student {3}", currConfiguration.FaCreditsVisibilityRule, currConfiguration.OfficeId, year, studentId);
+                        logger.Debug("Evaluating rule table {0} for office*year {1}*{2} for student {3}", currConfiguration.FaCreditsVisibilityRule, currConfiguration.OfficeId, year, studentId);
                         studentAwardYear.AreFaCreditsVisible = GetStudentFinancialAidCreditsVisibility(currConfiguration.FaCreditsVisibilityRule, year, studentId);
                     }
                     else { studentAwardYear.AreFaCreditsVisible = false; }
+
+                    if (currConfiguration != null)
+                    {
+                        studentAwardYear.HousingOptions = currConfiguration.HousingOptions;
+                    }
+
+
 
                     studentAwardYears.Add(studentAwardYear);
                 }

@@ -10,6 +10,7 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
 
+
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     /// <summary>
@@ -21,6 +22,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         private readonly IApplicantRepository applicantRepository;
         private readonly IConfigurationRepository configurationRepository;
+        private readonly IPersonBaseRepository personBaseRepository;
+
 
         public ApplicantService(IAdapterRegistry adapterRegistry,
             IApplicantRepository applicantRepository,
@@ -28,11 +31,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             IRoleRepository roleRepository,
             ILogger logger,
             IStudentRepository studentRepository,
+            IPersonBaseRepository personBaseRepository,
             IConfigurationRepository configurationRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             this.configurationRepository = configurationRepository;
             this.applicantRepository = applicantRepository;
+            this.personBaseRepository = personBaseRepository;
         }
 
         /// <summary>
@@ -60,6 +65,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
 
             var applicantEntity =await applicantRepository.GetApplicantAsync(applicantId);
+
+            Domain.Base.Entities.NameAddressHierarchy nameHierarchy = null;
+            var hierarchyNameAsString = await applicantRepository.GetStwebDefaultsHierarchyAsync();
+            if (!string.IsNullOrEmpty(hierarchyNameAsString))
+            {
+                try
+                {
+                    nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hierarchyNameAsString);
+                }
+
+                catch (Exception ex)
+                {
+                    logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", hierarchyNameAsString));
+
+                }
+            }
+
+            //If we have a valid name hierarchy from SPWP (verified existence on NAHM) get the student/applicant's display name
+            if (nameHierarchy != null)
+            {
+                applicantEntity.PersonDisplayName = Domain.Base.Services.PersonNameService.GetHierarchyName(applicantEntity, nameHierarchy);
+            }
 
             var applicantDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.Applicant, Dtos.Student.Applicant>();
 

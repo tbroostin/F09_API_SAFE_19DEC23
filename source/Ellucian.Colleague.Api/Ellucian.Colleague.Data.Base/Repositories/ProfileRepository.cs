@@ -1,8 +1,4 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -17,6 +13,10 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -26,7 +26,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     [RegisterType]
     public class ProfileRepository : PersonBaseRepository, IProfileRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         // one minute timeout -- to enable immediate re-reads of the data contract.
         const int PersonProfileCacheTimeout = 1;
 
@@ -292,7 +291,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         AlPersonalPhoneNumbers = phone.Number,
                         AlPersonalPhoneExtensions = phone.Extension,
                         AlPersonalPhoneTypes = phone.TypeCode,
-                        AlPersonalPhoneTextAuth = phone.IsAuthorizedForText == true ? "Y" : phone.IsAuthorizedForText == false ?  "N" : string.Empty
+                        AlPersonalPhoneTextAuth = phone.IsAuthorizedForText == true ? "Y" : phone.IsAuthorizedForText == false ? "N" : string.Empty
                     });
                 }
             }
@@ -307,10 +306,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     // Replace reserved characters with a nearly-equivalent visual in the English alphabet (û, ü with u and ý, þ with y)
                     // We can't replace them with the traditional multi-character transliterations (e.g. ü to ue or þ to th) because
                     // that might push the line over the character limit if maxed out with the special character beforehand.
-                    sanitizedAddressLines.Add(line.Replace(Convert.ToChar(DynamicArray.TM), 'u')
-                                                  .Replace(Convert.ToChar(DynamicArray.SM), 'u')
-                                                  .Replace(Convert.ToChar(DynamicArray.VM), 'y')
-                                                  .Replace(Convert.ToChar(DynamicArray.FM), 'y'));
+                    sanitizedAddressLines.Add(line.Replace(DmiString._TM, 'u')
+                                                  .Replace(DmiString._SM, 'u')
+                                                  .Replace(DmiString._VM, 'y')
+                                                  .Replace(DmiString._FM, 'y'));
                 }
 
                 profileUpdateRequest.ProfileAddresses.Add(new ProfileAddresses()
@@ -321,21 +320,47 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     AlAddressEffectiveEnd = address.EffectiveEndDate,
                     AlAddressEffectiveStart = address.EffectiveStartDate,
                     AlAddressId = address.AddressId,
-                    AlAddressLines = (string.Join(Convert.ToChar(DynamicArray.SM).ToString(), sanitizedAddressLines.ToArray())),
+                    AlAddressLines = (string.Join(DmiString.sSM, sanitizedAddressLines.ToArray())),
                     AlAddressPostalCode = address.PostalCode,
                     AlAddressSource = configuration.DfltsWebAdrChgSource,
                     AlAddressState = address.State,
-                    AlAddressTypes = address.TypeCode.Replace(',', Convert.ToChar(DynamicArray.SM))
+                    AlAddressTypes = address.TypeCode.Replace(',', DmiString._SM)
                 });
             }
 
             //update the identity
-            profileUpdateRequest.ANickname = profile.Nickname;
-            profileUpdateRequest.AChosenFirstName = profile.ChosenFirstName;
-            profileUpdateRequest.AChosenMiddleName = profile.ChosenMiddleName;
-            profileUpdateRequest.AChosenLastName = profile.ChosenLastName;
+            if (profile.Nickname != null)
+            {
+                profileUpdateRequest.ANickname = profile.Nickname.Replace(Convert.ToChar(DynamicArray.TM), 'u')
+                                                      .Replace(Convert.ToChar(DynamicArray.SM), 'u')
+                                                      .Replace(Convert.ToChar(DynamicArray.VM), 'y')
+                                                      .Replace(Convert.ToChar(DynamicArray.FM), 'y');
+            }
+            if (profile.ChosenFirstName != null)
+            {
+                profileUpdateRequest.AChosenFirstName = profile.ChosenFirstName.Replace(Convert.ToChar(DynamicArray.TM), 'u')
+                                                      .Replace(Convert.ToChar(DynamicArray.SM), 'u')
+                                                      .Replace(Convert.ToChar(DynamicArray.VM), 'y')
+                                                      .Replace(Convert.ToChar(DynamicArray.FM), 'y');
+            }
+            if (profile.ChosenMiddleName != null)
+            {
+                profileUpdateRequest.AChosenMiddleName = profile.ChosenMiddleName.Replace(Convert.ToChar(DynamicArray.TM), 'u')
+                                                  .Replace(Convert.ToChar(DynamicArray.SM), 'u')
+                                                  .Replace(Convert.ToChar(DynamicArray.VM), 'y')
+                                                  .Replace(Convert.ToChar(DynamicArray.FM), 'y');
+            }
+            if (profile.ChosenLastName != null)
+            {
+                profileUpdateRequest.AChosenLastName = profile.ChosenLastName.Replace(Convert.ToChar(DynamicArray.TM), 'u')
+                                              .Replace(Convert.ToChar(DynamicArray.SM), 'u')
+                                              .Replace(Convert.ToChar(DynamicArray.VM), 'y')
+                                              .Replace(Convert.ToChar(DynamicArray.FM), 'y');
+            }
             profileUpdateRequest.AGenderIdentity = profile.GenderIdentityCode;
             profileUpdateRequest.APersonalPronoun = profile.PersonalPronounCode;
+
+            
 
             var profileUpdateResponse = await transactionInvoker.ExecuteAsync<UpdatePersonProfileRequest, UpdatePersonProfileResponse>(profileUpdateRequest);
 
@@ -453,7 +478,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (!string.IsNullOrEmpty(address.TypeCode))
                     {
                         // AddrTypeAssocMember is actually an SM-delimited string of types, split to get all types
-                        var addressTypeCodes = address.TypeCode.Split(_SM);
+                        var addressTypeCodes = address.TypeCode.Split(DmiString._SM);
                         address.TypeCode = String.Join(",", addressTypeCodes);
                         var addressRelationships = await GetAddressRelationshipsAsync();
                         if (addressRelationships != null)
@@ -573,9 +598,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 // Address Local Phones in Person data
                                 // This could be subvalued so need to split on subvalue mark ASCII 252.
-                                string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(_SM);
-                                string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(_SM);
-                                string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(_SM);
+                                string[] localPhones = assoc.AddrLocalPhoneAssocMember.Split(DmiString._SM);
+                                string[] localPhoneExts = assoc.AddrLocalExtAssocMember.Split(DmiString._SM);
+                                string[] localPhoneTypes = assoc.AddrLocalPhoneTypeAssocMember.Split(DmiString._SM);
                                 for (int i = 0; i < localPhones.Length; i++)
                                 {
                                     try

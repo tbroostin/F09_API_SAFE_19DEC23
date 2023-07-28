@@ -1,11 +1,11 @@
-//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.  
+//Copyright 2019-2023 Ellucian Company L.P. and its affiliates.  
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -17,15 +17,12 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
     [TestClass]
     public class MappingSettingsRepositoryTests
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
-
         /// <summary>
         /// Test class for MappingSettings codes
         /// </summary>
@@ -42,7 +39,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             TestMappingSettingsRepository _testMappingSettingsRepository;
             string codeItemName;
             MappingSettingsRepository mappingSettingsRepo;
-            
+
 
             [TestInitialize]
             public void Initialize()
@@ -128,7 +125,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.IsNotNull(actual.Guid, "Guid");
                     Assert.IsNotNull(actual.EthosPropertyName, "PropertyName");
                     Assert.IsNotNull(actual.EthosResource, "Resource");
-                    Assert.AreNotEqual(actual.Enumerations.Count(), 0,  "Ethos Enumerations");                    
+                    Assert.AreNotEqual(actual.Enumerations.Count(), 0, "Ethos Enumerations");
                 }
             }
 
@@ -188,7 +185,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
                 // Set up dataAccessorMock as the object for the DataAccessor
-                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);                
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
                 // Setup response to MappingSettings read
                 var mappingSettingRecords = new List<IntgMappingSettings>();
@@ -686,10 +683,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var lookUpResults = new Dictionary<string, GuidLookupResult>();
                 lookUpResults.Add("INTG.MAPPING.SETTINGS", new GuidLookupResult() { Entity = "INTG.MAPPING.SETTINGS", PrimaryKey = "1*PRI" });
                 dataAccessorMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
-                
+
                 dataAccessorMock.Setup(ac => ac.ReadRecordAsync<IntgMappingSettings>(It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(mappingSettingContracts.FirstOrDefault());
-                
+
                 dataAccessorMock.Setup(ac => ac.ReadRecordAsync<IntgMappingInfo>("INTG.MAPPING.INFO", It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(mappingInfoContracts.FirstOrDefault());
 
@@ -703,7 +700,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 };
                 dataAccessorMock.Setup(ac => ac.SelectAsync("CORE.VALCODES", "PERSON.EMAIL.TYPES"))
                      .ReturnsAsync(new string[] { "PRI" });
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.EMAIL.TYPES", 
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PERSON.EMAIL.TYPES",
                     It.IsAny<bool>())).ReturnsAsync(personEmailTypesResponse);
 
                 // phone-types
@@ -717,7 +714,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(ac => ac.SelectAsync("CORE.VALCODES", "PHONE.TYPES"))
                      .ReturnsAsync(new string[] { "PRI" });
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "PHONE.TYPES",
-                    It.IsAny<bool>())).ReturnsAsync(phoneTypesResponse);                              
+                    It.IsAny<bool>())).ReturnsAsync(phoneTypesResponse);
 
                 // address-types
                 ApplValcodes addressTypesResponse = new ApplValcodes
@@ -858,7 +855,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 // RELATION.TYPES for relation-types
                 dataAccessorMock.Setup(i => i.ReadRecordAsync<RelationTypes>(It.IsAny<string>(), It.IsAny<bool>())).
-                    ReturnsAsync(new RelationTypes() { Recordkey = "AN", ReltyDesc = "Session", ReltyIntgPersonRelType = "1", ReltyIntgMaleRelType = "5", ReltyIntgFemaleRelType = "3"});
+                    ReturnsAsync(new RelationTypes() { Recordkey = "AN", ReltyDesc = "Session", ReltyIntgPersonRelType = "1", ReltyIntgMaleRelType = "5", ReltyIntgFemaleRelType = "3" });
 
                 dataAccessorMock.Setup(i => i.BulkReadRecordAsync<RelationTypes>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).
                     ReturnsAsync(new Collection<RelationTypes>(new List<RelationTypes>() { new RelationTypes() { Recordkey = "AN", ReltyDesc = "Session", ReltyIntgPersonRelType = "1", ReltyIntgMaleRelType = "5", ReltyIntgFemaleRelType = "3" } }));
@@ -884,7 +881,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(i => i.BulkReadRecordAsync<AwardCategoriesBase>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).
                     ReturnsAsync(new Collection<AwardCategoriesBase>(new List<AwardCategoriesBase>() { new AwardCategoriesBase() { Recordkey = "AN", AcDescription = "Session", AcIntgName = "2" } }));
 
-              
+
                 // INTG.RESTR.CATEGORIES enumeration translation table for person-hold-types
                 ApplValcodes intgRestrCategoriesResponse = new ApplValcodes
                 {
@@ -912,7 +909,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                      .ReturnsAsync(new string[] { "2" });
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INTG.PERSON.RELATION.TYPES", It.IsAny<bool>())).
                     ReturnsAsync(intgPersonRelationTypesResponse);
-                
+
                 // INTG.SESS.CATEGORIES enumeration translation table for academic-periods
                 ApplValcodes intgSessCategoriesResponse = new ApplValcodes
                 {

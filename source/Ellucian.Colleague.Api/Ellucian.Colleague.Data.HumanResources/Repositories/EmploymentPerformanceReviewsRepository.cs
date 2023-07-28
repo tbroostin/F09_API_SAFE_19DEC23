@@ -1,25 +1,23 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Data.HumanResources.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
-using Ellucian.Colleague.Domain.Base.Services;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -29,7 +27,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         const string AllEmploymentPerformanceReviewsRecordsCache = "AllEmploymentPerformanceReviewsRecordKeys";
         const int AllEmploymentPerformanceReviewsRecordsCacheTimeout = 20;
         private RepositoryException exception = new RepositoryException();
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// ..ctor
@@ -79,7 +76,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var perposIds2 = new List<string>();
                     foreach (var perposId in perposIds)
                     {
-                        var perposKey = perposId.Split(_VM)[0];
+                        var perposKey = perposId.Split(DmiString._VM)[0];
                         perposIds2.Add(perposKey);
                     }
 
@@ -117,8 +114,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 return new Tuple<IEnumerable<EmploymentPerformanceReview>, int>(new List<EmploymentPerformanceReview>(), 0);
             }
 
-            var thisSubList = new List<string>();            
-                
+            var thisSubList = new List<string>();
+
             // build list of all perpos keys and bulk read them
             var allPerposKeys = new List<string>();
             foreach (var key in subList)
@@ -271,7 +268,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         public async Task<EmploymentPerformanceReview> GetEmploymentPerformanceReviewByIdAsync(string id)
         {
             var guidInfo = await GetRecordInfoFromGuidAsync(id);
-            
+
             if (guidInfo == null)
                 throw new KeyNotFoundException();
 
@@ -285,7 +282,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     throw new RepositoryException("GUID " + id + " for PERPOS has no secondary key for PERPOS.EVAL.RATINGS.DATE");
                 }
-            }            
+            }
 
             var perpos = await DataReader.ReadRecordAsync<Perpos>("PERPOS", guidInfo.PrimaryKey);
             if (perpos == null && !string.IsNullOrEmpty(guidInfo.PrimaryKey))
@@ -482,7 +479,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                             employmentPerformanceReviewEntities.Add(new EmploymentPerformanceReview(employmentPerformanceReviewGuidInfo, employmentPerformanceReviewRecord.PerposHrpId, employmentPerformanceReviewRecord.Recordkey, employmentPerformanceReview.PerposEvalRatingsDateAssocMember, employmentPerformanceReview.PerposEvalRatingsCycleAssocMember, employmentPerformanceReview.PerposEvalRatingsAssocMember)
                             {
-                                ReviewedById = employmentPerformanceReview.PerposEvalRatingsHrpidAssocMember, 
+                                ReviewedById = employmentPerformanceReview.PerposEvalRatingsHrpidAssocMember,
                                 Comment = employmentPerformanceReview.PerposEvalRatingsCommentAssocMember
                             });
                         }
@@ -508,7 +505,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             var request = new CreatePerposReviewRequest
             {
-               
+
                 PerfEvalGuid = employmentPerformanceReviewsEntity.Guid,
 
                 PerfEvalPersonId = employmentPerformanceReviewsEntity.PersonId,
@@ -518,7 +515,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 PerfEvalRatingsHrpid = employmentPerformanceReviewsEntity.ReviewedById,
                 PerfEvalRatingsCycle = employmentPerformanceReviewsEntity.RatingCycleCode,
                 PerfEvalRatingsComment = employmentPerformanceReviewsEntity.Comment,
-                
+
             };
 
             return request;

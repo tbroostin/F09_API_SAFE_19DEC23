@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -17,6 +17,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<IEnumerable<Dtos.Student.RegistrationMessage>> CheckRegistrationEligibilityAsync(string id);
         Task<Dtos.Student.RegistrationEligibility> CheckRegistrationEligibility2Async(string studentId);
         Task<Dtos.Student.RegistrationEligibility> CheckRegistrationEligibility3Async(string studentId);
+        /// <summary>
+        /// Retreive student's registration priority information
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <returns><see cref="RegistrationPriority">Registration Priority Information</see> for a student.</returns>
+        Task<IEnumerable<Dtos.Student.RegistrationPriority>> GetRegistrationPrioritiesAsync(string studentId);
         Task<IEnumerable<TranscriptRestriction>> GetTranscriptRestrictionsAsync(string studentid);
         Task<Dtos.Student.TranscriptAccess> GetTranscriptRestrictions2Async(string studentId);
         Task<IEnumerable<Dtos.Student.Term>> GetUngradedTermsAsync(string studentId);
@@ -26,6 +32,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
         Task<Tuple<byte[], string>> GetUnofficialTranscriptAsync(string studentId, string path, string transcriptGrouping, string reportWatermarkPath, string deviceInfoPath);
         Task<Dtos.Student.RegistrationResponse> RegisterAsync(string studentId, IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations);
+        Task<Dtos.Student.StudentRegistrationSkipValidationsResponse> RegisterSkipValidationsAsync(string studentGuid, Dtos.Student.StudentRegistrationSkipValidationsRequest studentRegistrationRequest);
+        Task<Dtos.Student.StudentRegistrationValidationOnlyResponse> RegisterValidationOnlyAsync(string studentGuid, Dtos.Student.StudentRegistrationValidationOnlyRequest studentRegistrationRequest);
         Task<Dtos.Student.RegistrationResponse> DropRegistrationAsync(string studentId, Dtos.Student.SectionDropRegistration sectionDropRegistration);
         Task CheckStudentAccessAsync(string studentId);
 
@@ -52,8 +60,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of all the academic levels of the student</returns>
         Task<IEnumerable<Dtos.Student.StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId);
 
+        /// <summary>
+        /// Update a student.
+        /// </summary>
+        /// <param name="student">The <see cref="student">student</see> entity to update in the database.</param>
+        /// <returns>The newly updated <see cref="student">student</see></returns>
+        Task<Dtos.Students2> UpdateStudents2Async(Dtos.Students2 student, bool bypassCache = true);
+
         #region Planning Student
-        Task<PrivacyWrapper<Dtos.Student.PlanningStudent>> GetPlanningStudentAsync(string studentId);
+        Task<PrivacyWrapper<Dtos.Student.PlanningStudent>> GetPlanningStudentAsync(string studentId);        
         #endregion Planning Student
     }
 }

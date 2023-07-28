@@ -106,6 +106,6 @@ namespace Ellucian.Colleague.Dtos.Student
           /// name is defined in the Student Display Name Hierarchy on the SPWP form in Colleague.  
           /// If no hierarchy is provide on SPWP, PersonDisplayName will be null.
           /// </summary>
-          public PersonHierarchyName PersonDisplayName { get; set; }
+          ///public PersonHierarchyName PersonDisplayName { get; set; }
     }
 }

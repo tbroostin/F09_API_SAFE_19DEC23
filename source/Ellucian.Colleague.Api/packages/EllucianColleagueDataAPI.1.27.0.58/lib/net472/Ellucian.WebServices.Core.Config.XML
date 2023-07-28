@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.WebServices.Core.Config</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection">
+            <summary>
+            Represents the "DmiParameters" custom configuration section within a web application configuration file (app.config or web.config) under 
+            the "ColleagueSettings" section. This node has all of the required attributes for simplicity and there is currently a 1-to-1 mapping
+            between a web application deployment and the environment. Validation occurs outside of this class so the exceptions can be 
+            caught and handled appropriately.
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.PARENT_NAME">
+            <summary>
+            The name of the parent section group ("ColleagueSettings").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.NAME">
+            <summary>
+            The name of this custom configuration section ("DmiParameters").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.FULL_PATH">
+            <summary>
+            The full path to this custom configuration section ("ColleagueSettings/DmiParameters").
+            </summary>
+        </member>
+        <member name="M:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.UseDasDatareader">
+            <summary>
+            True to use DAS Data Reader (via DB listener), false to use original Data Reader (via app listener)
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.GeneralParameterCustomSection.UseDasDR">
+            <summary>
+            Read-only property to retreive boolean from UseDasDatareader, provided for convenience.
+            </summary>
+        </member>
+        <member name="T:Ellucian.WebServices.Core.Config.DasParameterCustomSection">
+            <summary>
+            Represents the "DasParameters" custom configuration section within a web application configuration file (app.config or web.config) under 
+            the "ColleagueSettings" section. This node has all of the required attributes for simplicity and there is currently a 1-to-1 mapping
+            between a web application deployment and the environment. Validation occurs outside of this class so the exceptions can be 
+            caught and handled appropriately.
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DasParameterCustomSection.PARENT_NAME">
+            <summary>
+            The name of the parent section group ("ColleagueSettings").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DasParameterCustomSection.NAME">
+            <summary>
+            The name of this custom configuration section ("DmiParameters").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DasParameterCustomSection.FULL_PATH">
+            <summary>
+            The full path to this custom configuration section ("ColleagueSettings/DmiParameters").
+            </summary>
+        </member>
+        <member name="M:Ellucian.WebServices.Core.Config.DasParameterCustomSection.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.Settings">
+            <summary>
+            Represents the name of the settings stored in Colleague.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.Environment">
+            <summary>
+            Represents the name of the Colleague environment.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.Address">
+            <summary>
+            Represents the IP address or host name of the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.Port">
+            <summary>
+            Represents the port number of the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.Secure">
+            <summary>
+            Read-only boolean property that determines if the secure flag was set in the configuration.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.SecureFlag">
+            <summary>
+            Boolean flag that determines the security setting when connecting to the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.CertificateHostnameOverride">
+            <summary>
+            This name represents the certificate host name override the Colleague Application Server. This is useful when the external and
+            internal host names do not match.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DasParameterCustomSection.ConnectionPoolSizeOverride">
+            <summary>
+            Override for the maximum size of the pooled persistent socket connections.
+            </summary>
+        </member>
+        <member name="T:Ellucian.WebServices.Core.Config.DmiParameterCustomSection">
+            <summary>
+            Represents the "DmiParameters" custom configuration section within a web application configuration file (app.config or web.config) under 
+            the "ColleagueSettings" section. This node has all of the required attributes for simplicity and there is currently a 1-to-1 mapping
+            between a web application deployment and the environment. Validation occurs outside of this class so the exceptions can be 
+            caught and handled appropriately.
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.PARENT_NAME">
+            <summary>
+            The name of the parent section group ("ColleagueSettings").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.NAME">
+            <summary>
+            The name of this custom configuration section ("DmiParameters").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.FULL_PATH">
+            <summary>
+            The full path to this custom configuration section ("ColleagueSettings/DmiParameters").
+            </summary>
+        </member>
+        <member name="M:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.Settings">
+            <summary>
+            Represents the name of the settings stored in Colleague.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.Environment">
+            <summary>
+            Represents the name of the Colleague environment.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.Address">
+            <summary>
+            Represents the IP address or host name of the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.Port">
+            <summary>
+            Represents the port number of the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.Secure">
+            <summary>
+            Read-only boolean property that determines if the secure flag was set in the configuration.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.SecureFlag">
+            <summary>
+            Boolean flag that determines the security setting when connecting to the Colleague Application Server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.CertificateHostnameOverride">
+            <summary>
+            This name represents the certificate host name override the Colleague Application Server. This is useful when the external and
+            internal host names do not match.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiParameterCustomSection.ConnectionPoolSizeOverride">
+            <summary>
+            Override for the maximum size of the pooled persistent socket connections.
+            </summary>
+        </member>
+        <member name="T:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection">
+            <summary>
+            Represents the ColleagueSettings/DmiSecurityParameters custom config section in the web.config file.
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.PARENT_NAME">
+            <summary>
+            The name of the parent section group ("ColleagueSettings").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.NAME">
+            <summary>
+            The name of this custom configuration section ("DmiSecurityParameters").
+            </summary>
+        </member>
+        <member name="F:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.FULL_PATH">
+            <summary>
+            The full path to this custom configuration section ("ColleagueSettings/DmiSecurityParameters").
+            </summary>
+        </member>
+        <member name="M:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.#ctor">
+            <summary>
+            Default Constructor.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.SharedSecret">
+            <summary>
+            This string represents the shared secret used between .NET and Colleague
+            (as defined on form WSPD) to secure inbound requests sent to the application server.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.DatabaseLogin">
+            <summary>
+            This string represents the database login used to create a DAS connection.
+            </summary>
+        </member>
+        <member name="P:Ellucian.WebServices.Core.Config.DmiSecurityParameterCustomSection.DatabasePassword">
+            <summary>
+            This string represents the password for the database login.
+            </summary>
+        </member>
+    </members>
+</doc>

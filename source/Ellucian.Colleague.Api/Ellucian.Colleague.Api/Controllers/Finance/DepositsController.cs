@@ -7,10 +7,13 @@ using System.Net.Http;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Finance;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
@@ -23,6 +26,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to get and update Accounts Receivable information.", ApiDomain = "Finance")]
     public class DepositsController : BaseCompressedApiController
     {
         private readonly IAccountsReceivableService _service;
@@ -49,6 +53,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <param name="studentId">Student ID</param>
         /// <returns>A list of <see cref="DepositDue">deposits due</see> for the student</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public IEnumerable<DepositDue> GetDepositsDue(string studentId)
         {
             try
@@ -74,6 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// Any authenticated user can get these resources
         /// </accessComments>
         /// <returns>All <see cref="DepositType">deposit type</see> codes and descriptions.</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public IEnumerable<DepositType> GetDepositTypes()
         {
             return _service.GetDepositTypes();

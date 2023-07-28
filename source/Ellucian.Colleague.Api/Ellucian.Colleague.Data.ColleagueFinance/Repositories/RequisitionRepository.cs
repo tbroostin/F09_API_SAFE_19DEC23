@@ -1,25 +1,24 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
-using Ellucian.Colleague.Domain.Base.Services;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
-using Ellucian.Dmi.Runtime;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -32,7 +31,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         protected const int AllRequisitionCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllRequisitionsCache = "AllEthosRequisitions";
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private RepositoryException exception = new RepositoryException();
 
         /// <summary>
@@ -687,7 +685,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             if (glAccountContract != null)
                             {
                                 if (glAccountContract.MemosEntityAssociation != null)
-                                { 
+                                {
                                     // Check that the GL account is available for the fiscal year.
                                     glAccountMemosForFiscalYear = glAccountContract.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
                                     if (glAccountMemosForFiscalYear != null)
@@ -780,7 +778,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                                 foreach (var item in lineItemRecords)
                                                 {
                                                     if ((item.ReqGlTaxesEntityAssociation != null) && (item.ReqGlTaxesEntityAssociation.Any()))
-                                                        {
+                                                    {
                                                         foreach (var taxAssociation in item.ReqGlTaxesEntityAssociation)
                                                         {
                                                             if (taxAssociation != null)
@@ -2522,7 +2520,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
                     var lineItem = new Transactions.AlReqLineItems()
                     {
-                        AlLineItemDescs = string.Join(_SM.ToString(), descriptionList),
+                        AlLineItemDescs = string.Join(DmiString.sSM, descriptionList),
                         AlLineItemQtys = apLineItem.Quantity.ToString(),
                         AlItemPrices = apLineItem.Price.ToString(),
                         AlUnitOfIssues = apLineItem.UnitOfIssue,
@@ -2636,7 +2634,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (addLineItemToModify)
                     {
                         var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
-                        lineItem.AlLineItemDescs = string.Join(_SM.ToString(), descriptionList);
+                        lineItem.AlLineItemDescs = string.Join(DmiString.sSM, descriptionList);
                         lineItem.AlLineItemQtys = apLineItem.Quantity.ToString();
                         lineItem.AlItemPrices = apLineItem.Price.ToString();
                         lineItem.AlItemUnitIssues = apLineItem.UnitOfIssue;

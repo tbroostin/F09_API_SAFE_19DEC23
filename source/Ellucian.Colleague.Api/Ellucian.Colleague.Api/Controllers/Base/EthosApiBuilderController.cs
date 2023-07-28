@@ -412,7 +412,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 var filterDictionary = await ValidateFilterParametersAsync(routeInfo.ExtendedFilterDefinitions, extendedEthosVersion, true);
 
-                var ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, configuration.ResourceName, filterDictionary, routeInfo.ReturnRestrictedFields);
+                var ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, filterDictionary);
 
                 AddEthosContextProperties(dpList,
                     await _ethosApiBuilderService.GetExtendedEthosDataByResource(routeInfo, new List<string>() { ethosApiBuilderReturn._Id }));
@@ -544,7 +544,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     //    await PerformPartialPayloadMerge(ethosApiBuilder, await GetEthosApiBuilderByIdAsync(routeInfo, configuration, extendedEthosVersion, recordKey),
                     //    dpList, _logger), configuration.ResourceName);
                     
-                    ethosApiBuilderReturn = await _ethosApiBuilderService.PutEthosApiBuilderAsync(recordKey, ethosApiBuilder, configuration.ResourceName, filterDictionary, routeInfo.ReturnRestrictedFields);
+                    ethosApiBuilderReturn = await _ethosApiBuilderService.PutEthosApiBuilderAsync(recordKey, ethosApiBuilder, routeInfo, filterDictionary);
 
                     if (string.IsNullOrEmpty(ethosApiBuilder._Id))
                     {
@@ -569,7 +569,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 if (performPostInstead)
                 {
-                    ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, configuration.ResourceName, filterDictionary, routeInfo.ReturnRestrictedFields);
+                    ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, routeInfo, filterDictionary);
                 }
 
                 AddEthosContextProperties(dpList,
@@ -626,7 +626,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                var entry = IntegrationApiUtility.ConvertToIntegrationApiException(e);
+                throw CreateHttpResponseException(entry);
             }
         }
         #endregion
@@ -743,7 +744,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 var queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query);
                 foreach (var queryName in queryString)
                 {
-                    if (queryName.ToString() =="id" || queryName.ToString() == "key")
+                    if (queryName != null && (queryName.ToString() =="id" || queryName.ToString() == "key"))
                     {
                         // We will get the ID from the Query instead of directly from the ID on URL.
                         // The route returns id with a value of the query object.  We need to parse
@@ -1255,6 +1256,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             var queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query);
             foreach (var query in queryString.Keys)
             {
+                if (query == null)
+                {
+                    var message = string.Concat("'", queryString, "' is an invalid query string parameter for filtering. ");
+                    throw new JsonException(message);
+                }
                 var queryName = query.ToString();
                 if (queryName.Equals("offset", StringComparison.OrdinalIgnoreCase) || queryName.Equals("limit", StringComparison.OrdinalIgnoreCase))
                 {

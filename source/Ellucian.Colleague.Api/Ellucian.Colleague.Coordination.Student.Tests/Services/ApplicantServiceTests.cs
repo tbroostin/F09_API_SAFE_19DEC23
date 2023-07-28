@@ -126,8 +126,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private List<Role> roles;
 
             private Mock<IApplicantRepository> applicantRepositoryMock;
-            private Mock<IStudentRepository> studentRepoMock;                
-            
+            private Mock<IStudentRepository> studentRepoMock;
+            private Mock<IPersonBaseRepository> personRepoMock;
+
+
             private ApplicantService applicantService;
 
             [TestInitialize]
@@ -166,6 +168,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     ).Returns(applicantDtoAdapter);
 
                 studentRepoMock = new Mock<IStudentRepository>();
+                personRepoMock = new Mock<IPersonBaseRepository>();
 
                 BuildApplicantService();
 
@@ -179,9 +182,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     currentUserFactory,
                     roleRepositoryMock.Object,
                     loggerMock.Object,
-                    studentRepoMock.Object, baseConfigurationRepository);
+                    studentRepoMock.Object, 
+                    personRepoMock.Object,
+                    baseConfigurationRepository);
             }
-
             [TestCleanup]
             public void Cleanup()
             {

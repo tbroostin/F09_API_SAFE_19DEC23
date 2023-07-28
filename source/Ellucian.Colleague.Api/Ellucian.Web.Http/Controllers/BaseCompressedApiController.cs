@@ -23,6 +23,9 @@ using Ellucian.Web.Http.Routes;
 using Ellucian.Colleague.Dtos;
 using System.Collections;
 using Ellucian.Web.Security;
+using Newtonsoft.Json.Serialization;
+using System.Web.Http.Controllers;
+using System.Threading;
 
 namespace Ellucian.Web.Http.Controllers
 {
@@ -239,7 +242,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="keyToSearch"></param>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public string GetValueFromJsonObject(string keyToSearch, JObject obj)
+        protected string GetValueFromJsonObject(string keyToSearch, JObject obj)
         {
             string outValue = string.Empty;
             var token = obj.GetValue(keyToSearch, StringComparison.OrdinalIgnoreCase);
@@ -257,7 +260,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="keyToSearch"></param>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public string GetValueFromJsonObjectToken(string keyToSearch, JObject obj)
+        protected string GetValueFromJsonObjectToken(string keyToSearch, JObject obj)
         {
             string outValue = string.Empty;
             var token = obj.SelectToken(keyToSearch);
@@ -275,7 +278,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="keyToSearch"></param>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public List<string> GetArrayFromJsonObjectToken(string arrayToSearch, JObject obj, string keyToSearch = "")
+        protected List<string> GetArrayFromJsonObjectToken(string arrayToSearch, JObject obj, string keyToSearch = "")
         {
             List<string> outValue = null;
             try
@@ -315,7 +318,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="type"></param>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public List<Tuple<string, string>> GetTupleFromJsonObjectToken(string arrayToSearch, JObject obj, string type = "", string value = "")
+        protected List<Tuple<string, string>> GetTupleFromJsonObjectToken(string arrayToSearch, JObject obj, string type = "", string value = "")
         {
             List<Tuple<string, string>> outValueList = new List<Tuple<string, string>>();
             try
@@ -348,7 +351,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="T">type</param>
         /// <param name="value">value</param>
         /// <returns></returns>
-        public bool ValidEnumerationValue(Type T, string value)
+        protected bool ValidEnumerationValue(Type T, string value)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -381,7 +384,7 @@ namespace Ellucian.Web.Http.Controllers
         /// <param name="value"></param>
         /// <param name="defaultValue"></param>
         /// <returns></returns>
-        public TEnum GetEnumFromEnumMemberAttribute<TEnum>(string value, TEnum defaultValue) where TEnum : struct
+        protected TEnum GetEnumFromEnumMemberAttribute<TEnum>(string value, TEnum defaultValue) where TEnum : struct
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -891,6 +894,17 @@ namespace Ellucian.Web.Http.Controllers
 
             }
             return retval;
+        }
+
+        public Dictionary<string, string> ImportExtendedEthosData()
+        {
+            var returnDictionary = new Dictionary<string, string>();
+            Object dictObject = null;
+            if (ActionContext.Request != null && ActionContext.Request.Properties != null && ActionContext.Request.Properties.TryGetValue("EthosExtendedDataDictionary", out dictObject))
+            {
+                returnDictionary = (Dictionary<string, string>)dictObject;
+            }
+            return returnDictionary;
         }
     }
 }

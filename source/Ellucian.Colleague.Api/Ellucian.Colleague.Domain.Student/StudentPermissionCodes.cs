@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -259,5 +259,39 @@ namespace Ellucian.Colleague.Domain.Student
 
         // Permission to delete instructional events
         public const string DeleteInstructionalEvent = "DELETE.INSTRUCTIONAL.EVENT";
+
+        // Permission to check the success of failure of a proposed registration for any student
+        public const string RegisterValidationOnly = "REGISTER.VALIDATION.ONLY";
+
+        // Permission to register any student, bypassing validations. For cross-registration
+        public const string RegisterSkipValidation = "REGISTER.SKIP.VALIDATION";
+
+        // Enables access to update student information
+        public const string UpdateStudentInformation = "UPDATE.STUDENT.INFORMATION";
+
+        // Permission to view financial aid application demographics
+        public const string ViewAidApplicationDemographics = "VIEW.AID.APPL.DEMO";
+
+        // Permission to create/update financial aid application demographics
+        public const string UpdateAidApplicationDemographics = "UPDATE.AID.APPL.DEMO";
+
+        // Permission to view financial aid application additional information
+        public const string ViewAidApplicationAdditionalInfo = "VIEW.AID.APPL.ADDITIONAL";
+
+        // Permission to view financial aid applications
+        public const string ViewAidApplications = "VIEW.AID.APPLICATIONS";
+
+        // Permission to view financial aid application additional information
+        public const string UpdateAidApplicationAdditionalInfo = "UPDATE.AID.APPL.ADDITIONAL";
+
+        // Permission to create/update financial aid applications
+        public const string UpdateAidApplications = "UPDATE.AID.APPLICATIONS";
+
+        // Permission to view financial aid application results
+        public const string ViewAidApplicationResults = "VIEW.AID.APPLICATION.RESULTS";
+
+        // Permission to view financial aid application results
+        public const string UpdateAidApplicationResults = "UPDATE.AID.APPLICATION.RESULTS";
+
     }
 }

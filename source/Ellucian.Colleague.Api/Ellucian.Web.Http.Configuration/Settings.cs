@@ -13,14 +13,19 @@ namespace Ellucian.Web.Http.Configuration
     public class Settings
     {
         private ColleagueSettings colleagueSettings;
+        private OauthSettings oauthSettings;
         private LogEventLevel logLevel;
         private string profileName;
-
 
         /// <summary>
         /// Colleague setting parameters
         /// </summary>
         public ColleagueSettings ColleagueSettings { get { return colleagueSettings; } }
+
+        /// <summary>
+        /// Colleague setting parameters
+        /// </summary>
+        public OauthSettings OauthSettings { get { return oauthSettings; } }
 
         /// <summary>
         /// Log level
@@ -37,14 +42,20 @@ namespace Ellucian.Web.Http.Configuration
                 profileName = value ?? string.Empty;
             }
         }
-        
-        public Settings(ColleagueSettings colleagueSettings, LogEventLevel logLevel)
+
+        public Settings(ColleagueSettings colleagueSettings, OauthSettings oauthSettings, LogEventLevel logLevel)
         {
             if (colleagueSettings == null)
             {
                 throw new ArgumentNullException("colleagueSettings");
             }
+            if (oauthSettings == null)
+            {
+                throw new ArgumentNullException("oauthSettings");
+            }
+
             this.colleagueSettings = colleagueSettings;
+            this.oauthSettings = oauthSettings;
             this.logLevel = logLevel;
         }
     }

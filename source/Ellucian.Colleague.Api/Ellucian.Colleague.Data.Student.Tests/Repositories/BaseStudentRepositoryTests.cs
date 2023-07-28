@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -13,6 +13,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
     public class BaseStudentRepositoryTests : BaseRepositorySetup
     {
         private BaseStudentRepository _repository;
+        private StwebDefaults stwebDefaults;
+        private RegDefaults regDefaults;
 
         [TestInitialize]
         public void BaseStudentRepositoryTests_Initialize()
@@ -52,6 +54,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(0, data.QuickRegistrationTermCodes.Count);
                 Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
                 Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
             }
 
             [TestMethod]
@@ -70,6 +73,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(0, data.QuickRegistrationTermCodes.Count);
                 Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
                 Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
             }
 
             [TestMethod]
@@ -87,6 +91,138 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
                 Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
                 Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_EmptyRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_False()
+            {
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_nullRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_False()
+            {
+                regDefaults.RgdSeatServiceEnabled = null;
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_InvalidRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_False()
+            {
+                regDefaults.RgdSeatServiceEnabled = "abc";
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_NoRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_False()
+            {
+                regDefaults.RgdSeatServiceEnabled = "N";
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_LowerNoRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_False()
+            {
+                regDefaults.RgdSeatServiceEnabled = "n";
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(false, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_YesRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_True()
+            {
+                regDefaults.RgdSeatServiceEnabled = "Y";
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(true, data.SeatServiceIsEnabled);
+            }
+
+            [TestMethod]
+            public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_LowerYesRgdSeatServiceEnabled_returns_SeatServiceIsEnabled_True()
+            {
+                regDefaults.RgdSeatServiceEnabled = "y";
+                var data = await _repository.GetRegistrationConfigurationAsync();
+                Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
+                Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);
+                Assert.AreEqual(false, data.RequireDropReason);
+                Assert.AreEqual(false, data.PromptForDropReason);
+                Assert.AreEqual(false, data.ShowBooksOnPrintedSchedules);
+                Assert.AreEqual(false, data.ShowCommentsOnPrintedSchedules);
+                Assert.AreEqual(true, data.AddDefaultTermsToDegreePlan);
+                Assert.AreEqual(true, data.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, data.QuickRegistrationTermCodes.Count);
+                Assert.IsFalse(data.AlwaysPromptUsersForIntentToWithdrawWhenDropping);
+                Assert.IsNull(data.CensusDateNumberForPromptingIntentToWithdraw);
+                Assert.AreEqual(true, data.SeatServiceIsEnabled);
             }
         }
 
@@ -96,7 +232,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private void BaseStudentRepository_DataReader_Setup()
         {
             // STWEB.DEFAULTS
-            var stwebDefaults = new StwebDefaults()
+            stwebDefaults = new StwebDefaults()
             {
                 Recordkey = "STWEB.DEFAULTS",
                 StwebEnableQuickReg = "Y",
@@ -105,11 +241,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             MockRecordsAsync<Student.DataContracts.StwebDefaults>("ST.PARMS", new List<Student.DataContracts.StwebDefaults>() { stwebDefaults });
 
             // REG.DEFAULTS
-            var regDefaults = new RegDefaults()
+            regDefaults = new RegDefaults()
             {
                 Recordkey = "REG.DEFAULTS",
                 RgdRequireAddAuthFlag = "Y",
-                RgdAddAuthStartOffset = 2
+                RgdAddAuthStartOffset = 2,
+                RgdSeatServiceEnabled = string.Empty,
             };
             MockRecordsAsync<Student.DataContracts.RegDefaults>("ST.PARMS", new List<Student.DataContracts.RegDefaults>() { regDefaults });
         }

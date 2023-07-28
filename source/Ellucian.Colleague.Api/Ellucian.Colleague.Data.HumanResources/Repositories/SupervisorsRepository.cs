@@ -712,7 +712,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             #region Direct Supervisees
 
             //select PERPOS records that specify this supervisor Id as the supervisor
-            var directSuperviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId);
+            var directSuperviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId, currentDate);
 
             var directSuperviseePerposRecords = await getPerposRecords(directSuperviseePerposKeys);
             logger.Debug(string.Format("**********PERPOS records that specify {0} as the supervisor fetched**********", supervisorId));
@@ -743,7 +743,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             #region POSD level Supervisees
             //next, get the supervisor's list of positions
-            var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId);
+            var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId, currentDate);
             logger.Debug(string.Format("*********Supervisor position Ids obtained for {0}*********", supervisorId));
 
             if (supervisorPositionIds != null && supervisorPositionIds.Any())

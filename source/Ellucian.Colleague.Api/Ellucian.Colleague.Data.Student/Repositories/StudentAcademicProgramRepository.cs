@@ -1,27 +1,26 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -32,7 +31,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private ApplValcodes studentProgramStatuses;
         private List<ApplicationStatuses> allAppStatuses;
         private readonly int readSize;
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         protected const string AllStudentAcademicProgramsCache = "AllStudentAcademicPrograms";
         protected const int AllStudentAcademicProgramsCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllStudentAcademicProgramsPersonFilterCache = "AllStudentAcademicProgramsPersonFilter";
@@ -319,7 +317,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 Location = stuAcadProg.Location,
                 StartTerm = stuAcadProg.StartTerm,
                 AcademicLevel = stuAcadProg.AcademicLevelCode,
-                Dept = stuAcadProg.DepartmentCode,                
+                Dept = stuAcadProg.DepartmentCode,
                 AntCmplTerm = stuAcadProg.AnticipatedCompletionTerm,
                 AntCmplDate = stuAcadProg.AnticipatedCompletionDate,
                 AdmitStatus = stuAcadProg.AdmitStatus,
@@ -786,15 +784,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 var acadCredLimitingKeys = new List<string>();
-               
-                var stuProgsLimitingKeysKeyCache= await GetStudentAcademicProgramsFilterCriteriaAsync(defaultInstitutionId, program, startDate, endDate, student, catalog, status, 
+
+                var stuProgsLimitingKeysKeyCache = await GetStudentAcademicProgramsFilterCriteriaAsync(defaultInstitutionId, program, startDate, endDate, student, catalog, status,
                     programOwner, site, academicLevel, graduatedOn, ccdCredentials, degreeCredentials, graduatedAcademicPeriod, completeStatus, curriculumObjective, includeAcademicCredentials);
 
-                if ((stuProgsLimitingKeysKeyCache == null)  || (stuProgsLimitingKeysKeyCache.NoQualifyingRecords == true))
+                if ((stuProgsLimitingKeysKeyCache == null) || (stuProgsLimitingKeysKeyCache.NoQualifyingRecords == true))
                 {
                     return new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>(), 0);
                 }
-               
+
                 var stuProgsLimitingKeys = (await DataReader.SelectAsync("STUDENT.PROGRAMS", stuProgsLimitingKeysKeyCache.limitingKeys.Any() ? stuProgsLimitingKeysKeyCache.limitingKeys.ToArray() : null,
                        stuProgsLimitingKeysKeyCache.criteria)).ToList();
 
@@ -835,7 +833,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 var acadCredRecords = new Collection<AcadCredentials>();
-               
+
                 if (includeAcademicCredentials && subList != null && subList.Any())
                 {
                     List<string> studentIds = subList.Select(x => x.Split('*')[0]).Where(y => !string.IsNullOrEmpty(y)).ToList();
@@ -894,8 +892,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 int totalCount = 0;
                 string[] subList = null;
-             
-                string studentAcademicProgramsCacheKey = CacheSupport.BuildCacheKey(AllStudentAcademicProgramsCache, program, startDate, endDate, student, catalog, status, 
+
+                string studentAcademicProgramsCacheKey = CacheSupport.BuildCacheKey(AllStudentAcademicProgramsCache, program, startDate, endDate, student, catalog, status,
                     programOwner, site, academicLevel, graduatedOn, ccdCredentials, degreeCredentials, graduatedAcademicPeriod,
                     completeStatus, curriculumObjective.ToString(), includeAcademicCredentials);
 
@@ -912,9 +910,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     AllStudentAcademicProgramsCacheTimeout,
                     async () =>
                     {
-                       return await GetStudentAcademicProgramsFilterCriteriaAsync(defaultInstitutionId,  program, startDate, endDate, student, catalog, status, 
-                            programOwner, site, academicLevel, graduatedOn, ccdCredentials, degreeCredentials, graduatedAcademicPeriod, completeStatus, curriculumObjective, includeAcademicCredentials);
-                    
+                        return await GetStudentAcademicProgramsFilterCriteriaAsync(defaultInstitutionId, program, startDate, endDate, student, catalog, status,
+                             programOwner, site, academicLevel, graduatedOn, ccdCredentials, degreeCredentials, graduatedAcademicPeriod, completeStatus, curriculumObjective, includeAcademicCredentials);
+
                     }
                 );
 
@@ -1297,7 +1295,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             //matriculated - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is not one w/ a special processing code of 3.
                             if (curriculumObjective == CurriculumObjectiveCategory.Matriculated)
                             {
-                                criteria += " AND WITH STPR.CURRENT.STATUS NE '" + codeAssoc.ValInternalCodeAssocMember + "'" ;
+                                criteria += " AND WITH STPR.CURRENT.STATUS NE '" + codeAssoc.ValInternalCodeAssocMember + "'";
                             }
                             //outcome - Select any STUDENT.PROGRAMS records where the START.DATE is populated and the STPR.CURRENT.STATUS is a code w/ a special processing code of 3.
                             else
@@ -1362,7 +1360,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if ((curriculumObjective == CurriculumObjectiveCategory.Applied) && (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any()))
                         {
                             return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                        } 
+                        }
 
                         if (curriculumObjective == CurriculumObjectiveCategory.Recruited)
                         {
@@ -1407,7 +1405,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw e;
             }
-        }      
+        }
 
 
         /// <summary>
@@ -1428,7 +1426,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             var stuProgsLimitingKeys = new List<string>();
-           
+
             int totalCount = 0;
             string criteria = "";
             string[] subList = null;
@@ -1459,7 +1457,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             var studentId = entry.Key;
                             foreach (KeyValuePair<string, string> stuPrograms in entry.Value)
                             {
-                                var programs = stuPrograms.Value.Split(_VM);
+                                var programs = stuPrograms.Value.Split(DmiString._VM);
                                 foreach (var program in programs)
                                 {
                                     if (!string.IsNullOrEmpty(program))
@@ -1475,7 +1473,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                         {
-                            limitingKeys = stuProgsLimitingKeys!= null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.Distinct().ToList() : null,
+                            limitingKeys = stuProgsLimitingKeys != null && stuProgsLimitingKeys.Any() ? stuProgsLimitingKeys.Distinct().ToList() : null,
                             criteria = criteria.ToString(),
                         };
 
@@ -1767,7 +1765,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         // Process the credential filter
         // This will take the list of acadprograms, student programss & acad credentials list and return an appropriate student program list after applying the filter
-        private async Task<List<string>> ApplyCredentialsFilter2(string acadProgram, List<string> degreeCredentials, List<string> ccdCredentials, List<string> stuProgsLimitingKeys, 
+        private async Task<List<string>> ApplyCredentialsFilter2(string acadProgram, List<string> degreeCredentials, List<string> ccdCredentials, List<string> stuProgsLimitingKeys,
             List<string> acadCredLimitingKeys, string completeStatus, bool includeAcademicCredentials = true)
         {
             var stuProg = new List<string>();
@@ -2227,7 +2225,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="defaultInstitutionId">Default Institution ID to get Acad Credentials record</param>
         /// <returns>Returns StudentProgram</returns>
         private async Task<IEnumerable<StudentAcademicProgram>> BuildStudentAcademicPrograms3Async(Collection<StudentPrograms> studentProgramData, Collection<AcadCredentials> acadCredentialsData)
-        {          
+        {
             //get needed reference data
             var stuAcadPrograms = new List<StudentAcademicProgram>();
 
@@ -2569,7 +2567,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            Id = guid,
                            SourceId = id
                        });
-                }           
+                }
             }
 
             if (exception.Errors.Any())

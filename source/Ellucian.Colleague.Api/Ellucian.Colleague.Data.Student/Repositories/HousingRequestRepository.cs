@@ -1,8 +1,10 @@
-﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 
 //using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -19,8 +21,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -31,7 +31,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         const string AllHousingRequestsRecordsCache = "AllHousingRequestsRecordKeys";
         const int AllHousingRequestsRecordsCacheTimeout = 20;
         RepositoryException exception = new RepositoryException();
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
         /// ...ctor
@@ -77,7 +76,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 async () =>
                 {
                     CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
-                    {                        
+                    {
                         criteria = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX"
                     };
                     return requirements;
@@ -200,7 +199,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException(string.Format("Unable to locate room assignment record with id of '{0}'", roomAssignmentId));
             }
             //Then get all room preferences based on the Id's from room assignment.
-            
+
             var roomPreferencesDataContract = await DataReader.BulkReadRecordAsync<RoomPreferences>("ROOM.PREFERENCES", new string[] { roomAssignmentDataContract.RmasPreference });
 
             Dictionary<string, string> dict = null;
@@ -209,7 +208,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 dict = await GetGuidsCollectionAsync(new List<string>() { entity.PrimaryKey });
             }
             catch (Exception ex)
-            { 
+            {
                 exception.AddError(new RepositoryError("Bad.Data", ex.Message));
                 exception.AddError(new RepositoryError("Bad.Data", "Guids not found for ROOM.ASSIGNMENT with RMAS.INTG.KEY.IDX."));
                 throw exception;
@@ -221,11 +220,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             HousingRequest housingRequest = BuildHousingRequest(roomAssignmentDataContract, dict, roomPreferencesDataContract);
-            
+
             if (exception != null && exception.Errors.Any())
                 throw exception;
 
-            return housingRequest;            
+            return housingRequest;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -417,7 +416,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     RoommatePreferences = roomPreference == null ? null : BuildRoommatePreference(roomPreference),
                     FloorCharacteristic = roomPreference == null ? null : roomPreference.RmprFloorPreference,
                     FloorCharacteristicReqd = roomPreference == null ? null : roomPreference.RmprFloorReqdFlag
-                };                
+                };
             }
             return housingRequest;
         }

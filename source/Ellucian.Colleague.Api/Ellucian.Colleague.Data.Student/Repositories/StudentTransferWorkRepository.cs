@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities.TransferWork;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -20,9 +20,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class StudentTransferWorkRepository : BaseColleagueRepository, IStudentTransferWorkRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
-        private static char _TM = Convert.ToChar(DynamicArray.TM);
-
         /// <summary>
         /// Constructor for StudentTransferWorkRepository
         /// </summary>
@@ -139,7 +136,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var equivalency = new Domain.Student.Entities.TransferWork.Equivalency();
 
                 // Add the Academic Program to the Equivalency
-                var academicPrograms = string.IsNullOrEmpty(item.AcademicPrograms) ? new List<string>() : item.AcademicPrograms.Split(_SM).ToList();
+                var academicPrograms = string.IsNullOrEmpty(item.AcademicPrograms) ? new List<string>() : item.AcademicPrograms.Split(DmiString._SM).ToList();
                 if (academicPrograms != null && academicPrograms.Any())
                 {
                     foreach (var academicProgram in academicPrograms)
@@ -149,14 +146,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 // Process the sub-valued associated lists so that we can process them and build the proper models.
-                var txfrIsCourseFlag = item.TxfrIsCourseFlag.Split(_SM).ToList();
-                var txfrCourses = string.IsNullOrEmpty(item.TxfrCourses) ? new List<string>() : item.TxfrCourses.Split(_SM).ToList();
-                var txfrTitles = string.IsNullOrEmpty(item.TxfrTitles) ? new List<string>() : item.TxfrTitles.Split(_SM).ToList();
-                var txfrCredits = string.IsNullOrEmpty(item.TxfrCredits) ? new List<string>() : item.TxfrCredits.Split(_SM).ToList();
-                var txfrScores = string.IsNullOrEmpty(item.TxfrScores) ? new List<string>() : item.TxfrScores.Split(_SM).ToList();
-                var txfrGradeIds = string.IsNullOrEmpty(item.TxfrGrades) ? new List<string>() : item.TxfrGrades.Split(_SM).ToList();
-                var txfrEndDates = string.IsNullOrEmpty(item.TxfrCompletionDates) ? new List<string>() : item.TxfrCompletionDates.Split(_SM).ToList();
-                var txfrStatuses = string.IsNullOrEmpty(item.TxfrStatuses) ? new List<string>() : item.TxfrStatuses.Split(_SM).ToList();
+                var txfrIsCourseFlag = item.TxfrIsCourseFlag.Split(DmiString._SM).ToList();
+                var txfrCourses = string.IsNullOrEmpty(item.TxfrCourses) ? new List<string>() : item.TxfrCourses.Split(DmiString._SM).ToList();
+                var txfrTitles = string.IsNullOrEmpty(item.TxfrTitles) ? new List<string>() : item.TxfrTitles.Split(DmiString._SM).ToList();
+                var txfrCredits = string.IsNullOrEmpty(item.TxfrCredits) ? new List<string>() : item.TxfrCredits.Split(DmiString._SM).ToList();
+                var txfrScores = string.IsNullOrEmpty(item.TxfrScores) ? new List<string>() : item.TxfrScores.Split(DmiString._SM).ToList();
+                var txfrGradeIds = string.IsNullOrEmpty(item.TxfrGrades) ? new List<string>() : item.TxfrGrades.Split(DmiString._SM).ToList();
+                var txfrEndDates = string.IsNullOrEmpty(item.TxfrCompletionDates) ? new List<string>() : item.TxfrCompletionDates.Split(DmiString._SM).ToList();
+                var txfrStatuses = string.IsNullOrEmpty(item.TxfrStatuses) ? new List<string>() : item.TxfrStatuses.Split(DmiString._SM).ToList();
 
                 for (int i = 0; i < txfrIsCourseFlag.Count(); i++)
                 {
@@ -202,18 +199,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
 
-                var equivIsCourseFlag = item.EquivIsCourseFlag.Split(_SM).ToList();
-                var equivCourseIds = item.EquivCourseId != null ? item.EquivCourseId.Split(_SM).ToList() : new List<string>();
-                var equivCourseNames = item.EquivCourseNames != null ? item.EquivCourseNames.Split(_SM).ToList() : new List<string>();
-                var equivCourseTitles = item.EquivCourseTitles != null ? item.EquivCourseTitles.Split(_SM).ToList() : new List<string>();
-                var equivSubjects = item.EquivSubjects != null ? item.EquivSubjects.Split(_SM).ToList() : new List<string>();
-                var equivCourseLevels = item.EquivCourseLevels != null ? item.EquivCourseLevels.Split(_SM).ToList() : new List<string>();
-                var equivCredits = item.EquivCredits != null ? item.EquivCredits.Split(_SM).ToList() : new List<string>();
-                var equivGradeIds = item.EquivGrades != null ? item.EquivGrades.Split(_SM).ToList() : new List<string>();
-                var equivAcadLevelIds = item.EquivAcadLevelIds != null ? item.EquivAcadLevelIds.Split(_SM).ToList() : new List<string>();
-                var equivCreditTypes = item.EquivCreditTypes != null ? item.EquivCreditTypes.Split(_SM).ToList() : new List<string>();
-                var equivCreditStatuses = item.EquivStatuses != null ? item.EquivStatuses.Split(_SM).ToList() : new List<string>();
-                var equivDepartments = item.EquivDepartments != null ? item.EquivDepartments.Split(_SM).ToList() : new List<string>();
+                var equivIsCourseFlag = item.EquivIsCourseFlag.Split(DmiString._SM).ToList();
+                var equivCourseIds = item.EquivCourseId != null ? item.EquivCourseId.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCourseNames = item.EquivCourseNames != null ? item.EquivCourseNames.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCourseTitles = item.EquivCourseTitles != null ? item.EquivCourseTitles.Split(DmiString._SM).ToList() : new List<string>();
+                var equivSubjects = item.EquivSubjects != null ? item.EquivSubjects.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCourseLevels = item.EquivCourseLevels != null ? item.EquivCourseLevels.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCredits = item.EquivCredits != null ? item.EquivCredits.Split(DmiString._SM).ToList() : new List<string>();
+                var equivGradeIds = item.EquivGrades != null ? item.EquivGrades.Split(DmiString._SM).ToList() : new List<string>();
+                var equivAcadLevelIds = item.EquivAcadLevelIds != null ? item.EquivAcadLevelIds.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCreditTypes = item.EquivCreditTypes != null ? item.EquivCreditTypes.Split(DmiString._SM).ToList() : new List<string>();
+                var equivCreditStatuses = item.EquivStatuses != null ? item.EquivStatuses.Split(DmiString._SM).ToList() : new List<string>();
+                var equivDepartments = item.EquivDepartments != null ? item.EquivDepartments.Split(DmiString._SM).ToList() : new List<string>();
 
                 for (int i = 0; i < equivIsCourseFlag.Count(); i++)
                 {
@@ -230,7 +227,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var creditStatus = equivCreditStatuses.Count() > i ? equivCreditStatuses[i] : "";
 
                         // There may be more than one department - these are sub-sub value mark delimited from the CTX.
-                        var departments = equivDepartments.Count() > i ? equivDepartments[i].Split(_TM).ToList() : new List<string>();
+                        var departments = equivDepartments.Count() > i ? equivDepartments[i].Split(DmiString._TM).ToList() : new List<string>();
 
                         if (isCourseFlag.Equals("Y"))
                         {

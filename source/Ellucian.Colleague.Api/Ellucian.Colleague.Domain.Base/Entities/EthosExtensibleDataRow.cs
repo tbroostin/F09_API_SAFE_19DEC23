@@ -1,6 +1,8 @@
 ﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
@@ -62,6 +64,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string TransFileName { get; set; }
 
         /// <summary>
+        /// Enumeration table for translations
+        /// </summary>
+        public List<EthosApiEnumerations> Enumerations { get; set; }
+
+        /// <summary>
         /// File name from Colleague
         /// </summary>
         public string ColleagueFileName { get; private set; }
@@ -100,7 +107,9 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The actual data in the colleague field to return to the API call
         /// </summary>
         public string ExtendedDataValue { get; private set; }
-        
+
+        public PropertyInfo PropertyInfo { get; set; }
+
         /// <summary>
         /// constructor for the row of extended data
         /// </summary>
@@ -120,9 +129,10 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             JsonPropertyType = jsonPropType;
             ExtendedDataValue = extendedDataValue;
             ColleaguePropertyLength = length;
+            Enumerations = new List<EthosApiEnumerations>();
 
             //build the full json patch path which includes the property itself
-            
+
             var sb = new StringBuilder();
 
             if (!jsonPath.StartsWith("/") && !string.IsNullOrEmpty(jsonPath))
@@ -146,6 +156,125 @@ namespace Ellucian.Colleague.Domain.Base.Entities
 
             FullJsonPath = sb.ToString();
 
+        }
+        
+         /// <summary>
+         /// constructor for the row of extended data
+         /// </summary>
+         /// <param name="colColumnName"></param>
+        public EthosExtensibleDataRow(string colColumnName)
+        {
+            ColleagueColumnName = colColumnName;
+        }
+
+        /// <summary>
+        /// Update the Protected File Name property
+        /// </summary>
+        /// <param name="colFileName"></param>
+        public void UpdateFileName(string colFileName)
+        {
+            if (!string.IsNullOrEmpty(colFileName))
+            {
+                ColleagueFileName = colFileName;
+            }
+        }
+
+        /// <summary>
+        /// Update the Protected json title property
+        /// </summary>
+        /// <param name="jsonTitle"></param>
+        public void UpdatePropertyName(string jsonTitle)
+        {
+            if (!string.IsNullOrEmpty(jsonTitle))
+            {
+                JsonTitle = jsonTitle;
+
+                //build the full json patch path which includes the property itself
+
+                var sb = new StringBuilder();
+
+                if (!JsonPath.StartsWith("/") && !string.IsNullOrEmpty(JsonPath))
+                {
+                    sb.Append("/");
+                }
+
+                //just make sure the path ends with / and if it doesn't add it to the end of it
+                if (JsonPath.EndsWith("/"))
+                {
+                    sb.Append(JsonPath);
+                }
+                else
+                {
+                    sb.Append(JsonPath);
+                    sb.Append("/");
+                }
+
+                //now make sure the property name doesn't start with / and if so trim off
+                sb.Append(jsonTitle.StartsWith("/") ? jsonTitle.TrimStart(new char[] { '/' }) : jsonTitle);
+
+                FullJsonPath = sb.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Update the Protected json path property
+        /// </summary>
+        /// <param name="jsonPath"></param>
+        public void UpdateJsonPath(string jsonPath)
+        {
+            if (!string.IsNullOrEmpty(jsonPath))
+            {
+                JsonPath = jsonPath;
+
+                //build the full json patch path which includes the property itself
+
+                var sb = new StringBuilder();
+
+                if (!jsonPath.StartsWith("/") && !string.IsNullOrEmpty(jsonPath))
+                {
+                    sb.Append("/");
+                }
+
+                //just make sure the path ends with / and if it doesn't add it to the end of it
+                if (jsonPath.EndsWith("/"))
+                {
+                    sb.Append(jsonPath);
+                }
+                else
+                {
+                    sb.Append(jsonPath);
+                    sb.Append("/");
+                }
+
+                //now make sure the property name doesn't start with / and if so trim off
+                sb.Append(JsonTitle.StartsWith("/") ? JsonTitle.TrimStart(new char[] { '/' }) : JsonTitle);
+
+                FullJsonPath = sb.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Update the Protected ExtendedDataValue property
+        /// </summary>
+        /// <param name="extendedDataValue"></param>
+        public void UpdateExtendedDataValue(string extendedDataValue)
+        {
+            if (!string.IsNullOrEmpty(extendedDataValue))
+            {
+                ExtendedDataValue = extendedDataValue;
+            }
+        }
+
+        /// <summary>
+        /// Update the Protected length property
+        /// </summary>
+        /// <param name="length"></param>
+        public void UpdateLength(int? length)
+        {
+            if (length != null && length > 0)
+            {
+                ColleaguePropertyLength = length;
+            }
         }
     }
 }

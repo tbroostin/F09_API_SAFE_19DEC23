@@ -1,8 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -11,6 +7,7 @@ using Ellucian.Colleague.Domain.Student.Entities.Requirements.Modifications;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -18,8 +15,11 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -405,7 +405,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="currentOnly">This flag works in conjunction with includeInactive Programs</param>
         /// <returns>StudentProgram Entity</returns>
 
-        public async Task<IEnumerable<StudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = false, bool currentOnly=true)
+        public async Task<IEnumerable<StudentProgram>> GetApplicantProgramsAsync(string applicantId, bool includeInactivePrograms = false, bool currentOnly = true)
         {
             try
             {
@@ -432,7 +432,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 var stprIds = new List<string>();
                 stprIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
-                if(stprIds==null || !stprIds.Any())
+                if (stprIds == null || !stprIds.Any())
                 {
                     var message = string.Format("There are no STUDENT.PROGRAMS records associated with applications for applicant {0}", applicantId);
                     logger.Error(message);
@@ -451,7 +451,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table for applicants programs {0}", string.Join(",", studentProgramsIds));
                             logger.Info(errorMessage);
-                            }
+                        }
                         if (studentProgramData.Count == 1 && studentProgramData.FirstOrDefault() == null)
                         {
                             var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", studentProgramsIds));
@@ -934,8 +934,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task BuildExceptionsAsync(List<string> exceptionids, Collection<StudentDaExcpts> exceptionData, StudentProgram stpr)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
-
             if (exceptionids != null && exceptionData != null && stpr != null && exceptionids.Count > 0 && exceptionData.Count() > 0)
             {
                 foreach (var excp in exceptionData.Where(ex => exceptionids.Contains(ex.Recordkey)))
@@ -949,9 +947,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     string message = excp.StexPrintedSpec;
 
                     // If there is a double-VM, replace them with NewLines (so they get treated as "paragraphs")
-                    message = message.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+                    message = message.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
                     // If there is a single-VM, replace it with a space.
-                    message = message.Replace(_VM, ' ');
+                    message = message.Replace(DmiString._VM, ' ');
 
                     // Minimum Credit (Program and group level only) or Minimum Institutional Credit(All levels)
                     // Min GPA(All levels), Min Inst GPA (Program level only)
@@ -1300,7 +1298,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="includeHistory">flag to include history</param>
         /// <returns>Returns StudentProgram</returns>
 
-        private async Task<IEnumerable<StudentProgram>> BuildApplicantStudentProgramsAsync(Collection<StudentPrograms> programData, string applicantId, bool includeInactivePrograms = false, bool currentOnly=true)
+        private async Task<IEnumerable<StudentProgram>> BuildApplicantStudentProgramsAsync(Collection<StudentPrograms> programData, string applicantId, bool includeInactivePrograms = false, bool currentOnly = true)
         {
 
             List<StudentProgram> programs = new List<StudentProgram>();
@@ -1384,11 +1382,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 try
                 {
-                    if(includeInactivePrograms==false)//it means do not include inactive programs depending upon the end date
+                    if (includeInactivePrograms == false)//it means do not include inactive programs depending upon the end date
                     {
                         if (programStatus == StudentProgramStatusProcessingType.InActive || programStatus == StudentProgramStatusProcessingType.Withdrawn || programStatus == StudentProgramStatusProcessingType.Graduated)
                         {
-                            if(currentOnly==true)// it means do not include inactive programs that are current: it means past will be included
+                            if (currentOnly == true)// it means do not include inactive programs that are current: it means past will be included
                             {
                                 if (!(prog.StprEndDate != null && prog.StprEndDate.Count > 0 && prog.StprEndDate.ElementAt(0) < DateTime.Today))
                                 {
@@ -1400,7 +1398,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 continue;
                             }
-                            
+
                         }
                     }
                     if (includeInactivePrograms == true)//it means we are going to include inactive programs
@@ -1420,7 +1418,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
 
-                   
+
                     string catcode = prog.StprCatalog;
                     string applId = prog.Recordkey.Split('*')[0];
                     string progcode = prog.Recordkey.Split('*')[1];
@@ -1454,7 +1452,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     stpr.ProgramName = prog.StprTitle;
                     stpr.AnticipatedCompletionDate = prog.StprAntCmplDate;
                     stpr.ProgramStatusProcessingCode = programStatus;
-                 
+
                     AcadPrograms acadProgramData = null;
                     if (acadProgramCollection != null && acadProgramCollection.Any())
                     {
@@ -1518,7 +1516,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     foreach (var ar in prog.StprMajorListEntityAssociation)
                     {
                         bool addMajor = false;
-                         if ((ar.StprAddnlMajorStartDateAssocMember != null) && (ar.StprAddnlMajorEndDateAssocMember == null || ar.StprAddnlMajorEndDateAssocMember >= DateTime.Today))
+                        if ((ar.StprAddnlMajorStartDateAssocMember != null) && (ar.StprAddnlMajorEndDateAssocMember == null || ar.StprAddnlMajorEndDateAssocMember >= DateTime.Today))
                             addMajor = true; // If not including history, make sure the start date is on or before the current date AND the end date is null or after the current date
                         if (addMajor)
                         {
@@ -1556,7 +1554,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     foreach (var ar in prog.StprMinorListEntityAssociation)
                     {
                         bool addMinor = false;
-                         if ((ar.StprMinorStartDateAssocMember != null) && (ar.StprMinorEndDateAssocMember == null || ar.StprMinorEndDateAssocMember >= DateTime.Today))
+                        if ((ar.StprMinorStartDateAssocMember != null) && (ar.StprMinorEndDateAssocMember == null || ar.StprMinorEndDateAssocMember >= DateTime.Today))
                             addMinor = true; // If not including history, make sure the start date is on or before the current date AND the end date is null or after the current date
                         if (addMinor)
                         {

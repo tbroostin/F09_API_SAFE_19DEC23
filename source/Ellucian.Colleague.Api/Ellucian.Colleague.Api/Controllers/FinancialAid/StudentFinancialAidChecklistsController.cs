@@ -226,5 +226,47 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             }
 
         }
+
+
+        /// <summary>
+        /// Retrieves a student's housing option for a given year
+        /// </summary>
+        /// <param name="studentId">The student ID to retrieve a housing option for</param>
+        /// <param name="awardYear">The award year to retrieve a housing option for</param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<HousingOption> GetHousingOption([FromUri] string studentId, [FromUri] string awardYear)
+        {
+            try 
+            {
+                return await studentChecklistService.GetSetHousingOptionAsync(studentId, awardYear, null, "G");
+            }
+            catch (ColleagueException ex) 
+            {
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            } 
+        }
+
+        /// <summary>
+        /// Sets a student's housing option for a given year
+        /// </summary>
+        /// <param name="studentId">The student ID to set the housing option for</param>
+        /// <param name="awardYear">The award year to set the housing option for</param>
+        /// <param name="housingOption">The housing option to set for the specified student/year</param>
+        /// <param name="forceOption">Either Y/N, indicates to force an update to CS.HOUSING.CODE even if it is already populated</param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<HousingOption> SetHousingOption([FromUri] string studentId, [FromUri] string awardYear, [FromUri] string housingOption, [FromUri] string forceOption)
+        {
+            try
+            {
+                var setOption = (forceOption == "Y" ? "F" : "S");
+                return await studentChecklistService.GetSetHousingOptionAsync(studentId, awardYear, housingOption, setOption);
+            }
+            catch(ColleagueException ex)
+            {
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

@@ -1,5 +1,4 @@
-﻿// Copyright 2014-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -29,7 +28,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class ApplicationStatusRepository : BaseColleagueRepository, IApplicationStatusRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly string colleagueTimeZone;
         private int bulkReadSize;
         const string AllApplicationStatusCacheKey = "AllApplicationStatusKeys";
@@ -53,22 +51,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] filterPersonIds = null, DateTimeOffset? decidedOn = null, Dictionary<string, string> filterQualifiers = null, bool bypassCache = false)
         {
             int totalCount = 0;
-       
+
             var exception = new RepositoryException();
-           
+
             var selectionCriteria = new StringBuilder();
-       
+
             var dateFilterOperation = string.Empty;
             var convertedDecidedOnDate = 0;
             var convertedDecidedOnTime = 0;
             var applicationLimitingKeys = new List<string>();
             var admissionStatusesEntities = new List<Domain.Student.Entities.ApplicationStatus2>();
 
-            string applicationStatusKey = CacheSupport.BuildCacheKey( AllApplicationStatusCacheKey,
-                        !string.IsNullOrWhiteSpace( applicationId ) ? applicationId : string.Empty,
+            string applicationStatusKey = CacheSupport.BuildCacheKey(AllApplicationStatusCacheKey,
+                        !string.IsNullOrWhiteSpace(applicationId) ? applicationId : string.Empty,
                         decidedOn.HasValue ? decidedOn.Value : default(DateTimeOffset?),
                         filterQualifiers != null && filterQualifiers.Any() ? filterQualifiers : null,
-                        filterPersonIds != null && filterPersonIds.Any() ? filterPersonIds : null );
+                        filterPersonIds != null && filterPersonIds.Any() ? filterPersonIds : null);
 
             var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
                    this,
@@ -182,7 +180,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        var idx = 0; var keys = new List<string>();
                        foreach (var applId in applIds)
                        {
-                           var applId2 = applId.Split(_VM)[0];
+                           var applId2 = applId.Split(DmiString._VM)[0];
                            var statusCode = applIdxs.ElementAt(idx).Split(new[] { '*' })[0];
                            if (applStatusesNoSpCodeIds.Contains(statusCode))
                            {
@@ -215,14 +213,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            limitingKeys = keys != null && keys.Any() ? keys.Distinct().ToList() : null,
                            criteria = string.Empty,
                        };
-                   } );
+                   });
 
-            if( keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any() )
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                return new Tuple<IEnumerable<ApplicationStatus2>, int>( new List<ApplicationStatus2>(), 0 );
+                return new Tuple<IEnumerable<ApplicationStatus2>, int>(new List<ApplicationStatus2>(), 0);
             }
-            
-            totalCount = keyCacheObject.TotalCount.Value;            
+
+            totalCount = keyCacheObject.TotalCount.Value;
             var keysSubList = keyCacheObject.Sublist;
 
             if (keysSubList.Any())
@@ -244,7 +242,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception ex)
                 {
-                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)); 
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message));
                     exception.AddError(new RepositoryError("Bad.Data", "Guids not found for APPLICATION with APPL.STATUS.DATE.TIME.IDX."));
                     throw exception;
                 }
@@ -259,7 +257,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     try
                     {
-                        var splitKey = key.Split('|');                        
+                        var splitKey = key.Split('|');
                         var applicationKey = splitKey[0];
                         var applStatusIdx = splitKey[1];
                         var application = applications.FirstOrDefault(x => x.Recordkey == applicationKey);
@@ -290,7 +288,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     catch (Exception ex)
                     {
                         exception.AddError(new RepositoryError("Bad.Data", string.Format("Application error occurred found for key {0}. {1}", key, ex.Message))
-                            { SourceId = key });
+                        { SourceId = key });
                     }
                 }
             }
@@ -319,16 +317,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 var guidLookup = ids.Select(s => new
-                        {
-                            recordKey = s.Split(new[] { '|' })[0],
-                            secondardaryKey = s.Split(new[] { '|' })[1],
-                        })
+                {
+                    recordKey = s.Split(new[] { '|' })[0],
+                    secondardaryKey = s.Split(new[] { '|' })[1],
+                })
                     .Where(s => !string.IsNullOrWhiteSpace(s.recordKey))
                     .Distinct().ToList()
-                    .ConvertAll(applicationKey => new RecordKeyLookup("APPLICATIONS", applicationKey.recordKey, 
+                    .ConvertAll(applicationKey => new RecordKeyLookup("APPLICATIONS", applicationKey.recordKey,
                     "APPL.STATUS.DATE.TIME.IDX", applicationKey.secondardaryKey, false))
                     .ToArray();
-             
+
                 var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
 
                 if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
@@ -348,7 +346,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex); 
+                throw new ColleagueWebApiException(string.Format("Error occured while getting guids for {0}.", "APPLICATIONS"), ex);
             }
 
             return guidCollection;
@@ -379,7 +377,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             switch (dateFilterOperation)
             {
-               case "EQ":
+                case "EQ":
                     {
 
                         retVal = (keys.Where(k => k.Contains('|'))
@@ -483,7 +481,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
 
-          
+
             Domain.Student.Entities.ApplicationStatus2 adminStatus = null;
 
             foreach (var applStatusEntity in application.ApplStatusesEntityAssociation)
@@ -520,7 +518,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<ApplicationStatus2> UpdateAdmissionDecisionAsync(ApplicationStatus2 appStatusEntity)
         {
-            if(appStatusEntity == null)
+            if (appStatusEntity == null)
             {
                 throw new ArgumentNullException("Admission Decision", "Admission decision must be provided.");
             }
@@ -564,7 +562,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<Tuple<string, string, string>> GetApplicationStatusKey(string guid)
         {
             var result = await GetRecordInfoFromGuidAsync(guid);
-            return result == null? null : new Tuple<string, string, string>(result.Entity, result.PrimaryKey, result.SecondaryKey);
+            return result == null ? null : new Tuple<string, string, string>(result.Entity, result.PrimaryKey, result.SecondaryKey);
         }
 
 

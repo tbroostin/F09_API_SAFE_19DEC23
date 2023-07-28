@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers
         private const string httpMethodConstraintName = "httpMethod";
         private const string headerVersionConstraintName = "headerVersion";
         private const string isEEdmSupported = "isEedmSupported";
+        private const string isEthosEnabled = "isEthosEnabled";
 
         private ICacheProvider _cacheProvider;
         private readonly IBulkLoadRequestService _bulkLoadRequestService;
@@ -80,7 +81,7 @@ namespace Ellucian.Colleague.Api.Controllers
             
             var routeCollection = Configuration.Routes;
             var httpRoutes = routeCollection
-                .Where(r => r.Defaults.Keys != null && r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true))
+                .Where(r => r.Defaults.Keys != null && ((r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true)) || (r.Defaults.Keys.Contains(isEthosEnabled) && r.Defaults[isEthosEnabled].Equals(true))))
                 .ToList();
 
             resourcesDtoList = await GetResourcesAsync(httpRoutes, mediaFormat, httpMethodConstraintName, headerVersionConstraintName);
@@ -613,8 +614,8 @@ namespace Ellucian.Colleague.Api.Controllers
                     resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));                
                     if (resourceDto != null)
                     {
+                        bool getAllSupported = true;
                         if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
-
                         var represDto = resourceDto.Representations.FirstOrDefault(repr => repr.XMediaType.Contains(appJsonContentType));
                         if (represDto == null)
                         {
@@ -622,13 +623,18 @@ namespace Ellucian.Colleague.Api.Controllers
                                 .Where(z => versionlessSupportedMethods.Contains(z.ToLower()))
                                 .Select(x => x.ToLower()).ToList();
 
+                            getAllSupported = true;
+                            if (!supported.Contains(GetAllMethod) && !supported.Contains(PostQapiMethod) && !supported.Contains(GetMethod))
+                            {
+                                getAllSupported = false;
+                            }
                             if (supported.Contains(GetMethod))
                             {
                                 supported = supported.Where(z => !z.Equals(GetIdMethod) && !z.Equals(GetAllMethod) && !z.Equals(PostQapiMethod)).ToList();
                             }
                             else if (!supported.Contains(GetAllMethod) && !supported.Contains(PostQapiMethod))
                             {
-                                if (supported.Contains(GetIdMethod))
+                                if (supported.Contains(GetIdMethod) && filters != null)
                                 {
                                     filters = filters.Where(z => z.StartsWith("id.")).Select(x => x.Split('.')[1]).ToList();
                                 }
@@ -654,6 +660,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                             // Remove special "id." filters from list of any remaining filters
                             if (filters != null) filters = filters.Where(z => !z.StartsWith("id.")).ToList();
+                            if (!getAllSupported) filters = null;
 
                             var newRepresentationVersionless = new Dtos.Representation()
                             {
@@ -667,7 +674,8 @@ namespace Ellucian.Colleague.Api.Controllers
                                 Customizations = customizations ?? null
                             };
 
-                            InsertGetAllPatterns(newRepresentationVersionless, appJsonContentType, bulkLoadSupport, false);
+                            if (getAllSupported)
+                                InsertGetAllPatterns(newRepresentationVersionless, appJsonContentType, bulkLoadSupport, false);
                             resourceDto.Representations.Add(newRepresentationVersionless);
                         }
                         // alternative representations will never be the default route
@@ -702,13 +710,18 @@ namespace Ellucian.Colleague.Api.Controllers
                             .Where(z => versionedSupportedMethods.Contains(z.ToLower()))
                             .Select(x => x.ToLower()).ToList();
 
+                        getAllSupported = true;
+                        if (!versionSupported.Contains(GetAllMethod) && !versionSupported.Contains(PostQapiMethod) && !versionSupported.Contains(GetMethod))
+                        {
+                            getAllSupported = false;
+                        }
                         if (versionSupported.Contains(GetMethod))
                         {
                             versionSupported = versionSupported.Where(z => !z.Equals(GetIdMethod) && !z.Equals(GetAllMethod) && !z.Equals(PostQapiMethod)).ToList();
                         }
                         else if (!versionSupported.Contains(GetAllMethod) && !versionSupported.Contains(PostQapiMethod))
                         {
-                            if (versionSupported.Contains(GetIdMethod))
+                            if (versionSupported.Contains(GetIdMethod) && filters != null)
                             {
                                 filters = filters.Where(z => z.StartsWith("id.")).Select(x => x.Split('.')[1]).ToList();
                             }
@@ -734,6 +747,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                         // Remove special "id." filters from list of any remaining filters
                         if (filters != null) filters = filters.Where(z => !z.StartsWith("id.")).ToList();
+                        if (!getAllSupported) filters = null;
 
                         var newRepresentation = new Dtos.Representation()
                         {
@@ -747,7 +761,8 @@ namespace Ellucian.Colleague.Api.Controllers
                             Customizations = customizations ?? null
                         };
 
-                        InsertGetAllPatterns(newRepresentation, xMediaType, bulkLoadSupport, false);
+                        if (getAllSupported)
+                            InsertGetAllPatterns(newRepresentation, xMediaType, bulkLoadSupport, false);
 
                         resourceDto.Representations.Add(newRepresentation);
 

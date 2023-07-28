@@ -1,4 +1,4 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +39,11 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// <summary>
         /// Review Award Letter checklist item
         /// </summary>
-        ReviewAwardLetter
+        ReviewAwardLetter,
+
+        /// <summary>
+        /// Housing option selection
+        /// </summary>
+        HousingOption
     }
 }

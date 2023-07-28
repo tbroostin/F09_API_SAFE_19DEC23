@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -34,6 +34,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             // To Do: LeaveRequestCommentRecords
 
             public bool EnableDeleteForSupervisor { get; set; }
+
+            public string LeavePlanId { get; set; }
+            public string LeavePlanDescription { get; set; }
+            public string EarningsTypeId { get; set; }
+            public string EarningsTypeDescription { get; set; }
         }
 
         public class LeaveRequestDetailRecord
@@ -58,6 +63,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public string ChangeOpr { get; set; }
             public DateTime? ChangeDate { get; set; }
             public DateTime? ChangeTime { get; set; }
+            public bool LatestStatusAlreadyExists { get; set; }
         }
 
         #region LeaveRequestStatusRecords
@@ -153,6 +159,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 ChangeDate =  DateTime.Today,
                 AddTime = DateTime.Today,
                 ChangeTime = DateTime.Today
+
             },
                           new LeaveRequestStatusRecord()
             {
@@ -165,8 +172,37 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 AddDate = DateTime.Today,
                 ChangeDate =  DateTime.Today,
                 AddTime = DateTime.Today,
-                ChangeTime = DateTime.Today
-            }
+                ChangeTime = DateTime.Today,
+             },
+           new LeaveRequestStatusRecord()
+           {
+            Id = "9",
+                LeaveRequestId = "4",
+                ActionType = LeaveStatusAction.Submitted,
+                ActionerId = "0010355",
+                AddOpr = "0011560",
+                ChangeOpr = "0011560",
+                AddDate = DateTime.Today,
+                ChangeDate =  DateTime.Today,
+                AddTime = DateTime.Today,
+                ChangeTime = DateTime.Today,
+                
+           },
+            new LeaveRequestStatusRecord()
+           {
+            Id = "10",
+                LeaveRequestId = "4",
+                ActionType = LeaveStatusAction.Approved,
+                ActionerId = "0010355",
+                AddOpr = "0011560",
+                ChangeOpr = "0010351",
+                AddDate = DateTime.Today,
+                ChangeDate =  DateTime.Today,
+                AddTime = DateTime.Today,
+                ChangeTime = DateTime.Today,
+                
+           }
+
         };
         #endregion
 
@@ -223,7 +259,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     },
                                 new LeaveRequestDetailRecord()  {
                     Id = "41", LeaveDate = DateTime.Today, LeaveHours = 4.00m, LeaveRequestId = "15"
-                    }
+                    },
+
+                                  new LeaveRequestDetailRecord()
+                    {
+                        Id = "456",
+                        LeaveRequestId = "4",
+                        LeaveDate = new DateTime(2022,12,01),
+                        LeaveHours = 4.00m,
+                        ProcessedInPayPeriod = false
+                    },
         };
         #endregion
 
@@ -244,7 +289,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     leaveRequestDetailRecords[0],
                     leaveRequestDetailRecords[1]
-                }
+                },
+                 LeavePlanId = "JURY",
+                 LeavePlanDescription = "Jury Duty",
+                 EarningsTypeId = "JUR",
+                 EarningsTypeDescription = "Jury Leave"
+
             },
             new LeaveRequestRecord()
             {
@@ -259,7 +309,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
                 {
                     leaveRequestDetailRecords[2]
-                }
+                },
+                 LeavePlanId = "VABH",
+                 LeavePlanDescription = "Vacation - Hourly Biweekly",
+                 EarningsTypeId = "VAC",
+                 EarningsTypeDescription = "Vacation Pay"
             },
             new LeaveRequestRecord()
             {
@@ -274,7 +328,30 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
                 {
                     leaveRequestDetailRecords[3]
-                }
+                },
+                 LeavePlanId = "SCKH",
+                 LeavePlanDescription = "Sick Leave - Hourly",
+                 EarningsTypeId = "SIC",
+                 EarningsTypeDescription = "Sick Leave Pay"
+            },
+             new LeaveRequestRecord()
+            {
+                Id = "4",
+                PerLeaveId = "806",
+                EmployeeId = "0010235",
+                StartDate = new DateTime(2022,12,01),
+                EndDate = new DateTime(2022,12,01),
+                ApproverId="0010355",
+                ApproverName="Rakshit Shetty",
+                Status = LeaveStatusAction.Submitted,
+                LeaveRequestDetailRecords = new List<LeaveRequestDetailRecord>()
+                {
+                    leaveRequestDetailRecords[8]
+                },
+                 LeavePlanId = "CMHA",
+                 LeavePlanDescription = "Compensatory Plan Hrly ADJ",
+                 EarningsTypeId = "CHEA",
+                 EarningsTypeDescription = "Comp Earned Hourly Adjunct"
             }
         };
 
@@ -293,7 +370,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         {
                            leaveRequestDetailRecords[5],
                             leaveRequestDetailRecords[6]
-                        }
+                        },
+
                     },
                            new LeaveRequestRecord() {
                         Id = "15",
@@ -308,10 +386,25 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         {
                              leaveRequestDetailRecords[7]
 
-                        }
+                        },
+                         LeavePlanId = "SCKH",
+                 LeavePlanDescription = "Sick Leave - Hourly",
+                 EarningsTypeId = "SIC",
+                 EarningsTypeDescription = "Sick Leave Pay"
                     }
                 };
         #endregion
+
+        #region EarnTypes Records
+
+        public List<EarningsType> earnTypeRecords = new List<EarningsType>()
+        {
+             new EarningsType("1","type1",true,EarningsCategory.Leave,EarningsMethod.Accrued,null,null),
+             new EarningsType("2","type2",true,EarningsCategory.Regular,EarningsMethod.Taken,null,null)
+        };
+
+        #endregion
+
         #endregion
 
         #region Helper_Methods
@@ -408,7 +501,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             DateTime? startDate,
             DateTime? endDate,
             string approverId,
-            string approverName,            
+            string approverName,
             LeaveStatusAction status,
             List<HumanResources.Entities.LeaveRequestDetail> leaveRequestDetails)
         {
@@ -421,7 +514,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 StartDate = startDate,
                 EndDate = endDate,
                 ApproverId = approverId,
-                ApproverName = approverName,                
+                ApproverName = approverName,
                 Status = status,
                 LeaveRequestDetailRecords = leaveRequestDetailRecords.Where(lrd => lrd.LeaveRequestId == randomLeaveRequestId).ToList(),
                 LeaveRequestStatusRecords = leaveRequestStatusRecords.Where(lrs => lrs.LeaveRequestId == randomLeaveRequestId).ToList()
@@ -490,7 +583,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 leaveRequest.StartDate,
                 leaveRequest.EndDate,
                 leaveRequest.ApproverId,
-                leaveRequest.ApproverName,                
+                leaveRequest.ApproverName,
                 leaveRequest.Status,
                 leaveRequest.LeaveRequestDetails);
 
@@ -593,6 +686,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         public Task<PersonHierarchyName> GetPersonNameFromNameHierarchy(PersonBase personBase)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<HumanResources.Entities.EarningsType>> GetEarningsTypeAsync()
+        {
+            var entities = earnTypeRecords.Where(lr => lr.EarningsLeaveType == null)
+              .Select(lr => lr.EarningsLeaveType).ToList();
+
+            return (IEnumerable<EarningsType>)await Task.FromResult(entities);
         }
         #endregion
     }

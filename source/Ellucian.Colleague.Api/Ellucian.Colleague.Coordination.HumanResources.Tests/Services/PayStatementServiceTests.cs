@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -28,7 +28,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     [TestClass]
     public class PayStatementServiceTests : HumanResourcesServiceTestsSetup
     {
-
         public Mock<ILocalReportService> reportRenderServiceMock;
         public Mock<IPayStatementRepository> payStatementRepositoryMock;
         public Mock<IPayStatementDomainService> payStatementDomanServiceMock;
@@ -46,7 +45,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public PayStatementService serviceUnderTest;
 
         public TestPayStatementRepository testData;
-
 
         public TestBenefitDeductionTypeRepository testBenDedData;
         public TestEarningsTypeRepository testEarningsTypeData;
@@ -197,8 +195,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 .Returns<IEnumerable<string>>(ids =>
                     testData.GetPayStatementSourceDataAsync(ids));
 
-
-
             payrollRegisterRepositoryMock.Setup(r => r.GetPayrollRegisterByEmployeeIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
                 .Returns<IEnumerable<string>, DateTime?, DateTime?>((personIds, startDate, endDate) =>
                     testPayrollRegisterData.GetPayrollRegisterByEmployeeIdsAsync(personIds, startDate, endDate));
@@ -293,7 +289,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await getActual();
             }
 
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task PayStatementIdRequiredTest()
@@ -319,11 +314,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     r.SetPath(inputPathToReport));
                 reportRenderServiceMock.Verify(r =>
                     r.EnableExternalImages(true));
-
-
-
             }
-
 
             [TestMethod]
             public async Task NoLogoPath_ParameterTest()
@@ -501,7 +492,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 return await serviceUnderTest.GetPayStatementSummariesAsync(inputPersonIds, inputHasOnlineConsent, inputPayDate, inputPayCycleId, inputStartDate, inputEndDate);
             }
 
-
             [TestInitialize]
             public void Initialize()
             {
@@ -515,7 +505,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 inputStartDate = DateTime.Now.AddYears(-5);
                 inputEndDate = DateTime.Now;
             }
-
 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
@@ -564,7 +553,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.IsTrue(actual.Any());
 
             }
-
 
             //[TestMethod]
             //public async Task EmptyListOfDtosTest()
@@ -677,6 +665,54 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 var actual = await getActual();
                 Assert.IsFalse(actual.Any());
+            }
+        }
+
+        [TestClass]
+        public class GetPayStatementInformationAsyncTests : PayStatementServiceTests
+        {
+            public string inputId;
+          
+            public async Task<Dtos.HumanResources.PayStatementInformation> getActual()
+            {
+                return await serviceUnderTest.GetPayStatementInformationAsync(inputId);
+            }
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                PayStatementServiceTestsInitialize();
+                testData.CreatePayStatementRecords("0003914");
+                inputId = testData.payStatementRecords[0].recordKey;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ApplicationExceptionIsThrownTest()
+            {
+                payStatementRepositoryMock.Setup(r => r.GetPayStatementSourceDataAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult<PayStatementSourceData>(null)); 
+                await getActual();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PermissionExceptionIsThrownTest()
+            {
+                payStatementRepositoryMock.Setup(r => r.GetPayStatementSourceDataAsync(It.IsAny<string>()))
+                    .Throws(new PermissionsException());
+                await getActual();
+            }
+
+            [TestMethod]
+            public async Task CorrectDtoReturnedTest()
+            {
+                var expected = testData.payStatementRecords[0];
+                var actual = await getActual();
+                Assert.AreEqual(expected.netPay, actual.NetAmount);
+                Assert.AreEqual(expected.grossPay, actual.GrossAmount); 
+                Assert.AreEqual(expected.totalBendeds, actual.DeductionAmount);
+                Assert.AreEqual(expected.totalTaxes, actual.TaxAmount);
             }
         }
     }

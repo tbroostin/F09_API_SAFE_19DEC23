@@ -13,6 +13,8 @@ using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Coordination.Base.Services;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -46,6 +48,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// </accessComments>
         /// <returns>The <see cref="FinanceConfiguration">Finance Configuration</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the required setup is not complete</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public FinanceConfiguration Get()
         {
             FinanceConfiguration configurationDto = null;
@@ -75,6 +79,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// </accessComments>
         /// <returns>The <see cref="ImmediatePaymentControl">Immediate Payment Control</see> information</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the required setup is not complete</exception>
+        [HttpGet]
         public ImmediatePaymentControl GetImmediatePaymentControl()
         {
             try

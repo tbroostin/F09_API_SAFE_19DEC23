@@ -15,5 +15,11 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns>An Applicant object</returns>
         Task<Applicant> GetApplicantAsync(string applicantId);
         Applicant GetApplicant(string applicantId);
+
+        /// <summary>
+        /// Retrieves the name/address hierarchy defined on SPWP
+        /// </summary>
+        /// <returns></returns>
+        Task<string> GetStwebDefaultsHierarchyAsync();
     }
 }

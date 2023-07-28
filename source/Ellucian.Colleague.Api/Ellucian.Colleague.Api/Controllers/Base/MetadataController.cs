@@ -1,44 +1,39 @@
-﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.Converters;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Utilities;
 using Ellucian.Web.License;
+using Ellucian.Web.Security;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Extensions;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Web.Http.Routing;
-using Ellucian.Colleague.Coordination.Base.Services;
-using slf4net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Text.RegularExpressions;
-using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Linq;
-using System.Dynamic;
-using Ellucian.Web.Http.EthosExtend;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Dmi.Runtime;
-using System.Text;
-using Ellucian.Colleague.Api.Utility;
-using Microsoft.OpenApi.Models;
-using Microsoft.OpenApi.Interfaces;
-using Microsoft.OpenApi.Writers;
-using Microsoft.OpenApi;
-using Microsoft.OpenApi.Extensions;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Exceptions;
-using System.Net;
-using Microsoft.OpenApi.Any;
-using System.Globalization;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -51,16 +46,19 @@ namespace Ellucian.Colleague.Api.Controllers
     public class MetadataController : BaseCompressedApiController
     {
         private const string EEDM_WEBAPI_METADATA_CACHE_KEY = "EEDM_WEBAPI_METADATA_CACHE_KEY";
+        private const string appJsonContentType = "application/json";
+        private const string mediaFormat = "vnd.hedtech.integration";
+        private const string httpMethodConstraintName = "httpMethod";
+        private const string headerVersionConstraintName = "headerVersion";
         private const string isEEdmSupported = "isEedmSupported";
+        private const string isEthosEnabled = "isEthosEnabled";
         private const string sourceSystem = "Colleague";
-        
+
         private const string GUID_PATTERN = "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$";
 
         private readonly ICacheProvider _cacheProvider;
         private readonly ILogger _logger;
         private readonly IEthosApiBuilderService _ethosApiBuilderService;
-        readonly char _VM = Convert.ToChar(DynamicArray.VM);
-        readonly char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         ///MetadataController
@@ -68,7 +66,7 @@ namespace Ellucian.Colleague.Api.Controllers
         public MetadataController(
             IEthosApiBuilderService ethosApiBuilderService, ICacheProvider cacheProvider, ILogger logger)
         {
-            _cacheProvider = cacheProvider;           
+            _cacheProvider = cacheProvider;
             _logger = logger;
             _ethosApiBuilderService = ethosApiBuilderService;
         }
@@ -98,17 +96,18 @@ namespace Ellucian.Colleague.Api.Controllers
                     new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.",
                     "API name is needed to return OpenAPI specifications.")));
             }
-            try { 
-            var routeCollection = Configuration.Routes;
-            var httpRoutes = routeCollection
-                   .Where(r => r.Defaults.Keys != null && r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true))
-                     .ToList();
-
-            if (!string.IsNullOrEmpty(resourceName))
+            try
             {
-                httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith(resourceName)).ToList();
-            }
-            var openApidocs = await GetOpenApiAsync(httpRoutes, resourceName, bypassCache);
+                var routeCollection = Configuration.Routes;
+                var httpRoutes = routeCollection
+                       .Where(r => r.Defaults.Keys != null && (r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true)) || (r.Defaults.Keys.Contains(isEthosEnabled) && r.Defaults[isEthosEnabled].Equals(true)))
+                         .ToList();
+
+                if (!string.IsNullOrEmpty(resourceName))
+                {
+                    httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith(resourceName)).ToList();
+                }
+                var openApidocs = await GetOpenApiAsync(httpRoutes, resourceName, bypassCache);
                 var openApiDocObjects = new List<object>();
                 if (openApidocs != null && openApidocs.Any())
                 {
@@ -126,13 +125,13 @@ namespace Ellucian.Colleague.Api.Controllers
                                 }
                             }
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             _logger.Error(ex.ToString() + openApidoc);
                         }
                     }
                 }
-            return openApiDocObjects;
+                return openApiDocObjects;
             }
             catch (KeyNotFoundException e)
             {
@@ -203,7 +202,8 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 var routeCollection = Configuration.Routes;
                 var httpRoutes = routeCollection
-                       .Where(r => r.Defaults.Keys != null && r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true))
+                       .Where(r => r.Defaults.Keys != null && (r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true) ||
+                       r.Defaults.Keys.Contains(isEthosEnabled) && r.Defaults[isEthosEnabled].Equals(true)))
                          .ToList();
 
                 if (!string.IsNullOrEmpty(resourceName))
@@ -211,32 +211,59 @@ namespace Ellucian.Colleague.Api.Controllers
                     httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith(resourceName)).ToList();
                 }
                 var openApidocs = await GetOpenApiAsync(httpRoutes, resourceName, bypassCache);
+                var versionNumberComparer = new MetadataVersionNumberComparer();
                 if (openApidocs != null && openApidocs.Any())
                 {
-                    OpenApiDocument openApiDoc = null;
+                    IEnumerable<OpenApiDocument> openApiDocs = null;
+                    string latestVersion = "0.0.0";
                     if (version.ToLower() != "latest")
                     {
-                        var versionNumberComparer = new MetadataVersionNumberComparer();
-                        openApiDoc = openApidocs.FirstOrDefault(ver => ver.Info != null && versionNumberComparer.Compare(ver.Info.Version, version) == 1);
+                        latestVersion = version;
                     }
                     else
                     {
-                        var sortedOpenApiDocs = from doc in openApidocs
-                                                orderby doc.Info.Version descending
-                                                select doc;
-                        openApiDoc = sortedOpenApiDocs.FirstOrDefault();
+                        // Sorting isn't giving us what we want in many cases.
+                        //var sortedOpenApiDocs = from doc in openApidocs
+                        //                        orderby doc.Info.Version descending
+                        //                        select doc;
+                        //openApiDocs = sortedOpenApiDocs.ToList();
+                        foreach (var openApiDoc in openApidocs)
+                        {
+                            if (openApiDoc.Info != null && !string.IsNullOrEmpty(openApiDoc.Info.Version))
+                            {
+                                if (versionNumberComparer.Compare(openApiDoc.Info.Version, latestVersion) == 1)
+                                {
+                                    latestVersion = openApiDoc.Info.Version;
+                                }
+                            }
+                        }
                     }
-                    if (openApiDoc != null)
+
+                    openApiDocs = openApidocs.Where(ver => ver.Info != null && !string.IsNullOrEmpty(ver.Info.Version) && versionNumberComparer.Compare(ver.Info.Version, latestVersion) == 1);
+
+                    if (openApiDocs != null && openApiDocs.Any())
                     {
-                        var openApiJson = openApiDoc.SerializeAsJson(OpenApiSpecVersion.OpenApi3_0);
-                        if (!string.IsNullOrEmpty(openApiJson))
+                        List<object> returnObject = new List<object>();
+
+                        foreach (var openApiDoc in openApiDocs)
                         {
-                            return JsonConvert.DeserializeObject(openApiJson);
+                            try
+                            {
+                                var openApiJson = openApiDoc.SerializeAsJson(OpenApiSpecVersion.OpenApi3_0);
+                                if (!string.IsNullOrEmpty(openApiJson))
+                                {
+                                    returnObject.Add(JsonConvert.DeserializeObject(openApiJson));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex.ToString() + openApiDoc);
+                            }
                         }
+                        if (returnObject.Count() > 1)
+                            return returnObject;
                         else
-                        {
-                            return null;
-                        }
+                            return returnObject.FirstOrDefault();
                     }
                     else
                     {
@@ -325,37 +352,49 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="httpRoutes"></param>
         /// <param name="selectedResource"></param>
         /// <param name="bypassCache"></param>
-    private async Task<IEnumerable<OpenApiDocument>> GetOpenApiAsync(List<IHttpRoute> httpRoutes,
+        private async Task<IEnumerable<OpenApiDocument>> GetOpenApiAsync(List<IHttpRoute> httpRoutes,
             string selectedResource, bool bypassCache = false)
         {
+            var metadataCacheKey = EEDM_WEBAPI_METADATA_CACHE_KEY + selectedResource;
             var openApiDocs = new List<OpenApiDocument>();
             try
             {
                 if (bypassCache == false)
                 {
-                    if (_cacheProvider != null && _cacheProvider.Contains(EEDM_WEBAPI_METADATA_CACHE_KEY))
+                    if (_cacheProvider != null && _cacheProvider.Contains(metadataCacheKey))
                     {
-                        openApiDocs = _cacheProvider[EEDM_WEBAPI_METADATA_CACHE_KEY] as List<OpenApiDocument>;
+                        openApiDocs = _cacheProvider[metadataCacheKey] as List<OpenApiDocument>;
                         return openApiDocs;
                     }
                 }
-                // get api configuration Info
-                EthosResourceRouteInfo routeInfo = new EthosResourceRouteInfo()
+                EthosApiConfiguration apiConfiguration = new EthosApiConfiguration();
+                List<Domain.Base.Entities.EthosExtensibleData> apiVersionConfigs = new List<Domain.Base.Entities.EthosExtensibleData>();
+                if (httpRoutes != null && httpRoutes.Any())
                 {
-                    ResourceName = selectedResource
-                };
-                //get EDM.EXTENSIONS
-                var apiConfiguration = await _ethosApiBuilderService.GetEthosApiConfigurationByResource(routeInfo,bypassCache);
-                if (apiConfiguration == null)
-                {
-                    return openApiDocs;
+                    var apiConfigurationTuple = await BuildApiConfigurationFromRoutesAsync(httpRoutes, selectedResource, bypassCache);
+                    apiConfiguration = apiConfigurationTuple.Item1;
+                    apiVersionConfigs = apiConfigurationTuple.Item2;
                 }
-                //get all EDM.EXT.VERSIONS
-                //var AllapiVersionConfigs = await _ethosApiBuilderService.GetAllExtendedEthosConfigurations(bypassCache);
-                var apiVersionConfigs = await _ethosApiBuilderService.GetExtendedEthosVersionsConfigurationsByResource(routeInfo, bypassCache, true);
-                if (apiVersionConfigs == null || !apiVersionConfigs.Any())
+                else
                 {
-                    return openApiDocs;
+                    // get api configuration Info
+                    EthosResourceRouteInfo routeInfo = new EthosResourceRouteInfo()
+                    {
+                        ResourceName = selectedResource
+                    };
+                    //get EDM.EXTENSIONS
+                    apiConfiguration = await _ethosApiBuilderService.GetEthosApiConfigurationByResource(routeInfo, bypassCache);
+                    if (apiConfiguration == null)
+                    {
+                        return openApiDocs;
+                    }
+                    //get all EDM.EXT.VERSIONS
+                    //var AllapiVersionConfigs = await _ethosApiBuilderService.GetAllExtendedEthosConfigurations(bypassCache);
+                    apiVersionConfigs = await _ethosApiBuilderService.GetExtendedEthosVersionsConfigurationsByResource(routeInfo, bypassCache, true);
+                    if (apiVersionConfigs == null || !apiVersionConfigs.Any())
+                    {
+                        return openApiDocs;
+                    }
                 }
                 //we have all the specifications data that we need
                 foreach (var apiVersionConfig in apiVersionConfigs)
@@ -376,11 +415,786 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw ex;
             }
-            _cacheProvider.Add(EEDM_WEBAPI_METADATA_CACHE_KEY, openApiDocs, new System.Runtime.Caching.CacheItemPolicy()
+            _cacheProvider.Add(metadataCacheKey, openApiDocs, new System.Runtime.Caching.CacheItemPolicy()
             {
                 AbsoluteExpiration = DateTimeOffset.Now.AddDays(1)
             });
             return openApiDocs;
+        }
+
+        private async Task<Tuple<EthosApiConfiguration, List<Domain.Base.Entities.EthosExtensibleData>>> BuildApiConfigurationFromRoutesAsync(List<IHttpRoute> httpRoutes,
+            string selectedResource, bool bypassCache = false)
+        {
+            List<Domain.Base.Entities.EthosExtensibleData> extensibleDataList = new List<Domain.Base.Entities.EthosExtensibleData>();
+            EthosApiConfiguration apiConfiguration = new EthosApiConfiguration();
+
+            string[] headerVersionConstraintValue = null;
+
+            Assembly asm = Assembly.GetExecutingAssembly();
+
+            var controlleractionlist = asm.GetTypes()
+                        .Where(tt => typeof(BaseCompressedApiController).IsAssignableFrom(tt))
+                        .SelectMany(tt => tt.GetMethods(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public))
+                        .Where(m => !m.GetCustomAttributes(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), true).Any())
+                        .Select(x => new
+                        {
+                            Controller = x.DeclaringType.Name,
+                            Action = x.Name,
+                            x.DeclaringType,
+                        })
+                        .OrderBy(x => x.Controller).ThenBy(x => x.Action).ToList();
+
+            if (!string.IsNullOrEmpty(selectedResource))
+            {
+                httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith(selectedResource)).ToList();
+            }
+            apiConfiguration.ResourceName = selectedResource;
+            apiConfiguration.ReleaseStatus = "R";
+            apiConfiguration.ApiDomain = "";
+            apiConfiguration.ApiType = "web";
+            apiConfiguration.HttpMethods = new List<EthosApiSupportedMethods>();
+            Dictionary<string, List<string>> mediaTypeMethodsSupported = new Dictionary<string, List<string>>();
+
+            foreach (IHttpRoute httpRoute in httpRoutes)
+            {
+                try
+                {
+                    //Get the route template
+                    var routeTemplate = httpRoute.RouteTemplate;
+                    var apiName = string.Empty;
+
+                    //gets api name
+                    apiName = routeTemplate;
+
+                    //Allowed http method
+                    var allowedMethod = string.Empty;
+
+                    //get all constraints
+                    IDictionary<string, object> constraints = httpRoute.Constraints;
+
+                    if (((System.Web.Routing.HttpMethodConstraint)constraints[httpMethodConstraintName]).AllowedMethods != null &&
+                        ((System.Web.Routing.HttpMethodConstraint)constraints[httpMethodConstraintName]).AllowedMethods.Any())
+                    {
+                        allowedMethod = ((System.Web.Routing.HttpMethodConstraint)httpRoute.Constraints[httpMethodConstraintName]).AllowedMethods.ToList()[0];
+                        var routeSplit = routeTemplate.Split('/');
+                        if (routeSplit.Count() == 1)
+                        {
+                            if (allowedMethod != "POST")
+                                allowedMethod = "GET_ALL";
+                        }
+                        else if (routeSplit.Count() == 2)
+                        {
+                            if (routeSplit[0].Equals("qapi", StringComparison.OrdinalIgnoreCase))
+                            {
+                                allowedMethod = "QAPI_POST";
+                            }
+                            else
+                            {
+                                if (allowedMethod != "PUT")
+                                    allowedMethod = "GET_ID";
+                            }
+                        }
+                    }
+
+                    var headerVersionConstraintConstraintName = ((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]);
+                    if (headerVersionConstraintConstraintName != null)
+                    {
+                        var headerVersionConstraint = headerVersionConstraintConstraintName.GetType();
+
+                        var pField = headerVersionConstraint
+                                          .GetField("_customMediaTypes", BindingFlags.NonPublic | BindingFlags.Instance);
+                        headerVersionConstraintValue = (string[])pField.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
+                    }
+
+                    try
+                    {
+                        // this would apply to PUT/POST where we would want to use the content-type to define the xMediaType
+                        if (constraints.ContainsKey("contentType"))
+                        {
+                            var contentTypeConstraint = ((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"])
+                                            .GetType();
+
+                            var pField2 = contentTypeConstraint
+                                              .GetField("contentType", BindingFlags.NonPublic | BindingFlags.Instance);
+                            var contentType = (string)pField2.GetValue(((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"]));
+                            headerVersionConstraintValue = new string[] { contentType };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        var e = ex.Message;
+                    }
+
+                    var tempXMediaType = string.Empty;
+                    if (headerVersionConstraintValue != null && headerVersionConstraintValue.Any())
+                    {
+                        tempXMediaType = headerVersionConstraintValue[0];
+                        if (tempXMediaType.Contains("/"))
+                            tempXMediaType = tempXMediaType.Split('/')[1];
+                    }
+                    var versionOnly = ExtractVersionNumberOnly(tempXMediaType);
+
+                    object controller = string.Empty;
+                    object action = string.Empty;
+                    object requestedContentType = string.Empty;
+
+
+                    httpRoute.Defaults.TryGetValue("action", out action);
+                    httpRoute.Defaults.TryGetValue("controller", out controller);
+                    httpRoute.Defaults.TryGetValue("RequestedContentType", out requestedContentType);
+
+                    var controlleraction = controlleractionlist
+                        .FirstOrDefault(x => x.Controller == string.Concat(controller.ToString(), "Controller"));
+                    var controllerType = controlleraction.DeclaringType;
+
+                    var controllerAction = action.ToString();
+
+                    if (controllerType != null)
+                    {
+                        //apiConfiguration.Description = controllerType.GetDocumentation();
+                        // Get information about the schema from the controller attribute SchemasAttribute
+                        // and update the configuration with this data.
+                        var controllerCustomAttributes = controllerType.GetCustomAttributes();
+                        //var controllerSchemaAttributes = controllerCustomAttributes.Where(mi => mi.GetType().Name == "MetadataAttribute");
+                        var schemaMetaData = controllerType.GetDocumentation();
+                        if (!string.IsNullOrEmpty(schemaMetaData.ApiDescription)) apiConfiguration.Description = schemaMetaData.ApiDescription;
+                        if (!string.IsNullOrEmpty(schemaMetaData.ApiDomain)) apiConfiguration.ApiDomain = schemaMetaData.ApiDomain;
+
+                        // Derive domain from module code if it hasn't been defined by the SchemaAttribute
+                        if (string.IsNullOrEmpty(apiConfiguration.ApiDomain))
+                        {
+                            var controllerLicenseModule = controllerCustomAttributes.Where(mi => mi.GetType().Name == "EllucianLicenseModuleAttribute");
+                            if (controllerLicenseModule != null && controllerLicenseModule.Any())
+                            {
+                                foreach (EllucianLicenseModuleAttribute schemaData in controllerLicenseModule)
+                                {
+                                    if (string.IsNullOrEmpty(apiConfiguration.ApiDomain))
+                                    {
+                                        if (!string.IsNullOrEmpty(schemaData.ModuleCode))
+                                        {
+                                            apiConfiguration.ApiDomain = ConvertModuleToDomain(schemaData.ModuleCode);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        MethodInfo[] methods = controllerType.GetMethods().Where(m => m.Name == controllerAction).ToArray();
+                        if (methods != null && methods.Count() > 0)
+                        {
+                            if (methods.Count() > 1)
+                            {
+                                // the above LINQ should result in just one, if not, throwing an exception here to make future troubleshooting easier
+                                throw new ColleagueWebApiException("ApiDocumentationProvider.GetActionMethodInfo found more than one matching method.");
+                            }
+                        }
+
+                        // Now get information about the schema from the specific controller method attribute SchemasAttribute
+                        // and update the configuration data and version data.
+                        string versionDescription = string.Empty;
+                        string versionReleaseStatus = string.Empty;
+                        string permission = string.Empty, description = string.Empty, summary = string.Empty;
+                        var schemaMetadata = methods.FirstOrDefault().GetDocumentation();
+                        if (schemaMetadata != null)
+                        {
+                            if (!string.IsNullOrEmpty(schemaMetadata.ApiDescription)) versionDescription = schemaMetadata.ApiDescription;
+                            if (!string.IsNullOrEmpty(schemaMetadata.ApiVersionStatus)) versionReleaseStatus = schemaMetadata.ApiVersionStatus;
+                            if (!string.IsNullOrEmpty(schemaMetadata.HttpMethodPermission)) permission = schemaMetadata.HttpMethodPermission;
+                            if (!string.IsNullOrEmpty(schemaMetadata.HttpMethodSummary)) summary = schemaMetadata.HttpMethodSummary;
+                            if (!string.IsNullOrEmpty(schemaMetadata.HttpMethodDescription)) description = schemaMetadata.HttpMethodDescription;
+                        }
+
+                        var existingMethod = apiConfiguration.HttpMethods.FirstOrDefault(http => http.Method.Equals(allowedMethod, StringComparison.OrdinalIgnoreCase));
+                        if (existingMethod == null)
+                        {
+                            apiConfiguration.HttpMethods.Add(new EthosApiSupportedMethods(allowedMethod, permission, description, summary));
+                        }
+
+                        if (allowedMethod.Equals("GET_ALL"))
+                        {
+                            var methodCustomAttributes = methods.FirstOrDefault().GetCustomAttributes();
+                            if (methodCustomAttributes != null && methodCustomAttributes.Any(mi => mi.GetType().Name == "PagingFilter"))
+                            {
+                                if (!apiConfiguration.PageLimit.HasValue)
+                                    apiConfiguration.PageLimit = ((PagingFilter)methodCustomAttributes.First(mi => mi.GetType().Name == "PagingFilter")).DefaultLimit;
+                            }
+                        }
+
+                        // Keep a dictionary of media types supported bye the different routes selected.
+                        if (!string.IsNullOrEmpty(tempXMediaType))
+                        {
+                            if (mediaTypeMethodsSupported.ContainsKey(tempXMediaType))
+                            {
+                                mediaTypeMethodsSupported[tempXMediaType].Add(allowedMethod);
+                            }
+                            else
+                            {
+                                mediaTypeMethodsSupported.Add(tempXMediaType, new List<string>() { allowedMethod });
+                            }
+                        }
+
+                        // If we've already processed this media type we can skip building the EthosExtensibleData values.
+                        var existingData = extensibleDataList.Where(edl => edl.ExtendedSchemaType == tempXMediaType);
+                        if (existingData != null && existingData.Any())
+                        {
+                            continue;
+                        }
+
+                        Domain.Base.Entities.EthosExtensibleData apiVersionConfiguration = new Domain.Base.Entities.EthosExtensibleData(selectedResource, versionOnly, tempXMediaType, "", "");
+                        apiVersionConfiguration.Description = versionDescription;
+                        apiVersionConfiguration.VersionReleaseStatus = versionReleaseStatus;
+                        apiVersionConfiguration.InquiryFields = new List<string>();
+
+                        var apiVersionConfig = GetVersionPropertiesForApi(methods.FirstOrDefault(), apiVersionConfiguration);
+
+                        if (apiVersionConfig != null && apiVersionConfig.ExtendedDataList != null && apiVersionConfig.ExtendedDataList.Any())
+                        {
+                            // Only get Extended data if we have either id or code in the schema
+                            var idColumn = apiVersionConfig.ExtendedDataList.FirstOrDefault(ed => ed.JsonTitle.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                                ed.JsonTitle.Equals("code", StringComparison.OrdinalIgnoreCase));
+                            if (idColumn != null)
+                            {
+                                // Get description, max length, table name, reference file, and reference field from run-time CDD if missing
+                                apiVersionConfig.ExtendedDataList = (await _ethosApiBuilderService.GetExtendedEthosDataRowDefault(apiVersionConfig.ExtendedDataList.ToList())).ToList();
+
+                                // Merge any extension data into the apiVersionConfigs
+                                EthosResourceRouteInfo routeInfo = new EthosResourceRouteInfo()
+                                {
+                                    ResourceName = selectedResource
+                                };
+                                var mergeApiVersionConfigs = await _ethosApiBuilderService.GetExtendedEthosVersionsConfigurationsByResource(routeInfo, false, false);
+                                if (mergeApiVersionConfigs != null)
+                                {
+                                    foreach (var mergeConfig in mergeApiVersionConfigs)
+                                    {
+                                        if (string.IsNullOrEmpty(mergeConfig.ApiVersionNumber) || mergeConfig.ApiVersionNumber == versionOnly || mergeConfig.ApiVersionNumber == versionOnly.Split('.')[0])
+                                        {
+                                            foreach (var dataRow in mergeConfig.ExtendedDataList)
+                                            {
+                                                apiVersionConfig.AddItemToExtendedData(dataRow);
+                                            }
+                                            foreach (var inquiryColumn in mergeConfig.InquiryFields)
+                                            {
+                                                apiVersionConfig.InquiryFields.Add(inquiryColumn);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Update inquiry only fields for invalid database usage
+                            foreach (var dataRow in apiVersionConfig.ExtendedDataList)
+                            {
+                                if (dataRow.DatabaseUsageType == "I" || string.IsNullOrEmpty(dataRow.DatabaseUsageType))
+                                {
+                                    if (!string.IsNullOrEmpty(dataRow.ColleagueColumnName))
+                                    {
+                                        apiVersionConfig.InquiryFields.Add(dataRow.ColleagueColumnName);
+                                    }
+                                }
+
+                                // Add Filter List for QAPI and GET all
+                                var filterRow = new Domain.Base.Entities.EthosExtensibleDataFilter(dataRow.ColleagueColumnName, dataRow.ColleagueFileName, dataRow.JsonTitle,
+                                    dataRow.JsonPath, dataRow.JsonPropertyType, new List<string>(), dataRow.ColleaguePropertyLength);
+
+                                filterRow.DatabaseUsageType = dataRow.DatabaseUsageType;
+                                filterRow.Required = dataRow.Required;
+                                filterRow.SelectFileName = dataRow.ColleagueFileName;
+                                filterRow.TransColumnName = dataRow.TransColumnName;
+                                filterRow.TransFileName = dataRow.TransFileName;
+                                filterRow.TransTableName = dataRow.TransTableName;
+                                filterRow.Enumerations = dataRow.Enumerations;
+
+                                apiVersionConfig.AddItemToExtendedDataFilter(filterRow);
+                            }
+
+                            extensibleDataList.Add(apiVersionConfig);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var e = ex.Message;
+                    //no need to throw since not all routes will have _customMediaTypes field
+                }
+            }
+
+            // Update supported methods based on media type from versions configuration
+            foreach (var versionConfig in extensibleDataList)
+            {
+                var dictionaryKey = !string.IsNullOrEmpty(versionConfig.ExtendedSchemaType) ? versionConfig.ExtendedSchemaType : "application/json";
+                if (mediaTypeMethodsSupported.ContainsKey(dictionaryKey))
+                {
+                    versionConfig.HttpMethodsSupported = mediaTypeMethodsSupported[dictionaryKey];
+                }
+            }
+            return new Tuple<EthosApiConfiguration, List<Domain.Base.Entities.EthosExtensibleData>>(apiConfiguration, extensibleDataList);
+        }
+
+        /// <summary>
+        /// Extract the version number from a customMediaType.  Extracts integers or semantic versions.
+        /// </summary>
+        /// <param name="original"></param>
+        /// <returns>Version number.  May contain none, or unknown number of decimals</returns>
+        private string ExtractVersionNumberOnly(string original)
+        {
+            var regex = new Regex(@"(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)|(?:(\d+))", RegexOptions.Compiled);
+            Match semanticVersion = regex.Match(original);
+            if (semanticVersion.Success)
+            {
+                return semanticVersion.Value;
+            }
+            else return string.Empty;
+        }
+
+        /// <summary>
+        /// Convert the module code designation to an API Domain code.
+        /// </summary>
+        /// <param name="moduleCode"></param>
+        /// <returns></returns>
+        private string ConvertModuleToDomain(string moduleCode)
+        {
+            string domain = "CORE";
+            switch (moduleCode)
+            {
+                case ModuleConstants.Base:
+                    {
+                        domain = "CORE";
+                        break;
+                    }
+                case ModuleConstants.Student:
+                    {
+                        domain = "ST";
+                        break;
+                    }
+                case ModuleConstants.Planning:
+                    {
+                        domain = "ST";
+                        break;
+                    }
+                case ModuleConstants.Finance:
+                    {
+                        domain = "CF";
+                        break;
+                    }
+                case ModuleConstants.FinancialAid:
+                    {
+                        domain = "FA";
+                        break;
+                    }
+                case ModuleConstants.ColleagueFinance:
+                    {
+                        domain = "CF";
+                        break;
+                    }
+                case ModuleConstants.ResidenceLife:
+                    {
+                        domain = "CORE";
+                        break;
+                    }
+                case ModuleConstants.HumanResources:
+                    {
+                        domain = "HR";
+                        break;
+                    }
+                case ModuleConstants.ProjectsAccounting:
+                    {
+                        domain = "CF";
+                        break;
+                    }
+                case ModuleConstants.CampusOrgs:
+                    {
+                        domain = "CORE";
+                        break;
+                    }
+                case ModuleConstants.TimeManagement:
+                    {
+                        domain = "HR";
+                        break;
+                    }
+                case ModuleConstants.FALink:
+                    {
+                        domain = "FA";
+                        break;
+                    }
+                case ModuleConstants.BudgetManagement:
+                    {
+                        domain = "CF";
+                        break;
+                    }
+            }
+            return domain;
+        }
+
+        /// <summary>
+        /// Get the Json Schema properties
+        /// </summary>
+        /// <param name="mi"></param>
+        /// <param name="apiVersionConfig"></param>
+        /// <returns></returns>
+        private Domain.Base.Entities.EthosExtensibleData GetVersionPropertiesForApi(MethodInfo mi, Domain.Base.Entities.EthosExtensibleData apiVersionConfig)
+        {
+            var dtoTypeAsArrayInput = false;
+            var dtoTypeNameInput = string.Empty;
+            apiVersionConfig.ExtendedDataList = new List<Domain.Base.Entities.EthosExtensibleDataRow>();
+
+            // get type name and if array...
+            Type type = mi.ReturnType;
+
+            if (type != null)
+            {
+                if (type.IsArray)
+                {
+                    type = type.GetElementType();
+                    dtoTypeAsArrayInput = true;
+                }
+                else if (type.IsGenericType && !type.IsValueType)
+                {
+                    type = type.GetGenericArguments().SingleOrDefault();
+                    dtoTypeAsArrayInput = true;
+                }
+            }
+            if (type.IsGenericType && !type.IsValueType)
+            {
+                type = type.GetGenericArguments().SingleOrDefault();
+            }
+            bool useCamelCase = false;
+            var customAttributes = mi.GetCustomAttributes();
+            var ethosEnabledFilter = customAttributes.Where(ca => ca.GetType().Name == "EthosEnabledFilter");
+            if (ethosEnabledFilter != null)
+            {
+                foreach (var attr in ethosEnabledFilter)
+                {
+                    var filterType = (EthosEnabledFilter)attr;
+                    useCamelCase = filterType._useCamelCase;
+                }
+            }
+
+            if (type.Name == "IHttpActionResult")
+            {
+                var queryStringFilter = customAttributes.Where(ca => ca.GetType().Name == "QueryStringFilterFilter");
+                if (queryStringFilter != null)
+                {
+
+                    foreach (var attr in queryStringFilter)
+                    {
+                        var filterType = (QueryStringFilterFilter)attr;
+                        var filterGroup = filterType.FilterGroupName;
+                        if (filterGroup == "criteria")
+                        {
+                            type = filterType.FilterType;
+                        }
+                    }
+                }
+            }
+            if (type != null)
+            {
+                dtoTypeNameInput = type.AssemblyQualifiedName;
+                if (!string.IsNullOrEmpty(dtoTypeNameInput))
+                {
+                    try
+                    {
+                        apiVersionConfig = GetVersionPropertiesFromDto(dtoTypeNameInput, apiVersionConfig, useCamelCase);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw;
+                    }
+
+                }
+            }
+
+            return apiVersionConfig;
+        }
+
+        /// <summary>
+        /// Get the Schema from the DTO
+        /// </summary>
+        /// <param name="dtoTypeNameInput"></param>
+        /// <param name="apiVersionConfig"></param>
+        /// <param name="useCamelCase"></param>
+        /// <param name="rootJsonPath"></param>
+        /// <returns></returns>
+        private Domain.Base.Entities.EthosExtensibleData GetVersionPropertiesFromDto(string dtoTypeNameInput, Domain.Base.Entities.EthosExtensibleData apiVersionConfig, bool useCamelCase, string rootJsonPath = "/")
+        {
+            Type dtoType = Type.GetType(dtoTypeNameInput);
+
+            var properties = dtoType.GetProperties();
+            if (properties != null)
+            {
+                if (properties != null)
+                {
+                    foreach (var orgProperty in properties)
+                    {
+                        apiVersionConfig = GetExtensibleDataRow(dtoType, apiVersionConfig, orgProperty, useCamelCase, rootJsonPath);
+                    }
+                }
+            }
+
+            return apiVersionConfig;
+        }
+
+        /// <summary>
+        /// Build an EthosExtensibleDataRow for the Open API specs to work with.
+        /// </summary>
+        /// <param name="dtoType"></param>
+        /// <param name="apiVersionConfig"></param>
+        /// <param name="orgProperty"></param>
+        /// <param name="useCamelCase"></param>
+        /// <param name="rootJsonPath"></param>
+        /// <returns></returns>
+        private Domain.Base.Entities.EthosExtensibleData GetExtensibleDataRow(Type dtoType, Domain.Base.Entities.EthosExtensibleData apiVersionConfig, PropertyInfo orgProperty, bool useCamelCase, string rootJsonPath = "/")
+        {
+            PropertyInfo pi = null;
+            FieldInfo fi = null;
+            MemberInfo[] mi = null;
+            if (orgProperty != null && !string.IsNullOrEmpty(orgProperty.Name))
+            {
+                pi = orgProperty;
+                fi = dtoType.GetField(orgProperty.Name);
+                mi = dtoType.GetMember(orgProperty.Name);
+            }
+
+            string jsonPropertyName = orgProperty.Name;
+            string jsonPath = rootJsonPath;
+            string jsonPropertyType = "string";
+            string[] enumNames = null;
+            if (pi != null)
+            {
+                var displayName = GetDisplayName(pi);
+                if (!string.IsNullOrEmpty(displayName))
+                    jsonPropertyName = displayName;
+            }
+            else
+            {
+                if (mi != null && mi.Any())
+                {
+                    var customAttributes = mi.FirstOrDefault().CustomAttributes;
+                    if (customAttributes != null & customAttributes.Any())
+                    {
+                        foreach (var custAttr in customAttributes)
+                        {
+                            if (custAttr != null && custAttr.NamedArguments != null)
+                            {
+                                foreach (var arg in custAttr.NamedArguments)
+                                {
+                                    if (arg.MemberName == "Name")
+                                    {
+                                        jsonPropertyName = arg.TypedValue.Value.ToString();
+                                    }
+                                }
+                            }
+                            if (custAttr != null && custAttr.ConstructorArguments != null)
+                            {
+                                foreach (var arg in custAttr.ConstructorArguments)
+                                {
+                                    if (arg.ArgumentType.Name == "String")
+                                    {
+                                        jsonPropertyName = arg.Value.ToString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Type fieldType = null;
+
+            if (pi != null)
+            {
+                fieldType = pi.PropertyType;
+            }
+            else if (fi != null)
+            {
+                fieldType = fi.FieldType;
+            }
+            else if (mi != null && mi.Any())
+            {
+                var memberTypes = mi.FirstOrDefault().MemberType;
+
+                fieldType = memberTypes.GetType();
+            }
+            if (fieldType != null)
+            {
+
+                if (fieldType.IsGenericType
+                    && fieldType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
+                {
+                    Type underlyingType = Nullable.GetUnderlyingType(fieldType);
+                    if (underlyingType == typeof(DateTime))
+                    {
+                        jsonPropertyType = GetJsonPropertyTypeForDateTime(pi);
+                    }
+                    else if (underlyingType.BaseType == typeof(Enum))
+                    {
+                        enumNames = GetEnumNames(underlyingType);
+                    }
+                    else if (underlyingType == typeof(bool))
+                    {
+                        jsonPropertyType = "bool";
+                    }
+                    else if (underlyingType == typeof(int))
+                    {
+                        jsonPropertyType = "integer";
+                    }
+                    else if (underlyingType == typeof(float))
+                    {
+                        jsonPropertyType = "float";
+                    }
+                    else if (underlyingType == typeof(decimal))
+                    {
+                        jsonPropertyType = "decimal";
+                    }
+                }
+                else if (fieldType == typeof(DateTime))
+                {
+                    jsonPropertyType = GetJsonPropertyTypeForDateTime(pi);
+                }
+                else if (fieldType == typeof(DateTimeOffset))
+                {
+                    jsonPropertyType = "datetime";
+                }
+                else if (fieldType.IsEnum)
+                {
+                    enumNames = GetEnumNames(fieldType);
+                }
+                else if (fieldType == typeof(bool))
+                {
+                    jsonPropertyType = "bool";
+                }
+                else if (fieldType == typeof(int))
+                {
+                    jsonPropertyType = "integer";
+                }
+                else if (fieldType == typeof(float))
+                {
+                    jsonPropertyType = "float";
+                }
+                else if (fieldType == typeof(decimal))
+                {
+                    jsonPropertyType = "decimal";
+                }
+                else if (fieldType.Name == "IEnumerable`1" || fieldType.Name == "IList`1" || fieldType.Name == "ICollection`1" || fieldType.Name == "List`1")
+                {
+                    Type underlyingType = fieldType.GetGenericArguments().FirstOrDefault();
+                    if (underlyingType.IsEnum)
+                    {
+                        enumNames = Enum.GetNames(underlyingType);
+                    }
+
+                    if (underlyingType.IsClass && underlyingType != typeof(string) && underlyingType != typeof(DateTime) && underlyingType != typeof(DateTimeOffset))
+                    {
+                        if (useCamelCase)
+                        {
+                            var firstCharacter = jsonPropertyName.Substring(0, 1).ToLower();
+                            var otherCharacters = jsonPropertyName.Substring(1);
+                            jsonPropertyName = firstCharacter + otherCharacters;
+                        }
+                        jsonPath = string.Concat(jsonPath, jsonPropertyName, "[]/");
+                        var dtoTypeNameInput = underlyingType.AssemblyQualifiedName;
+                        return GetVersionPropertiesFromDto(dtoTypeNameInput, apiVersionConfig, useCamelCase, jsonPath);
+                    }
+                    else
+                        jsonPropertyName = string.Concat(jsonPropertyName, "[]");
+                }
+                else if (fieldType.IsEnum)
+                {
+                    enumNames = Enum.GetNames(fieldType);
+                }
+                else if (fieldType.IsClass && fieldType != typeof(string) && fieldType != typeof(DateTime) && fieldType != typeof(DateTimeOffset))
+                {
+                    if (useCamelCase)
+                    {
+                        var firstCharacter = jsonPropertyName.Substring(0, 1).ToLower();
+                        var otherCharacters = jsonPropertyName.Substring(1);
+                        jsonPropertyName = firstCharacter + otherCharacters;
+                    }
+                    jsonPath = string.Concat(jsonPath, jsonPropertyName, "/");
+                    var dtoTypeNameInput = fieldType.AssemblyQualifiedName;
+                    return GetVersionPropertiesFromDto(dtoTypeNameInput, apiVersionConfig, useCamelCase, jsonPath);
+                }
+            }
+            if (!string.IsNullOrEmpty(jsonPropertyName))
+            {
+                if (useCamelCase)
+                {
+                    var firstCharacter = jsonPropertyName.Substring(0, 1).ToLower();
+                    var otherCharacters = jsonPropertyName.Substring(1);
+                    jsonPropertyName = firstCharacter + otherCharacters;
+                }
+
+                // Get additional Data from MetadataAttributes for column documentation
+                string columnName = string.Empty;
+                string fileName = string.Empty;
+                int? length = null;
+                string dataDescription = string.Empty;
+                bool dataRequired = false;
+                bool dataIsInquiryOnly = false;
+                string referenceFileName = string.Empty;
+                string referenceTableName = string.Empty;
+                string referenceColumnName = string.Empty;
+
+                MetadataAttribute schema = null;
+                if (pi != null)
+                {
+                    schema = pi.GetDocumentation();
+                }
+                else if (mi != null)
+                {
+                    schema = mi.FirstOrDefault().GetDocumentation();
+                }
+                if (schema != null)
+                {
+                    dataDescription = schema.DataDescription;
+                    columnName = schema.DataElementName;
+                    //if there is no column name like in shared DTO, we cannot put the column name, we can get other information from the metadata tags instead. 
+                    if (!string.IsNullOrEmpty(schema.DataFileName)) fileName = schema.DataFileName;
+                    // overide the maxlength from the CDD for boolean as the CDD size will be 1 but the schema value will be true or false. 
+                    if (jsonPropertyType == "bool")
+                        length = 5;
+                    else if (schema.DataMaxLength > 0)
+                        length = schema.DataMaxLength;
+                    if (!string.IsNullOrEmpty(schema.DataReferenceFileName)) referenceFileName = schema.DataReferenceFileName;
+                    if (!string.IsNullOrEmpty(schema.DataReferenceColumnName)) referenceColumnName = schema.DataReferenceColumnName;
+                    if (!string.IsNullOrEmpty(schema.DataReferenceTableName)) referenceTableName = schema.DataReferenceTableName;
+                    if (schema.DataIsInquiryOnly) dataIsInquiryOnly = schema.DataIsInquiryOnly;
+                    if (schema.DataRequired) dataRequired = schema.DataRequired;
+                }
+
+                var dataRow = new Domain.Base.Entities.EthosExtensibleDataRow(columnName, fileName, jsonPropertyName, jsonPath, jsonPropertyType, "", length)
+                {
+                    Description = dataDescription,
+                    Required = dataRequired,
+                    TransFileName = referenceFileName,
+                    TransColumnName = referenceColumnName,
+                    TransTableName = referenceTableName,
+                    TransType = referenceFileName.Contains("VALCODES") ? "T" : (!string.IsNullOrEmpty(referenceFileName) ? "F" : string.Empty)
+                };
+
+                if (enumNames != null && enumNames.Any())
+                {
+                    dataRow.TransType = "E";
+                    dataRow.Enumerations = new List<Domain.Base.Entities.EthosApiEnumerations>();
+                    foreach (var enumValue in enumNames)
+                    {
+                        dataRow.Enumerations.Add(new Domain.Base.Entities.EthosApiEnumerations(enumValue.Substring(0), enumValue));
+                    }
+                }
+                if (dataRow != null)
+                {
+                    if (pi != null)
+                    {
+                        dataRow.PropertyInfo = pi;
+                    }
+                    apiVersionConfig.AddItemToExtendedData(dataRow);
+                    if (!string.IsNullOrEmpty(columnName) && dataIsInquiryOnly)
+                    {
+                        apiVersionConfig.InquiryFields.Add(columnName);
+                    }
+                }
+            }
+            return apiVersionConfig;
         }
 
         /// <summary>
@@ -392,17 +1206,38 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             var components = new OpenApiComponents();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
             bool isFilterRequestSchemaAdded = false;
             bool isFilterSupported = false;
             //set up paths by looping through supported methods
             if (apiConfiguration.HttpMethods != null && apiConfiguration.HttpMethods.Any())
             {
                 bool isGetResponseSchemaAdded = false;
-                bool isPutRequestSchemaAdded = false;
-               
+                List<string> httpMethodsSupported = new List<string>();
+                if (apiVersionConfig.HttpMethodsSupported != null)
+                {
+                    httpMethodsSupported = apiVersionConfig.HttpMethodsSupported;
+                }
+
                 foreach (var httpMethod in apiConfiguration.HttpMethods)
                 {
-                    var method = string.Empty;                    
+                    if (httpMethodsSupported != null && httpMethodsSupported.Any())
+                    {
+                        if (!httpMethodsSupported.Contains(httpMethod.Method))
+                        {
+                            continue;
+                        }
+                    }
+                    var method = string.Empty;
                     if (httpMethod.Method != null && !string.IsNullOrEmpty(httpMethod.Method))
                     {
                         if (!httpMethod.Method.Contains("QAPI"))
@@ -448,12 +1283,10 @@ namespace Ellucian.Colleague.Api.Controllers
                                 //section for put
                                 case "put":
                                     {
-                                        if (!isPutRequestSchemaAdded)
-                                        {
-                                            var putRequestSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig,true);
-                                            components.Schemas.Add(string.Format(componentSchemaPrefix, "put_post", "request"), putRequestSchema);
-                                            isPutRequestSchemaAdded = true;
-                                        }
+                                        var putRequestSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig, "put");
+                                        components.Schemas.Add(string.Format(componentSchemaPrefix, "put", "request"), putRequestSchema);
+
+
                                         if (!isGetResponseSchemaAdded)
                                         {
                                             var getResponseSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig);
@@ -468,12 +1301,10 @@ namespace Ellucian.Colleague.Api.Controllers
                                 //section for put
                                 case "post":
                                     {
-                                        if (!isPutRequestSchemaAdded)
-                                        {
-                                            var putRequestSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig, true);
-                                            components.Schemas.Add(string.Format(componentSchemaPrefix, "put_post", "request"), putRequestSchema);
-                                            isPutRequestSchemaAdded = true;
-                                        }
+
+                                        var putRequestSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig, "post");
+                                        components.Schemas.Add(string.Format(componentSchemaPrefix, "post", "request"), putRequestSchema);
+
                                         if (!isGetResponseSchemaAdded)
                                         {
                                             var getResponseSchema = GetOpenApiSchemaFromExtensibleDataAsync(apiConfiguration, apiVersionConfig);
@@ -485,8 +1316,6 @@ namespace Ellucian.Colleague.Api.Controllers
                                         }
                                         break;
                                     }
-
-
                             }
                         }
                         else
@@ -547,8 +1376,11 @@ namespace Ellucian.Colleague.Api.Controllers
             errorsSchema.Type = "object";
             var errorsSchemaProperty = new OpenApiSchema() { Type = "array" };
             var errorsSchemaPropertyItems = new OpenApiSchema() { Type = "object" };
-            errorsSchemaPropertyItems.Properties.Add("message", new OpenApiSchema() { Type = "string" });
-            errorsSchemaPropertyItems.Properties.Add("description", new OpenApiSchema() { Type = "string" });
+            errorsSchemaPropertyItems.Properties.Add("id", new OpenApiSchema() { Type = "string", Description = "The global identifier of the resource in error." });
+            errorsSchemaPropertyItems.Properties.Add("sourceId", new OpenApiSchema() { Type = "string", Description = "The source applications data reference identifier for the primary data entity used to create the resource. This is useful for referencing the source item through the applications administrative user interface." });
+            errorsSchemaPropertyItems.Properties.Add("code", new OpenApiSchema() { Type = "string", Description = "The error message code used to describe the error details." });
+            errorsSchemaPropertyItems.Properties.Add("description", new OpenApiSchema() { Type = "string", Description = "The error description used to describe the error details." });
+            errorsSchemaPropertyItems.Properties.Add("message", new OpenApiSchema() { Type = "string", Description = "The detailed actionable error message." });
             errorsSchemaProperty.Items = errorsSchemaPropertyItems;
             errorsSchema.Properties.Add("errors", errorsSchemaProperty);
             components.Schemas.Add("errors_2_0_0", errorsSchema);
@@ -577,9 +1409,21 @@ namespace Ellucian.Colleague.Api.Controllers
                 bool isGetPathItemAdded = false;
                 bool isGetbyIdPathItemAdded = false;
                 bool isQapiPathItemAdded = false;
+                List<string> httpMethodsSupported = new List<string>();
+                if (apiVersionConfig.HttpMethodsSupported != null)
+                {
+                    httpMethodsSupported = apiVersionConfig.HttpMethodsSupported;
+                }
                 foreach (var httpMethod in apiConfiguration.HttpMethods)
                 {
-                    var method = string.Empty;                   
+                    if (httpMethodsSupported != null && httpMethodsSupported.Any())
+                    {
+                        if (!httpMethodsSupported.Contains(httpMethod.Method))
+                        {
+                            continue;
+                        }
+                    }
+                    var method = string.Empty;
                     if (httpMethod.Method != null && !string.IsNullOrEmpty(httpMethod.Method))
                     {
                         if (!httpMethod.Method.Contains("QAPI"))
@@ -588,7 +1432,7 @@ namespace Ellucian.Colleague.Api.Controllers
                             if (apiPathItem == null)
                                 apiPathItem = new OpenApiPathItem();
                             if (apiByIdPathItem == null)
-                               apiByIdPathItem = new OpenApiPathItem();
+                                apiByIdPathItem = new OpenApiPathItem();
                             switch (method)
                             {
                                 //section for get
@@ -601,7 +1445,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                                 apiPathItem.AddOperation(OperationType.Get, BuildGetOperationObject(apiConfiguration, apiVersionConfig, method, httpMethod.Description, httpMethod.Permission, httpMethod.Summary));
                                                 isGetPathItemAdded = true;
                                             }
-                                            if (!isGetbyIdPathItemAdded && !isCompositeKey )
+                                            if (!isGetbyIdPathItemAdded && !isCompositeKey)
                                             {
                                                 apiByIdPathItem.AddOperation(OperationType.Get, BuildGetbyIdOperationObject(apiConfiguration, apiVersionConfig, method, httpMethod.Description, httpMethod.Permission, httpMethod.Summary));
                                                 isGetbyIdPathItemAdded = true;
@@ -635,12 +1479,12 @@ namespace Ellucian.Colleague.Api.Controllers
                                                 isGetPathItemAdded = true;
                                             }
                                         }
-                                            break;
+                                        break;
                                     }
                                 //section for put
                                 case "put":
                                     {
-                                        if ( !isCompositeKey)
+                                        if (!isCompositeKey)
                                             apiByIdPathItem.AddOperation(OperationType.Put, BuildPutOperationObject(apiConfiguration, apiVersionConfig, method, httpMethod.Description, httpMethod.Permission, httpMethod.Summary));
                                         else
                                             apiPathItem.AddOperation(OperationType.Put, BuildPutOperationObject(apiConfiguration, apiVersionConfig, method, httpMethod.Description, httpMethod.Permission, httpMethod.Summary));
@@ -719,13 +1563,13 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
                     if (!string.IsNullOrEmpty(apiConfiguration.PrimaryTableName))
                     {
-                        operation.Summary = string.Format("Returns resources from {0} from {1}.", apiConfiguration.PrimaryTableName, string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity));
+                        operation.Summary = string.Format("Returns resources from {0} in {1}.", apiConfiguration.PrimaryTableName, string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity));
                     }
                     else
                     {
@@ -736,12 +1580,23 @@ namespace Ellucian.Colleague.Api.Controllers
             else if (IsBpa(apiConfiguration))
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 else
                     operation.Summary = string.Format("Returns resources from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
             }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                else
+                    operation.Summary = string.Format("Returns {0} resources.", apiConfiguration.ResourceName);
+            }
+            else if (!string.IsNullOrEmpty(httpMethodSummary))
+            {
+                operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+            }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-            operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
@@ -749,17 +1604,27 @@ namespace Ellucian.Colleague.Api.Controllers
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
-            //if Id is required, that means this method only supports get by Id
-            if (!SupportGetByIdOnly(apiConfiguration))
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
             {
-                var limitDesc = "The maximum number of resources requesting for this result set.";
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
+            //if Id is required, that means this method only supports get by Id
+            if (!SupportGetByIdOnly(apiConfiguration) || (apiVersionConfig.HttpMethodsSupported.Count() == 1 && apiVersionConfig.HttpMethodsSupported.Contains("GET_ID")))
+            {
+                var limitDesc = "The maximum number of resources requested for this result set.";
                 if (apiConfiguration.PageLimit != null)
                 {
-                    limitDesc = string.Concat(limitDesc, "The maximum valid limit value is " , apiConfiguration.PageLimit);
-                }               
-                parameters.Add(GetPathItemParameters("limit", ParameterLocation.Query, false, limitDesc , "integer", componentSchemaPrefix));
+                    limitDesc = string.Concat(limitDesc, " The maximum valid limit value is ", apiConfiguration.PageLimit + ".");
+                }
+                parameters.Add(GetPathItemParameters("limit", ParameterLocation.Query, false, limitDesc, "integer", componentSchemaPrefix));
                 parameters.Add(GetPathItemParameters("offset", ParameterLocation.Query, false, "The 0 based index for a collection of resources for the page requested.", "integer", componentSchemaPrefix));
-                parameters.Add(GetPathItemParameters("criteria", ParameterLocation.Query, false, "The filter criteria as a single URL query parameter. Use this parameter or the individual parameters listed. Must be a JSON representation of the property searching for. This can be any of the properties listed on the URL or QAPI and must be a json representation that can be validated against the GET schema. Limit and Offset are the only supported additional parameters on the URL.", "string", componentSchemaPrefix, false, true));
+                parameters.Add(GetPathItemParameters("criteria", ParameterLocation.Query, false, "The filter criteria as a single URL query parameter. Use this parameter or the individual parameters listed. Must be a JSON representation of the property searching for. This can be any of the properties listed on the URL or QAPI and must be a JSON representation that can be validated against the GET schema. Limit and Offset are the only supported additional parameters on the URL.", "string", componentSchemaPrefix, false, true));
                 showAdditionalResponseHeader = true;
             }
             //Display Id for only composite Key
@@ -768,9 +1633,9 @@ namespace Ellucian.Colleague.Api.Controllers
                 var idRequired = false;
                 if (SupportGetByIdOnly(apiConfiguration))
                     idRequired = true;
-                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, idRequired, "Must be a JSON representation of the  properties that make up the id block of a single record. No additional parameters on the URL are allowed. ", "string", componentSchemaPrefix, false, true));
+                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, idRequired, "Must be a JSON representation of the properties that make up the id block of a single record. No additional parameters on the URL are allowed.", "string", componentSchemaPrefix, false, true));
             }
-            
+
             //check to see if there is a name query
             bool hasNameQuery = false;
             if (apiVersionConfig != null && apiVersionConfig.ExtendedDataFilterList != null)
@@ -782,7 +1647,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
             }
             if (hasNameQuery)
-                parameters.Add(GetPathItemParameters("namedQuery", ParameterLocation.Query, false, "A named query is specified as a query parameter and may require arguments which must be expressed using JSON (where the arguments are provided as name-value pairs akin to the ad-hoc query syntax used for filtering by 'equality', as described above).", "object", componentSchemaPrefix,false,true));
+                parameters.Add(GetPathItemParameters("namedQuery", ParameterLocation.Query, false, "A named query is specified as a query parameter and may require arguments which must be expressed using JSON (where the arguments are provided as name-value pairs akin to the ad-hoc query syntax used for filtering by 'equality', as described above).", "object", componentSchemaPrefix, false, true));
             operation.Parameters = parameters;
             //add response section
             var responses = new OpenApiResponses
@@ -820,7 +1685,7 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
@@ -834,15 +1699,26 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
                     operation.Summary = string.Format("Returns the requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
                 }
             }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                {
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                }
+                else
+                {
+                    operation.Summary = string.Format("Returns the requested {0} resource.", apiConfiguration.ResourceName);
+                }
+            }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-                operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
@@ -850,6 +1726,16 @@ namespace Ellucian.Colleague.Api.Controllers
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
             //check to see if Id is a property or string. If string, check if this is a GUID
             bool isGuid = false;
             if (apiConfiguration != null && !string.IsNullOrEmpty(apiConfiguration.PrimaryGuidSource))
@@ -895,29 +1781,40 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
                     if (!string.IsNullOrEmpty(apiConfiguration.PrimaryTableName))
-                        operation.Summary = string.Format("Updates requested resource from {0} from {1}.", apiConfiguration.PrimaryTableName, string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity));
+                        operation.Summary = string.Format("Updates the requested resource from {0} from {1}.", apiConfiguration.PrimaryTableName, string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity));
                     else
-                        operation.Summary = string.Format("Updates requested resource from from {0}.", apiConfiguration.PrimaryEntity);
+                        operation.Summary = string.Format("Updates the requested resource from from {0}.", apiConfiguration.PrimaryEntity);
                 }
             }
             else if (IsBpa(apiConfiguration))
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
-                    operation.Summary = string.Format("Updates requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+                    operation.Summary = string.Format("Updates the requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+                }
+            }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                {
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                }
+                else
+                {
+                    operation.Summary = string.Format("Updates the requested {0} resource.", apiConfiguration.ResourceName);
                 }
             }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-                operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
@@ -925,18 +1822,28 @@ namespace Ellucian.Colleague.Api.Controllers
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
             //check to see if Id is a property or string. If string, check if this is a GUID
             bool isGuid = false;
             if (apiConfiguration != null && !string.IsNullOrEmpty(apiConfiguration.PrimaryGuidSource))
                 isGuid = true;
             if (apiConfiguration != null && apiConfiguration.ColleagueKeyNames != null && apiConfiguration.ColleagueKeyNames.Count > 1)
-                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, true, "Must be a JSON representation of the  properties that make up the id block of a single record. No additional parameters on the URL are allowed. ", "string", componentSchemaPrefix,isGuid,true));
+                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, true, "Must be a JSON representation of the  properties that make up the id block of a single record. No additional parameters on the URL are allowed. ", "string", componentSchemaPrefix, isGuid, true));
             else
                 parameters.Add(GetPathItemParameters("id", ParameterLocation.Path, true, "A global identifier of the resource for use in all external references.", "string", componentSchemaPrefix, isGuid));
 
             operation.Parameters = parameters;
             //add request section
-            operation.RequestBody = BuildPathItemPutPostRequestBody(apiVersionConfig, "put_post", componentSchemaPrefix);
+            operation.RequestBody = BuildPathItemPutPostRequestBody(apiVersionConfig, "put", componentSchemaPrefix);
             //add response section
             var responses = new OpenApiResponses
             {
@@ -977,6 +1884,30 @@ namespace Ellucian.Colleague.Api.Controllers
             if (apiConfiguration != null && apiConfiguration.ApiType == "T")
                 isBPA = true;
             return isBPA;
+        }
+
+        /// <summary>
+        /// Returns true if the api is EedmSupported or EthosEnabled
+        /// </summary>
+        /// <param name="apiConfiguration">main API configuration from EDM.EXTENSIONS</param>
+        private bool IsEthos(EthosApiConfiguration apiConfiguration)
+        {
+            bool IsEthos = false;
+            if (apiConfiguration != null && apiConfiguration.ApiType == "Ethos")
+                IsEthos = true;
+            return IsEthos;
+        }
+
+        /// <summary>
+        /// Returns true if the api is web enabled
+        /// </summary>
+        /// <param name="apiConfiguration">main API configuration from EDM.EXTENSIONS</param>
+        private bool IsWeb(EthosApiConfiguration apiConfiguration)
+        {
+            bool IsWeb = false;
+            if (apiConfiguration != null && apiConfiguration.ApiType == "web")
+                IsWeb = true;
+            return IsWeb;
         }
 
         /// <summary>
@@ -1047,7 +1978,7 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             bool isCompositeKey = false;
             if (apiConfiguration != null && apiConfiguration.ColleagueKeyNames != null && apiConfiguration.ColleagueKeyNames.Count > 1 && IsBpa(apiConfiguration))
-                 isCompositeKey = true;
+                isCompositeKey = true;
             return isCompositeKey;
         }
 
@@ -1069,29 +2000,40 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
                     if (!string.IsNullOrEmpty(apiConfiguration.PrimaryTableName))
                         operation.Summary = string.Format("Returns requested resource from {0} from {1}.", apiConfiguration.PrimaryTableName, string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity));
                     else
-                        operation.Summary = string.Format("Returns requested resource from {0}.", apiConfiguration.PrimaryEntity);
+                        operation.Summary = string.Format("Returns the requested resource from {0}.", apiConfiguration.PrimaryEntity);
                 }
             }
             else if (IsBpa(apiConfiguration))
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
-                    operation.Summary = string.Format("Returns requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+                    operation.Summary = string.Format("Returns the requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+                }
+            }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                {
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                }
+                else
+                {
+                    operation.Summary = string.Format("Returns the requested {0} resources.", apiConfiguration.ResourceName);
                 }
             }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-                operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
@@ -1099,13 +2041,27 @@ namespace Ellucian.Colleague.Api.Controllers
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
-            var limitDesc = "The maximum number of resources requesting for this result set.";
-            if (apiConfiguration.PageLimit != null)
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
             {
-                limitDesc = string.Concat(limitDesc, "The maximum valid limit value is ", apiConfiguration.PageLimit);
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
             }
-            parameters.Add(GetPathItemParameters("limit", ParameterLocation.Query, false, limitDesc, "integer", componentSchemaPrefix));
-            parameters.Add(GetPathItemParameters("offset", ParameterLocation.Query, false, "The 0 based index for a collection of resources for the page requested.", "integer", componentSchemaPrefix));
+            //if Id is required, that means this method only supports get by Id
+            if (!SupportGetByIdOnly(apiConfiguration))
+            {
+                var limitDesc = "The maximum number of resources requested for this result set.";
+                if (apiConfiguration.PageLimit != null)
+                {
+                    limitDesc = string.Concat(limitDesc, " The maximum valid limit value is ", apiConfiguration.PageLimit);
+                }
+                parameters.Add(GetPathItemParameters("limit", ParameterLocation.Query, false, limitDesc, "integer", componentSchemaPrefix));
+                parameters.Add(GetPathItemParameters("offset", ParameterLocation.Query, false, "The 0 based index for a collection of resources for the page requested.", "integer", componentSchemaPrefix));
+            }
             operation.Parameters = parameters;
             //add request section
             operation.RequestBody = BuildPathItemPutPostRequestBody(apiVersionConfig, "query", componentSchemaPrefix);
@@ -1146,7 +2102,7 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
@@ -1157,25 +2113,46 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
                 {
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 }
                 else
                 {
                     operation.Summary = string.Format("Creates a new resource in {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
                 }
             }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                {
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                }
+                else
+                {
+                    operation.Summary = string.Format("Creates a new {0} resource.", apiConfiguration.ResourceName);
+                }
+            }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-                operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
             }
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             operation.Parameters = parameters;
             //add request section
-            operation.RequestBody = BuildPathItemPutPostRequestBody(apiVersionConfig, "put_post", componentSchemaPrefix);
+            operation.RequestBody = BuildPathItemPutPostRequestBody(apiVersionConfig, "post", componentSchemaPrefix);
             //add response section
             var responses = new OpenApiResponses
             {
@@ -1211,19 +2188,26 @@ namespace Ellucian.Colleague.Api.Controllers
             if (IsSpecBased(apiConfiguration))
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 else
-                    operation.Summary = string.Format("Deletes requested resource from {0}.", apiConfiguration.PrimaryEntity);
+                    operation.Summary = string.Format("Deletes the requested resource from {0}.", apiConfiguration.PrimaryEntity);
             }
             else if (IsBpa(apiConfiguration))
             {
                 if (!string.IsNullOrEmpty(httpMethodSummary))
-                    operation.Summary = httpMethodSummary.Replace(_SM, ' ');
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
                 else
-                    operation.Summary = string.Format("Deletes requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+                    operation.Summary = string.Format("Deletes the requested resource from {0} - {1}.", apiConfiguration.ProcessId, apiConfiguration.ProcessDesc);
+            }
+            else if (IsBpa(apiConfiguration))
+            {
+                if (!string.IsNullOrEmpty(httpMethodSummary))
+                    operation.Summary = httpMethodSummary.Replace(DmiString._SM, ' ');
+                else
+                    operation.Summary = string.Format("Deletes the requested {0} resource.", apiConfiguration.ResourceName);
             }
             if (!string.IsNullOrEmpty(httpmethodDesc))
-                operation.Description = Regex.Unescape(httpmethodDesc.Replace(_SM, ' '));
+                operation.Description = Regex.Unescape(httpmethodDesc.Replace(DmiString._SM, ' '));
             if (!string.IsNullOrEmpty(httpMethodPermission))
             {
                 operation.AddExtension("x-method-permission", new OpenApiString(httpMethodPermission));
@@ -1231,12 +2215,22 @@ namespace Ellucian.Colleague.Api.Controllers
             //add parameters section
             var parameters = new List<OpenApiParameter>();
             var componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", apiVersionConfig.ApiVersionNumber.Replace(".", "_"), "_{0}_{1}");
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    componentSchemaPrefix = string.Concat(apiConfiguration.ResourceName, "_", alternateView, "_", versionNumber.Replace(".", "_"), "_{0}_{1}");
+                }
+            }
             //check to see if Id is a property or string. If string, check if this is a GUID
             bool isGuid = false;
             if (apiConfiguration != null && !string.IsNullOrEmpty(apiConfiguration.PrimaryGuidSource))
                 isGuid = true;
             if (apiConfiguration != null && apiConfiguration.ColleagueKeyNames != null && apiConfiguration.ColleagueKeyNames.Count > 1)
-                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, true, "Must be a JSON representation of the  properties that make up the id block of a single record. No additional parameters on the URL are allowed. ", "string", componentSchemaPrefix,isGuid,true));
+                parameters.Add(GetPathItemParameters("id", ParameterLocation.Query, true, "Must be a JSON representation of the properties that make up the id block of a single record. No additional parameters on the URL are allowed.", "string", componentSchemaPrefix, isGuid, true));
             else
                 parameters.Add(GetPathItemParameters("id", ParameterLocation.Path, true, "A global identifier of the resource for use in all external references.", "string", componentSchemaPrefix, isGuid));
 
@@ -1271,7 +2265,10 @@ namespace Ellucian.Colleague.Api.Controllers
             var requestBody = new OpenApiRequestBody();
             var mediaTypeContent = new OpenApiMediaType();
             mediaTypeContent.Schema = new OpenApiSchema() { Type = "array", Items = new OpenApiSchema() { Reference = new OpenApiReference() { Id = string.Format(schemaPrefix, httpMethod, "request"), Type = ReferenceType.Schema } } };
-            requestBody.Content.Add(apiVersionConfig.ExtendedSchemaType, mediaTypeContent);
+            if (apiVersionConfig.ExtendedSchemaType.Contains("/"))
+                requestBody.Content.Add(string.Format(apiVersionConfig.ExtendedSchemaType), mediaTypeContent);
+            else
+                requestBody.Content.Add(string.Format("application/{0}", apiVersionConfig.ExtendedSchemaType), mediaTypeContent);
             return requestBody;
         }
 
@@ -1316,7 +2313,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         response.Headers.Add("X-Media-Type", mediaTypeHeader);
                         //X-Content-Restricted
                         var restrictedContentHeader = new OpenApiHeader();
-                        restrictedContentHeader.Description = "If the resource is not a full representation of the resource, partial is returned. Otherwise, this header is not included.";
+                        restrictedContentHeader.Description = "If the response is not a full representation of the resource, a partial representation is returned. Otherwise, this header is not included.";
                         restrictedContentHeader.Schema = new OpenApiSchema() { Type = "string" };
                         response.Headers.Add("X-Content-Restricted", restrictedContentHeader);
                         if (showAddResponseHeader)
@@ -1326,25 +2323,29 @@ namespace Ellucian.Colleague.Api.Controllers
                             totalCountHeader.Description = "Specifies the total number of resources that satisfy the query.";
                             totalCountHeader.Schema = new OpenApiSchema() { Type = "integer" };
                             response.Headers.Add("X-Total-Count", totalCountHeader);
-                            // X-Max-Page-Size
-                            var maxPageSizeHeader = new OpenApiHeader();
-                            maxPageSizeHeader.Description = "Specifies the maximum number of resources returned in a response.";
-                            maxPageSizeHeader.Schema = new OpenApiSchema() { Type = "integer" };
-                            response.Headers.Add("X-Max-Page-Size", maxPageSizeHeader);
+
+                            if (apiConfiguration.PageLimit != null && apiConfiguration.PageLimit > 0)
+                            {
+                                // X-Max-Page-Size
+                                var maxPageSizeHeader = new OpenApiHeader();
+                                maxPageSizeHeader.Description = "Specifies the maximum number of resources returned in a response.";
+                                maxPageSizeHeader.Schema = new OpenApiSchema() { Type = "integer" };
+                                response.Headers.Add("X-Max-Page-Size", maxPageSizeHeader);
+                            }
                         }
                         var mediaTypeContent = new OpenApiMediaType();
                         mediaTypeContent.Schema = new OpenApiSchema() { Type = "array", Items = new OpenApiSchema() { Reference = new OpenApiReference() { Id = string.Format(schema_prefix, "get", "response"), Type = ReferenceType.Schema } } };
-                        response.Content.Add(apiVersionConfig.ExtendedSchemaType, mediaTypeContent);
+                        response.Content.Add(string.Format("application/{0}", apiVersionConfig.ExtendedSchemaType), mediaTypeContent);
                         break;
                     }
                 case "401":
                     {
-                        response.Description = "Failure. Unauthorized";
+                        response.Description = "Failure. Unauthorized.";
                         break;
                     }
                 case "403":
                     {
-                        response.Description = "Failure. Forbidden. The user does not have the necessary permissions for the resource.";
+                        response.Description = "Failure. Forbidden. The user does not have the required permissions for the resource.";
                         response.Content.Add("application/vnd.hedtech.integration.errors.v2+json", errMediaTypeContent);
                         break;
                     }
@@ -1361,19 +2362,19 @@ namespace Ellucian.Colleague.Api.Controllers
                     }
                 case "406":
                     {
-                        response.Description = "Failure. Not Acceptable. Not able to generate any of the client’s preferred media types, as indicated by the Accept request header.";
+                        response.Description = "Failure. Not Acceptable. Unable to generate any of the client’s preferred media types, as indicated by the Accept request header.";
                         response.Content.Add("application/vnd.hedtech.integration.errors.v2+json", errMediaTypeContent);
                         break;
                     }
                 case "400":
                     {
-                        response.Description = "Failure. Bad Request. The server cannot or will not process the request due to something that is perceived to be a client error.";
+                        response.Description = "Failure. Bad Request. The server cannot process the request due to something that is perceived to be a client error.";
                         response.Content.Add("application/vnd.hedtech.integration.errors.v2+json", errMediaTypeContent);
                         break;
                     }
                 case "500":
                     {
-                        response.Description = "Server error, unexpected configuration or data";
+                        response.Description = "Server error. Unexpected configuration or data.";
                         response.Content.Add("application/vnd.hedtech.integration.errors.v2+json", errMediaTypeContent);
                         break;
                     }
@@ -1398,10 +2399,10 @@ namespace Ellucian.Colleague.Api.Controllers
             var servers = new List<OpenApiServer>
             {
                 AddEthosServers("Ethos Integration API U.S.", "https://integrate.elluciancloud.com"),
-                AddEthosServers("Ethos Integration API Canada", "https://integrate.elluciancloud.ca"),
-                AddEthosServers("Ethos Integration API Europe", "https://integrate.elluciancloud.ie"),
-                AddEthosServers("Ethos Integration API Asia-Pacific", "https://integrate.elluciancloud.com.au"),
-                AddEthosServers("Custom server url", "{server_url}", "localhost")
+                AddEthosServers("Ethos Integration API Canada.", "https://integrate.elluciancloud.ca"),
+                AddEthosServers("Ethos Integration API Europe.", "https://integrate.elluciancloud.ie"),
+                AddEthosServers("Ethos Integration API Asia-Pacific.", "https://integrate.elluciancloud.com.au"),
+                AddEthosServers("Custom server URL.", "{server_url}", "localhost")
             };
             return servers;
         }
@@ -1413,20 +2414,30 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="apiVersionConfig">version configuration info from EDM.EXT.VERSIONS</param>
         private OpenApiInfo BuildOpenApiInfoProperty(EthosApiConfiguration apiConfiguration, Domain.Base.Entities.EthosExtensibleData apiVersionConfig)
         {
-            var info = new OpenApiInfo();            
+            var info = new OpenApiInfo();
             info.Title = apiConfiguration.ResourceName;
+            if (!apiVersionConfig.ExtendedSchemaType.Contains(mediaFormat + ".v"))
+            {
+                var alternateViews = apiVersionConfig.ExtendedSchemaType.Split('.');
+                if (alternateViews.Count() > 4)
+                {
+                    var alternateView = alternateViews[3];
+                    var versionNumber = alternateViews[4];
+                    info.Title = string.Concat(apiConfiguration.ResourceName, "_", alternateView);
+                }
+            }
             info.Description = apiConfiguration.Description;
             info.Version = apiVersionConfig.ApiVersionNumber;
             info.AddExtension("x-source-system", new OpenApiString(sourceSystem));
             if (IsBpa(apiConfiguration))
             {
-                info.AddExtension("x-source-name",new OpenApiString(apiConfiguration.ProcessId));
+                info.AddExtension("x-source-name", new OpenApiString(apiConfiguration.ProcessId));
                 info.AddExtension("x-source-title", new OpenApiString(apiConfiguration.ProcessDesc));
                 info.AddExtension("x-api-type", new OpenApiString("Administrative"));
             }
             else if (IsSpecBased(apiConfiguration))
             {
-                if (string.IsNullOrEmpty(apiConfiguration.PrimaryTableName))                    
+                if (string.IsNullOrEmpty(apiConfiguration.PrimaryTableName))
                     info.AddExtension("x-source-name", new OpenApiString(apiConfiguration.PrimaryEntity));
                 else
                     info.AddExtension("x-source-name", new OpenApiString(string.Concat(apiConfiguration.PrimaryApplication, "-", apiConfiguration.PrimaryEntity, " ", apiConfiguration.PrimaryTableName)));
@@ -1439,6 +2450,18 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 info.AddExtension("x-api-type", new OpenApiString("Specification-Based"));
             }
+            else if (IsEthos(apiConfiguration) || IsWeb(apiConfiguration))
+            {
+                var resourceName = apiConfiguration.ResourceName;
+                if (!string.IsNullOrEmpty(resourceName))
+                {
+                    resourceName = resourceName.Replace('-', ' ');
+                    resourceName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(resourceName);
+                    info.AddExtension("x-source-title", new OpenApiString(resourceName));
+                }
+                info.AddExtension("x-api-type", new OpenApiString("web"));
+            }
+
             //display the staus from version if it is there, otherwise use it from the API status.
             string apiStatus = string.Empty;
             if (!string.IsNullOrEmpty(apiVersionConfig.VersionReleaseStatus))
@@ -1451,12 +2474,12 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             if (!string.IsNullOrEmpty(apiStatus))
             {
-                if (apiStatus == "B")
+                if (apiStatus == "B" || apiStatus.ToLower() == "beta")
                 {
                     info.AddExtension("x-release-status", new OpenApiString("beta"));
                     info.Version = string.Concat(apiVersionConfig.ApiVersionNumber, "-beta");
                 }
-                else if (apiStatus == "R")
+                else if (apiStatus == "R" || apiStatus.ToLower().Contains("releas"))
                     info.AddExtension("x-release-status", new OpenApiString("ga"));
                 else
                     info.AddExtension("x-release-status", new OpenApiString("select"));
@@ -1487,12 +2510,12 @@ namespace Ellucian.Colleague.Api.Controllers
             parameter.Description = description;
             parameter.In = input;
             parameter.Required = required;
-            if (!string.IsNullOrEmpty(schemaType) && !hasRef )
+            if (!string.IsNullOrEmpty(schemaType) && !hasRef)
             {
                 if (!isGuid)
                     parameter.Schema = new OpenApiSchema() { Type = schemaType };
                 else
-                    parameter.Schema = new OpenApiSchema() { Type = schemaType, Format = "guid", Pattern = GUID_PATTERN};
+                    parameter.Schema = new OpenApiSchema() { Type = schemaType, Format = "guid", Pattern = GUID_PATTERN };
             }
             else if (!string.IsNullOrEmpty(schemaType) && hasRef)
             {
@@ -1508,7 +2531,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
             }
-                return parameter;
+            return parameter;
         }
 
         private OpenApiServer AddEthosServers(string description, string url, string variable = "")
@@ -1539,6 +2562,25 @@ namespace Ellucian.Colleague.Api.Controllers
             return
                    (type.GetCustomAttributes(typeof(DataContractAttribute), true).Any()
                     || type.GetCustomAttributes(typeof(JsonObjectAttribute), true).Any());
+        }
+
+        /// <summary>
+        /// Get the name to be displayed
+        /// </summary>
+        /// <param name="prop">Type of object to retrieve MetaData for.</param>
+        /// <returns>SchemasAttribute</returns>
+        private MetadataAttribute[] GetMetadaAttributes(PropertyInfo prop)
+        {
+            if (prop != null)
+            {
+                var dataMemberAttributes = (MetadataAttribute[])prop.GetCustomAttributes(typeof(MetadataAttribute), false);
+                if (dataMemberAttributes != null && dataMemberAttributes.Any())
+                {
+                    return dataMemberAttributes;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -1587,55 +2629,6 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// IterateProperties
-        /// </summary>
-        /// <param name="filterGroupName">string representing the filterGroup</param>
-        /// <param name="T">property type</param>
-        /// <param name="baseName">property name</param>
-        /// <param name="checkForFilterGroup">validate the property is a member of a filterGroup.  used when a parent object is defined as 
-        /// a filterable property, and all the children are then a memeber of that filter.</param>
-        /// <returns>IEnumerable</returns>
-        private IEnumerable<string> IterateProperties(string filterGroupName, Type T, string baseName = "", bool checkForFilterGroup = true)
-        {
-            var props = T.GetProperties();
-
-            if (props == null)
-                yield break;
-
-            foreach (var property in props)
-            {
-                var name = GetDisplayName(property); // property.Name;
-                var type = GetGenericType(property.PropertyType);
-
-                // Is the property a parent type AND a member of a filter group
-                // if so, then return all the children associated with it
-                if ((IsParent(type)) && (IsFilter(property, filterGroupName)))
-                {
-                    foreach (var info in IterateProperties(filterGroupName, type, name, false))
-                    {
-                        yield return string.IsNullOrEmpty(baseName) ? info : string.Format("{0}.{1}", baseName, info);
-                    }
-                }
-                //If the property is a parent that may have filterable properties, continue processing
-                else if (IsParent(type))
-                {
-                    foreach (var info in IterateProperties(filterGroupName, type, name, checkForFilterGroup))
-                    {
-                        yield return string.IsNullOrEmpty(baseName) ? info : string.Format("{0}.{1}", baseName, info);
-                    }
-                }
-                else
-                {
-                    if ((!checkForFilterGroup) || (IsFilter(property, filterGroupName)))
-                    {
-                        var displayName = GetDisplayName(property);
-                        yield return string.IsNullOrEmpty(baseName) ? displayName : string.Format("{0}.{1}", baseName, displayName);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Get the generic type for a list
         /// </summary>
         /// <param name="T">Type</param>
@@ -1648,15 +2641,10 @@ namespace Ellucian.Colleague.Api.Controllers
             return T.GetGenericArguments()[0];
         }
 
-
- 
-
-
-
         private string ConvertJsonPropertyType(string jsonPropertyType, string jsonTitle = "", string conversion = "")
 
         {
-            string OpenApiSchemaType ="string";
+            string OpenApiSchemaType = "string";
             if ((!string.IsNullOrEmpty(jsonTitle)) && (jsonTitle.EndsWith("[]")))
             {
                 return "array";
@@ -1680,15 +2668,27 @@ namespace Ellucian.Colleague.Api.Controllers
                         }
                         else
                         {
-                            OpenApiSchemaType ="number";
+                            OpenApiSchemaType = "number";
                         }
                     }
                     else
                     {
-                        OpenApiSchemaType = "Integer";
+                        OpenApiSchemaType = "integer";
                     }
 
 
+                    break;
+                case "bool":
+                    OpenApiSchemaType = "boolean";
+                    break;
+                case "decimal":
+                    OpenApiSchemaType = "number";
+                    break;
+                case "integer":
+                    OpenApiSchemaType = "integer";
+                    break;
+                case "float":
+                    OpenApiSchemaType = "number";
                     break;
                 case "date":
                     OpenApiSchemaType = "string";
@@ -1800,6 +2800,11 @@ namespace Ellucian.Colleague.Api.Controllers
                         var extendedData = extendedDataListSorted.FirstOrDefault(prop => prop.JsonPath == filter.JsonPath && prop.JsonTitle == filter.JsonTitle);
                         if (extendedData != null)
                         {
+                            if (IsWeb(apiConfiguration))
+                            {
+                                if (!IsFilter(extendedData.PropertyInfo, "criteria"))
+                                    continue;
+                            }
                             try
                             {
                                 var propSplit =
@@ -1814,7 +2819,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                     var response = BuildOpenApiSchemaResponse(extendedData);
 
                                     filterSchema.Properties.Add(extendedData.JsonTitle.Replace("[]", ""), response);
-                                    
+
 
                                 }
                                 else
@@ -1893,7 +2898,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                                 parentSchema.Properties.Add(propSplit[i], BuildOpenApiSchemaResponse(extendedData));
                                             }
                                         }
-                                    }                         
+                                    }
 
                                 }
 
@@ -1941,7 +2946,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     if (extendedData != null)
                     {
                         extendedData.Description = query.Description;
-                        var response = BuildOpenApiSchemaResponse(extendedData,false, false);
+                        var response = BuildOpenApiSchemaResponse(extendedData, false, false);
                         nameQuerySchema.Properties.Add(extendedData.JsonTitle.Replace("[]", ""), response);
                     }
                 }
@@ -1953,25 +2958,25 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="extendConfig">Domain.Base.Entities.EthosExtensibleData</param>
         /// <param name="ethosApiConfiguration">EthosApiConfiguration</param>
-        /// <param name="isPutPost">whether this is Put or POST</param>
+        /// <param name="method">which method is calling this </param>
         /// <returns>OpenApiSchema</returns>
 
         private OpenApiSchema GetOpenApiSchemaFromExtensibleDataAsync(EthosApiConfiguration ethosApiConfiguration,
-            Domain.Base.Entities.EthosExtensibleData extendConfig, bool isPutPost = false)
+            Domain.Base.Entities.EthosExtensibleData extendConfig, string method = "")
         {
             OpenApiSchema schemaRootNode = null;
             var extendedDataListSorted = new List<Ellucian.Colleague.Domain.Base.Entities.EthosExtensibleDataRow>();
             extendedDataListSorted.AddRange(extendConfig.ExtendedDataList);
             SortedSet<string> requiredProperties = new SortedSet<string>();
-                schemaRootNode = new OpenApiSchema()
-                {
-                   
-                    Type = "object",
-                    //Properties = new Dictionary<string, OpenApiSchema>(),
-                    //AdditionalPropertiesAllowed = false,                   
-                    //Title = extendConfig.ApiResourceName + "_" + extendConfig.ApiVersionNumber
+            schemaRootNode = new OpenApiSchema()
+            {
 
-                };
+                Type = "object",
+                //Properties = new Dictionary<string, OpenApiSchema>(),
+                //AdditionalPropertiesAllowed = false,                   
+                //Title = extendConfig.ApiResourceName + "_" + extendConfig.ApiVersionNumber
+
+            };
 
             //set up the Id property
             if (!string.IsNullOrEmpty(ethosApiConfiguration.PrimaryGuidSource))
@@ -1982,13 +2987,13 @@ namespace Ellucian.Colleague.Api.Controllers
                                     Type = "string",
                                     Title = "ID",
                                     Format = "guid",
-                                    Description = "The global identifier for the resource",
+                                    Description = "The global identifier for the resource.",
                                     Pattern = GUID_PATTERN
 
                                 });
                 //if this is not a schema for put/post then Id is going to be there in the response and hence it is required.
-                if (!isPutPost)
-                requiredProperties.Add("id");
+                if (method != "put")
+                    requiredProperties.Add("id");
             }
             else
             {
@@ -2042,16 +3047,16 @@ namespace Ellucian.Colleague.Api.Controllers
                                 extendedData.TransColumnName = idDataInfo.TransColumnName;
                                 extendedData.TransFileName = idDataInfo.TransFileName;
                                 extendedData.TransTableName = idDataInfo.TransTableName;
-                            }                            
+                            }
                             var response = BuildOpenApiSchemaResponse(extendedData);
                             schemaRootNode.Properties.Add("id", response);
                         }
                     }
                     //if this is not a schema for put/post then Id is going to be there in the response and hence it is required.
-                    if (!isPutPost)
+                    if (method != "put" && method != "post")
                         requiredProperties.Add("id");
                 }
-                else
+                else if (!string.IsNullOrEmpty(ethosApiConfiguration.PrimaryEntity))
                 {
                     schemaRootNode.Properties.Add("id",
                                     new OpenApiSchema
@@ -2062,18 +3067,18 @@ namespace Ellucian.Colleague.Api.Controllers
 
                                     });
                     //if this is not a schema for put/post then Id is going to be there in the response and hence it is required.
-                    if (!isPutPost)
+                    if (method != "put" && method != "post")
                         requiredProperties.Add("id");
                 }
             }
             //for put/post we need to remove those fields for the extendedDataList that are inquiry 
             foreach (var extendedData in extendedDataListSorted)
-            {                
+            {
                 try
                 {
                     bool skipRecord = false;
                     //skip inquiry fields in PUT/POST
-                    if (isPutPost)
+                    if (method == "put" || method == "post")
                     {
                         if (extendConfig.InquiryFields != null && extendConfig.InquiryFields.Any() && extendConfig.InquiryFields.Contains(extendedData.ColleagueColumnName))
                         {
@@ -2081,7 +3086,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         }
                     }
                     //skip preparedResponse in Get Response
-                    if (!isPutPost && IspredefinedInputs(extendedData))
+                    if (method != "put" && method != "post" && IspredefinedInputs(extendedData))
                     {
                         skipRecord = true;
                     }
@@ -2100,7 +3105,11 @@ namespace Ellucian.Colleague.Api.Controllers
                             schemaRootNode.Properties.Add(extendedData.JsonTitle.Replace("[]", ""), response);
                             if (extendedData.Required)
                             {
-                                requiredProperties.Add(extendedData.JsonTitle);
+                                //due to partial PUT, nothing is required so skip the required block for PUT for web types for now. 
+                                // for web type api, for POST, id is generated and hence not required.
+                                if (IsWeb(ethosApiConfiguration) && method == "put") { }
+                                else if (IsWeb(ethosApiConfiguration) && method == "post" && extendedData.JsonTitle == "id") { }
+                                else requiredProperties.Add(extendedData.JsonTitle);
                             }
                         }
                         // this is embedded levels
@@ -2136,10 +3145,16 @@ namespace Ellucian.Colleague.Api.Controllers
                                                 childSchemaItems.Properties.Add(propSplit[i].Replace("[]", ""), childSchema);
                                                 if (extendedData.Required)
                                                 {
-                                                    if (childSchemaItems.Required == null && !childSchemaItems.Required.Any())
-                                                        childSchemaItems.Required = new SortedSet<string>() { propSplit[i] };
+                                                    //due to partial PUT, nothing is required so skip the required block for PUT for web types for now. 
+                                                    //this is not an array so we are good here. 
+                                                    if (IsWeb(ethosApiConfiguration) && method == "put") { }
                                                     else
-                                                        childSchemaItems.Required.Add(propSplit[i]);
+                                                    {
+                                                        if (childSchemaItems.Required == null && !childSchemaItems.Required.Any())
+                                                            childSchemaItems.Required = new SortedSet<string>() { propSplit[i] };
+                                                        else
+                                                            childSchemaItems.Required.Add(propSplit[i]);
+                                                    }
                                                 }
                                                 parentSchema.Items = childSchemaItems;
                                             }
@@ -2183,7 +3198,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                             }
                                             parentSchema.Items = childSchemaItems;
 
-                                            
+
                                         }
                                         else
                                         {
@@ -2197,7 +3212,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                                     childSchemaItems.Required.Add(propSplit[i]);
                                             }
                                             parentSchema.Items = childSchemaItems;
-                                            
+
                                         }
                                         //parentSchema.Properties.Add(propSplit[i].Replace("[]", ""), childSchema);
                                     }
@@ -2206,15 +3221,21 @@ namespace Ellucian.Colleague.Api.Controllers
                                         parentSchema.Properties.Add(propSplit[i], BuildOpenApiSchemaResponse(extendedData));
                                         if (extendedData.Required)
                                         {
-                                            if (parentSchema.Required == null && !parentSchema.Required.Any())
-                                                parentSchema.Required = new SortedSet<string>() { propSplit[i] };
+                                            //due to partial PUT, nothing is required so skip the required block for PUT for web types for now. 
+                                            //this is not an array so we are good here. 
+                                            if (IsWeb(ethosApiConfiguration) && method == "put") { }
                                             else
-                                                parentSchema.Required.Add(propSplit[i]);
+                                            {
+                                                if (parentSchema.Required == null && !parentSchema.Required.Any())
+                                                    parentSchema.Required = new SortedSet<string>() { propSplit[i] };
+                                                else
+                                                    parentSchema.Required.Add(propSplit[i]);
+                                            }
                                         }
 
                                     }
                                 }
-                            }         
+                            }
                         }
                     }
 
@@ -2237,7 +3258,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
 
         private OpenApiSchema BuildOpenApiSchemaResponse(Domain.Base.Entities.EthosExtensibleDataRow extendedData, bool isIdSchema = false, bool displayLineage = true)
-        {           
+        {
             var OpenApiSchema = new OpenApiSchema
             {
                 Type = ConvertJsonPropertyType(extendedData.JsonPropertyType, extendedData.JsonTitle, extendedData.Conversion),
@@ -2251,10 +3272,10 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             if (!string.IsNullOrEmpty(extendedData.Description))
             {
-                OpenApiSchema.Description = extendedData.Description.Replace(_VM, ' ').Replace(_SM, ' ');
+                OpenApiSchema.Description = extendedData.Description.Replace(DmiString._VM, ' ').Replace(DmiString._SM, ' ');
             }
             //OpenApiSchema.AdditionalPropertiesAllowed = false;
-           
+
             if ((extendedData.JsonPropertyType.Equals("date", StringComparison.OrdinalIgnoreCase))
             || (extendedData.JsonPropertyType.Equals("date-time", StringComparison.OrdinalIgnoreCase)))
             {
@@ -2267,7 +3288,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     OpenApiSchema.Pattern = GUID_PATTERN;
                     OpenApiSchema.MaxLength = Guid.Empty.ToString().Length;
                     OpenApiSchema.Format = "guid";
-                }               
+                }
             }
             else if (!string.IsNullOrEmpty(extendedData.Conversion))
             {
@@ -2292,7 +3313,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 catch (Exception)
                 {
-                    OpenApiSchema.Title =  extendedData.JsonTitle;
+                    OpenApiSchema.Title = extendedData.JsonTitle;
                 }
 
             }
@@ -2334,7 +3355,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     if (extendedData.TransFileName.Contains(";"))
                     {
                         var values = extendedData.TransFileName.Split(';');
-                        foreach( var val in values)
+                        foreach (var val in values)
                         {
                             OpenApiSchema.Enum.Add(new OpenApiString(val));
                         }
@@ -2342,7 +3363,29 @@ namespace Ellucian.Colleague.Api.Controllers
                     else
                     {
                         OpenApiSchema.Enum.Add(new OpenApiString(extendedData.TransFileName));
-                    }                    
+                    }
+                }
+            }
+            if (extendedData.TransType == "E")
+            {
+                if (!string.IsNullOrEmpty(extendedData.TransFileName))
+                {
+                    //var responseValues = new List<OpenApiString>();
+                    if (extendedData.TransFileName.Contains(";"))
+                    {
+                        var values = extendedData.TransFileName.Split(';');
+                        foreach (var val in values)
+                        {
+                            OpenApiSchema.Enum.Add(new OpenApiString(val));
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var enumeration in extendedData.Enumerations)
+                    {
+                        OpenApiSchema.Enum.Add(new OpenApiString(enumeration.EnumerationValue));
+                    }
                 }
             }
             return OpenApiSchema;
@@ -2355,12 +3398,59 @@ namespace Ellucian.Colleague.Api.Controllers
         private bool IspredefinedInputs(Domain.Base.Entities.EthosExtensibleDataRow extendedData)
         {
             bool ispredefinedInputs = false;
-            if (extendedData != null && !string.IsNullOrEmpty(extendedData.JsonPath) && extendedData.JsonPath.Contains("predefinedInputs")) 
+            if (extendedData != null && !string.IsNullOrEmpty(extendedData.JsonPath) && extendedData.JsonPath.Contains("predefinedInputs"))
                 ispredefinedInputs = true;
             return ispredefinedInputs;
         }
-        
-       
+
+        /// <summary>
+        /// Gets all enum member values for given enum type
+        /// </summary>
+        /// <param name="fieldType">enum type</param>
+        /// <returns>enum member values</returns>
+        private static string[] GetEnumNames(Type fieldType)
+        {
+            string[] enumNames;
+            var names = Enum.GetNames(fieldType);
+            var enumMemberValues = new List<string>();
+            foreach (var name in names)
+            {
+                if (((EnumMemberAttribute[])fieldType.GetField(name).GetCustomAttributes(typeof(EnumMemberAttribute), true)).Any())
+                {
+                    var enumMemberAttribute = ((EnumMemberAttribute[])fieldType.GetField(name).GetCustomAttributes(typeof(EnumMemberAttribute), true)).Single();
+                    if (enumMemberAttribute != null)
+                        enumMemberValues.Add(enumMemberAttribute.Value);
+                }
+                else
+                {
+                    enumMemberValues.Add(name);
+                }
+            }
+            enumNames = enumMemberValues.ToArray();
+            return enumNames;
+        }
+
+        private static string GetJsonConverterTypeName(PropertyInfo pi)
+        {
+            string converterTypeName = "";
+            if (pi != null)
+            {
+                var jsonConverterAttributes = (JsonConverterAttribute[])pi.GetCustomAttributes(typeof(JsonConverterAttribute), false);
+                if (jsonConverterAttributes != null && jsonConverterAttributes.Any())
+                {
+                    var converterType = jsonConverterAttributes.FirstOrDefault(x => x.ConverterType != null && !string.IsNullOrEmpty(x.ConverterType.Name));
+                    converterTypeName = converterType.ConverterType.Name;
+                }
+            }
+            return converterTypeName;
+        }
+
+        private static string GetJsonPropertyTypeForDateTime(PropertyInfo pi)
+        {
+            string jsonConverterTypeName = GetJsonConverterTypeName(pi);
+            string jsonPropertyType = !string.IsNullOrEmpty(jsonConverterTypeName) && jsonConverterTypeName == nameof(DateOnlyConverter) ? "date" : "datetime";
+            return jsonPropertyType;
+        }
     }
 
 
@@ -2381,7 +3471,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 x = x.Replace("-beta", "");
                 y = y.Replace("-beta", "");
 
-                if (x == y) return 1;
+                if (x == y || x == string.Empty) return 1;
 
                 var first = x.Split(new char[] { '.' }).Select(xx => int.Parse(xx)).ToList();
                 var second = y.Split(new char[] { '.' }).Select(yy => int.Parse(yy)).ToList();
@@ -2424,7 +3514,7 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 //display error message for invalid version like x
                 throw new KeyNotFoundException("Requested version is not supported.");
-            }   
+            }
         }
     }
 

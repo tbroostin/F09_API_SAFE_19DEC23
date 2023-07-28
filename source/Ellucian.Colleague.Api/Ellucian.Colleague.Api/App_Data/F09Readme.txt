@@ -3,7 +3,7 @@
 **
 **        Fielding Ellucian Web Student (Self Service)
 **        -------------------------------------------
-**        https://github.com/TOAD-CODE/FGU-WebApi
+**        
 **
 **-----------------------------------------------------------------
 
@@ -12,16 +12,12 @@
 **-----------------------------------------------------------------
   
   FGU-dev
-      purpose..............: matches build that is currently deployed to TEST18
-      Colleague.Api Version: 1.37.1.2
-      deployed date........: 01/14/21
+      purpose..............: matches build that is currently deployed to TEST18/DEV3/PROJDB18
+      Colleague.Api Version: 1.40.0.11
+      deployed date........: 07/28/23
       deployed commit......: see server for actual commit (this is inside source control)
 
-  master
-      purpose..............: matches build that is currently deployed to PRODUCTION
-      Colleague.Api Version: 1.33.1.6
-      deployed date........: 12/13/21
-      deployed commit......: see server for actual commit (this is inside source control)
+  
 
 **-----------------------------------------------------------------
           Deployment Log
@@ -39,6 +35,7 @@
   01/14/22 TEST18                                                      -override reg dates cache timer
   01/19/22 LIVE                                                        -override reg dates cache timer
   12/03/22 TEST18   v1.37.1.2                                          -upgrade API to v1.37
+  07/28/23 DEV3     v1.40.0.11                                         -upgrade API to v1.40
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions

@@ -35,6 +35,9 @@ using SectionRegistration = Ellucian.Colleague.Dtos.Student.SectionRegistration;
 using System.Diagnostics;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Data.Colleague.Exceptions;
+using System.Web.Http.ModelBinding;
+using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -752,7 +755,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (ColleagueSessionExpiredException tex)
             {
-                string message = string.Format("Timeout have occurred while retrieving registration eligibility for the student {0}", studentId);
+                string message = string.Format("Timeout has occurred while retrieving registration eligibility for the student {0}", studentId);
                 _logger.Error(tex, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
@@ -765,6 +768,58 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(e, e.Message);
                 throw CreateHttpResponseException("An error occurred during request processing: " + e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retreive student's registration priority information.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <returns><see cref="RegistrationPriority">RegistrationPriority</see> registration priority information specific to a student</returns>
+        /// <accessComments>
+        /// A person may retrieve their own registration priorities.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration priorities for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration priorities for any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
+        public async Task<IEnumerable<Dtos.Student.RegistrationPriority>> GetRegistrationPrioritiesAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                _logger.Error("Invalid studentId parameter while retrieving student's registration priorities");
+                throw CreateHttpResponseException("The studentId is required to retrieve student's registration priorities.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await _studentService.GetRegistrationPrioritiesAsync(studentId);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = "Timeout has occurred while retrieving registration priorities for the student: " + studentId;
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException peex)
+            {
+                string message = "Either user is not self or does not have appropriate permissions to retrieving registration priorities for the student: " + studentId;
+                _logger.Error(peex, message);
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                string message = "An exception occurred while retrieving registration priorities for the student: " + studentId;
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -1210,7 +1265,107 @@ namespace Ellucian.Colleague.Api.Controllers
 
             catch (ColleagueSessionExpiredException tex)
             {
-                string message = string.Format("Timeout have occurred while registering for the student {0}", studentId);
+                string message = string.Format("Timeout has occurred while registering for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException("An error occurred during request processing: " + e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+
+        /// <summary>
+        /// Execute a set of registration actions to validate success or failure, but do not actually record the registration in the database.
+        /// </summary>
+        /// <param name="studentGuid">GUID of student to register</param>
+        /// <param name="studentRegistrationRequest">A registration request</param>
+        /// <returns>Results of the registration</returns>
+        /// <accessComments>
+        /// The user must have the REGISTER.VALIDATION.ONLY permission
+        /// </accessComments>
+        [HttpPost]
+        public async Task<StudentRegistrationValidationOnlyResponse> PostRegisterValidationOnlyAsync(string studentGuid, [FromBody] Dtos.Student.StudentRegistrationValidationOnlyRequest studentRegistrationRequest)
+        {
+            if (string.IsNullOrEmpty(studentGuid))
+            {
+                _logger.Error("Missing studentGuid");
+                throw CreateHttpResponseException("Missing studentGuid", HttpStatusCode.BadRequest);
+            }
+            if (studentRegistrationRequest == null || studentRegistrationRequest.SectionActionRequests == null || studentRegistrationRequest.SectionActionRequests.Count() == 0)
+            {
+                _logger.Error("Invalid studentRegistrationRequest");
+                throw CreateHttpResponseException("Invalid studentRegistrationRequest.", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                StudentRegistrationValidationOnlyResponse response = await _studentService.RegisterValidationOnlyAsync(studentGuid, studentRegistrationRequest);
+                return response;
+            }
+
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout has occurred while registering for the student {0}", studentGuid);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException("An error occurred during request processing: " + e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Process course section registration requests for a student, bypassing validations. For use with cross-registration.
+        /// </summary>
+        /// <param name="studentGuid">GUID of student to register</param>
+        /// <param name="studentRegistrationRequest">A registration request</param>
+        /// <returns>Results of the registration</returns>
+        /// <accessComments>
+        /// The user must have the REGISTER.SKIP.VALIDATION permission
+        /// </accessComments>
+        [HttpPost]
+        public async Task<StudentRegistrationSkipValidationsResponse> PostRegisterSkipValidationsAsync(string studentGuid, [FromBody] Dtos.Student.StudentRegistrationSkipValidationsRequest studentRegistrationRequest)
+        {
+            if (string.IsNullOrEmpty(studentGuid))
+            {
+                _logger.Error("Missing studentGuid");
+                throw CreateHttpResponseException("Missing studentGuid", HttpStatusCode.BadRequest);
+            }
+            if (studentRegistrationRequest == null || studentRegistrationRequest.SectionActionRequests == null || studentRegistrationRequest.SectionActionRequests.Count() == 0)
+            {
+                _logger.Error("Invalid studentRegistrationRequest");
+                throw CreateHttpResponseException("Invalid studentRegistrationRequest.", HttpStatusCode.BadRequest);
+            }
+            if ((studentRegistrationRequest.CrossRegHomeStudent ?? false) && (studentRegistrationRequest.CrossRegVisitingStudent ?? false))
+            {
+                var message = "CrossRegHomeStudent and CrossRegVisitingStudent cannot both be true.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                StudentRegistrationSkipValidationsResponse response = await _studentService.RegisterSkipValidationsAsync(studentGuid, studentRegistrationRequest);
+                return response;
+            }
+
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout has occurred while registering for the student {0}", studentGuid);
                 _logger.Error(tex, message);
                 throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
@@ -1809,6 +1964,92 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             //Update is not supported for Colleague but Data Model requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>        
+        /// Updates a Student.
+        /// </summary>
+        /// <param name="guid">Id of the Student to update</param>
+        /// <param name="student"><see cref="Dtos.Student">Student</see> to create</param>
+        /// <returns>Updated <see cref="Dtos.Students">Student</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateStudentInformation)]
+        public async Task<Dtos.Students2> PutStudent2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Students2 student)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            if (student == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null student argument",
+                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+            }
+            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
+            }
+            if (string.IsNullOrEmpty(student.Id))
+            {
+                student.Id = guid.ToLowerInvariant();
+            }
+            else if (!string.Equals(guid, student.Id, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+            }      
+
+            try
+            {
+                _studentService.ValidatePermissions(GetPermissionsMetaData());
+
+                var dpList = await _studentService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                var studentReturn = await _studentService.UpdateStudents2Async(
+                  await PerformPartialPayloadMerge(student, async () => await _studentService.GetStudentsByGuid2Async(guid, true),
+                  dpList, _logger));
+
+                AddEthosContextProperties(dpList,
+                    await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
+
+                return studentReturn;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
         }
 
         /// <summary>

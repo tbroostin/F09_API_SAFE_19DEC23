@@ -114,7 +114,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // Limit the list of accounts using the filter component criteria. If the data is not filtered,
             // return the finance query object for all the GL accounts assigned to the user.
             string[] filteredUserGlAccounts = await ApplyFilterCriteria(criteria, allGlAccountsForUser);
-            
+
             if (filteredUserGlAccounts != null && filteredUserGlAccounts.Any())
             {
                 // If the fiscal year is open, get the information from GL.ACCTS
@@ -271,7 +271,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Get GL activity transactions for the set of filtered GL accounts.
             var filteredUserGlAccountsList = filteredUserGlAccounts.ToList();
-            financeQueryActivityTransactions = await QueryGlActivitiesDetailAsync(filteredUserGlAccountsList, fiscalYear);
+            financeQueryActivityTransactions = await QueryGlActivitiesDetailAsync(filteredUserGlAccountsList, fiscalYear, glClassConfiguration, glAccountStructure.MajorComponentStartPositions);
             return financeQueryActivityTransactions;
         }
 
@@ -281,7 +281,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="glAccounts">The GL account numbers.</param>
         /// <param name="fiscalYear">The GL fiscal year.</param>
         /// <returns>Returns the list of activity detail posted to the GL account for the fiscal year.</returns>
-        private async Task<List<FinanceQueryActivityDetail>> QueryGlActivitiesDetailAsync(List<string> glAccounts, string fiscalYear)
+        private async Task<List<FinanceQueryActivityDetail>> QueryGlActivitiesDetailAsync(List<string> glAccounts, string fiscalYear, GeneralLedgerClassConfiguration glClassConfiguration, IList<string> majorComponentStartPosition)
         {
             List<FinanceQueryActivityDetail> glActivities = new List<FinanceQueryActivityDetail>();
 
@@ -590,6 +590,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     pooleeAccts = glpFyrDataContracts.SelectMany(x => x.GlpPooleeAcctsList).ToList();
                 }
 
+                #region Prerequisites for calculating Estimated Opening Balance 
+
+                // Not included in loop as it is one time query
+                // Read the GEN.LDGR record to see if the fiscal year is open or not.
+                List<string> glsFyrGlANumber = new List<string>();
+                List<string> glspreviousFyrGlANumber = new List<string>();
+                var fiscalYearGenLdgrContract = await DataReader.ReadRecordAsync<GenLdgr>(fiscalYear.ToString());
+
+                // Calculate the previous fiscal year.
+                int previousFiscalYear = 0;
+                try
+                {
+                    previousFiscalYear = Convert.ToInt32(fiscalYear) - 1;
+                }
+                catch (Exception)
+                {
+                    logger.Warn(string.Format("Error converting fiscal year {0} from string to int.", fiscalYear));
+                }
+
+                var previousFiscalYearGenLdgrContract = await DataReader.ReadRecordAsync<GenLdgr>(previousFiscalYear.ToString());
+
+                #endregion
+
                 foreach (var glString in glAccounts)
                 {
                     var glAccountDomain = new FinanceQueryActivityDetail(glString);
@@ -612,18 +635,196 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
                     }
 
+                    #region Get GL accounts for Estimated Opening Balance/Closing Year Amount
+
+                    GlClass glClass = GlClass.Asset;
+                    try
+                    {
+                        // Obtain the GL class for the GL account.
+                        glClass = GlAccountUtility.GetGlAccountGlClass(glAccountDomain.GlAccountNumber, glClassConfiguration, majorComponentStartPosition);
+                    }
+                    catch (ApplicationException aex)
+                    {
+                        logger.Warn(aex.Message);
+                    }
+
+                    // Revenue and expense do not have opening balance/closing amount so we only need 
+                    // to do the following if the GL account is an asset, liability or fund balance type.
+                    if (glClass == GlClass.Asset || glClass == GlClass.Liability || glClass == GlClass.FundBalance)
+                    {
+
+                        // Read the GEN.LDGR record to see if the fiscal year is open or not.
+                        if (fiscalYearGenLdgrContract != null && !string.IsNullOrEmpty(fiscalYearGenLdgrContract.GenLdgrStatus))
+                        {
+
+                            // If the fiscal year is open, determine the status of the previous fiscal year.
+                            if (fiscalYearGenLdgrContract.GenLdgrStatus.ToUpperInvariant() == "O")
+                            {
+
+                                if (previousFiscalYear != 0)
+                                {
+                                    // Read the previous fiscal year record to check if the status is open or not.
+
+                                    if (previousFiscalYearGenLdgrContract != null && !string.IsNullOrEmpty(previousFiscalYearGenLdgrContract.GenLdgrStatus))
+                                    {
+                                        // If the previous fiscal year is open, calculate estimated opening balances
+                                        // for asset, liability and fund balance accounts.
+                                        // If the previous fiscal year is not open, do nothing.
+                                        if (previousFiscalYearGenLdgrContract.GenLdgrStatus.ToUpperInvariant() == "O")
+                                        {
+                                            if (glClass == GlClass.FundBalance)
+                                            {
+                                                // For Fund Balance accounts only, the estimated opening balance is the one stored in the GLS.fiscalyear record.
+                                                glsFyrGlANumber.Add(glAccountDomain.GlAccountNumber);
+                                            }
+
+                                            else if (glClass == GlClass.Asset || glClass == GlClass.Liability)
+                                            {
+                                                // For Asset and Liability accounts only, when the previous fiscal year is open,
+                                                // add the open balance and monthly debits and subtract monthly credits from the GLS.previousyear record.
+                                                glspreviousFyrGlANumber.Add(glAccountDomain.GlAccountNumber);
+
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        logger.Warn("GEN.LDGR record or status is invalid for previous fiscal year " + previousFiscalYear);
+                                    }
+                                }
+                            }
+
+                        }
+                        else
+                        {
+                            logger.Warn("Unable to determine fiscal year status from GEN.LDGR for fiscal year " + fiscalYear);
+                        }
+                    }
+                    #endregion
+
                     // Remove those encumbrance or Requisition transactions that have a $0.00 amount. 
                     // There shouldn't be any but just in case, we do not want to display $0.00.
                     glAccountDomain.RemoveZeroDollarEncumbranceTransactions();
 
                     // Add the finance query activity detail entity to the list of finance query activity 
                     // domain entities, if the entity has any transactions.
-                    if (glAccountDomain.Transactions.Any())
-                    {
+                    // As we need to add all the EOB into considerations, we are considering all the glAccountDomain
+                    //if (glAccountDomain.Transactions.Any() )
+                    //{
                         glActivities.Add(glAccountDomain);
-                    }
+                    //}
 
                 }
+
+                #region Apply Estimated Opening Balance 
+
+                List<GlsFyr> glAccountGlsContract = new List<GlsFyr>();
+                List<GlsFyr> glAccountpreviousGlsContract = new List<GlsFyr>();
+
+                var glsFyrYearId = "GLS." + fiscalYear.ToString();
+                glAccountGlsContract = await BulkReadRecordAsync<GlsFyr>(glsFyrYearId, glsFyrGlANumber.ToArray());
+
+                var previousGlsFyrYearId = "GLS." + previousFiscalYear.ToString();
+                glAccountpreviousGlsContract = await BulkReadRecordAsync<GlsFyr>(previousGlsFyrYearId, glspreviousFyrGlANumber.ToArray());
+
+                foreach (var glAccts in glActivities)
+                {
+
+
+                    GlClass glClass = GlClass.Asset;
+                    try
+                    {
+                        // Obtain the GL class for the GL account.
+                        glClass = GlAccountUtility.GetGlAccountGlClass(glAccts.GlAccountNumber, glClassConfiguration, majorComponentStartPosition);
+                    }
+                    catch (ApplicationException aex)
+                    {
+                        logger.Warn(aex.Message);
+                    }
+
+                    // Revenue and expense do not have opening balance/closing amount so we only need 
+                    // to do the following if the GL account is an asset, liability or fund balance type.
+                    if (glClass == GlClass.Asset || glClass == GlClass.Liability || glClass == GlClass.FundBalance)
+                    {
+
+                        // Read the GEN.LDGR record to see if the fiscal year is open or not.
+                        if (fiscalYearGenLdgrContract != null && !string.IsNullOrEmpty(fiscalYearGenLdgrContract.GenLdgrStatus))
+                        {
+                            // If the fiscal year is open, determine the status of the previous fiscal year.
+                            if (fiscalYearGenLdgrContract.GenLdgrStatus.ToUpperInvariant() == "O")
+                            {
+
+                                if (previousFiscalYear != 0)
+                                {
+                                    // Read the previous fiscal year record to check if the status is open or not.
+
+                                    if (previousFiscalYearGenLdgrContract != null && !string.IsNullOrEmpty(previousFiscalYearGenLdgrContract.GenLdgrStatus))
+                                    {
+                                        // If the previous fiscal year is open, calculate estimated opening balances
+                                        // for asset, liability and fund balance accounts.
+                                        // If the previous fiscal year is not open, do nothing.
+                                        if (previousFiscalYearGenLdgrContract.GenLdgrStatus.ToUpperInvariant() == "O")
+                                        {
+                                            if (glClass == GlClass.FundBalance)
+                                            {
+                                                // For Fund Balance accounts only, the estimated opening balance is the one stored in the GLS.fiscalyear record.
+                                                if (glAccountGlsContract.Exists(x => x.Recordkey == glAccts.GlAccountNumber))
+                                                {
+                                                    decimal? bal = glAccountGlsContract.Find(x => x.Recordkey == glAccts.GlAccountNumber).GlsEstimatedOpenBal;
+                                                    glAccts.EstimatedOpeningBalance = (decimal)(bal.HasValue ? bal : 0m);
+                                                }
+
+                                            }
+
+                                            else if (glClass == GlClass.Asset || glClass == GlClass.Liability)
+                                            {
+                                                // For Asset and Liability accounts only, when the previous fiscal year is open,
+                                                // add the open balance and monthly debits and subtract monthly credits from the GLS.previousyear record.
+
+                                                if (glAccountpreviousGlsContract.Exists(x => x.Recordkey == glAccts.GlAccountNumber))
+                                                {
+                                                    var prevglsContract = glAccountpreviousGlsContract.Find(x => x.Recordkey == glAccts.GlAccountNumber);
+                                                    decimal? bal = prevglsContract.OpenBal;
+                                                    glAccts.EstimatedOpeningBalance = (decimal)(bal.HasValue ? bal : 0m);
+
+                                                    //glAccountDomain.EstimatedOpeningBalance = glAccountpreviousGlsContract.OpenBal.HasValue ? glAccountpreviousGlsContract.OpenBal.Value : 0m;
+                                                    var monthlyDebits = prevglsContract.Mdebits;
+                                                    if (monthlyDebits != null)
+                                                    {
+                                                        foreach (var debitAmt in monthlyDebits)
+                                                        {
+                                                            glAccts.EstimatedOpeningBalance += debitAmt.HasValue ? debitAmt.Value : 0m;
+                                                        }
+                                                    }
+                                                    var monthlyCredits = prevglsContract.Mcredits;
+                                                    if (monthlyCredits != null)
+                                                    {
+                                                        foreach (var creditAmt in monthlyCredits)
+                                                        {
+                                                            glAccts.EstimatedOpeningBalance -= creditAmt.HasValue ? creditAmt.Value : 0m;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        logger.Warn("GEN.LDGR record or status is invalid for previous fiscal year " + previousFiscalYear);
+                                    }
+                                }
+                            }
+
+                        }
+                        else
+                        {
+                            logger.Warn("Unable to determine fiscal year status from GEN.LDGR for fiscal year " + fiscalYear);
+                        }
+                    }
+                }
+                #endregion
+
+                glActivities.RemoveAll(x => x.EstimatedOpeningBalance == 0 && !(x.Transactions != null && x.Transactions.Any()) );
             }
             catch (ColleagueSessionExpiredException csee)
             {
@@ -1553,7 +1754,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 actualsAmount = glsContract.OpenBal.HasValue ? glsContract.OpenBal.Value : 0m;
                 bool includeYEClosingAmounts = true;
                 if (cfWebDefaults != null)
-                {                    
+                {
                     if (!string.IsNullOrEmpty(cfWebDefaults.CfwebFqIncludeYeAmounts) && cfWebDefaults.CfwebFqIncludeYeAmounts.Equals("N"))
                     {
                         includeYEClosingAmounts = false;

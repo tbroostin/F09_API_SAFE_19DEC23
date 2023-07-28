@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,6 +55,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -79,6 +81,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -102,7 +106,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -165,6 +169,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -189,6 +195,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -212,7 +220,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -267,6 +275,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -291,6 +301,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -313,7 +325,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -376,6 +388,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -400,6 +414,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -422,7 +438,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -479,6 +495,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -503,6 +521,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -525,7 +545,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -593,6 +613,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -618,6 +640,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -641,7 +665,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -724,6 +748,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -748,6 +774,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -770,7 +798,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -874,6 +902,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -898,6 +928,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -920,7 +952,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -983,6 +1015,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -1007,6 +1041,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -1029,7 +1065,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -1113,6 +1149,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -1137,6 +1175,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -1159,7 +1199,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -1241,6 +1281,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -1265,6 +1307,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -1287,7 +1331,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]
@@ -1371,6 +1415,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             private Mock<IPersonRepository> personRepoMock;
             private IPersonRepository personRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository personBaseRepo;
             private Mock<IReferenceDataRepository> refRepoMock;
             private IReferenceDataRepository refRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -1395,6 +1441,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personRepoMock = new Mock<IPersonRepository>();
                 personRepo = personRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                personBaseRepo = personBaseRepoMock.Object;
                 refRepoMock = new Mock<IReferenceDataRepository>();
                 refRepo = refRepoMock.Object;
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -1417,7 +1465,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRole.AddPermission(permissionViewAnyPerson);
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                demographicService = new DemographicService(refRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
+                demographicService = new DemographicService(refRepo, personBaseRepo, adapterRegistry, currentUserFactory, roleRepo, logger, configRepo, staffRepo);
             }
 
             [TestCleanup]

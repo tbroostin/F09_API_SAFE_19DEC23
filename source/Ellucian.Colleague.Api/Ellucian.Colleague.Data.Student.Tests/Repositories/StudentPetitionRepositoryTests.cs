@@ -1,23 +1,19 @@
-﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Data.Colleague;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Data.Student.Transactions;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -67,7 +63,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetsAllStudentPetitions()
             {
                 var studentPetitions = await studentPetitionRepository.GetStudentPetitionsAsync("0000123");
-                Assert.AreEqual(5, studentPetitions.Count(s=>s.Type == StudentPetitionType.StudentPetition));
+                Assert.AreEqual(5, studentPetitions.Count(s => s.Type == StudentPetitionType.StudentPetition));
                 Assert.AreEqual(5, studentPetitions.Count(s => s.Type == StudentPetitionType.FacultyConsent));
             }
 
@@ -343,8 +339,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
-                petitionMultiLineComment = "Student 456 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
-                consentMultiLineComment = "Student 456 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                petitionMultiLineComment = "Student 456 ART-101 Petition comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
+                consentMultiLineComment = "Student 456 ART-101 Consent comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
 
                 repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
                 {

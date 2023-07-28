@@ -1,30 +1,16 @@
-﻿using System;
-using System.Text;
+﻿//Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Data.Colleague;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.ObjectModel;
-using slf4net;
-using Ellucian.Colleague.Configuration;
-using Ellucian.Colleague.Domain;
-using Ellucian.Data.Colleague;
-using Ellucian.Dmi.Client;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Web.Cache;
-using Ellucian.Web.License;
-using Ellucian.Web.Security;
-using Ellucian.Web.Utility;
-using Ellucian.Web.Http.Configuration;
 namespace Ellucian.Colleague.Domain.Base.Services
 {
     public class CSCodeEvaler
     {
-        char _VM = Convert.ToChar(DynamicArray.VM);
-        char _SM = Convert.ToChar(DynamicArray.SM);
-        char _TM = Convert.ToChar(DynamicArray.TM);
-        char _XM = Convert.ToChar(250);
         public async Task<CodeBuilderObject> EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader, BaseCachingRepository baseCachingRepository, Func<string, Func<object>, double?, object> GetOrAddToCacheFunc, double? cacheTimeOut, bool bypassCache)
         {
             var outputData = new CodeBuilderObject();
@@ -54,7 +40,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                             var arTypes = string.Empty;
                             if (personArData != null && personArData.TryGetValue("PAR.AR.TYPES", out arTypes))
                             {
-                                var vlArTypes = arTypes.Split(_VM);
+                                var vlArTypes = arTypes.Split(DmiString._VM);
                                 foreach (var vArType in vlArTypes)
                                 {
                                     var vArAcctsId = string.Concat(vPersonArId, "*", vArType);
@@ -70,7 +56,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                                         var arPaymentIds = string.Empty;
                                         if (arAcctsData.TryGetValue("ARA.PAYMENTS", out arPaymentIds))
                                         {
-                                            var vlPaymentIds = arPaymentIds.Split(_VM);
+                                            var vlPaymentIds = arPaymentIds.Split(DmiString._VM);
                                             foreach (var paymentId in vlPaymentIds)
                                             {
                                                 if (!string.IsNullOrEmpty(paymentId))
@@ -121,7 +107,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                             var category = string.Empty;
                             if (!string.IsNullOrEmpty(typeId))
                             {
-                                var type = typeId.Split(_SM)[0];
+                                var type = typeId.Split(DmiString._SM)[0];
                                 if (!string.IsNullOrEmpty(type))
                                 {
                                     var ldmGuidColumns = dataReader.ReadRecordColumns("LDM.GUID", type, new string[] { "LDM.GUID.SECONDARY.KEY" });

@@ -10,10 +10,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     /// Section information
     /// </summary>
     [Serializable]
-    public class Section:SeatsManagement
+    public class Section : SeatsManagement
     {
-        
-        #region Constructor
+
+        #region Constructors
 
         /// <summary>
         /// Section Constructor. Section inherits course name (Course.Subject.Code + Course.Number)
@@ -36,10 +36,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <param name="allowWaitlist">Students may put themselves on a wait list</param>
         /// <param name="waitlistClosed">The wait list for this section is closed</param>
         /// <param name="isInstructorConsentRequired">Students must get instructor consent before taking this section</param>
+        /// <param name="hideInCatalog">Indicates whether the section should show in the course catalog</param>
+        /// <param name="isSeatServiceEnabled">Indicates whether the external seat service is enabled</param>
+        /// <param name="useSeatServiceWhenEnabled">Indicates whether the external seat service should be used for section seat counts
+        /// NOTE: Ethos endpoints should always set this parameter to false as Ethos is used to sync data between the local database and the external seat service</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        /// <exception cref="ArgumentException"></exception>
         public Section(string id, string courseId, string number, DateTime startDate, decimal? minCredits, decimal? ceus, string title, string creditTypeCode,
             ICollection<OfferingDepartment> departments, ICollection<string> courseLevelCodes, string academicLevelCode, IEnumerable<SectionStatusItem> statuses,
             bool allowPassNoPass = true, bool allowAudit = true, bool onlyPassNoPass = false, bool allowWaitlist = false, bool waitlistClosed = false,
-            bool isInstructorConsentRequired = false, bool hideInCatalog = false)
+            bool isInstructorConsentRequired = false, bool hideInCatalog = false, bool isSeatServiceEnabled = false, bool useSeatServiceWhenEnabled = false)
         {
             if (string.IsNullOrEmpty(courseId))
             {
@@ -93,7 +100,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentNullException("academicLevelCode", "Academic Level is required");
             }
-           
 
             // OnlyPassNoPass ALWAYS takes precedence over allowPassNoPass and allowAudit. 
             // If OnlyPassNoPass is true then allowPassNoPass MUST be true and allowAudit MUST be false.
@@ -122,6 +128,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _WaitlistClosed = waitlistClosed;
             _IsInstructorConsentRequired = isInstructorConsentRequired;
             _HideInCatalog = hideInCatalog;
+            IsSeatServiceEnabled = isSeatServiceEnabled;
+            UseSeatServiceWhenEnabled = useSeatServiceWhenEnabled;
 
             Departments = _Departments.AsReadOnly();
             CourseLevelCodes = _CourseLevelCodes.AsReadOnly();
@@ -147,9 +155,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             ShowSpecialIcon = false;
             SectionTerm = new SectionTerm();
             ReopenSectionAttendance = false;
+            AreSeatCountsAvailable = true;
         }
 
-        #endregion
+        #endregion Constructors
 
         #region Required fields
 
@@ -253,7 +262,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public bool OnlyPassNoPass { get { return _OnlyPassNoPass; } }
 
-     
+
         private readonly bool _IsInstructorConsentRequired;
         /// <summary>
         /// Indicates whether the student must get consent from the instructor to take this section
@@ -282,7 +291,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public string Subject { get; set; }
 
-        #endregion
+        #endregion Required fields
 
         #region Optional Fields
 
@@ -410,7 +419,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// First meeting date derived from generated/edited CALENDAR.SCHEDLUES
         /// </summary>
         public DateTime? FirstMeetingDate { get; set; }
-        
+
         /// <summary>
         /// Last meeting date derived from generated/edited CALENDAR.SCHEDLUES
         /// </summary>
@@ -431,6 +440,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// List of faculty assigned to this section
         /// </summary>
         public ReadOnlyCollection<string> FacultyIds { get; private set; }
+
         /// <summary>
         /// List of all the faculty names
         /// </summary>
@@ -440,15 +450,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public ReadOnlyCollection<SectionFacultyName> FacultyNames { get; private set; }
 
-
         private readonly List<SectionMeeting> _SectionMeetings = new List<SectionMeeting>();
 
-        private readonly List<SectionMeeting> _PrimarySectionMeetings = new List<SectionMeeting>();
         /// <summary>
         /// List of the meetings for this section
         /// </summary>
-
         public ReadOnlyCollection<SectionMeeting> Meetings { get; private set; }
+
+        private readonly List<SectionMeeting> _PrimarySectionMeetings = new List<SectionMeeting>();
         /// <summary>
         /// List of meetings for primary section.
         /// This is only populated when there is a flag that allows to override cross-listed section meetings with primary section meetings
@@ -456,7 +465,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// For all other conditions, this field will be empty list.
         /// </summary>
         public ReadOnlyCollection<SectionMeeting> PrimarySectionMeetings { get; private set; }
-  
 
         private readonly List<SectionFaculty> _SectionFaculty = new List<SectionFaculty>();
         /// <summary>
@@ -532,7 +540,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// If section does not have meetings then it looks for section's instructional methods.
         /// </summary>
         public OnlineCategory OnlineCategory { get; set; }
-        
+
         private List<SectionCensusCertification> _SectionCertifiedCensuses = new List<SectionCensusCertification>();
         /// <summary>
         /// Section Cert Census information
@@ -596,6 +604,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _WaitlistNumberOfDays = value;
             }
         }
+
         /// <summary>
         /// Status of waitlist (Clsd, Cncl, Froz, Wlst, Open, Wcls, Wful)
         /// </summary>
@@ -676,10 +685,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether Self-Service attendance entry for a section has been temporarily re-opened and the close attendance parameters on FCWP are to be bypassed
         /// </summary>
         public bool ReopenSectionAttendance { get; set; }
-        #endregion
+
+        #endregion Optional Fields
 
         #region Calculated properties
-
 
         /// <summary>
         /// If the client has defined a bookstore template this is a section specific URL for this section
@@ -690,7 +699,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates whether section is cross-listed
         /// </summary>
         public bool? IsCrossListedSection { get; set; }
-       
 
         /// <summary>
         /// Faculty name to sort on. Will only consider  first faculty. 
@@ -738,22 +746,22 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 decimal creditValue = 0;
                 if (this.MinimumCredits.HasValue && this.Ceus.HasValue)
                 {
-                    
-                        if (this.MinimumCredits.Value > this.Ceus.Value)
-                        {
-                            creditValue = this.MinimumCredits.Value;
-                        }
-                        else
-                        {
-                            creditValue = this.Ceus.Value;
-                        }
-                    
+
+                    if (this.MinimumCredits.Value > this.Ceus.Value)
+                    {
+                        creditValue = this.MinimumCredits.Value;
+                    }
+                    else
+                    {
+                        creditValue = this.Ceus.Value;
+                    }
+
                 }
-                else if(this.MinimumCredits.HasValue && !this.Ceus.HasValue)
+                else if (this.MinimumCredits.HasValue && !this.Ceus.HasValue)
                 {
                     creditValue = this.MinimumCredits.Value;
                 }
-                else if(!this.MinimumCredits.HasValue && this.Ceus.HasValue)
+                else if (!this.MinimumCredits.HasValue && this.Ceus.HasValue)
                 {
                     creditValue = this.Ceus.Value;
                 }
@@ -764,6 +772,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return creditValue;
             }
         }
+
         /// <summary>
         /// Section Name applicable for sorting. 
         /// </summary>
@@ -774,6 +783,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return string.Concat(this.CourseName, this.Number);
             }
         }
+
         /// <summary>
         /// Instructional Method applicable for sorting on description. Only the top most is considered and rest of them are ignored.
         /// Instructional Methods are from section meeting info and if section meeting is missing then are loaded from SEC.INSTR.METHODS in a sequence as exists on SOFF
@@ -786,6 +796,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return this.SectionInstructionalMethods != null && this.SectionInstructionalMethods.Any() ? this.SectionInstructionalMethods[0].Description : string.Empty;
             }
         }
+
         /// <summary>
         /// Course type applicable for sorting. Only top most is considered and rest of them are ignored.
         /// </summary>
@@ -796,6 +807,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return this.SectionCourseTypes != null && this.SectionCourseTypes.Any() ? this.SectionCourseTypes[0].Description : string.Empty;
             }
         }
+
         /// <summary>
         /// This is to return only section meetings and if cross-listed section uses primary section then its meetings is returned.
         /// </summary>
@@ -803,7 +815,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         {
             get
             {
-                if(this.Meetings.Any())
+                if (this.Meetings.Any())
                 {
                     return Meetings;
                 }
@@ -886,7 +898,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _CrossListedSections.Add(crossListSection);
         }
 
-        
         /// <summary>
         /// Add a faculty member to a section
         /// </summary>
@@ -902,6 +913,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _FacultyIds.Add(facultyId);
             }
         }
+
         /// <summary>
         /// Add all the faculty names to collection
         /// </summary>
@@ -909,20 +921,21 @@ namespace Ellucian.Colleague.Domain.Student.Entities
 
         public void AddFacultyNames(Domain.Student.Entities.Faculty faculty)
         {
-            
-                if (faculty == null)
-                {
-                    throw new ArgumentNullException("faculty", "Faculty cannot be null");
-                }
+
+            if (faculty == null)
+            {
+                throw new ArgumentNullException("faculty", "Faculty cannot be null");
+            }
             SectionFacultyName facultyNamesOnly = new SectionFacultyName(faculty.Id);
             facultyNamesOnly.FirstName = faculty.FirstName;
             facultyNamesOnly.LastName = faculty.LastName;
             facultyNamesOnly.MiddleName = faculty.MiddleName;
             facultyNamesOnly.ProfessionalName = faculty.ProfessionalName;
             facultyNamesOnly.PersonDisplayName = faculty.PersonDisplayName;
-                _FacultyNames.Add(facultyNamesOnly);
-            
+            _FacultyNames.Add(facultyNamesOnly);
+
         }
+
         /// <summary>
         /// Add a meeting time to a section
         /// </summary>
@@ -936,20 +949,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _SectionMeetings.Add(sectionMeeting);
         }
 
-
-        
-
         /// <summary>
         /// This method will update meetings for primary section in PrimarySectionMeetings collection
         /// </summary>
         /// <param name="meetings"></param>
         public void UpdatePrimarySectionMeetings(IEnumerable<SectionMeeting> meetings)
         {
-           if(meetings!=null)
+            if (meetings != null)
             {
-                
-                    _PrimarySectionMeetings.Clear();
-               
+
+                _PrimarySectionMeetings.Clear();
+
                 foreach (var meeting in meetings)
                 {
                     if (meeting != null)
@@ -959,8 +969,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 }
             }
         }
-
-
 
         /// <summary>
         /// Remove a section meeting from this section
@@ -1047,8 +1055,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _Statuses.Insert(0, new SectionStatusItem(status, code, date.Value));
         }
 
-
-
         /// <summary>
         /// Add an instructional contact for this section
         /// </summary>
@@ -1057,13 +1063,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         {
             if (contact == null)
             {
-                throw new ArgumentNullException("contact");    
+                throw new ArgumentNullException("contact");
             }
             if (!_instructionalContacts.Contains(contact))
             {
                 _instructionalContacts.Add(contact);
             }
         }
+
         /// <summary>
         /// Add a course category
         /// </summary>
@@ -1079,6 +1086,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _CourseCategories.Add(category);
             }
         }
+
         /// <summary>
         /// Add an instructional method (only code)
         /// </summary>
@@ -1094,6 +1102,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _InstructionalMethods.Add(method);
             }
         }
+
         /// <summary>
         /// This adds code as well as description
         /// </summary>
@@ -1104,17 +1113,23 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentNullException("sectionInstructionalMethod");
             }
-                _SectionInstructionalMethods.Add(sectionInstructionalMethod);
+            _SectionInstructionalMethods.Add(sectionInstructionalMethod);
         }
 
+        /// <summary>
+        /// Adds a course type for this section
+        /// </summary>
+        /// <param name="sectionCourseType"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public void AddSectionCourseType(SectionCourseType sectionCourseType)
         {
             if (sectionCourseType == null)
             {
                 throw new ArgumentNullException("sectionCourseType");
             }
-           _SectionCourseTypes.Add(sectionCourseType);
+            _SectionCourseTypes.Add(sectionCourseType);
         }
+
         /// <summary>
         /// Adds a financial charge for this section
         /// </summary>
@@ -1127,6 +1142,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _sectionCharges.Add(charge);
             }
         }
+
         /// <summary>
         /// Add a section's census certification details
         /// </summary>
@@ -1140,7 +1156,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _SectionCertifiedCensuses.Add(sectionCertCensus);
         }
 
-        #endregion
+        #endregion Methods
 
         #region Object override methods
 
@@ -1181,6 +1197,5 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             return seatsManagement;
         }
         #endregion
-
     }
 }

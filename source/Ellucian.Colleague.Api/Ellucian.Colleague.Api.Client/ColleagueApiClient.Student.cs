@@ -4128,6 +4128,41 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Returns student's registration priority information.
+        /// </summary>
+        /// <param name="studentId">Id of student to retreive registration priority information</param>
+        /// <returns><see cref="RegistrationPriority">Registration Priority Information</see> for a student.</returns>
+        public async Task<IEnumerable<RegistrationPriority>> GetRegistrationPrioritiesAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id must contain a valid value.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _studentsPath, studentId, _registrationPrioritiesPath });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var registrationPriorities = JsonConvert.DeserializeObject<IEnumerable<RegistrationPriority>>(await response.Content.ReadAsStringAsync());
+                return registrationPriorities;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "timeout exception has occurred while retreiving student's registration priority information.");
+                throw;
+            }
+            catch (Exception exception)
+            {
+                var message = "Unable to retreive student's registration priority information.";
+                logger.Error(message, exception);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get the set of Admitted Statuses
         /// </summary>
         /// <returns>Returns the admitted statuses</returns>

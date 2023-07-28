@@ -19,6 +19,8 @@ using Ellucian.Web.Security;
 using Ellucian.Web.Http.Filters;
 using System.Threading.Tasks;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Coordination.Base.Services;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -28,6 +30,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
     [EllucianLicenseModule(ModuleConstants.Finance)]
+    [Metadata(ApiDescription = "Provides access to get and update payment plan information", ApiDomain = "Finance")]
     public class PaymentPlansController : BaseCompressedApiController
     {
         private readonly IPaymentPlanService _service;
@@ -51,6 +54,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// Any authenticated user can get these resources
         /// </accessComments>
         /// <returns>A list of PaymentPlanTemplate DTOs</returns>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public IEnumerable<PaymentPlanTemplate> GetPaymentPlanTemplates()
         {
             try
@@ -75,6 +80,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>A PaymentPlan DTO</returns>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the payment plan ID is not provided.</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to get the payment plan</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public PaymentPlan GetPaymentPlan(string paymentPlanId)
         {
             if (string.IsNullOrEmpty(paymentPlanId))
@@ -110,6 +117,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the payment plan is not provided.</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to create the payment plan</exception>
         [ParameterSubstitutionFilter]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public PaymentPlanTemplate GetPaymentPlanTemplate(string templateId)
         {
             if (string.IsNullOrEmpty(templateId))
@@ -144,6 +153,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>The updated <see cref="PaymentPlanApproval">Payment Plan approval</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the payment plan is not provided.</exception>
+        [HttpPost]
         public PaymentPlanApproval PostAcceptTerms(PaymentPlanTermsAcceptance approval)
         {
             try
@@ -178,6 +188,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>A PaymentPlanApproval DTO</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the payment plan approval is not provided.</exception>
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public PaymentPlanApproval GetPaymentPlanApproval(string approvalId)
         {
             if (string.IsNullOrEmpty(approvalId))
@@ -221,6 +233,8 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>List of payments to be made</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "planId" })]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [HttpGet]
         public Payment GetPlanPaymentSummary(string planId, string payMethod, decimal amount, string payControlId)
         {
             try
@@ -248,6 +262,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// <returns>Proposed payment plan</returns>
         [HttpGet]
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "termId" })]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public async Task<PaymentPlan> GetProposedPaymentPlanAsync([FromUri]string personId, [FromUri]string termId,
             [FromUri]string receivableTypeCode, [FromUri]decimal planAmount)
         {

@@ -117,6 +117,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (attachmentCollectionEntity != null)
                 throw new ArgumentException("Attachment collection already exists");
 
+            // Move Extended Data extract from service into the repository
+            // _attachmentCollectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
             // create the new collection
             var newAttachmentCollectionEntity = await _attachmentCollectionRepository.PostAttachmentCollectionAsync(newAttachmentCollectionEntityIn);
 
@@ -156,6 +159,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new PermissionsException(error);
             }
 
+            // Move Extended Data extract from service into the repository
+            // _attachmentCollectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
             // update/create the collection
             var updatedAttachmentCollectionEntity = await _attachmentCollectionRepository.PutAttachmentCollectionAsync(updatedAttachmentCollectionEntityIn);
 
@@ -174,7 +180,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (string.IsNullOrEmpty(attachmentCollectionId))
                 throw new ArgumentNullException("attachmentCollectionId");
-            
+
             // get the collection
             var attachmentCollection = await _attachmentCollectionRepository.GetAttachmentCollectionByIdAsync(attachmentCollectionId);
             if (attachmentCollection == null)
@@ -215,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var roleEntities = await _roleRepository.GetRolesAsync();
                 if (roleEntities == null || !roleEntities.Any())
                     throw new ColleagueWebApiException("No roles found for conversion of titles to IDs");
-                
+
                 foreach (var roleIdentity in attachmentCollectionEntity.Roles)
                 {
                     // convert role title to its ID
@@ -258,7 +264,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw new ColleagueWebApiException("No roles found for conversion of IDs to titles");
 
                 var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.AttachmentCollection, AttachmentCollection>();
-                
+
                 foreach (var attachmentCollectionEntity in attachmentCollectionEntities)
                 {
                     // convert collection entity to DTO

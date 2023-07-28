@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2022 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="yearToDateDataContext"></param>
         /// <param name="dataUtility"></param>
         public PayStatementReport(PayStatementReportDataContext sourceDataContext, IEnumerable<PayStatementReportDataContext> yearToDateDataContext, PayStatementReferenceDataUtility dataUtility)
-            : base(sourceDataContext.sourceData.Id, sourceDataContext.sourceData.EmployeeId, sourceDataContext.sourceData.EmployeeName, sourceDataContext.sourceData.EmployeeSSN, sourceDataContext.sourceData.EmployeeMailingLabel, sourceDataContext.sourceData.PaycheckReferenceId, sourceDataContext.sourceData.StatementReferenceId, sourceDataContext.sourceData.PayDate, sourceDataContext.sourceData.PeriodEndDate, sourceDataContext.sourceData.PeriodGrossPay, sourceDataContext.sourceData.PeriodNetPay, sourceDataContext.sourceData.YearToDateGrossPay, sourceDataContext.sourceData.YearToDateNetPay, sourceDataContext.sourceData.Comments)
+            : base(sourceDataContext.sourceData.Id, sourceDataContext.sourceData.EmployeeId, sourceDataContext.sourceData.EmployeeName, sourceDataContext.sourceData.EmployeeSSN, sourceDataContext.sourceData.EmployeeMailingLabel, sourceDataContext.sourceData.PaycheckReferenceId, sourceDataContext.sourceData.StatementReferenceId, sourceDataContext.sourceData.PayDate, sourceDataContext.sourceData.PeriodEndDate, sourceDataContext.sourceData.PeriodGrossPay, sourceDataContext.sourceData.PeriodNetPay, sourceDataContext.sourceData.YearToDateGrossPay,sourceDataContext.sourceData.YearToDateNetPay, sourceDataContext.sourceData.Comments, sourceDataContext.sourceData.PeriodTotalTaxes, sourceDataContext.sourceData.PeriodTotalBenDeds)
         {
             this.sourceDataContext = sourceDataContext;
             this.yearToDateDataContext = yearToDateDataContext;
@@ -288,8 +288,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                         {
                             var payStatementLeave = new PayStatementLeave(leaveType.Code,
                                 leaveType.Description,
-                                leaveEntryGroup.Sum(entry => entry.LeaveTaken),
-                                leaveEntryGroup.Sum(entry => entry.LeaveRemaining));
+                                leaveEntryGroup.Select(entry => entry.LeaveTaken).FirstOrDefault(),
+                                leaveEntryGroup.Select(entry => entry.LeaveRemaining).FirstOrDefault()
+                                );
 
                             leaveItems.Add(payStatementLeave);
                         }

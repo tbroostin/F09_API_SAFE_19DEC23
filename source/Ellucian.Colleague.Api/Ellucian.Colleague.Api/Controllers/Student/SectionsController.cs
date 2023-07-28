@@ -2682,7 +2682,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <param name="criteria">DTO Object with a list of Section keys</param>
-        /// <returns>The requested <see cref="Section4">Sections</see></returns>
+        /// <returns>The requested <see cref="Dtos.Student.Section4">Sections</see></returns>
         /// <accessComments>
         /// Any authenticated user can retrieve course sections information; however,
         /// only an assigned faculty or departmental oversight user may retrieve list of active students Ids in a given course section.
@@ -2731,11 +2731,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (Exception exception)
             {
-                _logger.Error(exception.ToString());
+                _logger.Error(exception, exception.ToString());
                 throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
         }
-
 
         /// <summary>
         /// Puts a collection of student section grades.

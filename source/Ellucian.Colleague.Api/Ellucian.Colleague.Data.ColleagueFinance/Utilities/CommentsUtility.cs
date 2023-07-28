@@ -1,5 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2018-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Dmi.Runtime;
 using System;
 using System.Collections.Generic;
@@ -23,11 +22,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Utilities
             var replace = source;
             if (!string.IsNullOrEmpty(source))
             {
-                char _vm = Convert.ToChar(DynamicArray.VM);
                 string paragraphSpacing = "" + Environment.NewLine;
                 paragraphSpacing += Environment.NewLine;
                 //first replace two _vms with a new line, then replace remaining single vms with a space
-                replace = source.Replace("" + _vm + _vm, paragraphSpacing).Replace(_vm, ' ');
+                replace = source.Replace("" + DmiString._VM + DmiString._VM, paragraphSpacing).Replace(DmiString._VM, ' ');
             }
             return replace;
         }

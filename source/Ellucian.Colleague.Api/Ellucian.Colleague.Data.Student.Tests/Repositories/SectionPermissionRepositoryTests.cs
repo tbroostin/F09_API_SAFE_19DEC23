@@ -1,23 +1,23 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Data.Colleague;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Web.Http.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.Caching;
 using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -131,8 +131,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var sectionPermissions = await sectionPermissionRepository.GetSectionPermissionAsync("SEC1");
                 foreach (var response in stuPetitionCmntsResponseData)
                 {
-                    var expectedPetitionCommentLines = response.StpcPetitionComments != null ? response.StpcPetitionComments.Replace(Convert.ToChar(DynamicArray.VM), '\n') : null;
-                    var expectedConsentCommentLines = response.StpcConsentComments != null ? response.StpcConsentComments.Replace(Convert.ToChar(DynamicArray.VM), '\n') : null;
+                    var expectedPetitionCommentLines = response.StpcPetitionComments != null ? response.StpcPetitionComments.Replace(DmiString._VM, '\n') : null;
+                    var expectedConsentCommentLines = response.StpcConsentComments != null ? response.StpcConsentComments.Replace(DmiString._VM, '\n') : null;
 
                     var studentPetitionComment = sectionPermissions.StudentPetitions.Where(sp => sp.Comment == expectedPetitionCommentLines).Select(sp => sp.Comment).FirstOrDefault();
                     var facultyConsentComment = sectionPermissions.FacultyConsents.Where(fc => fc.Comment == expectedConsentCommentLines).Select(fc => fc.Comment).FirstOrDefault();
@@ -149,8 +149,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var studentPetition = sectionPermissions.StudentPetitions.Where(sp => sp.Id == "2").FirstOrDefault();
                 var facultyConsent = sectionPermissions.FacultyConsents.Where(sp => sp.Id == "2").FirstOrDefault();
 
-                var expectedPetitionCommentLines = petitionMultiLineComment.Replace(Convert.ToChar(DynamicArray.VM), '\n');
-                var expectedConsentCommentLines = consentMultiLineComment.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                var expectedPetitionCommentLines = petitionMultiLineComment.Replace(DmiString._VM, '\n');
+                var expectedConsentCommentLines = consentMultiLineComment.Replace(DmiString._VM, '\n');
 
                 Assert.AreEqual(expectedPetitionCommentLines, studentPetition.Comment);
                 Assert.AreEqual(expectedConsentCommentLines, facultyConsent.Comment);
@@ -441,8 +441,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
-                petitionMultiLineComment = "Student 456 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
-                consentMultiLineComment = "Student 456 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                petitionMultiLineComment = "Student 456 ART-101 Petition comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
+                consentMultiLineComment = "Student 456 ART-101 Consent comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
 
                 repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
                 {
@@ -671,7 +671,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(studentPetitionSec1.StpeConsentReasonCodeAssocMember, studentPetition.ReasonCode);
                 Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentAssocMember, studentPetition.StatusCode);
                 Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentSetByAssocMember, studentPetition.SetBy);
-                Assert.AreEqual(studentPetitionsResponseData.StudentPetitionsChgopr,studentPetition.UpdatedBy);
+                Assert.AreEqual(studentPetitionsResponseData.StudentPetitionsChgopr, studentPetition.UpdatedBy);
                 Assert.AreEqual(studentPetitionSec1.StpeFacultyConsentDateAssocMember, new DateTime(studentPetition.DateTimeChanged.Year, studentPetition.DateTimeChanged.Month, studentPetition.DateTimeChanged.Day));
                 Assert.AreEqual(new TimeSpan(studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Hour, studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Minute, studentPetitionSec1.StpeFacultyConsentTimeAssocMember.Value.Second),
                     new TimeSpan(studentPetition.DateTimeChanged.Hour, studentPetition.DateTimeChanged.Minute, studentPetition.DateTimeChanged.Second));
@@ -722,8 +722,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
-                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
-                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
+                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
 
                 repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
                 {
@@ -830,7 +830,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up repo response for petition request
                 dataAccessorMock.Setup<Task<StudentPetitions>>(acc => acc.ReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Returns(Task.FromResult(studentPetitionsResponseData));
-                dataAccessorMock.Setup<Task<Collection<StuPetitionCmnts>>>(acc => acc.BulkReadRecordAsync<StuPetitionCmnts>(It.IsAny<string[]>(), true)).Returns(Task.FromResult < Collection < StuPetitionCmnts >> (stuPetitionCmntsResponseData));
+                dataAccessorMock.Setup<Task<Collection<StuPetitionCmnts>>>(acc => acc.BulkReadRecordAsync<StuPetitionCmnts>(It.IsAny<string[]>(), true)).Returns(Task.FromResult<Collection<StuPetitionCmnts>>(stuPetitionCmntsResponseData));
 
                 SectionPermissionRepository repository = new SectionPermissionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 return repository;
@@ -1145,8 +1145,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
-                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
-                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
+                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
 
                 repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
                 {
@@ -1436,8 +1436,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // These would be all the comments associated to the specific student petition and they will all have same student but there could be different sections.
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
-                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
-                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
+                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + DmiString._VM + "comment line2" + DmiString._VM + "comment line3 the end";
 
                 repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
                 {

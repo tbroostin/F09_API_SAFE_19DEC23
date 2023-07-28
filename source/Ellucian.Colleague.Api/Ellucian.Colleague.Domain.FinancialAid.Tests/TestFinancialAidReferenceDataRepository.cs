@@ -1,5 +1,4 @@
-﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
-
+﻿//Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Dmi.Runtime;
@@ -18,8 +17,6 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
         /// <summary>
         /// Array contains data that could have come from Colleague
         /// </summary>
-
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         public class AwardRecord
         {
@@ -82,7 +79,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "PELL",
                 Description = "Pell Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Pell Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Pell Grant",
                 Category = "PELL",
                 LoanType = "",
                 ShoppingSheetGroup = "PL"
@@ -91,7 +88,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "UGTCH",
                 Description = "Undergraduate Teach Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Teach Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Teach Grant",
                 Category = "TEACH",
                 LoanType = "",
                 ShoppingSheetGroup = "ST"
@@ -100,7 +97,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "ZEBRA",
                 Description = "Zebra Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Zebra Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Zebra Grant",
                 Category = "GRANT",
                 LoanType = "",
                 ShoppingSheetGroup = "SC"
@@ -109,7 +106,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "WOOFY",
                 Description = "Woofy award",
-                Explanation = "Explanation of"+_VM.ToString()+"Woofy Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Woofy Grant",
                 Category = "GRANT",
                 LoanType = "",
                 ShoppingSheetGroup = "OT"
@@ -118,9 +115,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "PELL",
                 Description = "Pell Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Pell Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Pell Grant",
                 Category = "PELL",
-                LoanType = "",                
+                LoanType = "",
                 ShoppingSheetGroup = "PL"
             },
             new AwardRecord()
@@ -163,7 +160,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 Code = "GPLUS1",
                 Description = "GPLUS1 Description",
-                Explanation = "Explanation" + _VM.ToString()+_VM.ToString() + "of GPLUS1",
+                Explanation = "Explanation" + DmiString.sVM + DmiString.sVM + "of GPLUS1",
                 Category = "GPLUS",
                 LoanType = "P",
                 ShoppingSheetGroup = "PK"
@@ -240,8 +237,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
                     if (!string.IsNullOrEmpty(explanation))
                     {
-                        explanation = explanation.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
-                        explanation = explanation.Replace(_VM, ' ');
+                        explanation = explanation.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
+                        explanation = explanation.Replace(DmiString._VM, ' ');
                     }
 
                     ShoppingSheetAwardGroup? shoppingSheetGroup = null;
@@ -418,9 +415,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
         public List<AwardCategoryRecord> awardCategoryData = new List<AwardCategoryRecord>()
         {
-            new AwardCategoryRecord() 
+            new AwardCategoryRecord()
             {
-                Code = "PELL", 
+                Code = "PELL",
                 Description = "Pell Category",
                 GrantFlag = "Y"
             },
@@ -436,33 +433,33 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 Description = "Work Study Category",
                 WorkStudyFlag = "Y"
             },
-            new AwardCategoryRecord() 
+            new AwardCategoryRecord()
             {
-                Code = "GSL", 
+                Code = "GSL",
                 Description = "Subsidized Loans",
                 LoanFlag = "Y"
             },
-            new AwardCategoryRecord() 
+            new AwardCategoryRecord()
             {
-                Code = "USTF", 
+                Code = "USTF",
                 Description = "Unsubsidized Loans",
                 LoanFlag = "Y"
             },
-            new AwardCategoryRecord() 
+            new AwardCategoryRecord()
             {
-                Code = "GPLUS", 
+                Code = "GPLUS",
                 Description = "Graduate Plus Loans",
                 LoanFlag = "Y"
             },
-            new AwardCategoryRecord()             
+            new AwardCategoryRecord()
             {
-                Code = "PLUS", 
+                Code = "PLUS",
                 Description = "Parent Plus Loans",
                 LoanFlag = "Y"
             },
-            new AwardCategoryRecord() 
+            new AwardCategoryRecord()
             {
-                Code = "CL", 
+                Code = "CL",
                 Description = "Commonline Loans",
                 LoanFlag = "Y"
             },
@@ -501,27 +498,27 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
         public Task<IEnumerable<AwardCategory>> GetAwardCategoriesAsync()
         {
-            
-            
-                var categoryList = new List<AwardCategory>();
-                foreach (var acRecord in awardCategoryData)
+
+
+            var categoryList = new List<AwardCategory>();
+            foreach (var acRecord in awardCategoryData)
+            {
+                AwardCategoryType? type = null;
+                var typeArray = new string[4] { acRecord.LoanFlag, acRecord.GrantFlag, acRecord.ScholarshipFlag, acRecord.WorkStudyFlag };
+
+                //is exactly one of the flags equal to Yes?
+                if (typeArray.Where(t => !string.IsNullOrEmpty(t) && t.ToUpper() == "Y").Count() == 1)
                 {
-                    AwardCategoryType? type = null;
-                    var typeArray = new string[4] { acRecord.LoanFlag, acRecord.GrantFlag, acRecord.ScholarshipFlag, acRecord.WorkStudyFlag };
-
-                    //is exactly one of the flags equal to Yes?
-                    if (typeArray.Where(t => !string.IsNullOrEmpty(t) && t.ToUpper() == "Y").Count() == 1)
-                    {
-                        if (!string.IsNullOrEmpty(acRecord.LoanFlag) && acRecord.LoanFlag.ToUpper() == "Y") type = AwardCategoryType.Loan;
-                        else if (!string.IsNullOrEmpty(acRecord.GrantFlag) && acRecord.GrantFlag.ToUpper() == "Y") type = AwardCategoryType.Grant;
-                        else if (!string.IsNullOrEmpty(acRecord.ScholarshipFlag) && acRecord.ScholarshipFlag.ToUpper() == "Y") type = AwardCategoryType.Scholarship;
-                        else if (!string.IsNullOrEmpty(acRecord.WorkStudyFlag) && acRecord.WorkStudyFlag.ToUpper() == "Y") type = AwardCategoryType.Work;
-                    }
-
-                    categoryList.Add(new AwardCategory(acRecord.Code, acRecord.Description, type));
+                    if (!string.IsNullOrEmpty(acRecord.LoanFlag) && acRecord.LoanFlag.ToUpper() == "Y") type = AwardCategoryType.Loan;
+                    else if (!string.IsNullOrEmpty(acRecord.GrantFlag) && acRecord.GrantFlag.ToUpper() == "Y") type = AwardCategoryType.Grant;
+                    else if (!string.IsNullOrEmpty(acRecord.ScholarshipFlag) && acRecord.ScholarshipFlag.ToUpper() == "Y") type = AwardCategoryType.Scholarship;
+                    else if (!string.IsNullOrEmpty(acRecord.WorkStudyFlag) && acRecord.WorkStudyFlag.ToUpper() == "Y") type = AwardCategoryType.Work;
                 }
-                return Task.FromResult(categoryList.AsEnumerable());
-            
+
+                categoryList.Add(new AwardCategory(acRecord.Code, acRecord.Description, type));
+            }
+            return Task.FromResult(categoryList.AsEnumerable());
+
         }
 
 
@@ -891,9 +888,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                     if (Itemtype.HasValue && item.SortNumber.HasValue)
                     {
                         var itemRecord = new ChecklistItem(item.Code, item.SortNumber.Value, item.ItemDescription)
-                            {
-                                ChecklistItemType = Itemtype.Value
-                            };
+                        {
+                            ChecklistItemType = Itemtype.Value
+                        };
                         itemList.Add(itemRecord);
                     }
                 }
@@ -915,10 +912,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
         public List<SapStatusValcodeVals> SapStatusValcodeData = new List<SapStatusValcodeVals>()
         {
-           
+
             new SapStatusValcodeVals() { Code = "U", Description = "Unsatisfactory"},
             new SapStatusValcodeVals() { Code = "S", Description = "Satisfactory"},
-            new SapStatusValcodeVals() { Code = "W", Description = "Foobar"}, 
+            new SapStatusValcodeVals() { Code = "W", Description = "Foobar"},
             new SapStatusValcodeVals() { Code = "J", Description = "No Category"},
             new SapStatusValcodeVals() { Code = "H", Description = "No Explanation"},
             new SapStatusValcodeVals() { Code = "Z", Description = "Cannot Calculate Status"},
@@ -1015,21 +1012,21 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
         public Task<IEnumerable<AcademicProgressAppealCode>> GetAcademicProgressAppealCodesAsync()
         {
-            
-                if (SapAppealInfoRecords == null) return null;
-                var appealList = new List<AcademicProgressAppealCode>();
-                foreach (var appealRecord in SapAppealInfoRecords)
-                {
-                    var appeal = new AcademicProgressAppealCode(appealRecord.Code, appealRecord.Description);
-                    appealList.Add(appeal);
-                }
-                return Task.FromResult(appealList.AsEnumerable());
-           
+
+            if (SapAppealInfoRecords == null) return null;
+            var appealList = new List<AcademicProgressAppealCode>();
+            foreach (var appealRecord in SapAppealInfoRecords)
+            {
+                var appeal = new AcademicProgressAppealCode(appealRecord.Code, appealRecord.Description);
+                appealList.Add(appeal);
+            }
+            return Task.FromResult(appealList.AsEnumerable());
+
         }
         #endregion
 
         #region AwardLetterConfigurations 
-       
+
         public class awardLetterParamRecord
         {
             public string Id { get; set; }
@@ -1044,7 +1041,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string AwardPeriodGroup3Title { get; set; }
             public string AwardPeriodGroup4Title { get; set; }
             public string AwardPeriodGroup5Title { get; set; }
-            public string AwardPeriodGroup6Title { get; set; }           
+            public string AwardPeriodGroup6Title { get; set; }
 
             public string AwardColumnTitle { get; set; }
             public string TotalColumnTitle { get; set; }
@@ -1053,7 +1050,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
         public List<awardLetterParamRecord> awardLetterParameterData = new List<awardLetterParamRecord>()
         {
-            new awardLetterParamRecord() 
+            new awardLetterParamRecord()
             {
                 Id = "UNDERGRAD",
                 IsOfficeBlockActive = true,
@@ -1061,62 +1058,63 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IsHousingCodeActive = false,
                 AwardColumnTitle = "Awards",
                 TotalColumnTitle = "Total",
-                AwardCategoryGroup1Title = "Group 1 Title",                
-                AwardCategoryGroup2Title = "Group 2 Title",                
+                AwardCategoryGroup1Title = "Group 1 Title",
+                AwardCategoryGroup2Title = "Group 2 Title",
                 AwardCategoryGroup3Title = "Group 3 Title",
-                AwardPeriodGroup1Title = "Period Group 1",                
-                AwardPeriodGroup2Title = "Period Group 2",                
-                AwardPeriodGroup3Title = "Period Group 3",                
-                AwardPeriodGroup4Title = "Period Group 4",                
-                AwardPeriodGroup5Title = "Period Group 5",                
+                AwardPeriodGroup1Title = "Period Group 1",
+                AwardPeriodGroup2Title = "Period Group 2",
+                AwardPeriodGroup3Title = "Period Group 3",
+                AwardPeriodGroup4Title = "Period Group 4",
+                AwardPeriodGroup5Title = "Period Group 5",
                 AwardPeriodGroup6Title = "Period Group 6",
                 ParagraphSpacing = "2"
             },
-            new awardLetterParamRecord() 
+            new awardLetterParamRecord()
             {
-                Id = "GRADUATE",                
+                Id = "GRADUATE",
                 IsOfficeBlockActive = false,
                 IsNeedBlockActive = true,
                 IsHousingCodeActive = true,
                 AwardColumnTitle = "Awards",
                 TotalColumnTitle = "Total",
-                AwardCategoryGroup1Title = "Group 1 Title",                
-                AwardCategoryGroup2Title = "Group 2 Title",                
+                AwardCategoryGroup1Title = "Group 1 Title",
+                AwardCategoryGroup2Title = "Group 2 Title",
                 AwardCategoryGroup3Title = "Group 3 Title",
-                AwardPeriodGroup1Title = "Period Group 1",                
-                AwardPeriodGroup2Title = "Period Group 2",                
-                AwardPeriodGroup3Title = "Period Group 3",                
-                AwardPeriodGroup4Title = "Period Group 4",                
-                AwardPeriodGroup5Title = "Period Group 5",                
-                AwardPeriodGroup6Title = "Period Group 6"                
+                AwardPeriodGroup1Title = "Period Group 1",
+                AwardPeriodGroup2Title = "Period Group 2",
+                AwardPeriodGroup3Title = "Period Group 3",
+                AwardPeriodGroup4Title = "Period Group 4",
+                AwardPeriodGroup5Title = "Period Group 5",
+                AwardPeriodGroup6Title = "Period Group 6"
             },
-            new awardLetterParamRecord() 
+            new awardLetterParamRecord()
             {
-                Id = "EDUCATION",                
+                Id = "EDUCATION",
                 IsOfficeBlockActive = true,
                 IsNeedBlockActive = false,
                 IsHousingCodeActive = false,
                 AwardColumnTitle = "Awards",
                 TotalColumnTitle = "Total",
-                AwardCategoryGroup1Title = "Group 1 Title",                
-                AwardCategoryGroup2Title = "Group 2 Title",                
+                AwardCategoryGroup1Title = "Group 1 Title",
+                AwardCategoryGroup2Title = "Group 2 Title",
                 AwardCategoryGroup3Title = "Group 3 Title",
-                AwardPeriodGroup1Title = "Period Group 1",                
-                AwardPeriodGroup2Title = "Period Group 2",                
-                AwardPeriodGroup3Title = "Period Group 3",                
-                AwardPeriodGroup4Title = "Period Group 4",                
-                AwardPeriodGroup5Title = "Period Group 5",                
+                AwardPeriodGroup1Title = "Period Group 1",
+                AwardPeriodGroup2Title = "Period Group 2",
+                AwardPeriodGroup3Title = "Period Group 3",
+                AwardPeriodGroup4Title = "Period Group 4",
+                AwardPeriodGroup5Title = "Period Group 5",
                 AwardPeriodGroup6Title = "Period Group 6",
                 ParagraphSpacing = "1"
             }
         };
 
         public async Task<IEnumerable<AwardLetterConfiguration>> GetAwardLetterConfigurationsAsync()
-        {             
-            return await Task.Run(() => getAwardLetterConfigurations());            
+        {
+            return await Task.Run(() => getAwardLetterConfigurations());
         }
 
-        private IEnumerable<AwardLetterConfiguration> getAwardLetterConfigurations(){
+        private IEnumerable<AwardLetterConfiguration> getAwardLetterConfigurations()
+        {
             var awardLetterConfigurations = new List<AwardLetterConfiguration>();
             if (awardLetterParameterData != null)
             {
@@ -1220,7 +1218,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             if (!string.IsNullOrEmpty(faExplanations.pellLeuExpl))
             {
                 explanations.Add(new FinancialAidExplanation(faExplanations.pellLeuExpl, FinancialAidExplanationType.PellLEU));
-                
+
             }
             return Task.FromResult(explanations.AsEnumerable());
         }

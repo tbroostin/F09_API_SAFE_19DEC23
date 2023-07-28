@@ -1,4 +1,4 @@
-﻿/* Copyright 2019-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
@@ -123,6 +123,34 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public bool IsWithdrawPendingApproval { get { return isWithdrawPendingApproval; } }
         private readonly bool isWithdrawPendingApproval;
+        /// <summary>
+        /// The database id of the LeavePlan definition
+        /// </summary>
+        /// 
+        public string LeavePlanId { get { return leavePlanId; } }
+        private readonly string leavePlanId;
+       
+
+        /// <summary>
+        /// The description of the LeavePlan definition
+        /// </summary>
+        public string LeavePlanDescription { get { return leavePlanDescription; } }
+        private readonly string leavePlanDescription;
+
+
+        /// <summary>
+        /// The database Id of the EarningsType associated to this Leave Plan. When the employee takes this type of leave,
+        /// they track their leave hours to this earnings type
+        /// </summary>
+        public string EarningsTypeId { get { return earningsTypeId; } }
+        private readonly string earningsTypeId;
+
+        /// <summary>
+        /// The description of the EarningsType identified by the EarningsTypeId. Also see the /earnings-types endpoint for more
+        /// details about Earnings Types.
+        /// </summary>
+        public string EarningsTypeDescription { get { return earningsTypeDescription; } }
+        private readonly string earningsTypeDescription;
         #endregion
 
         /// <summary>
@@ -143,6 +171,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="isWithdrawn"></param>
         /// <param name="withdrawOption"></param
         /// <param name="enableDeleteForSupervisor">optional</param>
+        /// <param name="leavePlanId">optional</param>
+        /// <param name="leavePlanDescription">optional</param>
+        /// <param name="earningsTypeId">optional</param>
+        /// <param name="earningsTypeDescription">optional</param>
         public LeaveRequest(string id,
             string perLeaveId,
             string employeeId,
@@ -157,7 +189,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             bool isWithdrawPendingApproval,
             bool isWithdrawn = false,
             string withdrawOption = null,
-            bool enableDeleteForSupervisor = false)
+            bool enableDeleteForSupervisor = false,
+            string leavePlanId = null,
+            string leavePlanDescription = null,
+            string earningsTypeId = null,
+            string earningsTypeDescription = null)
         {
             if (string.IsNullOrEmpty(perLeaveId))
             {
@@ -204,6 +240,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             LeaveRequestComments = leaveRequestComments;
             this.enableDeleteForSupervisor = enableDeleteForSupervisor;
             this.isWithdrawPendingApproval = isWithdrawPendingApproval;
+            this.leavePlanId = leavePlanId;
+            this.leavePlanDescription = leavePlanDescription;
+            this.earningsTypeId = earningsTypeId;
+            this.earningsTypeDescription = earningsTypeDescription;
         }
 
         /// <summary>

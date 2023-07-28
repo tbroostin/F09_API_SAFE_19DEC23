@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -37,6 +37,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         decimal ytdGrossPay;
         decimal ytdNetPay;
         string comments;
+        decimal periodTotalTaxes;
+        decimal periodTotalBenDeds;
         PayStatementSourceData sourceData;
         PayStatementSourceData sourceData_0;
         IEnumerable<PayStatementSourceData> yearToDateSourceEntities;
@@ -85,8 +87,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             ytdGrossPay = 10010.28M;
             ytdNetPay = 9010.19M;
             comments = "some comments";
-            sourceData = new PayStatementSourceData(id, employeeId, employeeName, employeeSSN, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
-            sourceData_0 = new PayStatementSourceData("14301", employeeId, employeeName, employeeSSN, mailingLabel, "12010", "ref-009", payDate.AddMonths(-1), periodEndDate.AddMonths(-1), periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
+            periodTotalTaxes = 0.00M;
+            periodTotalBenDeds = 0.00M;
+            sourceData = new PayStatementSourceData(id, employeeId, employeeName, employeeSSN, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments, periodTotalTaxes, periodTotalBenDeds);
+            sourceData_0 = new PayStatementSourceData("14301", employeeId, employeeName, employeeSSN, mailingLabel, "12010", "ref-009", payDate.AddMonths(-1), periodEndDate.AddMonths(-1), periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments, periodTotalTaxes, periodTotalBenDeds);
             yearToDateSourceEntities = new List<PayStatementSourceData>() { sourceData_0, sourceData };
 
             payrollRegisterEntry = new PayrollRegisterEntry("54321", employeeId, periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "PC", 1, "ref", "ref-008", false, null);
@@ -202,7 +206,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             [TestMethod]
             public void EmptySSNTest()
             {
-                sourceData = new PayStatementSourceData(id, employeeId, employeeName, null, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
+                sourceData = new PayStatementSourceData(id, employeeId, employeeName, null, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments, periodTotalTaxes, periodTotalBenDeds);
                 payStatementReportDatacontext = new PayStatementReportDataContext(sourceData, payrollRegisterEntry, benefitDeductions, personEmploymentStatuses);
                 report = new PayStatementReport(payStatementReportDatacontext, yearToDateDataContext, referenceUtility);
                 Assert.AreEqual(string.Empty, report.EmployeeSSN);
@@ -234,7 +238,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void SSNDisplayLastFourForShortSSNTest()
             {
                 var shortSSN = "123";
-                sourceData = new PayStatementSourceData(id, employeeId, employeeName, shortSSN, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
+                sourceData = new PayStatementSourceData(id, employeeId, employeeName, shortSSN, mailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments, periodTotalTaxes, periodTotalBenDeds);
                 payStatementReportDatacontext = new PayStatementReportDataContext(sourceData, payrollRegisterEntry, benefitDeductions, personEmploymentStatuses);
                 payStatementConfiguration.SocialSecurityNumberDisplay = SSNDisplay.LastFour;
                 referenceUtility = new PayStatementReferenceDataUtility(earningsTypes, earningsDifferentials, taxCodes, benefitDeductionTypes, leaveTypes, positions, payStatementConfiguration);
@@ -484,9 +488,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     {
                         var payStatementLeave = new PayStatementLeave(leaveType.Code,
                             leaveType.Description,
-                            leaveEntryGroup.Sum(entry => entry.LeaveTaken),
-                            leaveEntryGroup.Sum(entry => entry.LeaveRemaining));
-
+                            leaveEntryGroup.Select(entry => entry.LeaveTaken).FirstOrDefault(),
+                            leaveEntryGroup.Select(entry => entry.LeaveRemaining).FirstOrDefault());
                         leaveItems.Add(payStatementLeave);
                     }
                 }

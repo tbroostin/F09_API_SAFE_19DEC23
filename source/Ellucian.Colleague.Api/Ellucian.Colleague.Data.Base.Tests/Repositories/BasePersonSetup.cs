@@ -1,9 +1,8 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Http.Configuration;
 using Moq;
 using System;
@@ -26,7 +25,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         protected int PersonCount = 0;
         Collection<DataContracts.Person> personResponseData;
         ApiSettings apiSettings;
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
 
         #region Private data array setup
 
@@ -107,7 +105,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             personIntgRecords = SetupPersonIntg(out personIds);
 
             preferredAddressResponses = SetupPreferredAddressResponses();
-            
+
             // Mock the calls for reading individual person records
             dataReaderMock.Setup<Task<DataContracts.Person>>(
                 accessor => accessor.ReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string>(), true)
@@ -131,31 +129,31 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 });
 
             // var integrationPerson = await DataReader.ReadRecordAsync<DataContracts.PersonIntg>(record.Recordkey);
-           dataReaderMock.Setup<Task<DataContracts.PersonIntg>>(
-                accessor => accessor.ReadRecordAsync<DataContracts.PersonIntg>(It.IsAny<string>(), true)
-                ).Returns<string, bool>((id, vms) =>
-                {
-                    DataContracts.PersonIntg response = null;
-                    return Task.FromResult((personIntgRecords.TryGetValue(id, out response)) ? response : null);
-                });
+            dataReaderMock.Setup<Task<DataContracts.PersonIntg>>(
+                 accessor => accessor.ReadRecordAsync<DataContracts.PersonIntg>(It.IsAny<string>(), true)
+                 ).Returns<string, bool>((id, vms) =>
+                 {
+                     DataContracts.PersonIntg response = null;
+                     return Task.FromResult((personIntgRecords.TryGetValue(id, out response)) ? response : null);
+                 });
 
-           // var integrationPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.PersonIntg>(personIds);
-           dataReaderMock.Setup<Task<Collection<DataContracts.PersonIntg>>>(
-               accessor => accessor.BulkReadRecordAsync<DataContracts.PersonIntg>(It.IsAny<string[]>(), true))
-               .Returns<string[], bool>((ids, b) =>
-               {
-                   return Task.FromResult(new Collection<DataContracts.PersonIntg>(
-                            personIntgRecords
-                            .Where(p => ids.Contains(p.Key))
-                            .Select(p =>
-                            new Ellucian.Colleague.Data.Base.DataContracts.PersonIntg()
-                            {
-                                Recordkey = p.Key,
-                                PerIntgBirthCountry = p.Value.PerIntgBirthCountry,
-                                PerIntgDlExpireDate = p.Value.PerIntgDlExpireDate,
-                                PerIntgEthnic = p.Value.PerIntgEthnic
-                            }).ToList()));
-               });         
+            // var integrationPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.PersonIntg>(personIds);
+            dataReaderMock.Setup<Task<Collection<DataContracts.PersonIntg>>>(
+                accessor => accessor.BulkReadRecordAsync<DataContracts.PersonIntg>(It.IsAny<string[]>(), true))
+                .Returns<string[], bool>((ids, b) =>
+                {
+                    return Task.FromResult(new Collection<DataContracts.PersonIntg>(
+                             personIntgRecords
+                             .Where(p => ids.Contains(p.Key))
+                             .Select(p =>
+                             new Ellucian.Colleague.Data.Base.DataContracts.PersonIntg()
+                             {
+                                 Recordkey = p.Key,
+                                 PerIntgBirthCountry = p.Value.PerIntgBirthCountry,
+                                 PerIntgDlExpireDate = p.Value.PerIntgDlExpireDate,
+                                 PerIntgEthnic = p.Value.PerIntgEthnic
+                             }).ToList()));
+                });
 
             //Mock the call to read a batch of person records
             dataReaderMock.Setup<Task<Collection<DataContracts.Person>>>(
@@ -173,6 +171,25 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                 FirstName = p.Value.FirstName
                             }).ToList()));
                 });
+            //Mock the call to read a batch of person records with Invalid records
+            dataReaderMock.Setup(
+                accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<DataContracts.Person>(It.IsAny<string[]>(), true))
+                .Returns<string[], bool>((ids, b) =>
+                {
+                    return Task.FromResult(new BulkReadOutput<DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<DataContracts.Person>(
+                            personRecords.Where(p => ids.Contains(p.Key))
+                            .Select(p => new DataContracts.Person()
+                            {
+                                Recordkey = p.Key,
+                                LastName = p.Value.LastName,
+                                FirstName = p.Value.FirstName
+                            }).ToList())
+                    });
+                });
+
+
 
             // Mock the call for getting the preferred address
             transManagerMock.Setup<Task<TxGetHierarchyAddressResponse>>(
@@ -188,6 +205,23 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             // Mock the call for getting multiple person records
             personResponseData = BuildPersonResponseData(personRecords);
             dataReaderMock.Setup<Task<Collection<DataContracts.Person>>>(acc => acc.BulkReadRecordAsync<DataContracts.Person>(It.IsAny<string[]>(), true)).ReturnsAsync(personResponseData);
+            dataReaderMock.Setup(
+                accessor => accessor.BulkReadRecordWithInvalidRecordsAsync<DataContracts.Person>(It.IsAny<string[]>(), true))
+                .Returns<string[], bool>((ids, b) =>
+                {
+                    return Task.FromResult(new BulkReadOutput<DataContracts.Person>()
+                    {
+                        BulkRecordsRead = new Collection<DataContracts.Person>(
+                            personResponseData.Where(p => ids.Contains(p.Recordkey))
+                            .Select(p => new DataContracts.Person()
+                            {
+                                Recordkey = p.Recordkey,
+                                LastName = p.LastName,
+                                FirstName = p.FirstName
+                            }).ToList())
+                    });
+                });
+
 
             dataReaderMock.Setup<Task<Collection<DataContracts.Person>>>(acc => acc.BulkReadRecordAsync<DataContracts.Person>(It.IsAny<GuidLookup[]>(), true)).ReturnsAsync(personResponseData);
 
@@ -222,13 +256,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     var personGuid = lookup[0].Guid;
                     var personRecord = personRecords.Where(pr => pr.Value.RecordGuid == personGuid).FirstOrDefault();
-                   
+
                     var result = new Dictionary<string, GuidLookupResult>();
-                    result.Add(personGuid, new GuidLookupResult() { PrimaryKey = personRecord .Value.Recordkey, Entity = "PERSON"});
+                    result.Add(personGuid, new GuidLookupResult() { PrimaryKey = personRecord.Value.Recordkey, Entity = "PERSON" });
                     return Task.FromResult(result);
                 });
 
-            
+
 
             // mock data accessor PERSON.ETHNICS
             dataReaderMock.Setup<Task<ApplValcodes>>(a =>
@@ -240,13 +274,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ValActionCode1 = new List<string>() { "W", "H" },
                     ValsEntityAssociation = new List<ApplValcodesVals>()
                     {
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "W",
                             ValExternalRepresentationAssocMember = "White",
                             ValActionCode1AssocMember = "W"
                         },
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "H",
                             ValExternalRepresentationAssocMember = "Hispanic",
@@ -265,13 +299,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ValActionCode1 = new List<string>() { "1", "2" },
                     ValsEntityAssociation = new List<ApplValcodesVals>()
                     {
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "CA",
                             ValExternalRepresentationAssocMember = "Caucasian",
                             ValActionCode1AssocMember = "1"
                         },
-                         new ApplValcodesVals() 
+                         new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "PI",
                             ValExternalRepresentationAssocMember = "Pacific Islander",
@@ -290,25 +324,25 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     ValActionCode1 = new List<string>() { "1", "2", "3", "4" },
                     ValsEntityAssociation = new List<ApplValcodesVals>()
                     {
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "S",
                             ValExternalRepresentationAssocMember = "Single",
                             ValActionCode1AssocMember = "1"
                         },
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "M",
                             ValExternalRepresentationAssocMember = "Married",
                             ValActionCode1AssocMember = "2"
                         },
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "D",
                             ValExternalRepresentationAssocMember = "Divorced",
                             ValActionCode1AssocMember = "3"
                         },
-                        new ApplValcodesVals() 
+                        new ApplValcodesVals()
                         {
                             ValInternalCodeAssocMember = "W",
                             ValExternalRepresentationAssocMember = "Widowed",
@@ -355,7 +389,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 .ReturnsAsync(new Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy()
                 {
                     Recordkey = "PREFERRED",
-                    NahNameHierarchy = new List<string>() { "MA", "XYZ", "PF"}
+                    NahNameHierarchy = new List<string>() { "MA", "XYZ", "PF" }
                 });
         }
 
@@ -730,11 +764,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Gender = "M",
                 GovernmentId = "111-11-1111",
                 MaritalStatusCode = "M",
-                EthnicCodes = new List<string> {"H"},
-                RaceCodes = new List<string> {"AS"}
-                
+                EthnicCodes = new List<string> { "H" },
+                RaceCodes = new List<string> { "AS" }
+
             };
-            person.MaritalStatus =  MaritalState.Married;
+            person.MaritalStatus = MaritalState.Married;
             person.AddEmailAddress(new EmailAddress("xyz@xmail.com", "PRI"));
             return person;
         }
@@ -746,9 +780,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             var legal = request.PersonIntgNames.FirstOrDefault(x => x.PersonNameType == "LEGAL");
 
             //if (request.Prefix != person.Prefix) return false;
-             if (legal.FirstName != person.FirstName) return false;
+            if (legal.FirstName != person.FirstName) return false;
             if (legal.LastName != person.LastName) return false;
-             if (legal.MiddleName != person.MiddleName) return false;
+            if (legal.MiddleName != person.MiddleName) return false;
             //if (request.Suffix != person.Suffix) return false;
             //if (request.Nickname != person.Nickname) return false;
             if (request.Gender != person.Gender) return false;
@@ -758,8 +792,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             if (request.BirthDate != person.BirthDate) return false;
             if (request.DeceasedDate != person.DeceasedDate) return false;
             //if (request.Ssn != person.GovernmentId) return false;
-           // if (request.EmailAddresses[0].EmailAddressValue != person.EmailAddresses[0].Value) return false;
-           // if (request.EmailAddresses[0].EmailAddressType != person.EmailAddresses[0].TypeCode) return false;
+            // if (request.EmailAddresses[0].EmailAddressValue != person.EmailAddresses[0].Value) return false;
+            // if (request.EmailAddresses[0].EmailAddressType != person.EmailAddresses[0].TypeCode) return false;
             /* addresses
             for (int i = 0; i < addresses.Count(); i++)
             {

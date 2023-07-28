@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -118,7 +118,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="personId">The Colleague PERSON id of the person in this position</param>
         /// <param name="positionId">The Id of the Position assigned to this person</param>
         /// <param name="startDate">The date on which the person begins this position</param>
-        /// <param name="fullTimeEquivalent">Full-time equivalent (FTE) value of the employee in the positionn</param>
+        /// <param name="fullTimeEquivalent">Full-time equivalent (FTE) value of the employee in the position</param>
         public PersonPosition(string id, string personId, string positionId, DateTime startDate, Decimal? fullTimeEquivalent)
         { 
             if (string.IsNullOrEmpty(id))

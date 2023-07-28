@@ -129,7 +129,8 @@ namespace Ellucian.Web.Http.Filters
                         {
                             actionExecutedContext.Response.Content = new ObjectContent<dynamic>(returnedJson, new JsonMediaTypeFormatter(), @"application/json");
                         }
-                        actionExecutedContext.Response.Headers.Add("X-Content-Restricted", "partial");
+                        if (!actionExecutedContext.Response.Headers.Contains("X-Content-Restricted"))
+                            actionExecutedContext.Response.Headers.Add("X-Content-Restricted", "partial");
                     }
                     else if (extensionsApplied)//check if extensions were applied and return the modified content even if dataprivacy is not applied
                     {

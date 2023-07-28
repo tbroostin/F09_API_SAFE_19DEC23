@@ -426,7 +426,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                section = await _sectionRepository.GetSectionAsync(sectionId);
+                section = await _sectionRepository.GetSectionAsync(sectionId, useSeatServiceWhenEnabled: true);
                 if (section == null)
                 {
                     var message = "Repository returned a null section for Id " + sectionId;

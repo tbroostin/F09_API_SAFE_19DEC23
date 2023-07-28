@@ -1,5 +1,4 @@
-﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
-
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -8,7 +7,6 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
@@ -25,7 +23,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class ConfigurationSettingsRepository : BaseColleagueRepository, IConfigurationSettingsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        // public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
 
         public ConfigurationSettingsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
@@ -163,10 +160,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var errorMessage = string.Format("Error(s) occurred updating configuration-settings '{0}':", configurationSettings.Guid);
                     var exception = new RepositoryException(errorMessage);
                     updateResponse.ConfigSettingErrors.ForEach(e => exception.AddError(new RepositoryError("Validation.Exception", string.Concat(e.ErrorCodes, ": ", e.ErrorMessages))
-                        {
-                            Id = configurationSettings.Guid,
-                            SourceId = configurationSettingsId
-                        }
+                    {
+                        Id = configurationSettings.Guid,
+                        SourceId = configurationSettingsId
+                    }
                     ));
                     logger.Error(errorMessage);
                     throw exception;
@@ -400,7 +397,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (allDuplicateCriteria != null && allDuplicateCriteria.Any())
             {
-               foreach (var elfDuplCriteria in allDuplicateCriteria)
+                foreach (var elfDuplCriteria in allDuplicateCriteria)
                 {
                     var dictKey = elfDuplCriteria.Recordkey;
                     var dictValue = elfDuplCriteria.ElfduplDesc;
@@ -434,11 +431,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             if (person != null && !string.IsNullOrEmpty(person.LastName))
                             {
-                                    var preferred = string.Concat(person.FirstName, " ", person.LastName);
-                                    if (!dictCashierNames.ContainsKey(person.Recordkey))
-                                    {
-                                        dictCashierNames.Add(person.Recordkey, preferred);
-                                    }
+                                var preferred = string.Concat(person.FirstName, " ", person.LastName);
+                                if (!dictCashierNames.ContainsKey(person.Recordkey))
+                                {
+                                    dictCashierNames.Add(person.Recordkey, preferred);
+                                }
                             }
                         }
                     }
@@ -463,7 +460,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     foreach (var regUser in regUserKeys)
                     {
                         if (regUser != null && !string.IsNullOrEmpty(regUser))
-                        {   
+                        {
                             if (!dictRegUsers.ContainsKey(regUser))
                             {
                                 dictRegUsers.Add(regUser, regUser);

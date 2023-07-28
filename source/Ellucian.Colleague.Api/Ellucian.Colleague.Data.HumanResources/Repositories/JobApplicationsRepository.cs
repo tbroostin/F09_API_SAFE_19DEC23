@@ -1,28 +1,27 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using System.Linq;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base.Services;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class JobApplicationsRepository : BaseColleagueRepository, IJobApplicationsRepository
     {
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
         const string AllJobApplicationsRecordsCache = "AllJobApplicationsRecordKeys";
         const int AllJobApplicationsRecordsCacheTimeout = 20;
@@ -82,7 +81,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     int index = 0;
                     foreach (var jobappId in jobappsIds)
                     {
-                        var jobappKey = string.Concat(jobappId.Split(_VM)[0], "|", jobappsIndexIds[index]);
+                        var jobappKey = string.Concat(jobappId.Split(DmiString._VM)[0], "|", jobappsIndexIds[index]);
                         jobappsIds2.Add(jobappKey);
                         index++;
                     }
@@ -110,11 +109,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             var jobApplicationEntities = new List<JobApplication>();
-                       
+
             if (keysSubList.Any())
             {
                 var keysJobappsSubList = keysSubList.Select(k => k.Split('|')[0]).Distinct();
-                
+
                 var jobApplicationsContracts = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Jobapps>("JOBAPPS", keysJobappsSubList.ToArray());
                 if ((jobApplicationsContracts.InvalidKeys != null && jobApplicationsContracts.InvalidKeys.Any()) ||
                    jobApplicationsContracts.InvalidRecords != null && jobApplicationsContracts.InvalidRecords.Any())
@@ -155,7 +154,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                     DesiredCompensationRateValue = (jobapps.JbapMinSalary.Count >= index + 1) ? jobapps.JbapMinSalary[index] : null,
                                 });
                             }
-                            
+
                             index++;
                         }
                     }
@@ -220,7 +219,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         PositionId = (jobapps.JbapPosId.Count >= index + 1) ? jobapps.JbapPosId[index] : null,
                         AppliedOn = (jobapps.JbapApplicationDate.Count >= index + 1) ? jobapps.JbapApplicationDate[index] : null,
-                        DesiredCompensationRateValue = (jobapps.JbapMinSalary.Count >= index + 1) ? jobapps.JbapMinSalary[index] : null,           
+                        DesiredCompensationRateValue = (jobapps.JbapMinSalary.Count >= index + 1) ? jobapps.JbapMinSalary[index] : null,
                     };
                 }
                 index++;

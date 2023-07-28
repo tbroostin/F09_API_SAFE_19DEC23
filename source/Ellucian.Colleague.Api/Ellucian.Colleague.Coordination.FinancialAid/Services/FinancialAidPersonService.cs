@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,10 @@ using System.Collections.ObjectModel;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Data.Colleague.Exceptions;
+
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -27,6 +30,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
     public class FinancialAidPersonService : FinancialAidCoordinationService, IFinancialAidPersonService
     {
         private readonly IFinancialAidPersonRepository financialAidPersonRepository;
+        private readonly IPersonBaseRepository personBaseRepository;
 
         /// <summary>
         /// Constructor
@@ -41,10 +45,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
            IRoleRepository roleRepository,
            ILogger logger,
            IFinancialAidPersonRepository financialAidPersonRepository,
+           IPersonBaseRepository personBaseRepository,
            IConfigurationRepository configurationRepository)
             : base(configurationRepository, adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.financialAidPersonRepository = financialAidPersonRepository;
+            this.personBaseRepository = personBaseRepository;   
         }
 
         /// <summary>
@@ -91,6 +97,26 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             }
             var financialAidPersonDtoToEntityAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.Base.Person>();
             var personDtos = new List<Dtos.Base.Person>();
+            NameAddressHierarchy nameHierarchy = null;
+
+            var hierarchyNameAsString = await financialAidPersonRepository.GetStwebDefaultsHierarchyAsync();
+            if (!string.IsNullOrEmpty(hierarchyNameAsString))
+            {
+                try
+                {
+                    nameHierarchy = await personBaseRepository.GetCachedNameAddressHierarchyAsync(hierarchyNameAsString);
+                }
+                catch (ColleagueSessionExpiredException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, string.Format("Unable to find name address hierarchy with ID {0}. Not calculating hierarchy name.", hierarchyNameAsString));
+
+                }
+            }
+
             foreach (var personEntity in financialAidPersons)
             {
                 var person = personEntity;
@@ -103,6 +129,11 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                         MiddleName = personEntity.MiddleName,
                         PreferredName = personEntity.PreferredName
                     };
+                }
+                //If we have a valid name hierarchy from SPWP (verified existence on NAHM) get the student/applicant's display name
+                if (nameHierarchy != null)
+                {
+                    person.PersonDisplayName = PersonNameService.GetHierarchyName(person, nameHierarchy);
                 }
                 personDtos.Add(financialAidPersonDtoToEntityAdapter.MapToType(person));
             }

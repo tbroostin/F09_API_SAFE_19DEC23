@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
@@ -203,6 +203,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                 leavePlan.Title,
                                 leavePlan.StartDate.Value,
                                 leavePlan.EndDate,
+                                leavePlan.Type,
                                 leaveType == null ? LeaveTypeCategory.None : leaveType.TimeType,
                                 earnType.Code,
                                 earnType.Description,

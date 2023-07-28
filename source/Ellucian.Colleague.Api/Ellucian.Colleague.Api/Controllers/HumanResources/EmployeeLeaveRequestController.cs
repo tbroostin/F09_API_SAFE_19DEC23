@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2022 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using System.Web.Http;
@@ -24,6 +24,8 @@ using Ellucian.Colleague.Dtos.HumanResources;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -78,6 +80,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </param>
         /// <returns>A list of Leave Requests</returns>
         [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets a Leave request for currently authenticated API user.",
+         HttpMethodDescription = "Gets a Leave request for currently authenticated API user.")]
         public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync([FromUri] string effectivePersonId = null)
         {
             try
@@ -264,7 +269,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </accessComments>
         /// <param name="status">Leave Request Status DTO</param>
         /// <param name="effectivePersonId">Optional parameter - Current user or proxy user person id.</param>
-        /// <returns>Newly created Leave Request Status</returns>
+        /// <returns>Newly created Leave Request Status or the latest status of the associated leave request(when the incoming status is same as the latest status)</returns>
         [HttpPost]
         public async Task<LeaveRequestStatus> CreateLeaveRequestStatusAsync([FromBody] LeaveRequestStatus status, [FromUri] string effectivePersonId = null)
         {
@@ -495,6 +500,61 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
 
         }
+
+        #region Experience end-points
+        /// <summary>
+        /// This ethos pro-code api end-point will return the following necessary information needed to perform leave request from the experience.
+        /// 1. Leave Types for Leave requests.
+        /// This API also performs a few of the data validations.
+        /// The requested information must be owned by the employee.
+        /// </summary>
+        /// <param name="employeeId">Optional parameter: employeeId for whom the leave request being shown.</param>      
+        /// <returns>PositionPayPeriodsTimecards DTO</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets the leave types for leave request. Also performs data validations.",
+           HttpMethodDescription = "Gets the leave types for leave request. Also performs data validations.")]
+        public async Task<IEnumerable<LeaveRequestLeaveTypes>> GetLeaveTypesForLeaveRequestAsync(string employeeId = null)
+        {
+            _logger.Debug("********* Start - Process to get leave types for leave request information - Start *********");
+            try
+            {
+                var leaveTypes = await _employeeLeaveRequestService.GetLeaveTypesForLeaveRequestAsync(employeeId);
+                _logger.Debug("********* End - Process to get leave types for leave request information - End *********");
+                return leaveTypes;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ApplicationException e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+        #endregion
 
     }
 }

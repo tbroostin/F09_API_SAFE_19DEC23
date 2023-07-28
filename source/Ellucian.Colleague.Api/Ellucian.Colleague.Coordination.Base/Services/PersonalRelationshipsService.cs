@@ -1,6 +1,4 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-
-using Ellucian.Colleague.Domain.Base;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -41,7 +39,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                             IRoleRepository roleRepository,
                                             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
-            //: base(adapterRegistry, configurationRepository, currentUserFactory, roleRepository, logger)
+        //: base(adapterRegistry, configurationRepository, currentUserFactory, roleRepository, logger)
         {
             _referenceDataRepository = referenceDataRepository;
             _personRepository = personRepository;
@@ -120,7 +118,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>IEnumerable<Dtos.PersonalRelationship></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetAllPersonalRelationshipsAsync(int offset, int limit, bool bypassCache)
         {
-                     
+
             List<Dtos.PersonalRelationship> personalRelationships = new List<Dtos.PersonalRelationship>();
 
             List<string> guardianWithInverseRels = await GetGuardianRelationsWithInverseList();
@@ -133,7 +131,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 personalRelationships.Add(personalRelationship);
             }
             return new Tuple<IEnumerable<Dtos.PersonalRelationship>, int>(personalRelationships, personalRelationshipEntities.Item2);
-        }        
+        }
 
         /// <summary>
         /// Gets a personal relationship based on id
@@ -160,10 +158,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="subjectPerson"></param>
         /// <param name="relatedPerson"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetPersonalRelationshipsByFilterAsync(int offset, int limit, 
+        public async Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetPersonalRelationshipsByFilterAsync(int offset, int limit,
             string subjectPerson, string relatedPerson, string directRelationshipType, string directRelationshipDetailId)
         {
-           
+
             var personRelationshipDtos = new List<Dtos.PersonalRelationship>();
 
             string newSubjectPerson = string.Empty, newRelatedPerson = string.Empty, newDirectRelationshipType = string.Empty,
@@ -212,7 +210,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             return id;
         }
-        
+
         #endregion
 
 
@@ -334,10 +332,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     {
                         relationshipCode = relationship.Code;
                     }
-                } 
+                }
                 catch
                 {
-                    throw new KeyNotFoundException("Could not find personal relationship entity with type: " + type); 
+                    throw new KeyNotFoundException("Could not find personal relationship entity with type: " + type);
                 }
             }
             return relationshipCode;
@@ -363,7 +361,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                     relationshipCode = relationship.Code;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     throw new ColleagueWebApiException(e.Message);
                 }
@@ -387,8 +385,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             personalRelationshipDto.Comment = personalRelationshipEntity.Comment;
             personalRelationshipDto.EndOn = personalRelationshipEntity.EndDate;
             personalRelationshipDto.StartOn = personalRelationshipEntity.StartDate;
-            personalRelationshipDto.PersonalRelationshipStatus = string.IsNullOrEmpty(personalRelationshipEntity.Status) ? 
-                null : 
+            personalRelationshipDto.PersonalRelationshipStatus = string.IsNullOrEmpty(personalRelationshipEntity.Status) ?
+                null :
                 await ConvertEntityStatusToDtoStatus(personalRelationshipEntity.Status);
 
             Tuple<Dtos.Relationship, Dtos.Relationship> relationships = await ConvertEntityRelationshipTypesToDtoRelationshipTypes
@@ -411,7 +409,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             Dtos.Relationship subjectRelation = new Dtos.Relationship();
             Dtos.Relationship relativeRelation = new Dtos.Relationship();
 
-            if(relationTypes == null)
+            if (relationTypes == null)
                 relationTypes = await this.GetRelationTypesAsync(true);
 
             var subjectRelation_type = relationTypes.FirstOrDefault(x => x.Code.Equals(relType, StringComparison.OrdinalIgnoreCase));
@@ -449,7 +447,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         relativeRelation.RelationshipType = Dtos.PersonalRelationshipType.Other;
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     logger.Error("Error occurred when converting relationship type: " + ex.Message);
                 }
@@ -466,11 +464,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private Dtos.PersonalRelationshipType GetRelationshipType(string gender, RelationType entityRelationType)
         {
             Dtos.PersonalRelationshipType personalRelType = Dtos.PersonalRelationshipType.Other;
-                 if ((gender != null ) && (gender.Equals("M", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(entityRelationType.MaleRelType.ToString())))
+            if ((gender != null) && (gender.Equals("M", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(entityRelationType.MaleRelType.ToString())))
             {
                 personalRelType = (Dtos.PersonalRelationshipType)Enum.Parse(typeof(Dtos.PersonalRelationshipType), entityRelationType.MaleRelType.ToString());
             }
-            else if ((gender != null ) && (gender.Equals("F", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(entityRelationType.FemaleRelType.ToString())))
+            else if ((gender != null) && (gender.Equals("F", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(entityRelationType.FemaleRelType.ToString())))
             {
                 personalRelType = (Dtos.PersonalRelationshipType)Enum.Parse(typeof(Dtos.PersonalRelationshipType), entityRelationType.FemaleRelType.ToString());
             }
@@ -492,7 +490,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private async Task<Dtos.GuidObject2> ConvertEntityStatusToDtoStatus(string status)
         {
             if (relationshipStatuses == null)
-            { 
+            {
                 relationshipStatuses = await _referenceDataRepository.GetRelationshipStatusesAsync(true);
             }
             var statusEntity = relationshipStatuses.FirstOrDefault(x => x.Code.Equals(status, StringComparison.OrdinalIgnoreCase));
@@ -630,7 +628,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         }
 
-      
+
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -639,10 +637,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>PersonalRelationships2 DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.PersonalRelationships2> GetPersonalRelationships2ByGuidAsync(string guid, bool bypassCache = true)
         {
-          
+
             try
             {
-               var rela = await ConvertPersonalRelationships2EntityToDto(await _relationshipRepository.GetPersonalRelationshipById2Async(guid));
+                var rela = await ConvertPersonalRelationships2EntityToDto(await _relationshipRepository.GetPersonalRelationshipById2Async(guid));
                 if (IntegrationApiException != null)
                 {
                     throw IntegrationApiException;
@@ -674,7 +672,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (personRelationshipEntity == null)
             {
-                IntegrationApiExceptionAddError("Personal relationship enetity cannot be empty.", "Validation.Exception", string.Empty , string.Empty);
+                IntegrationApiExceptionAddError("Personal relationship enetity cannot be empty.", "Validation.Exception", string.Empty, string.Empty);
                 throw IntegrationApiException;
             }
             Dtos.PersonalRelationships2 personRelationshipDto = new Dtos.PersonalRelationships2();
@@ -705,9 +703,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             if (!string.IsNullOrEmpty(personRelationshipEntity.Comment))
             {
-                personRelationshipDto.Comment = personRelationshipEntity.Comment.Replace(Convert.ToChar(DynamicArray.VM), '\n')
-                                                       .Replace(Convert.ToChar(DynamicArray.TM), ' ')
-                                                       .Replace(Convert.ToChar(DynamicArray.SM), ' ');
+                personRelationshipDto.Comment = personRelationshipEntity.Comment.Replace(DmiString._VM, '\n')
+                                                                                .Replace(DmiString._TM, ' ')
+                                                                                .Replace(DmiString._SM, ' ');
             }
             personRelationshipDto.EndOn = personRelationshipEntity.EndDate;
             personRelationshipDto.StartOn = personRelationshipEntity.StartDate;
@@ -794,7 +792,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (relationStatuses == null)
             {
-                relationStatuses = await _referenceDataRepository.GetRelationshipStatusesAsync(bypassCache);               
+                relationStatuses = await _referenceDataRepository.GetRelationshipStatusesAsync(bypassCache);
             }
             return relationStatuses;
         }
@@ -859,14 +857,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw ex;
             }
-            catch( IntegrationApiException ex)
+            catch (IntegrationApiException ex)
             {
                 throw ex;
             }
             catch (Exception ex)
             {
                 throw new ColleagueWebApiException(ex.Message, ex.InnerException);
-            }           
+            }
         }
 
         /// <summary>
@@ -885,7 +883,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     IntegrationApiExceptionAddError("Must provide a personal relationships representation for create.", "Missing.Request.Body");
                     throw IntegrationApiException;
                 }
-                 if (string.IsNullOrEmpty(personalRelationships.Id))
+                if (string.IsNullOrEmpty(personalRelationships.Id))
                 {
                     IntegrationApiExceptionAddError("Must provide a personal relationships representation id for create.", "Missing.Request.ID");
                     throw IntegrationApiException;
@@ -1159,9 +1157,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
                 if (!string.IsNullOrEmpty(personRelationshipsDto.Comment))
                 {
-                    personalRelaEntity.Comment = personRelationshipsDto.Comment.Replace(Convert.ToChar(DynamicArray.VM), '\n')
-                                                   .Replace(Convert.ToChar(DynamicArray.TM), ' ')
-                                                   .Replace(Convert.ToChar(DynamicArray.SM), ' '); ;
+                    personalRelaEntity.Comment = personRelationshipsDto.Comment.Replace(DmiString._VM, '\n')
+                                                                               .Replace(DmiString._TM, ' ')
+                                                                               .Replace(DmiString._SM, ' '); ;
                 }
                 if (IntegrationApiException != null)
                 {
@@ -1243,7 +1241,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var personMatchingRequest = await _personMatchingRequestsRepository.GetPersonMatchRequestsByIdAsync(createdPersonalRelationship.Item2);
                     if (personMatchingRequest == null)
                     {
-                        IntegrationApiExceptionAddError("Unable to locate person-match-request for id '" + createdPersonalRelationship.Item2  + "'.", "Bad.Data");
+                        IntegrationApiExceptionAddError("Unable to locate person-match-request for id '" + createdPersonalRelationship.Item2 + "'.", "Bad.Data");
                         throw IntegrationApiException;
                     }
 
@@ -1452,7 +1450,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 // Person Match Request Data
                 personalRelaEntity.RequestType = "RELATION";
-                
+
                 if (personRelationshipsDto.Related != null && (personRelationshipsDto.Related.Person == null || string.IsNullOrEmpty(personRelationshipsDto.Related.Person.Id)))
                 {
                     if (string.IsNullOrEmpty(personRelationshipsDto.Related.LastName) || string.IsNullOrEmpty(personRelationshipsDto.Related.FirstName))

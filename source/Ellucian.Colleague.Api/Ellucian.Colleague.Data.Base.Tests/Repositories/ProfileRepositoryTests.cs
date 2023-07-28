@@ -35,31 +35,29 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             #region Private data array setup
 
-            private static char _SM = Convert.ToChar(DynamicArray.SM);
-
             private string[,] _personData = { // id,    last name,   firstname, middle, prefix, preferred addr, person addresses, adrel type
                                            {"0000304", "Washington", "George", "", "Gen.", "101", "101;102;103", "HO;HO;BU"},
                                            {"0000404", "Adams", "John", "Peter", "Mr.", "104", "104;105", ""},
                                            {"0000504", "Jefferson", "Thomas", "", "Dr.", "106", "106", ""},
-                                           {"0000777", "Evans", "Ethan", "", "Mr.", "701", "701;702;703", "HO" + _SM + "V;HO" + _SM + "BU" + _SM + "ZZ;BU"},
-                                       
+                                           {"0000777", "Evans", "Ethan", "", "Mr.", "701", "701;702;703", "HO" + DmiString._SM + "V;HO" + DmiString._SM + "BU" + DmiString._SM + "ZZ;BU"},
+
                                            {"9999999", "Test", null, null, null, null, null, null},
                                            {"9999998", "Test", "Blank", "", "", "107", "107", ""}
                                        };
 
             private string[,] _addressData = {
-                                           {"0000304", "101 ", "65498 Ft. Belvoir Hwy;Mount Vernon;Alexandria, VA 21348", "65498 Ft. Belvoir Hwy;Mount Vernon", "Alexandria", "VA", "21348", "USA", "United States of America", "Father of our Country","01/01/2012", ""}, 
-                                           {"0000304", "102 ", "", "235 Beacon Hill Dr.", "Boston", "MA", "03549", "", "", "","","10/10/2025"}, 
-                                           {"0000304", "103 ", "1 Champs d'Elyssie;U.S. Embassy;Paris;FRANCE", "1 Champs d'Elyssie", "Paris", "", "", "FR", "France", "Ambassador to France","",""}, 
-                                           {"0000404", "104", "", "1812 Dolly Madison Dr.", "Arlington", "VA", "22146", "", "", "","03/01/2025",""}, 
-                                           {"0000404", "105", "", "1787 Constitution Ave.", "Franklin", "TN", "34567", "", "", "", "1/1/2011","5/1/2012"}, 
-                                           {"0000504", "106", "", "1600 Pennsylvania Ave.;The White House", "Washington", "DC", "12345", "", "", "POTUS","",""}, 
+                                           {"0000304", "101 ", "65498 Ft. Belvoir Hwy;Mount Vernon;Alexandria, VA 21348", "65498 Ft. Belvoir Hwy;Mount Vernon", "Alexandria", "VA", "21348", "USA", "United States of America", "Father of our Country","01/01/2012", ""},
+                                           {"0000304", "102 ", "", "235 Beacon Hill Dr.", "Boston", "MA", "03549", "", "", "","","10/10/2025"},
+                                           {"0000304", "103 ", "1 Champs d'Elyssie;U.S. Embassy;Paris;FRANCE", "1 Champs d'Elyssie", "Paris", "", "", "FR", "France", "Ambassador to France","",""},
+                                           {"0000404", "104", "", "1812 Dolly Madison Dr.", "Arlington", "VA", "22146", "", "", "","03/01/2025",""},
+                                           {"0000404", "105", "", "1787 Constitution Ave.", "Franklin", "TN", "34567", "", "", "", "1/1/2011","5/1/2012"},
+                                           {"0000504", "106", "", "1600 Pennsylvania Ave.;The White House", "Washington", "DC", "12345", "", "", "POTUS","",""},
                                            {"0000504", "107", "", "7413 Clifton Quarry Dr.", "Clifton", "VA", "20121", "", "", "","",""},
                                            {"9999999", "108 ", null, null, null, null, null, null, null, null, null, null},
                                            {"9999998", "109 ", "", "", "", "", "", "", "", "", "",""},
-                                           {"0000777", "701 ", "65498 Ft. Belvoir Hwy;Mount Vernon;Alexandria, VA 21348", "65498 Ft. Belvoir Hwy;Mount Vernon", "Alexandria", "VA", "21348", "USA", "United States of America", "Father of our Country","01/01/2012", ""}, 
-                                           {"0000777", "702 ", "", "235 Beacon Hill Dr.", "Boston", "MA", "03549", "", "", "","","10/10/2025"}, 
-                                           {"0000777", "703 ", "1 Champs d'Elyssie;U.S. Embassy;Paris;FRANCE", "1 Champs d'Elyssie", "Paris", "", "", "FR", "France", "Ambassador to France","",""}, 
+                                           {"0000777", "701 ", "65498 Ft. Belvoir Hwy;Mount Vernon;Alexandria, VA 21348", "65498 Ft. Belvoir Hwy;Mount Vernon", "Alexandria", "VA", "21348", "USA", "United States of America", "Father of our Country","01/01/2012", ""},
+                                           {"0000777", "702 ", "", "235 Beacon Hill Dr.", "Boston", "MA", "03549", "", "", "","","10/10/2025"},
+                                           {"0000777", "703 ", "1 Champs d'Elyssie;U.S. Embassy;Paris;FRANCE", "1 Champs d'Elyssie", "Paris", "", "", "FR", "France", "Ambassador to France","",""},
                                        };
 
             private string[,] _phoneData = {
@@ -182,27 +180,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 updateProfile.AddEmailAddress(new Domain.Base.Entities.EmailAddress("bob@ellucian.com", "sec") { IsPreferred = true });
                 updateProfile.LastChangedDateTime = new DateTimeOffset(2015, 09, 16, 11, 22, 33, new TimeSpan(0, 0, 0));
                 updateProfile.AddAddress(new Domain.Base.Entities.Address("123", "0000304")
-                    {
-                        AddressLines = new List<string>() { "Apt 3A", "10 Main Street" },
-                        City = "Georgetown",
-                        CountryCode = "CANADA",
-                        EffectiveEndDate = new DateTime(2017, 5, 1),
-                        EffectiveStartDate = new DateTime(2013, 2, 3),
-                        County = "QUE",
-                        PostalCode = "28495-2945",
-                        State = "Quebec",
-                        TypeCode = "H,WB"
-                    });
+                {
+                    AddressLines = new List<string>() { "Apt 3A", "10 Main Street" },
+                    City = "Georgetown",
+                    CountryCode = "CANADA",
+                    EffectiveEndDate = new DateTime(2017, 5, 1),
+                    EffectiveStartDate = new DateTime(2013, 2, 3),
+                    County = "QUE",
+                    PostalCode = "28495-2945",
+                    State = "Quebec",
+                    TypeCode = "H,WB"
+                });
                 updateProfile.AddAddress(new Domain.Base.Entities.Address("124", "0000304")
-                    {
-                        AddressLines = new List<string>() { "1 Blue Street" },
-                        City = "Columbus",
-                        EffectiveStartDate = DateTime.Today,
-                        County = "COL",
-                        PostalCode = "30987",
-                        State = "GA",
-                        TypeCode = "WB"
-                    });
+                {
+                    AddressLines = new List<string>() { "1 Blue Street" },
+                    City = "Columbus",
+                    EffectiveStartDate = DateTime.Today,
+                    County = "COL",
+                    PostalCode = "30987",
+                    State = "GA",
+                    TypeCode = "WB"
+                });
                 updateProfile.Nickname = "Nick";
                 updateProfile.ChosenFirstName = "Nicholas";
                 updateProfile.ChosenMiddleName = "Cage";
@@ -244,7 +242,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(updateProfile.Addresses.ElementAt(i).EffectiveStartDate, updatePersonProfileRequest.ProfileAddresses.ElementAt(i).AlAddressEffectiveStart);
                     Assert.AreEqual(updateProfile.Addresses.ElementAt(i).PostalCode, updatePersonProfileRequest.ProfileAddresses.ElementAt(i).AlAddressPostalCode);
                     Assert.AreEqual(updateProfile.Addresses.ElementAt(i).State, updatePersonProfileRequest.ProfileAddresses.ElementAt(i).AlAddressState);
-                    Assert.AreEqual(updateProfile.Addresses.ElementAt(i).TypeCode.Replace(',', Convert.ToChar(DynamicArray.SM)), updatePersonProfileRequest.ProfileAddresses.ElementAt(i).AlAddressTypes);
+                    Assert.AreEqual(updateProfile.Addresses.ElementAt(i).TypeCode.Replace(',', DmiString._SM), updatePersonProfileRequest.ProfileAddresses.ElementAt(i).AlAddressTypes);
                 }
 
                 // Verify update person identity options
@@ -267,27 +265,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 updateProfile.AddEmailAddress(new Domain.Base.Entities.EmailAddress("bob@ellucian.com", "sec") { IsPreferred = true });
                 updateProfile.LastChangedDateTime = new DateTimeOffset(2015, 09, 16, 11, 22, 33, new TimeSpan(0, 0, 0));
                 updateProfile.AddAddress(new Domain.Base.Entities.Address("123", "0000304")
-                    {
-                        AddressLines = new List<string>() { "Apt 3A", "10 Main Street" },
-                        City = "Georgetown",
-                        CountryCode = "CANADA",
-                        EffectiveEndDate = new DateTime(2017, 5, 1),
-                        EffectiveStartDate = new DateTime(2013, 2, 3),
-                        County = "QUE",
-                        PostalCode = "28495-2945",
-                        State = "Quebec",
-                        TypeCode = "H,WB"
-                    });
+                {
+                    AddressLines = new List<string>() { "Apt 3A", "10 Main Street" },
+                    City = "Georgetown",
+                    CountryCode = "CANADA",
+                    EffectiveEndDate = new DateTime(2017, 5, 1),
+                    EffectiveStartDate = new DateTime(2013, 2, 3),
+                    County = "QUE",
+                    PostalCode = "28495-2945",
+                    State = "Quebec",
+                    TypeCode = "H,WB"
+                });
                 updateProfile.AddAddress(new Domain.Base.Entities.Address("124", "0000304")
-                    {
-                        AddressLines = new List<string>() { "1 Blue Street", "Wüûýþ Ward, Apt A" },
-                        City = "Columbus",
-                        EffectiveStartDate = DateTime.Today,
-                        County = "COL",
-                        PostalCode = "30987",
-                        State = "GA",
-                        TypeCode = "WB"
-                    });
+                {
+                    AddressLines = new List<string>() { "1 Blue Street", "Wüûýþ Ward, Apt A" },
+                    City = "Columbus",
+                    EffectiveStartDate = DateTime.Today,
+                    County = "COL",
+                    PostalCode = "30987",
+                    State = "GA",
+                    TypeCode = "WB"
+                });
                 // set up request and response for update person confirmations
                 UpdatePersonConfirmationsRequest updatePersonConfirmationsRequest = null;
                 UpdatePersonConfirmationsResponse updatePersonConfirmationsResponse = new UpdatePersonConfirmationsResponse() { AErrorOccurred = "0" };
@@ -309,20 +307,20 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(expectedAddress.EffectiveStartDate, actualAddress.AlAddressEffectiveStart);
                     Assert.AreEqual(expectedAddress.PostalCode, actualAddress.AlAddressPostalCode);
                     Assert.AreEqual(expectedAddress.State, actualAddress.AlAddressState);
-                    Assert.AreEqual(expectedAddress.TypeCode.Replace(',', Convert.ToChar(DynamicArray.SM)), actualAddress.AlAddressTypes);
+                    Assert.AreEqual(expectedAddress.TypeCode.Replace(',', DmiString._SM), actualAddress.AlAddressTypes);
                     List<String> expectedLines = new List<string>();
                     foreach (var expectedLine in expectedAddress.AddressLines)
                     {
                         expectedLines.Add(
-                            expectedLine.Replace(Convert.ToChar(DynamicArray.TM), 'u')
-                                        .Replace(Convert.ToChar(DynamicArray.SM), 'u')
-                                        .Replace(Convert.ToChar(DynamicArray.VM), 'y')
-                                        .Replace(Convert.ToChar(DynamicArray.FM), 'y')
+                            expectedLine.Replace(DmiString._TM, 'u')
+                                        .Replace(DmiString._SM, 'u')
+                                        .Replace(DmiString._VM, 'y')
+                                        .Replace(DmiString._FM, 'y')
                         );
 
                     }
 
-                    Assert.AreEqual(string.Join(Convert.ToChar(DynamicArray.SM).ToString(), expectedLines.ToArray()), actualAddress.AlAddressLines);
+                    Assert.AreEqual(string.Join(DmiString.sSM, expectedLines.ToArray()), actualAddress.AlAddressLines);
                 }
             }
 
@@ -486,25 +484,25 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         ValActionCode2 = new List<string>() { "H", "B", "", "" },
                         ValsEntityAssociation = new List<ApplValcodesVals>()
                         {
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "HO",
                                 ValExternalRepresentationAssocMember = "Home",
                                 ValActionCode2AssocMember = "H"
                             },
-                             new ApplValcodesVals() 
+                             new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "BU",
                                 ValExternalRepresentationAssocMember = "Business",
                                 ValActionCode2AssocMember = "B"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "CP",
                                 ValExternalRepresentationAssocMember = "Cell Phone",
                                 ValActionCode2AssocMember = ""
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "FX",
                                 ValExternalRepresentationAssocMember = "FAX",
@@ -522,22 +520,22 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         ValExternalRepresentation = new List<string>() { "Home", "Business", "Vacation" },
                         ValsEntityAssociation = new List<ApplValcodesVals>()
                         {
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "HO",
                                 ValExternalRepresentationAssocMember = "Home"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "BU",
                                 ValExternalRepresentationAssocMember = "Business"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "V",
                                 ValExternalRepresentationAssocMember = "Vacation"
                             },
-                            new ApplValcodesVals() 
+                            new ApplValcodesVals()
                             {
                                 ValInternalCodeAssocMember = "ZZ",
                                 ValExternalRepresentationAssocMember = ""
@@ -549,10 +547,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var dfltsConfig = new Dflts() { DfltsWebAdrChgSource = "WB" };
                 dataReaderMock.Setup<Task<Dflts>>(d => d.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS", true)).ReturnsAsync(dfltsConfig);
 
-                var countries = new Collection<DataContracts.Countries>() 
-                { 
-                    new DataContracts.Countries() { Recordkey = "USA", CtryDesc = "USofA" }, 
-                    new DataContracts.Countries() { Recordkey = "CAN", CtryDesc = "Canada" } 
+                var countries = new Collection<DataContracts.Countries>()
+                {
+                    new DataContracts.Countries() { Recordkey = "USA", CtryDesc = "USofA" },
+                    new DataContracts.Countries() { Recordkey = "CAN", CtryDesc = "Canada" }
                 };
                 dataReaderMock.Setup<Task<Collection<DataContracts.Countries>>>(d => d.BulkReadRecordAsync<DataContracts.Countries>("COUNTRIES", "", true)).ReturnsAsync(countries);
 

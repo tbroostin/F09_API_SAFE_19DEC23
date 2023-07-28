@@ -1,26 +1,25 @@
-﻿/*Copyright 2016-2021 Ellucian Company L.P. and its affiliates.*/
-
+﻿/*Copyright 2016-2023 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
-using slf4net;
-using Ellucian.Web.Dependency;
-using Ellucian.Colleague.Domain.Exceptions;
-using Vendors = Ellucian.Colleague.Domain.ColleagueFinance.Entities.Vendors;
 using System.Text;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
-using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Base.Entities;
+using System.Threading.Tasks;
+using Vendors = Ellucian.Colleague.Domain.ColleagueFinance.Entities.Vendors;
 
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
@@ -28,8 +27,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class VendorsRepository : BaseColleagueRepository, IVendorsRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
-
         private readonly int readSize;
         protected const int AllVendorsCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllVendorFilterCache = "AllVendorsFilter";
@@ -649,7 +646,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     TaxForm1099MiscWithholding = x.AlVendor1099Wthhld,
                     AddressTypeCode = x.AlVendAddrTypeCodes,
                     AddressTypeDesc = x.AlVendAddrTypeDesc,
-                    VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(_SM).ToList() : new List<string>()
+                    VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(DmiString._SM).ToList() : new List<string>()
                 }).ToList();
             }
 
@@ -693,11 +690,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     resultEntity.VendorId = x.AlVendorIds;
 
                     // there may be multiple (sub-valued) messages for each vendor names.
-                    resultEntity.VendorNameLines = !string.IsNullOrEmpty(x.AlVendorNames) ? x.AlVendorNames.Split(_SM).ToList() : new List<string>();
+                    resultEntity.VendorNameLines = !string.IsNullOrEmpty(x.AlVendorNames) ? x.AlVendorNames.Split(DmiString._SM).ToList() : new List<string>();
                     resultEntity.AddressId = x.AlVendorAddrIds;
                     resultEntity.FormattedAddress = x.AlVendorFormattedAddresses;
                     // there may be multiple (sub-valued) messages for each vendor address.
-                    resultEntity.AddressLines = !string.IsNullOrEmpty(x.AlVendorAddress) ? x.AlVendorAddress.Split(_SM).ToList() : new List<string>();
+                    resultEntity.AddressLines = !string.IsNullOrEmpty(x.AlVendorAddress) ? x.AlVendorAddress.Split(DmiString._SM).ToList() : new List<string>();
                     resultEntity.City = x.AlVendorCity;
                     resultEntity.Country = x.AlVendorCountry;
                     resultEntity.State = x.AlVendorState;
@@ -709,10 +706,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     resultEntity.TaxForm1099MiscWithholding = x.AlVendor1099miWthhld;
                     resultEntity.AddressTypeCode = x.AlVendAddrTypeCodes;
                     resultEntity.AddressTypeDesc = x.AlVendAddrTypeDesc;
-                    resultEntity.VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(_SM).ToList() : new List<string>(); 
+                    resultEntity.VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(DmiString._SM).ToList() : new List<string>();
                     voucherVendorSearchResults.Add(resultEntity);
                 }
-               
+
             }
 
             return voucherVendorSearchResults.AsEnumerable();

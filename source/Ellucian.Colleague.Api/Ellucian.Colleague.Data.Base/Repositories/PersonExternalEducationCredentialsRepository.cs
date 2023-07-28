@@ -1,25 +1,24 @@
-﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2019-2023 Ellucian Company L.P. and its affiliates. */
 
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
-using slf4net;
-using Ellucian.Web.Dependency;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -27,16 +26,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class PersonExternalEducationCredentialsRepository : BaseColleagueRepository, IPersonExternalEducationCredentialsRepository
     {
         private RepositoryException exception = new RepositoryException();
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly int _readSize;
-        
+
         public PersonExternalEducationCredentialsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
             CacheTimeout = Level1CacheTimeoutValue;
             this._readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
         }
-        
+
         /// <summary>
         ///  Get all external education data consisting of academic credential data, excluding home insitution,
         /// along with some data from institutions attended
@@ -94,7 +92,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                var studentId = entry.Key;
                                foreach (KeyValuePair<string, string> institutitionsAttended in entry.Value)
                                {
-                                   var institutionsAttends = institutitionsAttended.Value.Split(_VM);
+                                   var institutionsAttends = institutitionsAttended.Value.Split(DmiString._VM);
                                    foreach (var institutionsAttend in institutionsAttends)
                                    {
                                        if (!string.IsNullOrEmpty(institutionsAttend) && (hostInstitutionId != institutionsAttend))
@@ -120,7 +118,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                        var instAttendId = entry.Key;
                                        foreach (KeyValuePair<string, string> institutitionsAttended in entry.Value)
                                        {
-                                           var acadCredentials = institutitionsAttended.Value.Split(_VM);
+                                           var acadCredentials = institutitionsAttended.Value.Split(DmiString._VM);
                                            foreach (var acadCredKey in acadCredentials)
                                            {
                                                if (!string.IsNullOrEmpty(acadCredKey))
@@ -192,7 +190,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             string personExternalEducationCredentialsKey = CacheSupport.BuildCacheKey("PersonExternalEducationCredentialsKeys", personFilter,
                filterPersonIds != null && filterPersonIds.Any() ? filterPersonIds.Count().ToString() : "", personId, externalEducationID);
-           
+
             var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
                 ContainsKey,
@@ -653,7 +651,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             catch (Exception ex)
             {
-                exception.AddError( new RepositoryError("GUID.Not.Found", string.Format("Error occured while getting guids for {0}.  {1}", "ACAD.CREDENTIALS", ex.Message)));
+                exception.AddError(new RepositoryError("GUID.Not.Found", string.Format("Error occured while getting guids for {0}.  {1}", "ACAD.CREDENTIALS", ex.Message)));
             }
 
             return guidCollection;

@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -33,20 +33,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public UpdateLeaveRequestRequest actualUpdateLeaveRequestRequest;
 
         Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
+        Mock<ILeavePlansRepository> leavePlansRepositoryMock;
 
         public HRSSConfiguration hrssConfiguration = null;
+        IEnumerable<LeavePlan> leavePlans = null;
         public DateTime startDate;
         public DateTime endDate;
-
+        private string guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874";
         public EmployeeLeaveRequestRepository BuildRepository()
         {
+
+            LeavePlan leaveplan = new LeavePlan(guid, "leaveplan", DateTime.Today, "leaveplan1", "type", "method", null);
+            leavePlans.Append(leaveplan);
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
             DataContracts.HrssDefaults value = new DataContracts.HrssDefaults() { HrssDisplayNameHierarchy = "GR" };
-            
-            hrReferenceDataRepositoryMock.Setup(repo => repo.GetHrssConfigurationAsync()).Returns(Task.FromResult(hrssConfiguration));
-            hrReferenceDataRepositoryMock.Setup(repo => repo.GetHrssConfigurationAsync())
-                .Returns(Task.FromResult(hrssConfiguration));
 
+            hrReferenceDataRepositoryMock.Setup(repo => repo.GetHrssConfigurationAsync()).Returns(Task.FromResult(hrssConfiguration));
+            leavePlansRepositoryMock.Setup(repo => repo.GetLeavePlansV2Async(false)).Returns(Task.FromResult(leavePlans));
             // mock data reader for getting the Name Address Hierarchy
             dataReaderMock.Setup<Task<Base.DataContracts.NameAddrHierarchy>>(a =>
                 a.ReadRecordAsync<Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "GR", true))
@@ -60,7 +63,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
               .Returns<string, string, string[], string, bool, int>((f, c, values, p, r, s) =>
                       Task.FromResult((testData.leaveRequestRecords == null) ? null :
-                          testData.leaveRequestRecords
+                          testData.leaveRequestRecords.Where(t=>employeeIds.Contains(t.EmployeeId))
                           .Select(rec => rec.Id).ToArray()
                       ));
 
@@ -232,22 +235,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
               .Returns<UpdateLeaveRequestRequest>((req) => Task.FromResult(new UpdateLeaveRequestResponse() { ErrorMessage = "" }));
             #endregion
 
-            return new EmployeeLeaveRequestRepository(hrReferenceDataRepositoryMock.Object, cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            return new EmployeeLeaveRequestRepository(hrReferenceDataRepositoryMock.Object, leavePlansRepositoryMock.Object, cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
         }
 
         public void EmployeeLeaveRequestRepositoryTestsInitialize()
         {
             MockInitialize();
             hrssConfiguration = new HRSSConfiguration() { HrssDisplayNameHierarchy = "GR" };
+            LeavePlan leaveplan = new LeavePlan(guid, "leaveplan", DateTime.Today, "leaveplan1", "type", "method", null);
+            leavePlans = new List<LeavePlan>() { new LeavePlan(guid, "leaveplan", DateTime.Today, "leaveplan1", "type", "method", null) };
             testData = new TestEmployeeLeaveRequestRepository();
             hrReferenceDataRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
+            leavePlansRepositoryMock = new Mock<ILeavePlansRepository>();
             employeeId = testData.leaveRequestRecords[0].EmployeeId;
             employeeIds = new List<string>() { employeeId };
             leaveRequestId = testData.leaveRequestRecords[1].Id;
             repositoryUnderTest = BuildRepository();
             startDate = DateTime.Today;
             endDate = DateTime.Today.AddDays(4);
-            
 
         }
 
@@ -927,6 +932,36 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.AreEqual(inputLeaveRequestStatus.ActionerId, newlyCreatedLeaveRequest.ActionerId);
                 Assert.AreEqual(inputLeaveRequestStatus.ActionType, newlyCreatedLeaveRequest.ActionType);
             }
+
+            [TestMethod]
+            public async Task CreateLeaveRequestStatus_DuplicateStatusCreationTest()
+            {
+                string inputLeaveRequestId = "4";
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.STATUS", string.Format("WITH LRS.LEAVE.REQUEST.ID EQ '{0}'", It.IsAny<string>())))
+                  .ReturnsAsync(testData.leaveRequestStatusRecords.Where(lrs => lrs.LeaveRequestId == inputLeaveRequestId).Select(rec => rec.Id).ToArray());
+
+                inputLeaveRequestStatus = new LeaveRequestStatus(null, "4", LeaveStatusAction.Approved, "0010355");
+                var actual = await createActual();
+                //Flag should be true since latest and the incoming status is approved.
+                Assert.IsNotNull(actual);
+                Assert.IsTrue(actual.LatestStatusAlreadyExists);
+
+            }
+            [TestMethod]
+            public async Task CreateLeaveRequestStatus_UniqueStatusCreationTest()
+            {
+                string inputLeaveRequestId = "4";
+                dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.STATUS", string.Format("WITH LRS.LEAVE.REQUEST.ID EQ '{0}'", It.IsAny<string>())))
+                  .ReturnsAsync(testData.leaveRequestStatusRecords.Where(lrs => lrs.LeaveRequestId == inputLeaveRequestId).Select(rec => rec.Id).ToArray());
+
+                inputLeaveRequestStatus = new LeaveRequestStatus(null, "4", LeaveStatusAction.Rejected, "0010355");
+                var actual = await createActual();
+                //A new status record must be created since the incoming status and the latest status are different.
+                Assert.IsNotNull(actual);
+                Assert.IsTrue(!string.IsNullOrEmpty(actual.Id));
+                Assert.IsFalse(actual.LatestStatusAlreadyExists);
+
+            }
         }
 
         [TestClass]
@@ -1166,7 +1201,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-
             public async Task GetLeaveRequestsForTimeEntryAsync_ExpectedEqualsActualTest()
             {
                 dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST", "WITH LR.EMPLOYEE.ID EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))

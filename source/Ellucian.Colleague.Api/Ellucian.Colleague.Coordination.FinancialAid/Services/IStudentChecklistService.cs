@@ -50,5 +50,15 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <param name="useCache">True/False flag to use the cache or not</param>
         /// <returns>Profile data for a parent</returns>
         Task<Dtos.Base.Profile> GetMpnProfileAsync(string parentId, string studentId, bool useCache = true);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId">The student ID to get/set the housing option for</param>
+        /// <param name="awardYear">The award year to get/set the housing option for</param>
+        /// <param name="housingCode">The housing option to set for the specified student/year</param>
+        /// <param name="retrieveOption">Either G/S/F, indicates to get, set, or force an update to CS.HOUSING.CODE even if it is already populated</param>
+        /// <returns></returns>
+        Task<HousingOption> GetSetHousingOptionAsync(string studentId, string awardYear, string housingCode, string retrieveOption);
     }
 }

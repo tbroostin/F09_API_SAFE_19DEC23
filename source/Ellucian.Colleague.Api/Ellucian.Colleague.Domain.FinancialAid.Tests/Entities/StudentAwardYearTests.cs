@@ -38,8 +38,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             public void NumberOfPropertiesTest()
             {
                 var studentAwardYearProperties = typeof(StudentAwardYear).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                //Added new AreFaCreditsVisible property, updating count to 23
-                Assert.AreEqual(23, studentAwardYearProperties.Count());
+                //Added new AreFaCreditsVisible and HousingOptions properties, updating count to 24
+                Assert.AreEqual(24, studentAwardYearProperties.Count());
             }
 
             [TestMethod]

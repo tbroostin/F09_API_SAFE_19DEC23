@@ -22,6 +22,7 @@ namespace Ellucian.Web.Http.Configuration
 
         private static string Settings = "settings";
         private static string Colleague = "colleague";
+        private static string Oauth = "oauth";
         private static string IpAddress = "ipAddress";
         private static string AccountName = "accountName";
         private static string Port = "port";
@@ -38,6 +39,9 @@ namespace Ellucian.Web.Http.Configuration
         private static string DasConnectionPoolSize = "dasConnectionPoolSize";
         private static string DasLogin = "dasLogin";
         private static string DasPassword = "dasPassword";
+        private static string OauthProxyLogin = "oauthProxyLogin";
+        private static string OauthProxyPassword = "oauthProxyPassword";
+        private static string OauthIssuerUrl = "oauthIssuerUrl";
         private static string UseDasDatareader = "useDasDatareader";
 
         private static string Level = "logLevel";
@@ -64,6 +68,7 @@ namespace Ellucian.Web.Http.Configuration
             var doc = XDocument.Load(fs);
             var colleagueElement = doc.Descendants(Colleague).FirstOrDefault();
             var collSettings = new ColleagueSettings();
+            var oauthSettings = new OauthSettings();
             var dmi = new DmiSettings();
             var das = new DasSettings();
             var general = new GeneralSettings();
@@ -177,6 +182,24 @@ namespace Ellucian.Web.Http.Configuration
 
             collSettings.DasSettings = das;
 
+            elem = doc.Descendants(OauthProxyLogin).FirstOrDefault();
+            if (elem != null)
+            {
+                oauthSettings.OauthProxyLogin = Decrypt(elem.Value);
+            }
+
+            elem = doc.Descendants(OauthProxyPassword).FirstOrDefault();
+            if (elem != null)
+            {
+                oauthSettings.OauthProxyPassword = Decrypt(elem.Value);
+            }
+
+            elem = doc.Descendants(OauthIssuerUrl).FirstOrDefault();
+            if (elem != null)
+            {
+                oauthSettings.OauthIssuerUrl = elem.Value;
+            }
+
             elem = doc.Descendants(UseDasDatareader).FirstOrDefault();
             if (elem != null)
             {
@@ -201,8 +224,7 @@ namespace Ellucian.Web.Http.Configuration
                 profileName = elem.Value;
             }
 
-
-            return new Settings(collSettings, serilogLevel) { ProfileName = profileName };
+            return new Settings(collSettings, oauthSettings, serilogLevel) { ProfileName = profileName };
         }
 
         public void Update(Settings settings)
@@ -226,10 +248,18 @@ namespace Ellucian.Web.Http.Configuration
             colleague.Add(new XElement(DasConnectionPoolSize, settings.ColleagueSettings.DasSettings.ConnectionPoolSize.ToString()));
             colleague.Add(new XElement(DasLogin, Encrypt(settings.ColleagueSettings.DasSettings.DbLogin)));
             colleague.Add(new XElement(DasPassword, Encrypt(settings.ColleagueSettings.DasSettings.DbPassword)));
-
             colleague.Add(new XElement(UseDasDatareader, settings.ColleagueSettings.GeneralSettings.UseDasDatareader.ToString()));
 
+            var oauth = new XElement(Oauth);
+            var oauthProxyLogin = settings.OauthSettings != null ? Encrypt(settings.OauthSettings.OauthProxyLogin) : string.Empty;
+            var oauthProxyPassword = settings.OauthSettings != null ? Encrypt(settings.OauthSettings.OauthProxyPassword) : string.Empty;
+            var oauthIssuerUrl = settings.OauthSettings != null ? settings.OauthSettings.OauthIssuerUrl : string.Empty;
+            oauth.Add(new XElement(OauthProxyLogin, oauthProxyLogin));
+            oauth.Add(new XElement(OauthProxyPassword, oauthProxyPassword));
+            oauth.Add(new XElement(OauthIssuerUrl, oauthIssuerUrl));
+
             root.Add(colleague);
+            root.Add(oauth);
 
             var logging = new XElement(Level, settings.LogLevel.ToString());
             var loggingOff = new XElement(Level, SourceLevels.Off.ToString());
@@ -271,9 +301,9 @@ namespace Ellucian.Web.Http.Configuration
 
         private static string Encrypt(string plainText)
         {
-            var plaintextBytes = Encoding.UTF8.GetBytes(plainText);
             try
             {
+                var plaintextBytes = Encoding.UTF8.GetBytes(plainText);
                 return MachineKey.Encode(plaintextBytes, MachineKeyProtection.All);
             }
             catch

@@ -1,6 +1,7 @@
-﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.Base;
 using System;
+using System.Data;
 
 namespace Ellucian.Colleague.Domain.HumanResources
 {
@@ -155,5 +156,10 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// supervises, and can create new timecard statuses for those timecards.
         /// </summary>
         public const string ApproveRejectEmployeeTimecard = "APPROVE.REJECT.TIME.ENTRY";
+
+        /// <summary>
+        /// This permission is required in order to view the org chart
+        /// </summary>
+        public const string ViewOrgChart = "VIEW.ORG.CHART";
     }
 }

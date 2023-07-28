@@ -36,6 +36,11 @@ namespace Ellucian.Web.Http.EthosExtend
         public bool Required { get; set; }
 
         /// <summary>
+        /// Description of the Data Row
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// Title of the extended property in the Ethos json schema
         /// </summary>
         public string JsonTitle { get; set; }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2022 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -62,12 +62,21 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public ReadOnlyCollection<string> QuickRegistrationTermCodes { get; private set; }
 
+        /// <summary>
+        /// Indicates if capacity can be exceeded during registration when a student is given add authorization code.
+        /// </summary>
+        public bool ExceedAddAuthCapacity { get; set; }
+        /// <summary>
+        /// Indicates if faculty authorization can be skipped while adding a student to waitlist.
+        /// </summary>
+        public bool BypassAddAuthWaitlist { get; set; }
+
         private readonly List<string> _quickRegistrationTermCodes = new List<string>();
 
         /// <summary>
         /// Flag indicating whether or not to *always* present a prompt to Self-Service users when dropping course sections, inquiring if the student intends to withdraw from the institution
         /// </summary>
-        public bool AlwaysPromptUsersForIntentToWithdrawWhenDropping 
+        public bool AlwaysPromptUsersForIntentToWithdrawWhenDropping
         {
             get { return _alwaysPromptUsersForIntentToWithdrawWhenDropping; }
             set
@@ -103,6 +112,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private int? _censusDateNumberForPromptingIntentToWithdraw;
 
         /// <summary>
+        /// Seat Service will be used to determine section seat counts.
+        /// </summary>
+        public bool SeatServiceIsEnabled { get; private set; }
+
+
+        /// <summary>
         /// Adds a quick registration term to the registration configuration object.
         /// </summary>
         /// <param name="termCode">Term Code</param>
@@ -125,7 +140,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Constructor for RegistrationConfiguration
         /// </summary>
-        public RegistrationConfiguration(bool requireFacultyAddAuthorization, int addAuthorizationStartOffsetDays, bool quickRegistrationIsEnabled = false)
+        public RegistrationConfiguration(bool requireFacultyAddAuthorization, bool exceedAddAuthCapacity, bool bypassAddAuthWaitlist, int addAuthorizationStartOffsetDays,
+            bool quickRegistrationIsEnabled = false, bool seatServiceIsEnabled = false)
         {
             if (addAuthorizationStartOffsetDays < 0)
             {
@@ -133,6 +149,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
 
             this.RequireFacultyAddAuthorization = requireFacultyAddAuthorization;
+            this.ExceedAddAuthCapacity = exceedAddAuthCapacity;
+            this.BypassAddAuthWaitlist = bypassAddAuthWaitlist;
             this.AddAuthorizationStartOffsetDays = addAuthorizationStartOffsetDays;
             this.RequireDropReason = false;
             this.PromptForDropReason = false;
@@ -143,6 +161,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             this.QuickRegistrationTermCodes = _quickRegistrationTermCodes.AsReadOnly();
             this.CensusDateNumberForPromptingIntentToWithdraw = null;
             this.AlwaysPromptUsersForIntentToWithdrawWhenDropping = false;
+            this.SeatServiceIsEnabled = seatServiceIsEnabled;
         }
     }
 }

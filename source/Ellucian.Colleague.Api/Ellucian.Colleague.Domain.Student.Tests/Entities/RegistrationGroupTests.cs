@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 regStart = DateTime.Today.AddDays(1);
                 regEnd = DateTime.Today.AddDays(2);
                 group = new RegistrationGroup(id);
-                sectionRegDate = new SectionRegistrationDate(sectionId, locationCode, regStart, regEnd, null, null, null, null, null, null, null, null);
+                sectionRegDate = new SectionRegistrationDate(sectionId, locationCode, regStart, regEnd, null, null, null, null, null, null, null, null, RegistrationDateSource.RegistrationUserSection);
             }
 
             [TestCleanup]

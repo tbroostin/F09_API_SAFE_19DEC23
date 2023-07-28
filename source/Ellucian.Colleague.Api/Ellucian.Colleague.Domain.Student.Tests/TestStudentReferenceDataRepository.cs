@@ -1648,5 +1648,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<IEnumerable<AidApplicationType>> GetAidApplicationTypesAsync(bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

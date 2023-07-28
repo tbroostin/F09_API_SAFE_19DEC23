@@ -107,7 +107,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Meeting time start time
         /// </summary>
         public DateTimeOffset? StartTime { get; set; }
-        
+
+        /// <summary>
+        /// Meeting time start time
+        /// </summary>
+        public DateTime? RawStartTime { get; set; }
+
         /// <summary>
         /// Meeting time end time 
         /// </summary>

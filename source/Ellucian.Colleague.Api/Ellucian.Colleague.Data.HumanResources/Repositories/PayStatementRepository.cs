@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -364,7 +364,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         webPayAdviceRecord.WpaNetPay.Value,
                         webPayAdviceRecord.WpaTotalYtdGrossPay.Value,
                         webPayAdviceRecord.WpaTotalYtdNetPay.Value,
-                        webPayAdviceRecord.WpaComments);
+                        webPayAdviceRecord.WpaComments,
+                        webPayAdviceRecord.WpaTotalTaxes.Value,
+                        webPayAdviceRecord.WpaTotalBendeds.Value);
 
             logger.Debug(string.Format("************ PayStatement Entity = {0},{1}************",
                         webPayAdviceRecord.WpaEmployeId, webPayAdviceRecord.WpaPeriodDate.Value));

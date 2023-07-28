@@ -1,32 +1,31 @@
-﻿// Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Http.Exceptions;
-using slf4net;
-using Ellucian.Data.Colleague.DataContracts;
-using System.Collections.ObjectModel;
-using System.Text;
-using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Configuration;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
-using Ellucian.Colleague.Domain.Base;
-using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Http.Exceptions;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -36,9 +35,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private readonly string colleagueTimeZone;
         private readonly string orgIndicator;
         private IColleagueTransactionInvoker anonymousTransactionInvoker;
-        char _VM = Convert.ToChar(DynamicArray.VM);
-        char _SM = Convert.ToChar(DynamicArray.SM);
-        char _TM = Convert.ToChar(DynamicArray.TM);
         char _XM = Convert.ToChar(250);
 
         /// <summary>
@@ -128,7 +124,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return hubRecordToCheck != null && hubRecordToCheck.CintApiUsername.Equals(userName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private IEnumerable<EdmExtVersions> _ethosExtensiblitySettingsListByResource = null;
         /// <summary>
         /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
         /// </summary>
@@ -136,26 +131,21 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>List of DataContracts.EdmExtVersions</returns>
         private async Task<IEnumerable<EdmExtVersions>> GetEthosExtensibilityConfiguration(string resource, bool bypassCache = false)
         {
-            if (_ethosExtensiblitySettingsListByResource == null)
+            string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettingsByResource" + resource;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                string ethosExtensiblityCacheKey = "AllEthosExtensibiltySettingsByResource" + resource;
-
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
-                {
-                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
-                }
-
-                string criteria = string.Format("WITH EDMV.RESOURCE.NAME = '{0}'", resource);
-                var ethosExtensiblitySettingsList =
-                    await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", criteria)).ToList(), CacheTimeout);
-
-                _ethosExtensiblitySettingsListByResource = ethosExtensiblitySettingsList;
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
-            return _ethosExtensiblitySettingsListByResource;
+
+            string criteria = string.Format("WITH EDMV.RESOURCE.NAME = '{0}'", resource);
+            var ethosExtensiblitySettingsList =
+                await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey,
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", criteria)).ToList(), CacheTimeout);
+
+            return ethosExtensiblitySettingsList;
         }
 
-        private IEnumerable<EdmCodeHooks> _ethosExtensibleCodeHooks = null;
         /// <summary>
         /// Gets all of the Ethos Extensiblity code hook settings stored on EDM.CODE.HOOKS
         /// </summary>
@@ -163,33 +153,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>List of DataContracts.EdmCodeHooks</returns>
         public async Task<IEnumerable<EdmCodeHooks>> GetEthosExtensibilityCodeHooks(bool bypassCache = false)
         {
-            if (_ethosExtensibleCodeHooks == null)
+            const string ethosExtensiblityCacheKey = "AllEthosExtensibiltyCodeHooks";
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                const string ethosExtensiblityCacheKey = "AllEthosExtensibiltyCodeHooks";
-
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
-                {
-                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
-                }
-
-                var ethosExtensiblityCodeHooks = new List<EdmCodeHooks>();
-                try
-                {
-                    ethosExtensiblityCodeHooks =
-                        await GetOrAddToCacheAsync<List<EdmCodeHooks>>(ethosExtensiblityCacheKey,
-                            async () => (await DataReader.BulkReadRecordAsync<EdmCodeHooks>("EDM.CODE.HOOKS", "")).ToList(), CacheTimeout);
-                }
-                catch (Exception ex)
-                {
-                    // If we are missing code hooks table, then do not throw an exception.
-                    logger.Error(ex.Message, "Missing code hooks table.");
-                }
-
-                _ethosExtensibleCodeHooks = ethosExtensiblityCodeHooks;
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
-            return _ethosExtensibleCodeHooks;
-        }
 
+            var ethosExtensiblityCodeHooks = new List<EdmCodeHooks>();
+            try
+            {
+                ethosExtensiblityCodeHooks =
+                    await GetOrAddToCacheAsync<List<EdmCodeHooks>>(ethosExtensiblityCacheKey,
+                        async () => (await DataReader.BulkReadRecordAsync<EdmCodeHooks>("EDM.CODE.HOOKS", "")).ToList(), CacheTimeout);
+            }
+            catch (Exception ex)
+            {
+                // If we are missing code hooks table, then do not throw an exception.
+                logger.Error(ex.Message, "Missing code hooks table.");
+            }
+
+            return ethosExtensiblityCodeHooks;
+        }
 
         /// <summary>
         /// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
@@ -211,15 +196,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             List<string> edmeVersions = new List<string>();
             ICollection<EdmExtensions> extensions = null;
             if (customOnly)
-               extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "WITH EDME.PRIMARY.GUID.SOURCE NE '' OR WITH EDME.PRIMARY.KEY NE ''");
+                extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "WITH EDME.PRIMARY.GUID.SOURCE NE '' OR WITH EDME.PRIMARY.KEY NE ''");
             else
                 extensions = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "");
 
             foreach (var ext in extensions)
             {
                 edmeVersions.AddRange(ext.EdmeVersions);
-            }         
-          
+            }
+
             var ethosExtensiblitySettingsList =
                 await GetOrAddToCacheAsync<List<EdmExtVersions>>(ethosExtensiblityCacheKey + "VERSIONS",
                     async () => (await DataReader.BulkReadRecordAsync<EdmExtVersions>("EDM.EXT.VERSIONS", edmeVersions.ToArray(),
@@ -260,7 +245,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 if (depData != null)
                                 {
                                     extendedEthosConfiguration.DeprecationDate = depData.EdmpDeprecationDate;
-                                    extendedEthosConfiguration.DeprecationNotice = depData.EdmpDeprecationNotice.Replace(_VM, ' ');
+                                    extendedEthosConfiguration.DeprecationNotice = depData.EdmpDeprecationNotice.Replace(DmiString._VM, ' ');
                                     extendedEthosConfiguration.SunsetDate = depData.EdmpSunsetDate;
                                 }
                             }
@@ -320,7 +305,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (customOnly)
                 extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", string.Format("WITH (EDME.PRIMARY.GUID.SOURCE NE '' OR EDME.PRIMARY.KEY NE '' OR EDME.PROCESS.ID NE '') AND EDME.RESOURCE.NAME EQ '{0}'", resourceName));
             else
-                extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "");
+                extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", resourceName));
 
             foreach (var ext in extensionsData)
             {
@@ -346,13 +331,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             // await GetOrAddToCacheAsync<List<EdmExtensions>>(ethosExtensiblityCacheKey + "EXTENSIONS",
             // async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", "")).ToList(), CacheTimeout);
 
-                    //await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES");
-                    // var extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS");
+            //await DataReader.BulkReadRecordAsync<EdmDepNotices>("EDM.DEP.NOTICES");
+            // var extensionsData = await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS");
 
             foreach (var ethosExtensiblitySetting in ethosExtensiblitySettingsList)
             {
                 var extendedEthosConfiguration = (await GetExtendedEthosConfigurationByResource(ethosExtensiblitySetting.EdmvResourceName, ethosExtensiblitySetting.EdmvVersionNumber,
-                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant(),bypassCache,true));
+                        ethosExtensiblitySetting.EdmvResourceName.ToUpperInvariant(), bypassCache, true));
                 if (extendedEthosConfiguration != null)
                 {
                     if (deprecatedData != null)
@@ -367,7 +352,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 if (depData != null)
                                 {
                                     extendedEthosConfiguration.DeprecationDate = depData.EdmpDeprecationDate;
-                                    extendedEthosConfiguration.DeprecationNotice = depData.EdmpDeprecationNotice.Replace(_VM, ' ');
+                                    extendedEthosConfiguration.DeprecationNotice = depData.EdmpDeprecationNotice.Replace(DmiString._VM, ' ');
                                     extendedEthosConfiguration.SunsetDate = depData.EdmpSunsetDate;
                                 }
                             }
@@ -679,9 +664,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     row.TransFileName = edmvColumn.EdmvTransFileNameAssocMember;
                                     row.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
                                     row.TransColumnName = edmvColumn.EdmvTransColumnNameAssocMember;
+                                    var enums = edmvColumn.EdmvTransEnumTableAssocMember;
+                                    var enumTable = enums.Split(DmiString._SM);
+                                    if (enumTable != null && enumTable.Count() == 2)
+                                    {
+                                        var collValue = enumTable[0].Split(DmiString._TM);
+                                        var enumValue = enumTable[1].Split(DmiString._TM);
+                                        int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
+                                        for (int i = 0; i < total; i++)
+                                        {
+                                            string value1 = enumValue.Count() > i ? enumValue[i] : string.Empty;
+                                            string value2 = collValue.Count() > i ? collValue[i] : string.Empty;
+                                            if (!string.IsNullOrEmpty(value1) || !string.IsNullOrEmpty(value2))
+                                            {
+                                                row.Enumerations.Add(new EthosApiEnumerations(value1, value2));
+                                            }
+                                        }
+                                    }
 
                                     //if there is still no validation, get it from RT.FIELDS
-                                    if (readRtFields && apiConfiguration.EdmeType != "T" && string.IsNullOrEmpty(row.TransFileName) )
+                                    if (readRtFields && apiConfiguration.EdmeType != "T" && string.IsNullOrEmpty(row.TransFileName))
                                     {
                                         if (string.IsNullOrEmpty(row.TransFileName))
                                         {
@@ -871,11 +873,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
                                     filterRow.Enumerations = new List<EthosApiEnumerations>();
                                     var enums = edmvColumn.EdmvTransEnumTableAssocMember;
-                                    var enumTable = enums.Split(_SM);
+                                    var enumTable = enums.Split(DmiString._SM);
                                     if (enumTable != null && enumTable.Count() == 2)
                                     {
-                                        var collValue = enumTable[0].Split(_TM);
-                                        var enumValue = enumTable[1].Split(_TM);
+                                        var collValue = enumTable[0].Split(DmiString._TM);
+                                        var enumValue = enumTable[1].Split(DmiString._TM);
                                         int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
                                         for (int i = 0; i < total; i++)
                                         {
@@ -929,7 +931,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         filterRow.SelectColumnName = selectCriteria.EdmsSelectColumnName;
                                         filterRow.SelectRules = selectCriteria.EdmsSelectRules;
                                         filterRow.SelectParagraph = selectCriteria.EdmsSelectParagraph;
-                                        filterRow.ValidFilterOpers = selectCriteria.EdmsAdvanceQueryOpers;                                        
+                                        filterRow.ValidFilterOpers = selectCriteria.EdmsAdvanceQueryOpers;
                                         filterRow.SelectionCriteria = new List<EthosApiSelectCriteria>();
                                         foreach (var selection in selectCriteria.EdmsSelectEntityAssociation)
                                         {
@@ -986,7 +988,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 foreach (var columnName in apiConfiguration.EdmeNkElementName)
                                 {
                                     var edmvColumn = matchingExtendedConfigData.EdmvColumnsEntityAssociation.FirstOrDefault(ea => ea.EdmvColumnNameAssocMember == columnName);
-                                    var existingFilter = extendedDataConfigReturn.ExtendedDataFilterList.FirstOrDefault(edf => edf.ColleagueColumnName == columnName && edf.JsonPath == "/"); 
+                                    var existingFilter = extendedDataConfigReturn.ExtendedDataFilterList.FirstOrDefault(edf => edf.ColleagueColumnName == columnName && edf.JsonPath == "/");
                                     if (edmvColumn != null && existingFilter == null)
                                     {
                                         var filterRow = new EthosExtensibleDataFilter(edmvColumn.EdmvColumnNameAssocMember, edmvColumn.EdmvFileNameAssocMember,
@@ -1006,11 +1008,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
                                         filterRow.Enumerations = new List<EthosApiEnumerations>();
                                         var enums = edmvColumn.EdmvTransEnumTableAssocMember;
-                                        var enumTable = enums.Split(_SM);
+                                        var enumTable = enums.Split(DmiString._SM);
                                         if (enumTable != null && enumTable.Count() == 2)
                                         {
-                                            var collValue = enumTable[0].Split(_TM);
-                                            var enumValue = enumTable[1].Split(_TM);
+                                            var collValue = enumTable[0].Split(DmiString._TM);
+                                            var enumValue = enumTable[1].Split(DmiString._TM);
                                             int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
                                             for (int i = 0; i < total; i++)
                                             {
@@ -1044,11 +1046,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         filterRow.TransTableName = edmvColumn.EdmvTransTableNameAssocMember;
                                         filterRow.Enumerations = new List<EthosApiEnumerations>();
                                         var enums = edmvColumn.EdmvTransEnumTableAssocMember;
-                                        var enumTable = enums.Split(_SM);
+                                        var enumTable = enums.Split(DmiString._SM);
                                         if (enumTable != null && enumTable.Count() == 2)
                                         {
-                                            var collValue = enumTable[0].Split(_TM);
-                                            var enumValue = enumTable[1].Split(_TM);
+                                            var collValue = enumTable[0].Split(DmiString._TM);
+                                            var enumValue = enumTable[1].Split(DmiString._TM);
                                             int total = collValue.Count() > enumValue.Count() ? collValue.Count() : enumValue.Count();
                                             for (int i = 0; i < total; i++)
                                             {
@@ -1059,7 +1061,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                     filterRow.Enumerations.Add(new EthosApiEnumerations(value1, value2));
                                                 }
                                             }
-                                        }                                       
+                                        }
                                         extendedDataConfigReturn.AddItemToExtendedDataFilter(filterRow);
                                     }
                                 }
@@ -1088,7 +1090,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         }
 
-        private IEnumerable<EdmExtensions> _ethosExtensibilityByResourceSettings = null;
         /// <summary>
         /// Gets all of the Ethos API builder settings stored on EDM.EXTENSIONS
         /// </summary>
@@ -1096,22 +1097,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>List of DataContracts.EdmExtensions</returns>
         private async Task<IEnumerable<EdmExtensions>> GetEthosApiConfiguration(string resource, bool bypassCache = false)
         {
-            if (_ethosExtensibilityByResourceSettings == null)
+            string ethosExtensiblityCacheKey = "EthosApiBuilderConfigurationSettingsByResource" + resource;
+
+            if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
             {
-                string ethosExtensiblityCacheKey = "EthosApiBuilderConfigurationSettingsByResource" + resource;
-
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosExtensiblityCacheKey)))
-                {
-                    ClearCache(new List<string> { ethosExtensiblityCacheKey });
-                }
-                string criteria = string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", resource);
-                var ethosExtensiblitySettingsList =
-                    await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
-                        async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", criteria)).ToList(), CacheTimeout);
-
-                _ethosExtensibilityByResourceSettings = ethosExtensiblitySettingsList;
+                ClearCache(new List<string> { ethosExtensiblityCacheKey });
             }
-            return _ethosExtensibilityByResourceSettings;
+            string criteria = string.Format("WITH EDME.RESOURCE.NAME EQ '{0}'", resource);
+            var ethosExtensiblitySettingsList =
+                await GetOrAddToCacheAsync(ethosExtensiblityCacheKey,
+                    async () => (await DataReader.BulkReadRecordAsync<EdmExtensions>("EDM.EXTENSIONS", criteria)).ToList(), CacheTimeout);
+
+            return ethosExtensiblitySettingsList;
         }
 
         /// <summary>
@@ -1368,6 +1365,59 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Update the Ethos data rows from data stored in RT.FIELDS
+        /// </summary>
+        /// <param name="schemasAttributes"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns>SchemasAttribute</returns>
+        public async Task<IEnumerable<EthosExtensibleDataRow>> GetExtendedEthosDataRowDefault(List<EthosExtensibleDataRow> ethosExtensibleDataRows, bool bypassCache)
+        {
+            var columnNames = ethosExtensibleDataRows.Where(edr => !string.IsNullOrEmpty(edr.ColleagueColumnName)).Select(edr => edr.ColleagueColumnName).Distinct().ToArray();
+            if (columnNames != null && columnNames.Any())
+            {
+                var rtFieldsRecords = await DataReader.BulkReadRecordAsync<RtFields>("RT.FIELDS", columnNames);
+                if (rtFieldsRecords != null && rtFieldsRecords.Any())
+                {
+                    foreach (var extensibleDataRow in ethosExtensibleDataRows)
+                    {
+                        if (!string.IsNullOrEmpty(extensibleDataRow.ColleagueColumnName))
+                        {
+                            var record = rtFieldsRecords.FirstOrDefault(rf => rf.Recordkey == extensibleDataRow.ColleagueColumnName);
+                            if (record != null)
+                            {
+                                string description = string.Empty;
+                                record.RtfldsDescription.ForEach(desc =>
+                                {
+                                    description = string.Concat(description, " ", desc).TrimStart().TrimEnd();
+                                });
+
+                                if (string.IsNullOrEmpty(extensibleDataRow.DatabaseUsageType)) extensibleDataRow.DatabaseUsageType = record.RtfldsDatabaseUsageType;
+                                if (string.IsNullOrEmpty(extensibleDataRow.ColleagueFileName)) extensibleDataRow.UpdateFileName(record.RtfldsFileName);
+                                if (extensibleDataRow.ColleaguePropertyLength == null || extensibleDataRow.ColleaguePropertyLength <= 0) extensibleDataRow.UpdateLength(record.RtfldsLength.Value);
+                                if (string.IsNullOrEmpty(extensibleDataRow.Description)) extensibleDataRow.Description = description;
+                                if (extensibleDataRow.Required == false && record.RtfldsMandatoryField == "Y") extensibleDataRow.Required = true;
+                                if (string.IsNullOrEmpty(extensibleDataRow.TransTableName)) extensibleDataRow.TransTableName = record.RtfldsValidationTable;
+                                if (string.IsNullOrEmpty(extensibleDataRow.TransFileName))
+                                {
+                                    if (!string.IsNullOrEmpty(record.RtfldsValTableApplication) && !string.IsNullOrEmpty(record.RtfldsValidationTable))
+                                    {
+                                        extensibleDataRow.TransFileName = string.Concat(record.RtfldsValTableApplication, ".VALCODES - ", record.RtfldsValidationTable);
+                                    }
+                                    else if (!string.IsNullOrEmpty(record.RtfldsValidationFile))
+                                    {
+                                        extensibleDataRow.TransFileName = record.RtfldsValidationFile;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return ethosExtensibleDataRows;
+        }
+
+        /// <summary>
         /// Gets the extended data available on a resource, returns an empty list if there are no 
         /// </summary>
         /// <param name="resourceName">name of the resource (api) </param>
@@ -1528,15 +1578,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             if (resp.ColumnNames != null && resp.PropertyValues != null)
                             {
-                                var columnNames = resp.ColumnNames.Split(_SM).ToList();
-                                var columnValues = resp.PropertyValues.Split(_SM).ToList();
+                                var columnNames = resp.ColumnNames.Split(DmiString._SM).ToList();
+                                var columnValues = resp.PropertyValues.Split(DmiString._SM).ToList();
                                 Dictionary<string, string> columnDataItem = new Dictionary<string, string>();
                                 var index = 0;
                                 foreach (var columnName in columnNames)
                                 {
                                     try
                                     {
-                                        var inputData = columnValues.ElementAt(index).Replace(_TM, _VM).Replace(_XM, _SM);
+                                        var inputData = columnValues.ElementAt(index).Replace(DmiString._TM, DmiString._VM).Replace(_XM, DmiString._SM);
                                         var outputData = await GetOutputDataHookAsync(columnName, inputData, columnNames, columnValues, resourceName, resourceVersionNumber, reportEthosApiErrors, bypassCache);
 
 
@@ -1619,7 +1669,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     logger.Error(string.Concat(ex.Message));
                     return retConfigData;
                 }
-            }            
+            }
 
             //list of linked column config data for datetime columns, exlcuding date or time only ones.
             var linkedColumnDetails = matchingExtendedConfigData.EdmvColumnsEntityAssociation
@@ -1682,7 +1732,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                         if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
                         {
-                            var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                            var secondaryKeyList = secondaryKeyValue.Value.Split(DmiString._VM);
                             var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
                             if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
                             {
@@ -1718,7 +1768,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         }
                                         if (secondaryKeyListValue == secondaryKey)
                                         {
-                                            var newValue = colKeyValuePair.Value.Split(_VM);
+                                            var newValue = colKeyValuePair.Value.Split(DmiString._VM);
                                             if (i < newValue.Count())
                                             {
                                                 colleagueValue = newValue[i];
@@ -1740,11 +1790,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 var secondaryUsageType = columnConfigDetails.EdmvSecDatabaseUsageTypeAssocMember.ToUpper();
                                 if (secondaryUsageType == "Q" || secondaryUsageType == "A" || secondaryUsageType == "L")
                                 {
-                                    colleagueValue = colKeyValuePair.Value.Replace(_SM, ' ');
+                                    colleagueValue = colKeyValuePair.Value.Replace(DmiString._SM, ' ');
                                 }
                                 else
                                 {
-                                    colleagueValue = colKeyValuePair.Value.Replace(_VM, ' ');
+                                    colleagueValue = colKeyValuePair.Value.Replace(DmiString._VM, ' ');
                                 }
                             }
                             else
@@ -1756,7 +1806,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     var secondaryKeyValue = colKeyValuePair;
                                     if (secondaryKeyValue.Key != null && secondaryKeyValue.Value != null && !string.IsNullOrEmpty(secondaryKeyValue.Value))
                                     {
-                                        var secondaryKeyList = secondaryKeyValue.Value.Split(_VM);
+                                        var secondaryKeyList = secondaryKeyValue.Value.Split(DmiString._VM);
                                         var colleagueSecondaryKey = colleagueSecondaryKeys.FirstOrDefault(rk => rk.Key == cData.Key);
                                         if (colleagueSecondaryKey.Key != null && colleagueSecondaryKey.Value != null && !string.IsNullOrEmpty(colleagueSecondaryKey.Value))
                                         {
@@ -1792,7 +1842,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                     }
                                                     if (secondaryKeyListValue == secondaryKey)
                                                     {
-                                                        var newValue = colKeyValuePair.Value.Split(_VM);
+                                                        var newValue = colKeyValuePair.Value.Split(DmiString._VM);
                                                         if (i < newValue.Count())
                                                         {
                                                             colleagueValue = newValue[i];
@@ -1839,7 +1889,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             columnConfigDetails.EdmvDateTimeLinkAssocMember, colKeyValuePair.Key,
                             colleagueValue));
                     }
-                    else 
+                    else
                     {
                         // If this is a row for a key field in the list of key properties then create a new
                         // "id" row for this property.
@@ -2011,8 +2061,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         {
                                             if (!string.IsNullOrEmpty(fieldNames))
                                             {
-                                                fieldNames = string.Concat(fieldNames, _SM);
-                                                fieldValues = string.Concat(fieldValues, _SM);
+                                                fieldNames = string.Concat(fieldNames, DmiString._SM);
+                                                fieldValues = string.Concat(fieldValues, DmiString._SM);
                                             }
                                             fieldNames = string.Concat(fieldNames, fldName);
                                             fieldValues = string.Concat(fieldValues, fldValue);
@@ -2023,8 +2073,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         // Add the file name and key to the list of file names and keys
                                         if (!string.IsNullOrEmpty(fileNames))
                                         {
-                                            fileNames = string.Concat(fileNames, _SM);
-                                            fileValues = string.Concat(fileValues, _SM);
+                                            fileNames = string.Concat(fileNames, DmiString._SM);
+                                            fileValues = string.Concat(fileValues, DmiString._SM);
                                         }
                                         fileNames = string.Concat(fileNames, fldName);
                                         fileValues = string.Concat(fileValues, fldValue);
@@ -2040,15 +2090,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                                 {
                                                     if (!string.IsNullOrEmpty(fieldNames))
                                                     {
-                                                        fieldNames = string.Concat(fieldNames, _SM);
-                                                        fieldValues = string.Concat(fieldValues, _SM);
+                                                        fieldNames = string.Concat(fieldNames, DmiString._SM);
+                                                        fieldValues = string.Concat(fieldValues, DmiString._SM);
                                                     }
                                                     fieldNames = string.Concat(fieldNames, fieldName);
                                                     fieldValues = string.Concat(fieldValues, fldValue);
                                                 }
                                             }
                                         }
-                                        
+
                                         // If we are working with a file suite, then add the CDD name and value
                                         // to the list of column names and column values.
                                         if (isFileSuite && fldName.Contains("."))
@@ -2058,13 +2108,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             var glName = "FISCAL.YEAR";
                                             if (!string.IsNullOrEmpty(fieldNames))
                                             {
-                                                fieldNames = string.Concat(fieldNames, _SM);
-                                                fieldValues = string.Concat(fieldValues, _SM);
+                                                fieldNames = string.Concat(fieldNames, DmiString._SM);
+                                                fieldValues = string.Concat(fieldValues, DmiString._SM);
                                             }
 
                                             // Add FA.YEAR and FISCAL.YEAR to list of data elements
-                                            fieldNames = string.Concat(fieldNames, faName, _SM, glName);
-                                            fieldValues = string.Concat(fieldValues, faYear, _SM, faYear);
+                                            fieldNames = string.Concat(fieldNames, faName, DmiString._SM, glName);
+                                            fieldValues = string.Concat(fieldValues, faYear, DmiString._SM, faYear);
                                         }
                                     }
                                 }
@@ -2072,8 +2122,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     if (!string.IsNullOrEmpty(fileNames))
                                     {
-                                        fileNames = string.Concat(fileNames, _SM);
-                                        fileValues = string.Concat(fileValues, _SM);
+                                        fileNames = string.Concat(fileNames, DmiString._SM);
+                                        fileValues = string.Concat(fileValues, DmiString._SM);
                                     }
                                     fileNames = string.Concat(fileNames, apiConfiguration.PrimaryEntity);
                                     fileValues = string.Concat(fileValues, keyPart);
@@ -2119,6 +2169,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                     }
                     request.CallChain = request.CallChain.Distinct().ToList();
+                }
+
+                // Update the specifications columns to include each requested column from the API.
+                // This allows us to compare access to restricted fields and log the view
+                // only if the API contains the column to be viewed.
+                foreach (var columnData in matchingExtendedConfigData.EdmvColumnsEntityAssociation)
+                {
+                    var columnName = columnData.EdmvColumnNameAssocMember;
+                    string jsonPath;
+                    if (columnData.EdmvJsonPathAssocMember.Equals("/") || string.IsNullOrEmpty(columnData.EdmvJsonPathAssocMember))
+                    {
+                        jsonPath = columnData.EdmvJsonLabelAssocMember;
+                    }
+                    else
+                    {
+                        if (!columnData.EdmvJsonPathAssocMember.EndsWith("/")) columnData.EdmvJsonPathAssocMember = string.Concat(columnData.EdmvJsonPathAssocMember, "/");
+                        jsonPath = string.Concat(columnData.EdmvJsonPathAssocMember, columnData.EdmvJsonLabelAssocMember);
+                    }
+                    if (request.SpecColumnData.FirstOrDefault(cd => cd.SpecColumnNames.Contains(columnName)) == null)
+                    {
+                        request.SpecColumnData.Add(new SpecColumnData() { SpecColumnNames = columnName, SpecColumnPaths = jsonPath });
+                    }
                 }
 
                 // Update the prepared Responses from the Configuration for GET request
@@ -2233,15 +2305,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     string columnNames = string.Empty;
                     foreach (var name in extendedDataTuple.Item1)
                     {
-                        if (!string.IsNullOrEmpty(columnNames)) columnNames = string.Concat(columnNames, _SM);
+                        if (!string.IsNullOrEmpty(columnNames)) columnNames = string.Concat(columnNames, DmiString._SM);
                         columnNames = string.Concat(columnNames, name);
                     }
 
                     string columnValues = string.Empty;
                     foreach (var name in extendedDataTuple.Item2)
                     {
-                        if (!string.IsNullOrEmpty(columnValues)) columnValues = string.Concat(columnValues, _SM);
-                        columnValues = string.Concat(columnValues, name.Replace(_VM, _TM).Replace(_SM, _XM));
+                        if (!string.IsNullOrEmpty(columnValues)) columnValues = string.Concat(columnValues, DmiString._SM);
+                        columnValues = string.Concat(columnValues, name.Replace(DmiString._VM, DmiString._TM).Replace(DmiString._SM, _XM));
                     }
 
                     var resourceDataObject = new List<ResourceDataObject>()
@@ -2511,15 +2583,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     continue;
                 }
 
-                var dateValues = dateTuple.Item4.Split(_VM);
+                var dateValues = dateTuple.Item4.Split(DmiString._VM);
                 string[] timeValues;
                 if (timeTuple != null)
                 {
-                    timeValues = timeTuple.Item4.Split(_VM);
+                    timeValues = timeTuple.Item4.Split(DmiString._VM);
                 }
                 else
                 {
-                    timeValues = string.Empty.Split(_VM);
+                    timeValues = string.Empty.Split(DmiString._VM);
                 }
 
                 var maxDateTime = dateValues.Count();
@@ -2542,7 +2614,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                         var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                        utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
+                        utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, DmiString._VM, utcDateTimeString);
                     }
                     else
                     {
@@ -2555,7 +2627,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                             var utcDateTimeString = convertedDateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                            utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, _VM, utcDateTimeString);
+                            utcDateTimeStringValues = string.Concat(utcDateTimeStringValues, DmiString._VM, utcDateTimeString);
                         }
                     }
                 }
@@ -2564,7 +2636,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var returnEthosDataRow = new EthosExtensibleDataRow(dateColumnConfig.EdmvColumnNameAssocMember,
                     dateColumnConfig.EdmvFileNameAssocMember, dateColumnConfig.EdmvJsonLabelAssocMember,
                     dateColumnConfig.EdmvJsonPathAssocMember, dateColumnConfig.EdmvJsonPropertyTypeAssocMember,
-                    utcDateTimeStringValues.TrimStart(_VM))
+                    utcDateTimeStringValues.TrimStart(DmiString._VM))
                 {
                     AssociationController = dateColumnConfig.EdmvAssociationControllerAssocMember,
                     TransType = dateColumnConfig.EdmvTransTypeAssocMember,
@@ -2665,7 +2737,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     try
                     {
-                         return ConvertColleagueNumber(colleagueValue, columnConfigDetails.EdmvConversionAssocMember);
+                        return ConvertColleagueNumber(colleagueValue, columnConfigDetails.EdmvConversionAssocMember);
                     }
                     catch (FormatException)
                     {
@@ -2698,8 +2770,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     try
                     {
-                        var enumerations = columnConfigDetails.EdmvTransEnumTableAssocMember.Split(_SM)[0].Split(_TM).ToList();
-                        var enumerationValues = columnConfigDetails.EdmvTransEnumTableAssocMember.Split(_SM)[1].Split(_TM).ToList();
+                        var enumerations = columnConfigDetails.EdmvTransEnumTableAssocMember.Split(DmiString._SM)[0].Split(DmiString._TM).ToList();
+                        var enumerationValues = columnConfigDetails.EdmvTransEnumTableAssocMember.Split(DmiString._SM)[1].Split(DmiString._TM).ToList();
                         var matchingIndex = enumerationValues.IndexOf(colleagueValue);
                         if (matchingIndex >= 0)
                         {
@@ -2994,7 +3066,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                 }
                 if (auditCategory != null)
-                { 
+                {
                     updateRequest.AuditLogCategory = auditCategory.Code;
                     updateRequest.AuditLogEnabled = auditLogConfiguration.IsEnabled == true ? true : false;
                     UpdateAuditLogParmsResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateAuditLogParmsRequest, UpdateAuditLogParmsResponse>(updateRequest);
@@ -4853,7 +4925,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var exception = new RepositoryException("Extensibility configuration errors.");
 
             List<string> inputDataList = new List<string>();
-            inputDataList = inputData.Split(_VM).ToList();
+            inputDataList = inputData.Split(DmiString._VM).ToList();
 
             var allCodeHooks = await GetEthosExtensibilityCodeHooks(bypassCache);
             if (allCodeHooks == null || !allCodeHooks.Any())
@@ -4896,7 +4968,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             if (!columnDataRows.ContainsKey(column))
                             {
-                                columnDataRows.Add(column, columnValues[index].Replace(_TM, _VM).Replace(_XM, _SM).Split(_VM).ToList());
+                                columnDataRows.Add(column, columnValues[index].Replace(DmiString._TM, DmiString._VM).Replace(_XM, DmiString._SM).Split(DmiString._VM).ToList());
                             }
                         }
                     }
@@ -4940,7 +5012,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             foreach (var data in result.DataValues)
                             {
-                                if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, _VM);
+                                if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, DmiString._VM);
                                 outputData = string.Concat(outputData, data);
                             }
                         }
@@ -5010,7 +5082,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 if (matchingResourceVersion)
                 {
-                    Dictionary<string, List<string>> columnDataRows = ethosExtensibleDataRows.ToDictionary(edr => edr.ColleagueColumnName, edr => edr.ExtendedDataValue.Split(_VM).ToList());
+                    Dictionary<string, List<string>> columnDataRows = ethosExtensibleDataRows.ToDictionary(edr => edr.ColleagueColumnName, edr => edr.ExtendedDataValue.Split(DmiString._VM).ToList());
 
                     CodeBuilderObject inputObject = new CodeBuilderObject()
                     {
@@ -5050,7 +5122,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             foreach (var data in result.DataValues)
                             {
-                                if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, _VM);
+                                if (!string.IsNullOrEmpty(outputData)) outputData = string.Concat(outputData, DmiString._VM);
                                 outputData = string.Concat(outputData, data);
                             }
                             var returnEthosDataRow = new EthosExtensibleDataRow(string.Concat("VAR", calcProperties.Recordkey),

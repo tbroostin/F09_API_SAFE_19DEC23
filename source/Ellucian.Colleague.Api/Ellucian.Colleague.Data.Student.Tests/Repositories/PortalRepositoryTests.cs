@@ -1,11 +1,5 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
-using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -15,7 +9,11 @@ using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Dmi.Runtime;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Ellucian.Web.Http.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -182,8 +180,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task PortalRepository_GetSectionsForUpdateAsync_ResponseHasValidData()
             {
-                char _SM = Convert.ToChar(DynamicArray.SM);
-
                 string[] bookDataSeparator = { "...;" };
                 char bookCostSeparator = ';';
                 var bookCostCultureInfo = new CultureInfo("en-US", false);
@@ -228,7 +224,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(responseSection.BookTotal ?? 0, resultSection.TotalBookCost);
 
                     var depts = !string.IsNullOrWhiteSpace(responseSection.SecDepts) ?
-                        responseSection.SecDepts.Split(_SM).ToList() : new List<string>();
+                        responseSection.SecDepts.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(depts.Count, resultSection.Departments.Count);
 
                     for (var j = 0; j < depts.Count; j++)
@@ -237,7 +233,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
 
                     var faculty = !string.IsNullOrWhiteSpace(responseSection.SecFaculty) ?
-                        responseSection.SecFaculty.Split(_SM).ToList() : new List<string>();
+                        responseSection.SecFaculty.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(faculty.Count, resultSection.Faculty.Count);
                     for (var j = 0; j < faculty.Count; j++)
                     {
@@ -245,7 +241,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
 
                     var courseTypes = !string.IsNullOrWhiteSpace(responseSection.CrsType) ?
-                        responseSection.CrsType.Split(_SM).ToList() : new List<string>();
+                        responseSection.CrsType.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(courseTypes.Count, resultSection.CourseTypes.Count);
                     for (var j = 0; j < courseTypes.Count; j++)
                     {
@@ -280,12 +276,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(bookCost.Count - blankBooksCount, resultSection.BookInformation.Count);
 
                     // meeting information
-                    var buildings = responseSection.CsmBldg != null ? responseSection.CsmBldg.Split(_SM).ToList() : new List<string>();
-                    var rooms = responseSection.CsmRoom != null ? responseSection.CsmRoom.Split(_SM).ToList() : new List<string>();
-                    var instructionalMethod = responseSection.CsmInstrMethod != null ? responseSection.CsmInstrMethod.Split(_SM).ToList() : new List<string>();
-                    var days = responseSection.CsmDays != null ? responseSection.CsmDays.Split(_SM).ToList() : new List<string>();
-                    var starttime = responseSection.CsmStartTime != null ? responseSection.CsmStartTime.Split(_SM).ToList() : new List<string>();
-                    var endtime = responseSection.CsmEndTime != null ? responseSection.CsmEndTime.Split(_SM).ToList() : new List<string>();
+                    var buildings = responseSection.CsmBldg != null ? responseSection.CsmBldg.Split(DmiString._SM).ToList() : new List<string>();
+                    var rooms = responseSection.CsmRoom != null ? responseSection.CsmRoom.Split(DmiString._SM).ToList() : new List<string>();
+                    var instructionalMethod = responseSection.CsmInstrMethod != null ? responseSection.CsmInstrMethod.Split(DmiString._SM).ToList() : new List<string>();
+                    var days = responseSection.CsmDays != null ? responseSection.CsmDays.Split(DmiString._SM).ToList() : new List<string>();
+                    var starttime = responseSection.CsmStartTime != null ? responseSection.CsmStartTime.Split(DmiString._SM).ToList() : new List<string>();
+                    var endtime = responseSection.CsmEndTime != null ? responseSection.CsmEndTime.Split(DmiString._SM).ToList() : new List<string>();
 
                     int blankMeetingsCount = 0;
                     for (int j = 0; j < instructionalMethod.Count(); j++)
@@ -763,8 +759,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task PortalRepository_GetCoursesForUpdateAsync_ResponseHasValidData()
             {
-                char _SM = Convert.ToChar(DynamicArray.SM);
-
                 response = SetPortalGetCoursesForUpdateResponseData();
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<PortalGetCoursesForUpdateRequest, PortalGetCoursesForUpdateResponse>(It.IsAny<PortalGetCoursesForUpdateRequest>())).ReturnsAsync(response);
                 PortalUpdatedCoursesResult result = await repository.GetCoursesForUpdateAsync();
@@ -785,7 +779,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(responseCourse.CrsShortTitle, resultCourse.ShortTitle);
                     Assert.AreEqual(responseCourse.CrsTitle, resultCourse.Title);
                     Assert.AreEqual(responseCourse.CrsDesc, resultCourse.Description);
-                    
+
                     Assert.AreEqual(responseCourse.CrsSubject, resultCourse.Subject);
                     Assert.AreEqual(responseCourse.CrsNo, resultCourse.CourseNumber);
                     Assert.AreEqual(responseCourse.CrsAcadLevel, resultCourse.AcademicLevel);
@@ -793,7 +787,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(responseCourse.CrsPrereqs, resultCourse.PrerequisiteText);
 
                     var depts = !string.IsNullOrWhiteSpace(responseCourse.CrsDepts) ?
-                        responseCourse.CrsDepts.Split(_SM).ToList() : new List<string>();
+                        responseCourse.CrsDepts.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(depts.Count, resultCourse.Departments.Count);
 
                     for (var j = 0; j < depts.Count; j++)
@@ -802,7 +796,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
 
                     var courseTypes = !string.IsNullOrWhiteSpace(responseCourse.CrsTypes) ?
-                        responseCourse.CrsTypes.Split(_SM).ToList() : new List<string>();
+                        responseCourse.CrsTypes.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(courseTypes.Count, resultCourse.CourseTypes.Count);
                     for (var j = 0; j < courseTypes.Count; j++)
                     {
@@ -810,7 +804,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
 
                     var locations = !string.IsNullOrWhiteSpace(responseCourse.Locations) ?
-                        responseCourse.Locations.Split(_SM).ToList() : new List<string>();
+                        responseCourse.Locations.Split(DmiString._SM).ToList() : new List<string>();
                     Assert.AreEqual(locations.Count, resultCourse.Locations.Count);
                     for (var j = 0; j < locations.Count; j++)
                     {

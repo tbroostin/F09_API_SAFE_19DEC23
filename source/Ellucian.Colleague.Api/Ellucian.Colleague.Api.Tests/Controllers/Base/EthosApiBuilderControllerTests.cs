@@ -506,7 +506,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             ethosApiBuilderController.Request.Method = new HttpMethod("PUT");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
-            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, It.IsAny<Dtos.EthosApiBuilder>(), ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).ReturnsAsync(expected);
+            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, It.IsAny<Dtos.EthosApiBuilder>(), It.IsAny<Web.Http.EthosExtend.EthosResourceRouteInfo>(), new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).ReturnsAsync(expected);
             ethosApiBuilderServiceMock.Setup(x => x.GetEthosApiBuilderByIdAsync(expected._Id, ethosApiConfiguration.ResourceName)).ReturnsAsync(expected);
 
             var ethosApiBuilderDto = new Dtos.EthosApiBuilder();
@@ -551,7 +551,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             ethosApiBuilderController.Request.Method = new HttpMethod("PUT");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
-            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<PermissionsException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<PermissionsException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", expected._Id, It.IsAny<Paging>());
         }
 
@@ -561,7 +561,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             ethosApiBuilderController.Request.Method = new HttpMethod("PUT");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
-            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<ArgumentException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<ArgumentException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", expected._Id, It.IsAny<Paging>());
         }
 
@@ -571,7 +571,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             ethosApiBuilderController.Request.Method = new HttpMethod("PUT");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
-            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<RepositoryException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<RepositoryException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", expected._Id, It.IsAny<Paging>());
         }
 
@@ -581,7 +581,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             ethosApiBuilderController.Request.Method = new HttpMethod("PUT");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
-            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<IntegrationApiException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PutEthosApiBuilderAsync(expected._Id, expected, It.IsAny<Web.Http.EthosExtend.EthosResourceRouteInfo>(), new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<IntegrationApiException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", expected._Id, It.IsAny<Paging>());
         }
         #endregion
@@ -595,7 +595,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).ReturnsAsync(expected);
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, It.IsAny<Web.Http.EthosExtend.EthosResourceRouteInfo>(), new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).ReturnsAsync(expected);
             ethosApiBuilderServiceMock.Setup(x => x.GetEthosApiBuilderByIdAsync(expected._Id, ethosApiConfiguration.ResourceName)).ReturnsAsync(expected);
 
             var response = (await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>()));
@@ -620,7 +620,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<PermissionsException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<PermissionsException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
 
         }
@@ -632,7 +632,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<ArgumentException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<ArgumentException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
         }
 
@@ -643,7 +643,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<RepositoryException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<RepositoryException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
         }
 
@@ -654,7 +654,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<IntegrationApiException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<IntegrationApiException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
         }
 
@@ -665,7 +665,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<ConfigurationException>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<ConfigurationException>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
         }
 
@@ -676,7 +676,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             ethosApiBuilderController.Request.Method = new HttpMethod("POST");
             var expected = ethosApiBuilderCollection.FirstOrDefault();
             expected._Id = Guid.Empty.ToString();
-            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, ethosApiConfiguration.ResourceName, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>(), false)).Throws<Exception>();
+            ethosApiBuilderServiceMock.Setup(x => x.PostEthosApiBuilderAsync(expected, routeInfo, new Dictionary<string, Web.Http.EthosExtend.EthosExtensibleDataFilter>())).Throws<Exception>();
             await ethosApiBuilderController.GetAlternativeRouteOrNotAcceptable(expected, "x-person-health", "", It.IsAny<Paging>());
         }
         #endregion

@@ -7,6 +7,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 {
     public abstract class CurrentUserSetup
     {
+        protected Domain.Entities.Role personRole = new Domain.Entities.Role(105, "Faculty");
         public class StudentUserFactory : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser

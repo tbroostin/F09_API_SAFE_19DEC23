@@ -1,10 +1,9 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿/*Copyright 2018-2023 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Dmi.Runtime;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Finance.Tests
@@ -17,7 +16,6 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
         /// Array contains data that could have come from Colleague
         /// </summary>
 
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         public class AwardRecord
         {
@@ -80,7 +78,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "PELL",
                 Description = "Pell Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Pell Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Pell Grant",
                 Category = "PELL",
                 LoanType = "",
                 ShoppingSheetGroup = "PL"
@@ -89,7 +87,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "UGTCH",
                 Description = "Undergraduate Teach Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Teach Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Teach Grant",
                 Category = "TEACH",
                 LoanType = "",
                 ShoppingSheetGroup = "ST"
@@ -98,7 +96,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "ZEBRA",
                 Description = "Zebra Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Zebra Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Zebra Grant",
                 Category = "GRANT",
                 LoanType = "",
                 ShoppingSheetGroup = "SC"
@@ -107,7 +105,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "WOOFY",
                 Description = "Woofy award",
-                Explanation = "Explanation of"+_VM.ToString()+"Woofy Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Woofy Grant",
                 Category = "GRANT",
                 LoanType = "",
                 ShoppingSheetGroup = "OT"
@@ -116,7 +114,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "PELL",
                 Description = "Pell Grant",
-                Explanation = "Explanation of"+_VM.ToString()+"Pell Grant",
+                Explanation = "Explanation of"+DmiString.sVM+"Pell Grant",
                 Category = "PELL",
                 LoanType = "",
                 ShoppingSheetGroup = "PL"
@@ -161,7 +159,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             {
                 Code = "GPLUS1",
                 Description = "GPLUS1 Description",
-                Explanation = "Explanation" + _VM.ToString()+_VM.ToString() + "of GPLUS1",
+                Explanation = "Explanation" + DmiString.sVM + DmiString.sVM + "of GPLUS1",
                 Category = "GPLUS",
                 LoanType = "P",
                 ShoppingSheetGroup = "PK"

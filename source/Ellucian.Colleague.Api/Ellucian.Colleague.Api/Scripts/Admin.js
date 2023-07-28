@@ -84,7 +84,12 @@
             .extend(
             {
                 required: { message: "DAS Password is required", onlyIf: function () { return self.useDasDatareader() === true } }
-            });
+                });
+
+        // OAUTH settings
+        self.oauthIssuerUrl = ko.observable(localSettings.OauthIssuerUrl);
+        self.oauthProxyUsername = ko.observable(localSettings.OauthProxyUsername);
+        self.oauthProxyPassword = ko.observable(localSettings.OauthProxyPassword);
 
         // Shared secret
         self.sharedSecret1 = ko.observable(localSettings.SharedSecret1)
@@ -111,6 +116,7 @@
         self.appErrors = ko.validatedObservable({ p1: self.accountName, p2: self.ipAddress, p3: self.port, p4: self.secure, p5: self.hostNameOverride, p6: self.connectionPoolSize });
         self.dasErrors = ko.validatedObservable({ p1: self.dasAccountName, p2: self.dasIpAddress, p3: self.dasPort, p4: self.dasSecure, p5: self.dasConnectionPoolSize, p6: self.dasHostNameOverride, p7: self.dasUsername, p8: self.dasPassword });
         self.secretErrors = ko.validatedObservable({ p1: self.sharedSecret1, p2: self.sharedSecret2 });
+        self.oauthErrors = ko.validatedObservable({ p1: self.oauthIssuingUrl, p2: self.oauthProxyUsername, p3: self.oauthProxyPassword });
 
         self.saveLocalSettings = function (validate) {
             var valid = true;
@@ -249,6 +255,47 @@
                     complete: function () { }
                 });
             }
+        }
+
+        //Test App connection Test Button Click
+        self.testOauthConnection_TestBtnClick = function () {
+            var model = new Object();
+            model.OauthIssuerUrl = self.oauthIssuerUrl();
+            model.UserId = self.oauthProxyUsername();
+            model.Password = self.oauthProxyPassword();
+            var theDialog = $(this);
+            $.ajax({
+                url: 'TestOauthSettingsAsync',
+                data: JSON.stringify(model),
+                type: 'POST',
+                contentType: 'application/json',
+                dataType: 'json',
+                success: function (data, textStatus, jqXHR) {
+                    alert(data);
+                    $('#dialog-form').dialog('close');
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    var responseText = null;
+                    try {
+                        responseText = $.parseJSON(jqXHR.responseText);
+                    }
+                    catch (e) {
+                        responseText = null;
+                    }
+
+                    if (responseText != null) {
+                        alert(responseText);
+                    }
+                    else {
+                        var message = "HTTP Error " + jqXHR.status + ": " + jqXHR.statusText;
+                        if (jqXHR.status == "404") {
+                            message += ".  You may get this error if you recently upgrade the Colleague Web API and did not clear your browser cache.";
+                        }
+                        alert(message);
+                    }
+                },
+                complete: function () { }
+            });
         }
 
         self.errors = ko.validation.group(self);

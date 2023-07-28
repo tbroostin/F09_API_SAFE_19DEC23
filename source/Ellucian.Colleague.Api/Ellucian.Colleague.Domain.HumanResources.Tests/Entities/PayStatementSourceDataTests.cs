@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -26,12 +26,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         decimal ytdGrossPay;
         decimal ytdNetPay;
         string comments;
-
+        decimal periodTotalTaxes;
+        decimal periodTotalBenDeds;
         PayStatementSourceData sourceData
         {
             get
             {
-                return new PayStatementSourceData(id, employeeId, employeeName, employeeSsn, employeeMailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
+                return new PayStatementSourceData(id, employeeId, employeeName, employeeSsn, employeeMailingLabel, checkReferenceId, statementReferenceId, payDate, periodEndDate, periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments, periodTotalTaxes, periodTotalBenDeds);
             }
         }
 
@@ -52,7 +53,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             ytdGrossPay = 12202.43M;
             ytdNetPay = 10992.22M;
             comments = "comments here";
-
+            periodTotalTaxes = 0.00M;
+            periodTotalBenDeds = 0.00M;
         }
 
         [TestMethod]
@@ -72,6 +74,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.AreEqual(ytdGrossPay, sourceData.YearToDateGrossPay);
             Assert.AreEqual(ytdNetPay, sourceData.YearToDateNetPay);
             Assert.AreEqual(comments, sourceData.Comments);
+            Assert.AreEqual(periodTotalTaxes, sourceData.PeriodTotalTaxes);
+            Assert.AreEqual(periodTotalBenDeds, sourceData.PeriodTotalBenDeds);
             Assert.IsFalse(sourceData.SourceBankDeposits.Any());
 
         }

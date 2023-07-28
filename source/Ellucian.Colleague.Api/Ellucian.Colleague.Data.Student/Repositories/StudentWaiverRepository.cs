@@ -1,14 +1,11 @@
-﻿// Copyright 2015-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Exceptions;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -16,8 +13,11 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -47,7 +47,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             else
             {
-                var waivers =await GetOrAddToCacheAsync<List<StudentWaiver>>("SectionWaivers" + sectionId,
+                var waivers = await GetOrAddToCacheAsync<List<StudentWaiver>>("SectionWaivers" + sectionId,
                 async () =>
                 {
                     try
@@ -107,7 +107,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         // We need to convert value marks to new line characters because we want to maintain any formatting
                         // (line-to-line) that the user may have entered.
-                        string comments = (string.IsNullOrEmpty(waiverItem.SrwvComments)) ? null : waiverItem.SrwvComments.Replace(Convert.ToChar(DynamicArray.VM), '\n');
+                        string comments = (string.IsNullOrEmpty(waiverItem.SrwvComments)) ? null : waiverItem.SrwvComments.Replace(DmiString._VM, '\n');
                         var waiver = new StudentWaiver(waiverItem.Recordkey,
                                                 waiverItem.SrwvStudent,
                                                 waiverItem.SrwvCourse,
@@ -222,7 +222,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error(ex, "Error occurred during CreateStudentReqWaiver transaction execution.");
                 throw new ColleagueWebApiException();

@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Data.Colleague.Exceptions;
 using System.Net;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Http.Filters;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -185,6 +187,7 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
         /// <returns>StudentAwardYear2 object</returns>
         /// <exception cref="HttpResponseException">Thrown if the studentId or awardYearCode argument is null or empty</exception>
         [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public async Task<StudentAwardYear2> GetStudentAwardYear2Async(string studentId, string awardYear, bool getActiveYearsOnly = false)
         {
             if (string.IsNullOrEmpty(studentId))

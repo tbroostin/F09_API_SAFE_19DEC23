@@ -311,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 //if (depositDirectiveEntities == null || !depositDirectiveEntities.Any())
                 var hasAdressSpecificDirectives = (depositDirectiveEntities == null) ?
                     false :
-                    depositDirectiveEntities.Where(dep => dep.AddressId == addressId).Any();
+                    depositDirectiveEntities.Where(dep => !string.IsNullOrEmpty(dep.AddressId) && dep.AddressId == addressId).Any();
 
                 if (hasAdressSpecificDirectives)
                 {

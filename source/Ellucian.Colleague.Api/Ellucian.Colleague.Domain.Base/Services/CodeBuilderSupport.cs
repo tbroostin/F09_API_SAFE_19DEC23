@@ -314,9 +314,9 @@ namespace Ellucian.Colleague.Domain.Base.Services
 
             sb.Append("namespace Ellucian.Colleague.Domain.Base.Services{ \n");
             sb.Append("public class CSCodeEvaler{ \n");
-            sb.Append("char _VM = Convert.ToChar(DynamicArray.VM); \n");
-            sb.Append("char _SM = Convert.ToChar(DynamicArray.SM); \n");
-            sb.Append("char _TM = Convert.ToChar(DynamicArray.TM); \n");
+            sb.Append("char _VM = DmiString._VM; \n");
+            sb.Append("char _SM = DmiString._SM; \n");
+            sb.Append("char _TM = DmiString._TM; \n");
             sb.Append("char _XM = Convert.ToChar(250); \n");
             sb.Append("public CodeBuilderObject EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader, BaseCachingRepository rep, Func<string, Func<object>, double?, object> GetOrAddToCacheFunc, double? cacheTimeOut, bool bypassCache){\n");
             sb.Append("var outputData = new CodeBuilderObject();\n");

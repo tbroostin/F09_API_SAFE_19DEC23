@@ -1,5 +1,5 @@
-﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Student.DataContracts;
+﻿// Copyright 2020-2023 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities.Portal;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -9,15 +9,13 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
 using System.Globalization;
-using Ellucian.Web.Http.Configuration;
-using System.Xml.Schema;
-using Ellucian.Colleague.Data.Student.Transactions;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -28,7 +26,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
     public class PortalRepository : BaseColleagueRepository, IPortalRepository
     {
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         private string colleagueTimeZone;
 
         public PortalRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
@@ -159,12 +156,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             continue;
 
                         // meeting information
-                        var buildings = section.CsmBldg != null ? section.CsmBldg.Split(_SM).ToList() : new List<string>();
-                        var rooms = section.CsmRoom != null ? section.CsmRoom.Split(_SM).ToList() : new List<string>();
-                        var instructionalMethod = section.CsmInstrMethod != null ? section.CsmInstrMethod.Split(_SM).ToList() : new List<string>();
-                        var days = section.CsmDays != null ? section.CsmDays.Split(_SM).ToList() : new List<string>();
-                        var starttime = section.CsmStartTime != null ? section.CsmStartTime.Split(_SM).ToList() : new List<string>();
-                        var endtime = section.CsmEndTime != null ? section.CsmEndTime.Split(_SM).ToList() : new List<string>();
+                        var buildings = section.CsmBldg != null ? section.CsmBldg.Split(DmiString._SM).ToList() : new List<string>();
+                        var rooms = section.CsmRoom != null ? section.CsmRoom.Split(DmiString._SM).ToList() : new List<string>();
+                        var instructionalMethod = section.CsmInstrMethod != null ? section.CsmInstrMethod.Split(DmiString._SM).ToList() : new List<string>();
+                        var days = section.CsmDays != null ? section.CsmDays.Split(DmiString._SM).ToList() : new List<string>();
+                        var starttime = section.CsmStartTime != null ? section.CsmStartTime.Split(DmiString._SM).ToList() : new List<string>();
+                        var endtime = section.CsmEndTime != null ? section.CsmEndTime.Split(DmiString._SM).ToList() : new List<string>();
 
                         portalSectionMeetings = new List<PortalSectionMeeting>();
                         for (int i = 0; i < instructionalMethod.Count(); i++)
@@ -200,9 +197,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 endTime: etimeOffset));
                         }
 
-                        var depts = !string.IsNullOrWhiteSpace(section.SecDepts) ? section.SecDepts.Split(_SM).ToList() : new List<string>();
-                        var faculty = !string.IsNullOrWhiteSpace(section.SecFaculty) ? section.SecFaculty.Split(_SM).ToList() : new List<string>();
-                        var courseTypes = !string.IsNullOrWhiteSpace(section.CrsType) ? section.CrsType.Split(_SM).ToList() : new List<string>();
+                        var depts = !string.IsNullOrWhiteSpace(section.SecDepts) ? section.SecDepts.Split(DmiString._SM).ToList() : new List<string>();
+                        var faculty = !string.IsNullOrWhiteSpace(section.SecFaculty) ? section.SecFaculty.Split(DmiString._SM).ToList() : new List<string>();
+                        var courseTypes = !string.IsNullOrWhiteSpace(section.CrsType) ? section.CrsType.Split(DmiString._SM).ToList() : new List<string>();
 
                         //book information
                         var bookData = section.BookData != null ? section.BookData.Split(bookDataSeparator, StringSplitOptions.None).ToList() : new List<string>();
@@ -366,7 +363,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Add events
                     if (response.Events != null && response.Events.Any())
                     {
-                        foreach(var portalEvent in response.Events)
+                        foreach (var portalEvent in response.Events)
                         {
                             try
                             {
@@ -415,7 +412,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     portalReminder.ReminderType,
                                     portalReminder.ReminderShortText,
                                     portalReminder.ReminderParticipants);
-                                eventsAndReminders.AddPortalReminder(pReminder);                            
+                                eventsAndReminders.AddPortalReminder(pReminder);
                             }
                             catch (Exception ex)
                             {
@@ -495,9 +492,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if (course == null)
                             continue;
 
-                        var depts = !string.IsNullOrWhiteSpace(course.CrsDepts) ? course.CrsDepts.Split(_SM).ToList() : new List<string>();
-                        var courseTypes = !string.IsNullOrWhiteSpace(course.CrsTypes) ? course.CrsTypes.Split(_SM).ToList() : new List<string>();
-                        var locations = !string.IsNullOrWhiteSpace(course.Locations) ? course.Locations.Split(_SM).ToList() : new List<string>();
+                        var depts = !string.IsNullOrWhiteSpace(course.CrsDepts) ? course.CrsDepts.Split(DmiString._SM).ToList() : new List<string>();
+                        var courseTypes = !string.IsNullOrWhiteSpace(course.CrsTypes) ? course.CrsTypes.Split(DmiString._SM).ToList() : new List<string>();
+                        var locations = !string.IsNullOrWhiteSpace(course.Locations) ? course.Locations.Split(DmiString._SM).ToList() : new List<string>();
 
                         portalCourses.Add(new PortalCourse(
                             courseId: course.CoursesId,
@@ -540,7 +537,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Collection of <see cref="PortalStudentPreferredCourseSectionUpdateResult"/></returns>
         public async Task<IEnumerable<PortalStudentPreferredCourseSectionUpdateResult>> UpdateStudentPreferredCourseSectionsAsync(string studentId, IEnumerable<string> courseSectionIds)
         {
-            List<PortalStudentPreferredCourseSectionUpdateResult> results = new List<PortalStudentPreferredCourseSectionUpdateResult>(); 
+            List<PortalStudentPreferredCourseSectionUpdateResult> results = new List<PortalStudentPreferredCourseSectionUpdateResult>();
             try
             {
                 if (string.IsNullOrEmpty(studentId))
@@ -571,14 +568,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         throw new RepositoryException(string.Format("Calling PORTAL.UPDATE.PREFERRED.SECTIONS for student {0} did not return any results.", studentId));
                     }
                     var resultSectionIds = response.Results.Select(res => res.CourseSectionId).ToList();
-                    foreach(var sectionToAdd in sectionsToAdd)
+                    foreach (var sectionToAdd in sectionsToAdd)
                     {
                         if (!resultSectionIds.Contains(sectionToAdd))
                         {
                             throw new RepositoryException(string.Format("Request to PORTAL.UPDATE.PREFERRED.SECTIONS for student {0} contained course section {1} but response did not contain a result for this course section.", studentId, sectionToAdd));
                         }
                     }
-                    foreach(var result in response.Results)
+                    foreach (var result in response.Results)
                     {
                         try
                         {
@@ -624,7 +621,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new ArgumentNullException("statusString", "The status for adding a course section to a student's list of preferred course sections cannot be null or blank.");
             }
-            switch(statusString)
+            switch (statusString)
             {
                 case "OK":
                     return PortalStudentPreferredCourseSectionUpdateStatus.Ok;

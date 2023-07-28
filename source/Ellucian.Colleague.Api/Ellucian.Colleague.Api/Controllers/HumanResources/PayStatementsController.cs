@@ -1,11 +1,16 @@
-﻿/* Copyright 2017-2022 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2023 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using Microsoft.Reporting.WebForms;
@@ -64,6 +69,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="startDate">optional: start date to filter pay statements by</param>
         /// <param name="endDate">optional: end date to filter pay statements by</param>
         /// <returns>An array of PayStatementSummary objects for the requested parameters</returns>
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets a list of summaries of all pay statements for the current user, or, if you have the proper permissions, for any employee.",
+            HttpMethodDescription = "Gets a list of summaries of all pay statements for the current user, or, if you have the proper permissions, for any employee.")]
         public async Task<IEnumerable<PayStatementSummary>> GetPayStatementSummariesAsync(
             [FromUri(Name = "employeeId")] string employeeId = null,
             [FromUri(Name = "hasOnlineConsent")] bool? hasOnlineConsent = null,
@@ -251,5 +260,79 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException("Unknown error occurred", HttpStatusCode.BadRequest);
             }
         }
+
+        #region Experience end-points
+        /// <summary>
+        /// This ethos end-point will return the pay statement information for a given id.
+        /// The requested pay statement must be owned by the authenticated user.
+        /// </summary>
+        /// <param name="id">The id of the requested pay statement.</param>      
+        /// <returns>The requested PayStatementInformation DTO</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "This ethos end-point will return the pay statement information for a given id.",
+           HttpMethodDescription = "This ethos end-point will return the pay statement information for a given id.")]
+        public async Task<PayStatementInformation> GetPayStatementInformationAsync(string id)
+        {
+            logger.Debug("********* Start - Process to get pay statement information - Start *********");
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    logger.Debug("id cannot be null");
+                    throw new ArgumentNullException("id", "id cannot be null");
+                }
+
+                var payStatementInformation = await payStatementService.GetPayStatementInformationAsync(id);
+                logger.Debug("********* End - Process to get pay statement information - End *********");
+                return payStatementInformation;
+            }
+            catch (PermissionsException e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ApplicationException e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentNullException e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>        
+        /// Get all PayStatementInformation
+        /// </summary>
+        /// <returns>PayStatementInformation objects</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "This ethos end-point will return all the pay statement information.",
+          HttpMethodDescription = "This ethos end-point will return all the pay statement information.")]
+        public async Task<IEnumerable<PayStatementInformation>> GetAllPayStatementInformationAsync()
+        {
+            // GetAll is not supported for Colleague/Experience but ethos requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        #endregion
     }
 }

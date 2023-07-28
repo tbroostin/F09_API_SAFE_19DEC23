@@ -118,5 +118,19 @@ namespace Ellucian.Colleague.Api.Models
         /// Gets or sets the DAS settings flag.
         /// </summary>
         public bool UseDasDatareader { get; set; }
+        /// <summary>
+        /// Gets or sets the Oauth Issuer Url.
+        /// </summary>
+        public string OauthIssuerUrl { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Oauth Proxy login.
+        /// </summary>
+        public string OauthProxyUsername { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Oauth Proxy password.
+        /// </summary>
+        public string OauthProxyPassword { get; set; }
     }
 }

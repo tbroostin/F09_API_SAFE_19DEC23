@@ -1,5 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2015-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
@@ -24,7 +23,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private TestGeneralLedgerConfigurationRepository expectedRepository;
         private BudgetWebDefaults budgetWebDefaultsDataContract;
         private int testFiscalYear = 0;
-        private char _SM = Convert.ToChar(DynamicArray.SM);
 
         [TestInitialize]
         public void Initialize()
@@ -438,7 +436,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var actualMessage = "";
             try
             {
-                this.expectedRepository.GlStructDataContract.AcctSubName = new List<string>() { "FUND" + _SM + null, "PROGRAM", "LOCATION", "ACTIVITY", "FUNCTION" + _SM + "DIVISION" + _SM + "SUBDIVISION" + _SM + "DEPARTMENT", "GL.CLASS" + _SM + "GL.SUBCLASS" + _SM + "CATEGORY" + _SM + "SUBCATEGORY" + _SM + "OBJECT" };
+                this.expectedRepository.GlStructDataContract.AcctSubName = new List<string>() { "FUND" + DmiString._SM + null, "PROGRAM", "LOCATION", "ACTIVITY", "FUNCTION" + DmiString._SM + "DIVISION" + DmiString._SM + "SUBDIVISION" + DmiString._SM + "DEPARTMENT", "GL.CLASS" + DmiString._SM + "GL.SUBCLASS" + DmiString._SM + "CATEGORY" + DmiString._SM + "SUBCATEGORY" + DmiString._SM + "OBJECT" };
                 await actualRepository.GetAccountStructureAsync();
             }
             catch (ConfigurationException cex)
@@ -545,9 +543,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 // Get the subcomponent names, start positions, and lengths for the given major component.
                 var majorComponentType = DetermineComponentType(expectedRepository.GlStructDataContract.AcctComponentType[i]);
-                var subcomponentNames = expectedRepository.GlStructDataContract.AcctSubName[i].Split(_SM);
-                var subcomponentStartPositions = expectedRepository.GlStructDataContract.AcctSubStart[i].Split(_SM);
-                var subcomponentLengths = expectedRepository.GlStructDataContract.AcctSubLgth[i].Split(_SM);
+                var subcomponentNames = expectedRepository.GlStructDataContract.AcctSubName[i].Split(DmiString._SM);
+                var subcomponentStartPositions = expectedRepository.GlStructDataContract.AcctSubStart[i].Split(DmiString._SM);
+                var subcomponentLengths = expectedRepository.GlStructDataContract.AcctSubLgth[i].Split(DmiString._SM);
 
                 // Grab the individual subcomponent name, start position, and length and make sure that subcomponent is represented in the entity.
                 for (int j = 0; j < subcomponentNames.Length; j++)

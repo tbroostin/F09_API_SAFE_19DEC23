@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,7 +46,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="credentials">From Body, Login <see cref="Credentials">Credentials</see></param>
         /// <returns><see cref="HttpResponseMessage">HttpResponseMessage</see> with JSON Web Token</returns>
         [Obsolete("Obsolete as of API version 1.12, use PostLogin2Async instead")]
-        public async Task<HttpResponseMessage> PostLoginAsync([FromBody]Credentials credentials)
+        public async Task<HttpResponseMessage> PostLoginAsync([FromBody] Credentials credentials)
         {
             IEnumerable<string> nameHeaderValues = null;
             IEnumerable<string> versionHeaderValues = null;
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// or one of the following failure responses: 
         /// HttpStatusCode.Forbidden : Password has expired, HttpStatusCode.Unauthorized : Invalid credentials provided, or HttpStatusCode.NotFound : Listener not found or not responding
         /// </returns>
-        public async Task<HttpResponseMessage> PostLogin2Async([FromBody]Credentials credentials)
+        public async Task<HttpResponseMessage> PostLogin2Async([FromBody] Credentials credentials)
         {
             IEnumerable<string> nameHeaderValues = null;
             IEnumerable<string> versionHeaderValues = null;
@@ -179,7 +179,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="proxyCredentials">From Body, <see cref="ProxyCredentials">ProxyCredentials</see></param>
         /// <returns><see cref="HttpResponseMessage">HttpResponseMessage</see> with JSON Web Token</returns>
         [Obsolete("Obsolete as of API version 1.12, use PostProxyLogin2Async instead")]
-        public async Task<HttpResponseMessage> PostProxyLoginAsync([FromBody]ProxyCredentials proxyCredentials)
+        public async Task<HttpResponseMessage> PostProxyLoginAsync([FromBody] ProxyCredentials proxyCredentials)
         {
             IEnumerable<string> nameHeaderValues = null;
             IEnumerable<string> versionHeaderValues = null;
@@ -243,7 +243,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// or one of the following failure responses: 
         /// HttpStatusCode.Forbidden : Password has expired, HttpStatusCode.Unauthorized : Invalid credentials provided, or HttpStatusCode.NotFound : Listener not found or not responding
         /// </returns>
-        public async Task<HttpResponseMessage> PostProxyLogin2Async([FromBody]ProxyCredentials proxyCredentials)
+        public async Task<HttpResponseMessage> PostProxyLogin2Async([FromBody] ProxyCredentials proxyCredentials)
         {
             IEnumerable<string> nameHeaderValues = null;
             IEnumerable<string> versionHeaderValues = null;
@@ -370,7 +370,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="session"></param>
         /// <returns>User's token</returns>
-        public async Task<string> PostTokenAsync([FromBody]LegacyColleagueSession session)
+        public async Task<string> PostTokenAsync([FromBody] LegacyColleagueSession session)
         {
             return await sessionRepository.GetTokenAsync(session.SecurityToken, session.ControlId);
         }
@@ -381,7 +381,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="request"><see cref="ChangePassword">ChangePassword</see> request</param>
         /// <returns>Empty <see cref="HttpResponseMessage">HttpResponseMessage</see> if successful</returns>
         /// <exception> <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadResponse when passed data is not acceptable</exception>
-        public async Task<HttpResponseMessage> PostNewPasswordAsync([FromBody]ChangePassword request)
+        public async Task<HttpResponseMessage> PostNewPasswordAsync([FromBody] ChangePassword request)
         {
             try
             {
@@ -405,7 +405,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// the same as the Current user ID, then any previously assigned proxy subject claims will be removed.</param>
         /// <returns></returns>
         [Authorize]
-        public async Task<HttpResponseMessage> PutSessionProxySubjectsAsync([FromBody]ProxySubject proxySubject)
+        public async Task<HttpResponseMessage> PutSessionProxySubjectsAsync([FromBody] ProxySubject proxySubject)
         {
             try
             {
@@ -454,7 +454,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
         [HttpPost]
         [Authorize]
-        public async Task<HttpResponseMessage> PostResetPasswordTokenRequestAsync([FromBody]PasswordResetTokenRequest tokenRequest)
+        public async Task<HttpResponseMessage> PostResetPasswordTokenRequestAsync([FromBody] PasswordResetTokenRequest tokenRequest)
         {
             try
             {
@@ -476,7 +476,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
         [HttpPost]
         [Authorize]
-        public async Task<HttpResponseMessage> PostUserIdRecoveryRequestAsync([FromBody]UserIdRecoveryRequest userIdRecoveryRequest)
+        public async Task<HttpResponseMessage> PostUserIdRecoveryRequestAsync([FromBody] UserIdRecoveryRequest userIdRecoveryRequest)
         {
             try
             {
@@ -498,7 +498,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <accessComments>User must have ADMIN.RESET.ALL.PASSWORDS permission to reset passwords.</accessComments>
         [HttpPost]
         [Authorize]
-        public async Task<HttpResponseMessage> PostResetPasswordAsync([FromBody]ResetPassword resetPassword)
+        public async Task<HttpResponseMessage> PostResetPasswordAsync([FromBody] ResetPassword resetPassword)
         {
             try
             {
@@ -545,7 +545,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 var currentUserTokenClaim = currentUserPrincipal.Identities.First().Claims.FirstOrDefault(
                     c => c.ClaimType == Ellucian.Web.Security.ClaimConstants.SecurityTokenControlId);
 
-                if (currentUserTokenClaim == null 
+                if (currentUserTokenClaim == null
                     || string.IsNullOrWhiteSpace(currentUserTokenClaim.Value)
                     || currentUserTokenClaim.Value.Split('*').Length != 2)
                 {
@@ -563,5 +563,154 @@ namespace Ellucian.Colleague.Api.Controllers
                 return new HttpResponseMessage(HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Requests a Multifactor Token (one-time password) be emailed to the user.
+        /// Returns a temporary session token that must be included with the follow-up
+        /// call to verify the multifactor token with the emailed OTP.
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<HttpResponseMessage> RequestMultifactorTokenAsync([FromBody] Credentials credentials)
+        {
+            IEnumerable<string> nameHeaderValues = null;
+            IEnumerable<string> versionHeaderValues = null;
+            bool hasName = Request.Headers.TryGetValues("X-ProductName", out nameHeaderValues);
+            bool hasVersion = Request.Headers.TryGetValues("X-ProductVersion", out versionHeaderValues);
+            if (hasName)
+            {
+                string productName = nameHeaderValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(productName))
+                {
+                    this.sessionRepository.ProductName = productName;
+                }
+            }
+            if (hasVersion)
+            {
+                string productVersion = versionHeaderValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(productVersion))
+                {
+                    this.sessionRepository.ProductVersion = productVersion;
+                }
+            }
+
+            if (string.IsNullOrEmpty(sessionRepository.ProductName))
+            {
+                var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                this.sessionRepository.ProductName = "WebApi";
+                this.sessionRepository.ProductVersion = string.Format("{0}.{1}", assemblyVersion.Major, assemblyVersion.Minor);
+            }
+
+            try
+            {
+                var response = await sessionRepository.GetMultifactorTokenAsync(credentials.UserId, credentials.Password);
+                return new HttpResponseMessage() { Content = new StringContent(response) };
+            }
+            catch (LoginException lex)
+            {
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
+                {
+                    logger.Info(lex, "Login attempt failed due to expired password.");
+                    return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message + "Error: " + lex.ErrorCode) };
+                }
+                // Check if login failure is due to reaching the maximum number of login attempts.
+                else if (lex.ErrorCode == "10014")
+                {
+                    logger.Info(lex, "Login attempt failed due to too many incorrect login attempts for User: " + credentials.UserId);
+                    return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(lex.Message + "Error: " + lex.ErrorCode) };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(lex.Message) };
+                }
+            }
+            catch (ColleagueDmiConnectionException cdce)
+            {
+                logger.Error("Login attempt failed with ColleagueDmiConnectionException: " + cdce.Message);
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("Listener was not found or was unresponsive.") });
+            }
+            catch (Exception ex)
+            {
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(ex.Message) };
+            }
+        }
+
+        /// <summary>
+        /// Verify the multifactor token with the provided temporary session token
+        /// and the emailed one-time password.
+        /// Successful requests will result in a full session being created and 
+        /// a response of the session JWT.
+        /// </summary>
+        /// <returns>Session JWT</returns>
+        [HttpPost]
+        public async Task<HttpResponseMessage> VerifyMultifactorTokenAsync([FromBody] CredentialsWithMultifactorToken credentialsWithMfaToken)
+        {
+            IEnumerable<string> nameHeaderValues = null;
+            IEnumerable<string> versionHeaderValues = null;
+            bool hasName = Request.Headers.TryGetValues("X-ProductName", out nameHeaderValues);
+            bool hasVersion = Request.Headers.TryGetValues("X-ProductVersion", out versionHeaderValues);
+            if (hasName)
+            {
+                string productName = nameHeaderValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(productName))
+                {
+                    this.sessionRepository.ProductName = productName;
+                }
+            }
+            if (hasVersion)
+            {
+                string productVersion = versionHeaderValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(productVersion))
+                {
+                    this.sessionRepository.ProductVersion = productVersion;
+                }
+            }
+
+            if (string.IsNullOrEmpty(sessionRepository.ProductName))
+            {
+                var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                this.sessionRepository.ProductName = "WebApi";
+                this.sessionRepository.ProductVersion = string.Format("{0}.{1}", assemblyVersion.Major, assemblyVersion.Minor);
+            }
+
+            try
+            {
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(await sessionRepository.LoginWithMultifactorAsync(
+                        credentialsWithMfaToken.UserId,
+                        credentialsWithMfaToken.ServiceToken, credentialsWithMfaToken.MultifactorOneTimePassword))
+                };
+            }
+            catch (VerifyMultifactorException vme)
+            {
+                logger.Info(vme, "Verify multifactor token failure: (" + vme.StatusCode + ") " + vme.Message);
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(vme.StatusCode + ": " + vme.Message) };
+            }
+            catch (LoginException lex)
+            {
+                // Check if login failure is from a force change or password expired error (DMI error code 10017 or 10016)
+                if (lex.ErrorCode == "10017" || lex.ErrorCode == "10016")
+                {
+                    logger.Info(lex, lex.Message);
+                    return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent(lex.Message) };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(lex.Message) };
+                }
+            }
+            catch (ColleagueDmiConnectionException cdce)
+            {
+                logger.Error("Login attempt failed with ColleagueDmiConnectionException: " + cdce.Message);
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("Listener was not found or was unresponsive.") });
+            }
+            catch (Exception ex)
+            {
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent(ex.Message) };
+            }
+        }
+
     }
 }

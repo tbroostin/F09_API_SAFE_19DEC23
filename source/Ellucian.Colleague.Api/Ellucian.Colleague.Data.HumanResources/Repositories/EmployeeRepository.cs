@@ -1531,7 +1531,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 foreach (var perwage in personPositionWages)
                 {
-                    if (perwage.PpwgEndDate == null || perwage.PpwgEndDate > DateTime.Today)
+                    if ((perwage.PpwgEndDate == null || perwage.PpwgEndDate > DateTime.Today) && (!string.IsNullOrEmpty(perwage.PpwgType) && perwage.PpwgType.Equals("W")))
                     {
                         employeeEntity.PayStatus = PayStatus.WithPay;
                         //v12 NEW LOGIC FOR hoursPerPeriod property

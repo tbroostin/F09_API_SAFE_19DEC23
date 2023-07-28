@@ -54,6 +54,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public string WithdrawOption { get; set; }
 
+        /// <summary>
+        /// Flag denotes whether the incoming action type of the associated leave request(in the case POST/PUT), is already the latest action in the database
+        /// </summary>
+        public bool LatestStatusAlreadyExists { get; set; }
+
         #endregion
 
         /// <summary>

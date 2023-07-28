@@ -66,5 +66,19 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="studentId">Student Id</param>
         /// <returns>An IEnumerable list of student's academic levels</returns>
         Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId);
+
+        /// <summary>
+        /// Get the record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>Primary key</returns>
+        Task<string> GetStudentIdFromGuidAsync(string guid);
+
+        /// <summary>
+        /// Update student information
+        /// </summary>
+        /// <param name="student">Student</param>
+        /// <returns>Updated student</returns>
+        Task<Domain.Student.Entities.Student> UpdateStudentAsync(Domain.Student.Entities.Student student);
     }
 }

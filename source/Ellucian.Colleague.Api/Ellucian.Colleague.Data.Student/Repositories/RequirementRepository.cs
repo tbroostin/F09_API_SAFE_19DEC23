@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -142,7 +141,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 //retrieve parameter that define whether "my progress" display text should show similar to html version  of EVAL or 
                 //show the way as it is entered
-                bool printTextAsEntered =await RetrievePrintTextParamAsync();
+                bool printTextAsEntered = await RetrievePrintTextParamAsync();
 
                 // Requirements moved to a separate repository because of multiple entry points: 
                 //      Each program*catalog may have multiple requirements from ACPR.ACAD.REQMTS
@@ -167,7 +166,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 if (rqs != null)
                 {
-                    char _VM = Convert.ToChar(DynamicArray.VM);
                     foreach (var rq in rqs)
                     {
 
@@ -181,9 +179,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if (!string.IsNullOrEmpty(rq.AcrPrintedSpec))
                         {
                             r.DisplayText = rq.AcrPrintedSpec;
-                            r.DisplayText = r.DisplayText.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+                            r.DisplayText = r.DisplayText.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
                             //If there is a single-VM, replace it with a space.
-                            r.DisplayText = r.DisplayText.Replace(_VM, ' ');
+                            r.DisplayText = r.DisplayText.Replace(DmiString._VM, ' ');
                         }
 
                         if (reqs.Contains(r))
@@ -264,8 +262,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         Subrequirement sr = Subrequirements.Find(s => s.Id == SubrequirementBlock.Recordkey);
                         if (sr != null)
                         {
-                            sr.ExtraCourseDirective=topBlocks[SubrequirementBlock.AcrbParentBlock].ExtraCourseDirective;
-                            await AddSVToBlockBaseAsync(sr, SubrequirementBlock, grades, printTextAsEntered );
+                            sr.ExtraCourseDirective = topBlocks[SubrequirementBlock.AcrbParentBlock].ExtraCourseDirective;
+                            await AddSVToBlockBaseAsync(sr, SubrequirementBlock, grades, printTextAsEntered);
                             AddSVToBlock(sr, SubrequirementBlock);
                             //Give the Subrequirement a reference to its parent
                             Requirement requirement = topBlocks[SubrequirementBlock.AcrbParentBlock];
@@ -319,7 +317,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             group.SortSpecificationId = !string.IsNullOrEmpty(groupBlock.AcrbSortMethod) ? groupBlock.AcrbSortMethod : group.SortSpecificationId;
                             group.ExtraCourseDirective = group.SubRequirement.ExtraCourseDirective;
-                            group.InListOrder = string.IsNullOrWhiteSpace(groupBlock.AcrbInListOrder)?false:true;
+                            group.InListOrder = string.IsNullOrWhiteSpace(groupBlock.AcrbInListOrder) ? false : true;
                             await AddSVToBlockBaseAsync(group, groupBlock, grades, printTextAsEntered);
 
                             // Group Include Low Grades setting. This is in BlockBase but must be set here because
@@ -489,7 +487,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private async Task<bool> RetrievePrintTextParamAsync()
         {
             Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await GetStwebDefaultsAsync();
-            return ( !string.IsNullOrEmpty(stwebDefaults.StwebFormatProgPrintText) && stwebDefaults.StwebFormatProgPrintText.Equals("Y",StringComparison.OrdinalIgnoreCase)) ? true:false;
+            return (!string.IsNullOrEmpty(stwebDefaults.StwebFormatProgPrintText) && stwebDefaults.StwebFormatProgPrintText.Equals("Y", StringComparison.OrdinalIgnoreCase)) ? true : false;
         }
 
 
@@ -504,7 +502,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     r.DisplayText = ReplaceSpecialPrintChars(r.DisplayText, printTextAsEntered);
                 }
             }
-            if(!string.IsNullOrEmpty(block.AcrbExtraCode))
+            if (!string.IsNullOrEmpty(block.AcrbExtraCode))
             {
                 switch (block.AcrbExtraCode)
                 {
@@ -603,7 +601,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private string ReplaceSpecialPrintChars(string displayText, bool printTextAsEntered)
         {
-            char _VM = Convert.ToChar(DynamicArray.VM);
             string replacedString = string.Empty;
             try
             {
@@ -614,18 +611,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (!printTextAsEntered)
                     {
                         // If there is a  #, replace them with new line. 
-                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, "#", "\n" );
+                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, "#", "\n");
                         // If there is are multiple VMs, replace them with NewLines (so they get treated as "paragraphs").
-                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, _VM + "{2,}", Environment.NewLine+Environment.NewLine);
+                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, DmiString._VM + "{2,}", Environment.NewLine + Environment.NewLine);
                         // If there is a single-VM, replace it with a space.
-                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, _VM + "{1}", " ");
+                        replacedString = System.Text.RegularExpressions.Regex.Replace(replacedString, DmiString._VM + "{1}", " ");
                     }
                     else
                     {
                         // If there is a double-VM, replace them with NewLines (so they get treated as "paragraphs")
-                        replacedString = replacedString.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+                        replacedString = replacedString.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
                         // If there is a single-VM, replace it with a new line.
-                        replacedString = replacedString.Replace(_VM, '\n');
+                        replacedString = replacedString.Replace(DmiString._VM, '\n');
                     }
                 }
             }
@@ -678,10 +675,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            // UseLowGrade is true unless it is specifically N - so null, empty and Y are all true.
                            return new DegreeAuditParameters(extraCourses, !string.IsNullOrEmpty(daDefaults.DaRelatedCoursesFlag) && daDefaults.DaRelatedCoursesFlag.ToUpper() == "Y" ? true : false,
                                !string.IsNullOrEmpty(daDefaults.DaIncludeFailures) && daDefaults.DaIncludeFailures.ToUpper() == "N" ? false : true,
-                               !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false, 
-                               !string.IsNullOrEmpty(daDefaults.DaExcludeCmplRplGpaFlag) && daDefaults.DaExcludeCmplRplGpaFlag.ToUpper()=="Y" ? true:false,
+                               !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false,
+                               !string.IsNullOrEmpty(daDefaults.DaExcludeCmplRplGpaFlag) && daDefaults.DaExcludeCmplRplGpaFlag.ToUpper() == "Y" ? true : false,
                                !string.IsNullOrEmpty(daDefaults.DaRptdCrdtsOvrPlcrsFlag) && daDefaults.DaRptdCrdtsOvrPlcrsFlag.ToUpper() == "Y" ? true : false,
-                               !string.IsNullOrEmpty(daDefaults.DaDisableOptmzCrseSelect) && daDefaults.DaDisableOptmzCrseSelect.ToUpper() == "Y"? true:false);
+                               !string.IsNullOrEmpty(daDefaults.DaDisableOptmzCrseSelect) && daDefaults.DaDisableOptmzCrseSelect.ToUpper() == "Y" ? true : false);
                        }
                        else
                        {

@@ -461,6 +461,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// User defined text to explain the Enrolled Credits page
         /// </summary>
         public string EnrolledCreditsPageExplanation { get; set; }
+        /// <summary>
+        /// List of housing options to be included on the checklist for selection
+        /// </summary>
+        public List<string> HousingOptions { get; set; }
 
 
 

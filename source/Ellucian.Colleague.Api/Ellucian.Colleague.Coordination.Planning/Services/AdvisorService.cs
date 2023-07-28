@@ -1,26 +1,26 @@
 ﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using slf4net;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Web.Security;
-using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Planning.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Planning.Entities;
+using Ellucian.Colleague.Domain.Planning.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Planning.Entities;
-using Ellucian.Colleague.Domain.Planning.Repositories;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Planning.Services
 {
@@ -37,9 +37,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         private readonly IStudentRepository _studentRepository;
         private readonly IPersonBaseRepository _personBaseRepository;
 
-        public AdvisorService(IAdapterRegistry adapterRegistry, IAdvisorRepository advisorRepository, IDegreePlanRepository degreePlanRepository, 
-            ITermRepository termRepository, IAdviseeRepository adviseeRepository, IStudentConfigurationRepository studentConfigurationRepository, 
-            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, 
+        public AdvisorService(IAdapterRegistry adapterRegistry, IAdvisorRepository advisorRepository, IDegreePlanRepository degreePlanRepository,
+            ITermRepository termRepository, IAdviseeRepository adviseeRepository, IStudentConfigurationRepository studentConfigurationRepository,
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository,
             IStaffRepository staffRepository, IConfigurationRepository configurationRepository, IPersonBaseRepository personBaseRepository,
             IStudentDegreePlanRepository studentDegreePlanRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository, staffRepository)
@@ -144,7 +144,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 throw new ArgumentNullException("advisorIds", "At least one advisor ID must be provided to search for advisors.");
             }
             try
-            { 
+            {
                 IEnumerable<Dtos.Planning.Advisor> advisorDtos;
                 IEnumerable<Domain.Planning.Entities.Advisor> advisorEntities;
 
@@ -225,9 +225,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// </summary>
         /// <param name="advisorId"></param>
         /// <returns>List of Advisee objects</returns>
-        public async Task<PrivacyWrapper<List<Dtos.Planning.Advisee>>> GetAdviseesAsync(string advisorId, int pageSize, int pageIndex, bool activeAdviseesOnly = false )
+        public async Task<PrivacyWrapper<List<Dtos.Planning.Advisee>>> GetAdviseesAsync(string advisorId, int pageSize, int pageIndex, bool activeAdviseesOnly = false)
         {
             logger.Info("STEPPING through advisorservice GetAdvisees... " + DateTime.Now);
+            logger.Debug("GetAdvisees advisor is " + CurrentUser.PersonId);
+
 
             if (string.IsNullOrEmpty(advisorId))
             {
@@ -647,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
         // Create Advisor Dto to return
         private PrivacyWrapper<List<Dtos.Planning.Advisee>> BuildAdviseeDtos(
-            IEnumerable<Domain.Student.Entities.DegreePlans.DegreePlan> degreePlans, 
+            IEnumerable<Domain.Student.Entities.DegreePlans.DegreePlan> degreePlans,
             IEnumerable<Domain.Student.Entities.PlanningStudent> adviseeStudentEntities, IEnumerable<string> assignedAdvisees)
         {
             var hasPrivacyRestriction = false; // Default to false, check later for each advisee
@@ -708,7 +710,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         {
                             adviseeDto.PreferredEmailAddress = advisee.PreferredEmailAddress.Value;
                         }
-                        if (advisee.EmailAddresses !=null)
+                        if (advisee.EmailAddresses != null)
                         {
                             if (advisee.EmailAddresses.Any())
                             {
@@ -729,7 +731,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     }
                     adviseeDtos.Add(adviseeDto);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     logger.Error("Failed to build advisee dto for advisee - " + advisee.Id);
                     logger.Error(ex, ex.Message);
@@ -771,7 +773,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 if (adviseeStudentEntity.CompletedAdvisements != null && adviseeStudentEntity.CompletedAdvisements.Any())
                 {
                     List<Dtos.Student.CompletedAdvisement> completedAdvisements = new List<Dtos.Student.CompletedAdvisement>();
-                    foreach(var completedAdvisement in adviseeStudentEntity.CompletedAdvisements)
+                    foreach (var completedAdvisement in adviseeStudentEntity.CompletedAdvisements)
                     {
                         completedAdvisements.Add(completedAdvisementsAdapter.MapToType(completedAdvisement));
                     }
@@ -928,7 +930,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             if (criteria.IncludeActiveAdviseesOnly)
             {
                 advisor = await GetAuthorizedAdvisorAsync(CurrentUser.PersonId, AdviseeInclusionType.CurrentAdviseesOnly);
-            } else
+            }
+            else
             {
                 advisor = await GetAuthorizedAdvisorAsync(CurrentUser.PersonId, AdviseeInclusionType.AllAdvisees);
             }
@@ -1166,7 +1169,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             if (pageSize < 1) pageSize = int.MaxValue;
             if (pageIndex < 1) pageIndex = 1;
 
-            logger.Info("STEPPING through AdvisorService Search3... " + DateTime.Now);
+            logger.Info("STEPPING through AdvisorService SearchForExactMatchAsync... " + DateTime.Now);
+            logger.Debug("STEPPING through AdvisorService SearchForExactMatchAsync for Advisor Id " + CurrentUser.PersonId);
 
             ///////////////////////  STEP1: Get authorized advisor /////////////////////////////////////////////
 
@@ -1196,11 +1200,25 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             if (advisor.Advisees.Count() > 0)
             {
                 assignedAdvisees.AddRange(await _adviseeRepository.GetAsync(advisor.Advisees, pageSize, pageIndex));
+                if (assignedAdvisees != null)
+                {
+                    logger.Info(String.Format("GetAsync for assigned advisees... returned {0} planningStudent records for count of {1} assigned advisees ", assignedAdvisees.Count, advisor.Advisees.Count()));
+                }
+                else
+                {
+                    logger.Info(String.Format("No planningStudent records were  returned for {0} assigned advisees ", advisor.Advisees.Count()));
+                }
+            }
+            else
+            {
+                logger.Debug(String.Format("There are no assigned advisees for advisor {0}", advisor.Id));
             }
 
             //===================================================
             watch.Stop();
-            logger.Info("GetAssignedAdvisees... completed in " + watch.ElapsedMilliseconds.ToString());
+            logger.Info("GetAssignedAdvisees... completed in  " + watch.ElapsedMilliseconds.ToString());
+
+
 
             string searchString = !string.IsNullOrEmpty(criteria.AdviseeKeyword) ? criteria.AdviseeKeyword : criteria.AdvisorKeyword;
 
@@ -1377,6 +1395,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             //===================================================
             watch.Stop();
             logger.Info("Build Advisee DTOs... completed in " + watch.ElapsedMilliseconds.ToString());
+            logger.Debug("Build Advisee DTOs... completed  for Advisor Id " + CurrentUser.PersonId);
 
             return privacyWrapper;
         }
@@ -1455,11 +1474,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             // Access is Ok if this is an advisor with all access, update access, or review access for any student.  
             // Access is also OK if this is an advisor with all access, update access, or review access to their assigned advisees and this is an assigned advisee.
-            if (userPermissions.Contains(PlanningPermissionCodes.AllAccessAnyAdvisee) || 
-                userPermissions.Contains(PlanningPermissionCodes.UpdateAnyAdvisee) || 
-                userPermissions.Contains(PlanningPermissionCodes.ReviewAnyAdvisee) || 
-                (userPermissions.Contains(PlanningPermissionCodes.AllAccessAssignedAdvisees) && userIsAssignedAdvisor) || 
-                (userPermissions.Contains(PlanningPermissionCodes.UpdateAssignedAdvisees) && userIsAssignedAdvisor) || 
+            if (userPermissions.Contains(PlanningPermissionCodes.AllAccessAnyAdvisee) ||
+                userPermissions.Contains(PlanningPermissionCodes.UpdateAnyAdvisee) ||
+                userPermissions.Contains(PlanningPermissionCodes.ReviewAnyAdvisee) ||
+                (userPermissions.Contains(PlanningPermissionCodes.AllAccessAssignedAdvisees) && userIsAssignedAdvisor) ||
+                (userPermissions.Contains(PlanningPermissionCodes.UpdateAssignedAdvisees) && userIsAssignedAdvisor) ||
                 (userPermissions.Contains(PlanningPermissionCodes.ReviewAssignedAdvisees) && userIsAssignedAdvisor))
             {
                 return;

@@ -9,7 +9,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class SectionRegistration
     {
-        // Optional GUID of the STUDENT.ACAD.CRED record association with the registration.
+        // Optional GUID of the STUDENT.ACAD.CRED record association with the registration. (Used by Ethos only)
         public string Guid { get; set; }
         // COURSE.SECTIONS.ID value
         public string SectionId { get; set; }
@@ -23,20 +23,20 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         // always assigns the number of CEUS of the section to the registration.
         public decimal? Ceus { get; set; }
         // An optional effective registration date, if different from the current date. Not all registration repository
-        // methods apply this property.
+        // methods apply this property. (Used by Ethos only)
         public DateTime? RegistrationDate { get; set; }
         // Optional academic level for the registration. Not all registration repository
-        // methods apply this property.
+        // methods apply this property. (Used by Ethos only)
         public string AcademicLevelCode { get; set; }
         // A code from the STUDENT.ACAD.CRED.STATUS.REASONS valcode. Applies only when Action is Drop. Not all registration repository
-        // methods apply this property.
+        // methods apply this property. (Used by Ethos only)
         public string DropReasonCode { get; set; }
         // System ID of a record in the INT.TO.WDRL.CODES file. Applies only when Action is Drop. Not all registration repository
-        // methods apply this property.
+        // methods apply this property. (Used by WebAPI only)
         public string IntentToWithdrawId { get; set; }
-        // Section registration start on date
+        // Section registration start on date (Used by WebAPI only)
         public DateTimeOffset? InvolvementStartOn { get; set; }
-        // Section registration end on date
+        // Section registration end on date (Used by Ethos only)
         public DateTimeOffset? InvolvementEndOn { get; set; }
     }
 }

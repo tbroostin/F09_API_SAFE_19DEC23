@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -19,7 +19,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="id">Record ID</param>
         /// <returns>The section</returns>
-        Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false);
+        Task<Section> GetSectionAsync(string id, bool ignoreFaculty = false, bool useSeatServiceWhenEnabled = false);
 
         /// <summary>
         /// Get section using filters

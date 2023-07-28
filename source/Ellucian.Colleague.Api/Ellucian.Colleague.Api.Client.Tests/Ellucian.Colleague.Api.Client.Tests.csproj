@@ -68,7 +68,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.256\lib\net451\Ellucian.Logging.dll</HintPath>
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.263\lib\net472\Ellucian.Logging.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Rest.Client, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.192\lib\net451\Ellucian.Rest.Client.dll</HintPath>
@@ -132,14 +132,17 @@
     <Reference Include="Moq, Version=4.15.0.0, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
       <HintPath>..\packages\Moq.4.15.2\lib\net45\Moq.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
-      <HintPath>..\packages\Serilog.2.10.0\lib\net46\Serilog.dll</HintPath>
+      <HintPath>..\packages\Serilog.2.11.0\lib\net46\Serilog.dll</HintPath>
     </Reference>
-    <Reference Include="Serilog.Sinks.File, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
-      <HintPath>..\packages\Serilog.Sinks.File.4.1.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
+    <Reference Include="Serilog.Expressions, Version=3.4.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Expressions.3.4.0\lib\netstandard2.0\Serilog.Expressions.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.File, Version=5.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.File.5.0.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
     </Reference>
     <Reference Include="slf4net">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -28,7 +28,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class RelationshipRepository : BaseColleagueRepository, IRelationshipRepository
     {
         private List<Domain.Base.Entities.Relationship> _relationships;
-        private static char _VM = Convert.ToChar(DynamicArray.VM);
         RepositoryException exception = new RepositoryException();
         private string colleagueTimeZone;
 
@@ -458,13 +457,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (persons != null && persons.Any())
             {
                 //read columns from person to create RELATION keys
-                var columns = await DataReader.BatchReadRecordColumnsAsync("PERSON", persons, new string[] { "SPOUSE", "CHILDREN",  "OTHERS", "PARENTS"});
+                var columns = await DataReader.BatchReadRecordColumnsAsync("PERSON", persons, new string[] { "SPOUSE", "CHILDREN", "OTHERS", "PARENTS" });
                 foreach (KeyValuePair<string, Dictionary<string, string>> entry in columns)
                 {
                     var personId = entry.Key;
                     foreach (KeyValuePair<string, string> relatedId in entry.Value)
                     {
-                        var relatedIds = relatedId.Value.Split(_VM);
+                        var relatedIds = relatedId.Value.Split(DmiString._VM);
                         if (relatedIds != null && relatedIds.Any())
                         {
                             foreach (var relId in relatedIds)
@@ -979,7 +978,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (personalRelationshipsEntity == null)
             {
                 throw new RepositoryException("Must provide a personal relationship body");
-            }          
+            }
 
             var updateRequest = await BuildPersonRelationshipsUpdateRequest(personalRelationshipsEntity);
             var extendedDataTuple = GetEthosExtendedDataLists();
@@ -1517,7 +1516,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             return personGuidCollection;
-           
+
         }
         #endregion
     }

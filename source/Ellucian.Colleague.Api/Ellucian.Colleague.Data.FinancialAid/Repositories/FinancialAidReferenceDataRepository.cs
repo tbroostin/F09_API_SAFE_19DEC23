@@ -41,7 +41,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         {
             CacheTimeout = Level1CacheTimeoutValue;
         }
-        
+
         /// <summary>
         /// Get all SAP.APPEALS.CODES from Colleague. This accessor caches all the categories.
         /// </summary>
@@ -74,13 +74,12 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         foreach (var awardRecord in awardRecords)
                         {
                             var explanation = awardRecord.AwExplanationText;
-                            char _VM = Convert.ToChar(DynamicArray.VM);
 
                             if (!string.IsNullOrEmpty(explanation))
                             {
-                                explanation = FormatString(explanation, _VM);
+                                explanation = FormatString(explanation, DmiString._VM);
                             }
-                            
+
 
                             ShoppingSheetAwardGroup? shoppingSheetGroup = null;
                             if (!string.IsNullOrEmpty(awardRecord.AwShopsheetGroup))
@@ -115,7 +114,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             }
 
                             //TODO: Change this to a real Async when Awards method is converted. This is a temporary workaround.
-                            var awardCategory = Task.Run(async () => 
+                            var awardCategory = Task.Run(async () =>
                                 {
                                     return await GetAwardCategoriesAsync();
                                 }).GetAwaiter().GetResult()
@@ -123,17 +122,17 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             try
                             {
                                 var award = new Award(awardRecord.Recordkey, awardRecord.AwDescription, awardCategory, explanation)
-                                    {
-                                        IsFederalDirectLoan = (!string.IsNullOrEmpty(awardRecord.AwDlLoanType)),
-                                        Type = awardRecord.AwType,
-                                        ShoppingSheetGroup = shoppingSheetGroup,
-                                        AwRenewableFlag = awardRecord.AwRenewableFlag,
-                                        AwRenewableText = awardRecord.AwRenewableText
-                                    };
+                                {
+                                    IsFederalDirectLoan = (!string.IsNullOrEmpty(awardRecord.AwDlLoanType)),
+                                    Type = awardRecord.AwType,
+                                    ShoppingSheetGroup = shoppingSheetGroup,
+                                    AwRenewableFlag = awardRecord.AwRenewableFlag,
+                                    AwRenewableText = awardRecord.AwRenewableText
+                                };
                                 awardList.Add(award);
                             }
                             catch (Exception e)
-                            {                                
+                            {
                                 LogDataError("AWARDS", awardRecord.Recordkey, awardRecord, e, string.Format("Failed to add award {0}", awardRecord.Recordkey));
                             }
                         }
@@ -224,26 +223,26 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
         public async Task<IEnumerable<AwardCategory>> GetAwardCategoriesAsync()
         {
-            
-                return await GetCodeItemAsync<AwardCategories, AwardCategory>("AllAwardCategories", "AWARD.CATEGORIES",
-                    ac =>
+
+            return await GetCodeItemAsync<AwardCategories, AwardCategory>("AllAwardCategories", "AWARD.CATEGORIES",
+                ac =>
+                {
+                    AwardCategoryType? type = null;
+                    var typeArray = new string[4] { ac.AcLoanFlag, ac.AcGrantFlag, ac.AcScholarshipFlag, ac.AcWorkFlag };
+
+                    //is exactly one of the flags equal to Yes?
+                    if (typeArray.Where(t => !string.IsNullOrEmpty(t) && t.ToUpper() == "Y").Count() == 1)
                     {
-                        AwardCategoryType? type = null;
-                        var typeArray = new string[4] { ac.AcLoanFlag, ac.AcGrantFlag, ac.AcScholarshipFlag, ac.AcWorkFlag };
-
-                        //is exactly one of the flags equal to Yes?
-                        if (typeArray.Where(t => !string.IsNullOrEmpty(t) && t.ToUpper() == "Y").Count() == 1)
-                        {
-                            if (!string.IsNullOrEmpty(ac.AcLoanFlag) && ac.AcLoanFlag.ToUpper() == "Y") type = AwardCategoryType.Loan;
-                            else if (!string.IsNullOrEmpty(ac.AcGrantFlag) && ac.AcGrantFlag.ToUpper() == "Y") type = AwardCategoryType.Grant;
-                            else if (!string.IsNullOrEmpty(ac.AcScholarshipFlag) && ac.AcScholarshipFlag.ToUpper() == "Y") type = AwardCategoryType.Scholarship;
-                            else if (!string.IsNullOrEmpty(ac.AcWorkFlag) && ac.AcWorkFlag.ToUpper() == "Y") type = AwardCategoryType.Work;
-                        }
-
-                        return new AwardCategory(ac.Recordkey, ac.AcDescription, type);
+                        if (!string.IsNullOrEmpty(ac.AcLoanFlag) && ac.AcLoanFlag.ToUpper() == "Y") type = AwardCategoryType.Loan;
+                        else if (!string.IsNullOrEmpty(ac.AcGrantFlag) && ac.AcGrantFlag.ToUpper() == "Y") type = AwardCategoryType.Grant;
+                        else if (!string.IsNullOrEmpty(ac.AcScholarshipFlag) && ac.AcScholarshipFlag.ToUpper() == "Y") type = AwardCategoryType.Scholarship;
+                        else if (!string.IsNullOrEmpty(ac.AcWorkFlag) && ac.AcWorkFlag.ToUpper() == "Y") type = AwardCategoryType.Work;
                     }
-                );
-            
+
+                    return new AwardCategory(ac.Recordkey, ac.AcDescription, type);
+                }
+            );
+
         }
 
 
@@ -344,7 +343,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             return awardYearList;
                         }
 
-                        var invalidYearStatuses = new string[] {"D", "O", "A"};
+                        var invalidYearStatuses = new string[] { "D", "O", "A" };
                         var validYears = awardYearData.Where(y => !invalidYearStatuses.Contains(y.FaSuitesStatus));
                         foreach (var year in validYears)
                         {
@@ -448,8 +447,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             }
 
                             string url = link.FahubLinkUrl;
-                            var linkRecord = new Link(title, type, url);                            
-                            
+                            var linkRecord = new Link(title, type, url);
+
                             linksList.Add(linkRecord);
                         }
                         return linksList;
@@ -525,7 +524,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                     }
                                 }
                             }
-                            catch(ColleagueDataReaderException cdre)
+                            catch (ColleagueDataReaderException cdre)
                             {
                                 string message = string.Format("There was an error reading {0} file.", acyrFile);
                                 LogDataError("FBCAcyr", acyrFile, null, cdre, message);
@@ -543,7 +542,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <returns>BudgetComponentCostType or null</returns>
         private BudgetComponentCostType? CalculateCostType(FbcAcyr budgetRecord)
         {
-            if (budgetRecord != null && !string.IsNullOrEmpty(budgetRecord.FbcCostIndicator)) {
+            if (budgetRecord != null && !string.IsNullOrEmpty(budgetRecord.FbcCostIndicator))
+            {
                 if (budgetRecord.FbcCostIndicator.ToUpper() == "D")
                 {
                     return BudgetComponentCostType.Direct;
@@ -602,6 +602,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                 case "SIGNAWDLTR":
                                     itemtype = ChecklistItemType.ReviewAwardLetter;
                                     break;
+                                case "HOUSINGOPT":
+                                    itemtype = ChecklistItemType.HousingOption;
+                                    break;
 
                             }
 
@@ -641,7 +644,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         public async Task<IEnumerable<AcademicProgressStatus>> GetAcademicProgressStatusesAsync()
         {
             return await GetOrAddToCacheAsync<IEnumerable<AcademicProgressStatus>>("AllAcademicProgressStatuses",
-                    async() =>
+                    async () =>
                     {
                         var sapStatusesValcode = await DataReader.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "SAP.STATUSES", true);
 
@@ -696,16 +699,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                                     // Add Category and Explanation properties
                                     academicProgressStatus.Category = itemtype;
-                                    
+
                                     var explanation = faSapStatusInfoRec.FssiExplained;
-                                    char _VM = Convert.ToChar(DynamicArray.VM);
 
                                     if (!string.IsNullOrEmpty(explanation))
                                     {
                                         // If there is a double-VM, replace them with NewLines (so they get treated as "paragraphs")
-                                        explanation = explanation.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+                                        explanation = explanation.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
                                         // If there is a single-VM, replace it with a space.
-                                        explanation = explanation.Replace(_VM, ' ');
+                                        explanation = explanation.Replace(DmiString._VM, ' ');
                                     }
 
                                     if (!string.IsNullOrEmpty(explanation))
@@ -731,9 +733,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// </summary>
         /// <returns>Collection of AwardLetterConfiguration entities</returns>
         public async Task<IEnumerable<AwardLetterConfiguration>> GetAwardLetterConfigurationsAsync()
-        {            
-            return  await GetOrAddToCacheAsync<IEnumerable<AwardLetterConfiguration>>("AwardLetterParameters",
-                async() =>
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<AwardLetterConfiguration>>("AwardLetterParameters",
+                async () =>
                 {
                     var awardLetterParametersRecords = new List<AwardLetterConfiguration>();
                     var awardLetterParameters = await DataReader.BulkReadRecordAsync<AltrParameters>("", false);
@@ -772,7 +774,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             awardLetterConfiguration.AddAwardPeriodColumnGroup(record.AltrTitleColumn3, 3, GroupType.AwardPeriodColumn);
                             awardLetterConfiguration.AddAwardPeriodColumnGroup(record.AltrTitleColumn4, 4, GroupType.AwardPeriodColumn);
                             awardLetterConfiguration.AddAwardPeriodColumnGroup(record.AltrTitleColumn5, 5, GroupType.AwardPeriodColumn);
-                            awardLetterConfiguration.AddAwardPeriodColumnGroup(record.AltrTitleColumn6, 6, GroupType.AwardPeriodColumn);                                
+                            awardLetterConfiguration.AddAwardPeriodColumnGroup(record.AltrTitleColumn6, 6, GroupType.AwardPeriodColumn);
 
                             awardLetterParametersRecords.Add(awardLetterConfiguration);
                         }
@@ -784,7 +786,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         return awardLetterParametersRecords;
                     }
                 });
-            
+
         }
         /// <summary>
         /// Get a collection of financial aid award periods
@@ -824,7 +826,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                         return new FinancialAidFundCategory(g, fa.Recordkey, String.IsNullOrEmpty(fa.AcDescription) ? fa.Recordkey : fa.AcDescription, type, categoryName, restrictedFlag);
                     }, bypassCache: ignoreCache);
-          }
+        }
 
         /// <summary>
         /// Get a collection of financial aid fund classifications
@@ -834,7 +836,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         public async Task<IEnumerable<FinancialAidFundClassification>> GetFinancialAidFundClassificationsAsync(bool ignoreCache = false)
         {
             return await GetGuidCodeItemAsync<ReportFundTypes, FinancialAidFundClassification>("AllFinancialAidFundClassifications", "REPORT.FUND.TYPES",
-                (fa, g) => new FinancialAidFundClassification(g, fa.RftFundTypeCode, String.IsNullOrEmpty(fa.RftTitle) ? fa.RftFundTypeCode : fa.RftTitle) 
+                (fa, g) => new FinancialAidFundClassification(g, fa.RftFundTypeCode, String.IsNullOrEmpty(fa.RftTitle) ? fa.RftFundTypeCode : fa.RftTitle)
                 { Description2 = fa.RftDesc, FundingTypeCode = fa.Recordkey }, bypassCache: ignoreCache);
         }
 
@@ -847,7 +849,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         {
             return await GetGuidCodeItemAsync<FaSuites, FinancialAidYear>("AllFinancialAidYears", "FA.SUITES",
                 (fa, g) => new FinancialAidYear(g, fa.Recordkey, fa.Recordkey, fa.FaSuitesStatus) { HostCountry = GetHostCountryAsync().Result }, bypassCache: ignoreCache);
-        }     
+        }
 
         /// <summary>
         /// Gets all financial aid explanations
@@ -859,17 +861,16 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     async () =>
                     {
                         var explanations = await DataReader.ReadRecordAsync<FaExplanations>("FA.EXPLANATIONS", "FA.SS.TEXT");
-                        if(explanations == null)
+                        if (explanations == null)
                         {
                             logger.Info("No financial aid explanations records found.");
                             return new List<FinancialAidExplanation>();
                         }
 
                         var faExplanationEntities = new List<FinancialAidExplanation>();
-                        char vm = Convert.ToChar(DynamicArray.VM);
                         if (!string.IsNullOrEmpty(explanations.FePellLeuExpl))
                         {
-                            faExplanationEntities.Add(new FinancialAidExplanation(FormatString(explanations.FePellLeuExpl, vm), FinancialAidExplanationType.PellLEU));                            
+                            faExplanationEntities.Add(new FinancialAidExplanation(FormatString(explanations.FePellLeuExpl, DmiString._VM), FinancialAidExplanationType.PellLEU));
                         }
                         return faExplanationEntities;
                     });
@@ -991,7 +992,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     return FinancialAidFundAidCategoryType.nonGovernmental;
             }
         }
-   
+
         /// <summary>
         /// Public Accessor for Financial Aid Awards. Retrieves and caches all awards defined
         /// in Colleague. 
@@ -1011,17 +1012,16 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         //                {
         //                   // I expect an explanation field to be coming up in the near future. pbw 06/17/15
         //                   // var explanation = typeRecord.AwExplanationText;
-        //                   // char _VM = Convert.ToChar(DynamicArray.VM);
 
         //                   // if (!string.IsNullOrEmpty(explanation))
         //                   // {
         //                        // If there is a double-VM, replace them with NewLines (so they get treated as "paragraphs")
-        //                   //     explanation = explanation.Replace("" + _VM + _VM, Environment.NewLine + Environment.NewLine + "");
+        //                   //     explanation = explanation.Replace("" + DmiString._VM + DmiString._VM, Environment.NewLine + Environment.NewLine + "");
         //                        // If there is a single-VM, replace it with a space.
-        //                   //     explanation = explanation.Replace(_VM, ' ');
+        //                   //     explanation = explanation.Replace(DmiString._VM, ' ');
         //                   // }
 
-                            
+
         //                    }
         //                    // Award Categrory is no longer required
         //                    var awardCategory = AwardCategories.FirstOrDefault(ac => ac.Code == typeRecord.AwCategory);
@@ -1029,7 +1029,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         //                    {
         //                        IsFederalDirectLoan = (!string.IsNullOrEmpty(typeRecord.AwDlLoanType)),
         //                        Type = typeRecord.AwType,
-                                
+
         //                    };
 
         //                    awardList.Add(award);

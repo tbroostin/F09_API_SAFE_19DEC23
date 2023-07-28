@@ -1,4 +1,4 @@
-﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2023 Ellucian Company L.P. and its affiliates.*/
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -23,6 +23,8 @@ using Ellucian.Colleague.Coordination.HumanResources.Services;
 using System.Collections;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -54,6 +56,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns>LeaveBalanceConfiguration</returns>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
         [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
+        [Metadata(ApiVersionStatus = "R", HttpMethodSummary = "Gets access to Leave Balance Configuration object for the currently authenticated API user (as an employee.leave approver,supervisor).",
+          HttpMethodDescription = "Gets access to Leave Balance Configuration object for the currently authenticated API user (as an employee.leave approver,supervisor).")]
         public async Task<LeaveBalanceConfiguration> GetLeaveBalanceConfigurationAsync()
         {
             try

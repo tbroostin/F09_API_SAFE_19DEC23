@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2023 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Utility;
@@ -901,7 +901,7 @@ namespace Ellucian.Colleague.Api.Client
             {
                 string urlPath = UrlUtility.CombineUrlPath(_humanResourceDemographicsPath);
                 Dictionary<string, string> urlArgCollection = new Dictionary<string, string>();
-                
+
 
                 if (effectivePersonId != null)
                 {
@@ -1038,7 +1038,7 @@ namespace Ellucian.Colleague.Api.Client
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PayCycle>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
-            catch(LoginException lex)
+            catch (LoginException lex)
             {
                 logger.Error(lex, lex.Message);
                 throw;
@@ -1185,7 +1185,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 return new Tuple<string, byte[]>(fileName, resource);
             }
-            catch(LoginException lex)
+            catch (LoginException lex)
             {
                 logger.Error(lex, lex.Message);
                 throw;
@@ -1246,7 +1246,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 return JsonConvert.DeserializeObject<PayStatementConfiguration>(await response.Content.ReadAsStringAsync());
             }
-            catch(LoginException lex)
+            catch (LoginException lex)
             {
                 logger.Error(lex, lex.Message);
                 throw;
@@ -1326,6 +1326,45 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Gets Employee Leave Plans V3
+        /// </summary>
+        /// <param name="effectivePersonId"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansV3Async(string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath;
+                if (string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath = UrlUtility.CombineUrlPath(_employeeLeavePlansPath);
+                }
+                else
+                {
+                    urlPath = _employeeLeavePlansPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<IEnumerable<EmployeeLeavePlan>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get employee leave plans");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Returns Employee Compensation Details 
         /// </summary>
         /// <param name="effectivePersonId">EmployeeId of a user used for retrieving compensation details </param>
@@ -1372,7 +1411,7 @@ namespace Ellucian.Colleague.Api.Client
             {
                 logger.Error(lex, lex.Message);
                 throw;
-            }            
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unable to get employee compensation details");
@@ -1811,7 +1850,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-      
+
         /// <summary>
         /// Queries employee information summary based on the specified criteria.
         /// Either a supervisor id or employee ids must be specified (or both)
@@ -1872,6 +1911,71 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve employee leave plan data for specified criteria");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets employees for organizational chart
+        /// </summary>
+        /// <param name="rootEmployeeId"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<OrgChartEmployee>> GetOrganizationalChartAsync(string rootEmployeeId)
+        {
+            if (rootEmployeeId == null)
+            {
+                throw new ArgumentNullException("rootEmployeeId");
+            }
+
+            try
+            {
+                string urlPath;
+                urlPath = UrlUtility.CombineUrlPath(_organizationalChartPath);
+                var headers = new NameValueCollection();
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<OrgChartEmployee>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get organizational chart data");
+                throw;
+            }
+        }
+        /// <summary>
+        /// Gets employees for organizational chart
+        /// </summary>
+        /// <param name="rootEmployeeId"></param>
+        /// <returns></returns>
+        public async Task<OrgChartEmployee> GetOrganizationalChartEmployeeAsync(string rootEmployeeId)
+        {
+            if (rootEmployeeId == null)
+            {
+                throw new ArgumentNullException("rootEmployeeId");
+            }
+
+            try
+            {
+                string urlPath;
+                urlPath = UrlUtility.CombineUrlPath(_organizationalChartEmployeePath);
+                var headers = new NameValueCollection();
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<OrgChartEmployee>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, lex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get organizational chart data");
                 throw;
             }
         }

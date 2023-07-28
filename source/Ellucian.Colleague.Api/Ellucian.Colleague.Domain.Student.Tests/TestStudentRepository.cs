@@ -448,5 +448,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<string> GetStudentIdFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Student.Entities.Student> UpdateStudentAsync(Student.Entities.Student student)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -77,5 +77,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="personId"></param>
         /// <returns></returns>
         Task<bool> IsStudentAsync(string personId);
+
+        /// <summary>
+        /// Using a collection of person ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="personIds">collection of person ids</param>
+        /// <returns>Dictionary consisting of a personId (key) and guid (value)</returns
+        Task<Dictionary<string, string>> GetPersonGuidsCollectionAsync(IEnumerable<string> personIds);
     }
 }

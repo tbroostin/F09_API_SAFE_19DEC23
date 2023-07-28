@@ -66,7 +66,7 @@ namespace Ellucian.Web.Http.Filters
                                 {
                                     IEnumerable<object> model = null;
                                     context.Response.TryGetContentValue(out model);
-                                    if (model != null)
+                                    if (model != null && model.Any())
                                     {
                                         List<Sorting> sortParams = context.Request.GetSortingParameters();
                                         //Check for Sort Expressions NOT NULL

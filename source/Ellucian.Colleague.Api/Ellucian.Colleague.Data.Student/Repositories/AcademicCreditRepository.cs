@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2022 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2023 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Services;
@@ -39,7 +39,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private string colleagueTimeZone;
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
-        private static char _SM = Convert.ToChar(DynamicArray.SM);
         const string AllStudentEquivEvalsRecordsCache = "AllStudentEquivEvalsRecordKeys";
         const int AllStudentEquivEvalsRecordsCacheTimeout = 20;
         private RepositoryException exception = new RepositoryException();
@@ -177,7 +176,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (!dict.ContainsKey(sortSpec.OutDaSortSpecsIds))
                     {
                         // Split the list of @SM-delimited STUDENT.ACAD.CRED.IDs
-                        var sortedCreditIds = sortSpec.OutSortedStudentAcadCredIds.Split(_SM).ToList();
+                        var sortedCreditIds = sortSpec.OutSortedStudentAcadCredIds.Split(DmiString._SM).ToList();
 
                         // Sort the list of AcademicCredit objects using the sort order
                         var sortedCredits =
@@ -1984,7 +1983,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var message = "Student " + studentId + " is not registered for course sections that are configured for random grading in term: " + id + ".";
                     logger.Error(message);
-                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty,string.Empty, string.Empty, id, message));
+                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, string.Empty, id, message));
                 }
 
                 // filter out terms if terms where specified in the query criteria
@@ -2119,7 +2118,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     continue;
                 }
 
-                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId,midTermGradingId, termId, null, message));
+                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, midTermGradingId, termId, null, message));
             }
 
             return studentAnonymousGradingIds;

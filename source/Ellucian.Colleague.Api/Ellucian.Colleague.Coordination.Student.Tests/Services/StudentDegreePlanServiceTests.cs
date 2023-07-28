@@ -1,26 +1,25 @@
 ﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using Ellucian.Colleague.Coordination.Base.Adapters;
+using Ellucian.Colleague.Coordination.Student.Adapters;
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Tests;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Web.Security;
-using Ellucian.Web.Adapters;
-using Ellucian.Colleague.Coordination.Base.Adapters;
-using Ellucian.Colleague.Coordination.Student.Adapters;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Domain.Student;
-using Ellucian.Colleague.Domain.Student.Tests;
-using Ellucian.Web.License;
-using Ellucian.Web.Http.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -143,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             protected ILogger logger;
             protected ICurrentUserFactory currentUserFactory;
 
-  
+
 
 
 
@@ -1609,7 +1608,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 DegreePlan degreePlanEntity = new DegreePlan(studentId) { Id = 1 };
                 studentDegreePlanRepoMock.Setup(x => x.AddAsync(It.IsAny<DegreePlan>())).Returns(Task.FromResult(degreePlanEntity));
 
-                RegistrationConfiguration configuration = new RegistrationConfiguration(false, 0) { AddDefaultTermsToDegreePlan = false };
+                RegistrationConfiguration configuration = new RegistrationConfiguration(false, false, false, 0) { AddDefaultTermsToDegreePlan = false };
                 studentConfigurationRepositoryMock.Setup(repo => repo.GetRegistrationConfigurationAsync()).ReturnsAsync(configuration);
 
                 studentDegreePlanService = new StudentDegreePlanService(
@@ -1627,7 +1626,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentDegreePlanService_CreateDegreePlan6Async_Success_RegistrationConfiguration_AddDefaultTermsToDegreePlan_True()
             {
-                RegistrationConfiguration configuration = new RegistrationConfiguration(false, 0);
+                RegistrationConfiguration configuration = new RegistrationConfiguration(false, false, false, 0);
                 studentConfigurationRepositoryMock.Setup(repo => repo.GetRegistrationConfigurationAsync()).ReturnsAsync(configuration);
 
                 studentDegreePlanService = new StudentDegreePlanService(

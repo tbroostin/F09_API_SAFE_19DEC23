@@ -1,5 +1,5 @@
-﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
-
+﻿// Copyright 2017-2023 Ellucian Company L.P. and its affiliates
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
@@ -8,7 +8,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -18,7 +18,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -31,7 +30,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         RepositoryException exception = null;
         const string AllStudentFinancialAidAwardsCache = "StudentFinancialAidAwards";
         const int AllStudentFinancialAidAwardsCacheTimeout = 20; // Clear from cache every 20 minutes
-        private static char _VM = Convert.ToChar(DynamicArray.VM);        
 
         /// <summary>
         /// Constructor to instantiate a student FinancialAidAwards repository object
@@ -106,7 +104,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of StudentFinancialAidAward domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<StudentFinancialAidAward>, int>> GetAsync(int offset, int limit, bool bypassCache, bool restricted, IEnumerable<string> unrestrictedFunds, 
+        public async Task<Tuple<IEnumerable<StudentFinancialAidAward>, int>> GetAsync(int offset, int limit, bool bypassCache, bool restricted, IEnumerable<string> unrestrictedFunds,
             IEnumerable<string> awardYears, StudentFinancialAidAward criteriaEntity = null)
         {
             var studentFinancialAidAwardsEntities = new List<StudentFinancialAidAward>();
@@ -133,10 +131,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     tcCriteria = string.Format("WITH TC.STUDENT.ID EQ '{0}'", criteriaEntity.StudentId);
 
-                    var record = await DataReader.ReadRecordAsync<FinAid>("FIN.AID", criteriaEntity.StudentId);                    
+                    var record = await DataReader.ReadRecordAsync<FinAid>("FIN.AID", criteriaEntity.StudentId);
                     if (record == null)
                     {
-                        return new Tuple<IEnumerable<StudentFinancialAidAward>, int>( new List<StudentFinancialAidAward>(), 0);
+                        return new Tuple<IEnumerable<StudentFinancialAidAward>, int>(new List<StudentFinancialAidAward>(), 0);
                     }
 
                     if (record.FaSaYears == null || !record.FaSaYears.Any())
@@ -163,7 +161,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-                else if(!string.IsNullOrEmpty(criteriaEntity.AidYearId) && string.IsNullOrEmpty(criteriaEntity.StudentId))
+                else if (!string.IsNullOrEmpty(criteriaEntity.AidYearId) && string.IsNullOrEmpty(criteriaEntity.StudentId))
                 {
                     faCriteria = string.Format("WITH FA.SA.YEARS EQ '{0}'", criteriaEntity.AidYearId);
                     var records = await DataReader.SelectAsync("FIN.AID", faCriteria);
@@ -177,7 +175,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //awardFundId
                 if (!string.IsNullOrEmpty(criteriaEntity.AwardFundId))
                 {
-                    if(string.IsNullOrEmpty(tcCriteria))
+                    if (string.IsNullOrEmpty(tcCriteria))
                     {
                         tcCriteria = string.Format("WITH TC.AWARD.ID EQ '{0}'", criteriaEntity.AwardFundId);
                     }
@@ -189,10 +187,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             foreach (var awardYear in awardYears)
-            {                
+            {
                 var tcAcyrFile = string.Concat("TC.", awardYear);
                 string[] studentFinancialAidAwardIds = await DataReader.SelectAsync(tcAcyrFile, tcCriteria);
-                if(studentFinancialAidAwardIds == null || !studentFinancialAidAwardIds.Any())
+                if (studentFinancialAidAwardIds == null || !studentFinancialAidAwardIds.Any())
                 {
                     continue;
                 }
@@ -377,7 +375,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             //awardFundId
                             if (!string.IsNullOrEmpty(criteriaEntity.AwardFundId))
                             {
-                                taCriteria = string.Format("{0} AND TA.AW.ID EQ '{1}'", taCriteria, criteriaEntity.AwardFundId);                                
+                                taCriteria = string.Format("{0} AND TA.AW.ID EQ '{1}'", taCriteria, criteriaEntity.AwardFundId);
                             }
                         }
 
@@ -434,7 +432,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 awardYears = awardYears.Intersect(fasaYears);
                             }
                         }
-                        
+
 
                         foreach (var awardYear in awardYears)
                         {
@@ -464,7 +462,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         {
                                             if (!string.IsNullOrEmpty(studentAwards.Value))
                                             {
-                                                var awards = studentAwards.Value.Split(_VM);
+                                                var awards = studentAwards.Value.Split(DmiString._VM);
                                                 foreach (var award in awards)
                                                 {
                                                     tcAcyrIdsFromPersonFilter.Add(string.Concat(studentId, "*", award));
@@ -540,7 +538,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         // Need to return unrestricted, but no unrestricted funds found.  So return no student awards.
                                         studentFinancialAidAwardIds = null;
                                     }
-                                }                                
+                                }
                             }
 
                             if (studentFinancialAidAwardIds != null && studentFinancialAidAwardIds.Any())
@@ -572,12 +570,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 var subItems = keyCache.Sublist.ToArray();
- 
+
                 totalCount = keyCache.TotalCount.Value;
 
-               List<string> years = subItems.GroupBy(s => s.Split('.')[0])
-                               .Select(g => g.First().Split('.')[0]).Distinct()
-                               .ToList();
+                List<string> years = subItems.GroupBy(s => s.Split('.')[0])
+                                .Select(g => g.First().Split('.')[0]).Distinct()
+                                .ToList();
 
                 foreach (var year in years)
                 {
@@ -616,8 +614,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                     // Select and bulk read all FA.AWARD.HISTORY for the year.
                     var awardHistoryStudents = taAcyrDataContracts.Select(ta => ta.Recordkey.Split('*')[0]).Distinct().ToArray();
-                    var awardHistoryAwards   = taAcyrDataContracts.Select(ta => ta.Recordkey.Split('*')[1]).Distinct().ToArray();
-                    var awardHistoryPeriods  = taAcyrDataContracts.Select(ta => ta.Recordkey.Split('*')[2]).Distinct().ToArray();
+                    var awardHistoryAwards = taAcyrDataContracts.Select(ta => ta.Recordkey.Split('*')[1]).Distinct().ToArray();
+                    var awardHistoryPeriods = taAcyrDataContracts.Select(ta => ta.Recordkey.Split('*')[2]).Distinct().ToArray();
                     var criteria = new StringBuilder();
                     criteria.AppendFormat("WITH FAWH.FA.YEAR = '" + year + "'");
                     criteria.AppendFormat(" WITH FAWH.STUDENT.ID   = '" + (string.Join(" ", awardHistoryStudents.ToArray())).Replace(" ", "' '") + "'");
@@ -653,14 +651,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var taAcyrData = taAcyrDataContracts.Where(ta => dataContract.TcTaTerms.Contains(ta.Recordkey));
 
                         // Extract the FA.AWARD.HISTORY needed for the group of TA.ACYR.      
-                        var awardPeriods = taAcyrData.Select(td => td.Recordkey.Split('*')[2]).Distinct().ToArray();                        
+                        var awardPeriods = taAcyrData.Select(td => td.Recordkey.Split('*')[2]).Distinct().ToArray();
                         IEnumerable<FaAwardHistory> faAwardHistoryData = null;
                         if (faAwardHistoryDataContracts != null && faAwardHistoryDataContracts.Any())
                         {
                             faAwardHistoryData = faAwardHistoryDataContracts
                                 .Where(x => x.FawhStudentId == studentId && x.FawhFaYear == year && x.FawhAwardCode == awardId && awardPeriods.Contains(x.FawhAwardPeriod));
                         }
-                                                
+
                         studentFinancialAidAward.AwardHistory = await BuildStudentFinancialAidAward2(taAcyrData, year, faAwardHistoryData);
 
                         studentFinancialAidAwardsEntities.Add(studentFinancialAidAward);
@@ -814,7 +812,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<FaSysParams> GetSystemParametersAsync()
         {
-            return await GetOrAddToCacheAsync<FaSysParams>("FinancialAidSystemParameters", 
+            return await GetOrAddToCacheAsync<FaSysParams>("FinancialAidSystemParameters",
                 async () =>
                 {
                     return await DataReader.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS");
@@ -828,9 +826,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of financial aid years</returns>
         public async Task<IEnumerable<FinancialAidYear>> GetLimitedFinancialAidYearsAsync(bool restricted = false)
-        {          
+        {
             var financialAidYearCollection = new List<FinancialAidYear>();
-            
+
             var api = string.Empty;
             if (restricted == false)
             {
@@ -884,6 +882,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return financialAidYearCollection;
         }
-        
+
     }
 }

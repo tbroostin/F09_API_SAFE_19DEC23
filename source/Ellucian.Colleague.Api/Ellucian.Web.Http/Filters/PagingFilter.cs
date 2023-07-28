@@ -71,7 +71,7 @@ namespace Ellucian.Web.Http.Filters
                                 {
                                     IEnumerable<dynamic> model = null;
                                     context.Response.TryGetContentValue(out model);
-                                    if (model != null)
+                                    if (model != null && model.Any())
                                     {
                                         if (!IgnorePaging)
                                         {
@@ -88,7 +88,7 @@ namespace Ellucian.Web.Http.Filters
                                                     pagedContent.Headers.Add(header.Key, header.Value);
                                                 }
                                                 context.Response.Content = pagedContent;
-                                            context.Response.AddPagingHeaders(page.Offset, page.Limit, model.Count());
+                                                context.Response.AddPagingHeaders(page.Offset, page.Limit, model.Count());
                                             }
                                         }
                                     }

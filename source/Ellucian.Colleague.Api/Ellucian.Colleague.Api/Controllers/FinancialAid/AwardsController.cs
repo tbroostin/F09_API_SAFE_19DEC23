@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2023 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,6 +12,8 @@ using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Http.Filters;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -121,7 +123,9 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
         /// <accessComments>
         /// Any authenticated user can get these resources
         /// </accessComments>
-        /// <returns>A collection of Award data objects</returns>   
+        /// <returns>A collection of Award data objects</returns>
+        [HttpGet]
+        [EthosEnabledFilter(typeof(IEthosApiBuilderService))]
         public IEnumerable<Award3> GetAwards3()
         {
             try

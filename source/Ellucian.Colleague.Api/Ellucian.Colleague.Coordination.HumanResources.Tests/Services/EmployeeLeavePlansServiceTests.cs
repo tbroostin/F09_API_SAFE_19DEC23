@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2022 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2023 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -115,7 +115,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 earningTypeIdList.Add("VAC2");
 
                 employeeLeavePlans = new List<EmployeeLeavePlan>();
-                employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null,
+                employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null, "VAC",
                     LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, true, earningTypeIdList, 80, 50, 50, 10, "P", false, new DateTime(2022, 1, 1), true, true));
 
             }
@@ -277,6 +277,45 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
 
             }
+
+            // V3 GetEmployeeLeavePlansV3Async
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_ExecutesNoErrors()
+            {
+                var actual = await empLeavePlansService.GetEmployeeLeavePlansV3Async();
+                var expected = employeeLeavePlans[0];
+                var actualDto = actual.FirstOrDefault(a => a.Id == expected.Id);
+
+                Assert.AreEqual(expected.Id, actualDto.Id);
+                Assert.AreEqual(expected.LeavePlanId, actualDto.LeavePlanId);
+            }
+
+            [TestMethod, ExpectedException(typeof(ArgumentException))]
+            public async Task GetEmployeeLeavePlansV3Async_NoEarnTypesThowsError()
+            {
+                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetEarningTypesAsync(false)).ReturnsAsync(() => null);
+                var actual = await empLeavePlansService.GetEmployeeLeavePlansV3Async();
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_NoLeaveTypesLogsError()
+            {
+                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(() => null);
+                var actual = await empLeavePlansService.GetEmployeeLeavePlansV3Async();
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Count());
+                loggerMock.Verify(m => m.Error("No leave categories defined."), Times.Once);
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_NoPlansLogsError()
+            {
+                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(() => null);
+                var actual = await empLeavePlansService.GetEmployeeLeavePlansV3Async();
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Count());
+                loggerMock.Verify(m => m.Error("No leave plans defined."), Times.Once);
+            }
         }
 
         [TestClass]
@@ -291,10 +330,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
-                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1),  true),
-                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
-                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
-                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "SIC", "SICK" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
+                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, "VAC", LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1),  true),
+                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, "VAC", LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
+                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, "VAC", LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
+                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, "SIC", LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "SIC", "SICK" }, 80, 50, 50, 10, "P", false, new DateTime(2022, 1,1), true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -483,6 +522,114 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task GetEmployeeLeavePlansV2Async_PerLeaveAccrualDetails()
             {
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
+                var expected = employeeLeavePlans.Where(e => e.EmployeeId == employeeCurrentUserFactory.CurrentUser.PersonId).ToList();
+
+                Assert.IsNotNull(actual.First().AccrualLimit);
+                Assert.IsNotNull(actual.First().AccrualRate);
+                Assert.IsNotNull(actual.First().AccrualMaxCarryOver);
+                Assert.IsNotNull(actual.First().AccrualMaxRollOver);
+                Assert.AreEqual(expected.First().AccrualLimit, actual.First().AccrualLimit);
+                Assert.AreEqual(expected.First().AccrualRate, actual.First().AccrualRate);
+                Assert.AreEqual(expected.First().AccrualMaxCarryOver, actual.First().AccrualMaxCarryOver);
+                Assert.AreEqual(expected.First().AccrualMaxRollOver, actual.First().AccrualMaxRollOver);
+            }
+
+            //V3
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_ExecutesNoErrors()
+            {
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async();
+                var expected = employeeLeavePlans.Where(e => e.EmployeeId == employeeCurrentUserFactory.CurrentUser.PersonId).ToList();
+
+                Assert.AreEqual(expected.Count, actual.Count());
+                Assert.IsTrue(actual.All(a => a.EmployeeId == employeeCurrentUserFactory.CurrentUser.PersonId));
+
+            }
+
+            [TestMethod, ExpectedException(typeof(ArgumentException))]
+            public async Task GetEmployeeLeavePlansV3Async_NoEarnTypesThowsError()
+            {
+                humanResourcesReferenceDataRepositoryMock.Setup(r => r.GetEarningTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async();
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_NoLeaveTypesLogsError()
+            {
+                humanResourcesReferenceDataRepositoryMock.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(() => null);
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async();
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Count());
+                loggerMock.Verify(m => m.Error("No leave categories defined."), Times.Once);
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_NoPlansLogsError()
+            {
+                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(() => null);
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Count());
+                loggerMock.Verify(m => m.Error("No leave plans defined."), Times.Once);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task CannotGetEffectivePersonData_V3_NoProxyAccess()
+            {
+                await serviceUnderTest.GetEmployeeLeavePlansV3Async("0003915");
+            }
+
+            [TestMethod]
+            public async Task GetEffectivePersonData_V3_EmployeeProxyAccess()
+            {
+                employeeUserFactory.ProxyClaim = new ProxySubjectClaims()
+                {
+                    PersonId = "0003915",
+                    Permissions = new List<string>() { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value }
+                };
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async("0003915");
+
+                Assert.IsTrue(actual.All(a => a.EmployeeId == "0003915"));
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_GetEffectivePersonData_AdminAccess()
+            {
+
+                roleRepositoryMock.Setup(r => r.Roles)
+                   .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+                   {
+                       var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                       role.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewAllTimeHistory));
+
+                       return role;
+                   }));
+
+
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async(UserForAdminPermissionCheck);
+
+                Assert.AreEqual(actual.Count(), 1);
+                Assert.AreEqual(actual.ToList()[0].EmployeeId, UserForAdminPermissionCheck);
+
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetEmployeeLeavePlansV3Async_GetEffectivePersonData_NoAdminAccess()
+            {
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async(UserForAdminPermissionCheck);
+
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV3Async_PerLeaveAccrualDetails()
+            {
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV3Async();
                 var expected = employeeLeavePlans.Where(e => e.EmployeeId == employeeCurrentUserFactory.CurrentUser.PersonId).ToList();
 
                 Assert.IsNotNull(actual.First().AccrualLimit);

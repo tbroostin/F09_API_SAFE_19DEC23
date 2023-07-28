@@ -102,7 +102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 sectionData = new TestSectionRepository().GetAsync().Result.First();
                 sectionData.AddFaculty("1111100");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData));
 
                 // Mock Section Permission response
                 sectionPermissionResponseData = BuildSectionPermissionRepositoryResponse();
@@ -134,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionPermissionAsync_ThrowsExceptionIfSectionStringNull()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false, true)).Throws(new ArgumentNullException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync(null);
             }
 
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetSectionPermissionAsync_ThrowsExceptionIfSectionStringEmpty()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ArgumentNullException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false, true)).Throws(new ArgumentNullException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync(string.Empty);
             }
 
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetSectionPermissionAsync_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false, true)).Throws(new ApplicationException());
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
             }
 
@@ -159,7 +159,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task GetSectionPermissionAsync_ThrowsKeyNotFoundExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>(), false, true)).Returns(Task.FromResult(nullSection));
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
             }
 
@@ -175,7 +175,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData));
 
                 var sectionPermissionDto = await sectionPermissionService.GetAsync("SEC1");
 
@@ -193,7 +193,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData));
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData));
 
                 // Null adapter registry to force adapter error
                 ITypeAdapter<Domain.Student.Entities.SectionPermission, Dtos.Student.SectionPermission> nullAdapter = null;
@@ -208,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 sectionData.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(sectionData)); ;
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(sectionData)); ;
 
                 // Mock empty response from section permission respository
                 //Task<Dtos.Student.SectionPermission> nullResponse = null;
@@ -577,7 +577,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = new TestSectionRepository().GetAsync().Result.First();
                 section.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false)).Returns(Task.FromResult(section));
+                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false, true)).Returns(Task.FromResult(section));
                 var addedPetitionDto = await sectionPermissionService.AddStudentPetitionAsync(goodPetitionDto);
                 Assert.AreEqual(goodPetitionDto.StudentId, addedPetitionDto.StudentId);
                 Assert.AreEqual(goodPetitionDto.SectionId, addedPetitionDto.SectionId);
@@ -665,7 +665,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = new TestSectionRepository().GetAsync().Result.First();
                 section.AddFaculty("1111100");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(section));
 
                 // Mock Section  Permissions response
                 petitionResponse = BuildSectionPermissionRepoResponse();
@@ -741,7 +741,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ColleagueWebApiException))]
             public async Task GetStudentPetition_RethrowsExceptionFromSectionRepository()
             {
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Throws(new ApplicationException());
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).Throws(new ApplicationException());
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
             }
 
@@ -750,7 +750,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task GetStudentPetition_ThrowsExceptionIfSectionNotFound()
             {
                 Section nullSection = null;
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false)).Returns(Task.FromResult(nullSection));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync(It.IsAny<string>(), false, true)).Returns(Task.FromResult(nullSection));
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
             }
 
@@ -774,7 +774,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // Add this faculty to the mocked section response
                 section.AddFaculty("0000011");
-                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false)).Returns(Task.FromResult(section));
+                sectionRepoMock.Setup(repo => repo.GetSectionAsync("SEC1", false, true)).Returns(Task.FromResult(section));
 
                 // Act
                 var petitionDto = await sectionPermissionService.GetStudentPetitionAsync(petitionId, sectionId, type);
@@ -1126,7 +1126,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Mock section response
                 section = new TestSectionRepository().GetAsync().Result.First();
                 section.AddFaculty("0000011");
-                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false)).Returns(Task.FromResult(section));
+                sectionRepositoryMock.Setup(repo => repo.GetSectionAsync("sectionId", false, true)).Returns(Task.FromResult(section));
                 var updatedPetitionDto = await sectionPermissionService.UpdateStudentPetitionAsync(goodPetitionDto);
                 Assert.AreEqual(goodPetitionDto.StudentId, updatedPetitionDto.StudentId);
                 Assert.AreEqual(goodPetitionDto.SectionId, updatedPetitionDto.SectionId);

@@ -1,9 +1,10 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2023 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
@@ -26,5 +27,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         /// <param name="ids"></param>
         /// <returns></returns>
         Task<IEnumerable<PersonBase>> SearchFinancialAidPersonsByIdsAsync(IEnumerable<string> ids);
+        /// <summary>
+        /// Retrieves the name/address hierarchy defined on SPWP
+        /// </summary>
+        /// <returns></returns>
+        Task<string> GetStwebDefaultsHierarchyAsync();
     }
 }

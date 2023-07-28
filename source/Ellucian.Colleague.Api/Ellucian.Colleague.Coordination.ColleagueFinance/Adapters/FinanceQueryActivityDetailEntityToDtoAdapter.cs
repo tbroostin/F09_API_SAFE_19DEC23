@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2022 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Adapters;
 using slf4net;
@@ -30,7 +30,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             financeQueryActivityDetailDto.FormattedGlAccount = Source.GetFormattedGlAccount(glMajorComponentStartPositions);
             financeQueryActivityDetailDto.Description = Source.GlAccountDescription;
             financeQueryActivityDetailDto.BudgetPoolIndicator = Source.BudgetPoolIndicator;
-
+            financeQueryActivityDetailDto.EstimatedOpeningBalance = Source.EstimatedOpeningBalance;
             financeQueryActivityDetailDto.Transactions = new List<FinanceQueryGlTransaction>();
        
             // Convert the finance query activity detail transaction domain entities into finance query Gl transaction DTOs
